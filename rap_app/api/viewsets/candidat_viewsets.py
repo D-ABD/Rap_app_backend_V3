@@ -19,6 +19,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
@@ -39,7 +40,7 @@ from ...models.formations import Formation
 from ...models.prospection import Prospection
 from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
-from ..permissions import IsStaffOrAbove
+from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 from ..serializers.candidat_serializers import (
     CandidatCreateUpdateSerializer,
@@ -109,7 +110,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
     ViewSet pour les candidats. IsStaffOrAbove ; scope par centre (_scope_qs_to_user_centres, _assert_staff_can_use_formation). get_serializer_class : list + lite=1 => CandidatLiteSerializer, list => CandidatListSerializer, create/update/partial => CandidatCreateUpdateSerializer, sinon CandidatSerializer. Actions : meta (GET), creer-compte, valider-stagiaire, valider-demande-compte, refuser-demande-compte (POST), export-xlsx (GET).
     """
 
-    permission_classes = [IsStaffOrAbove]
+    permission_classes = [IsStaffOrAbove, CanAccessCandidatObject]
     pagination_class = RapAppPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -323,13 +324,33 @@ class CandidatViewSet(viewsets.ModelViewSet):
             except TypeError:
                 pass
 
+    def perform_update(self, serializer):
+        """Vérifie le périmètre centre avant mise à jour et cascade les prospections le cas échéant."""
+        instance = self.get_object()
+        old_formation = getattr(instance, "formation", None)
+        new_formation = serializer.validated_data.get("formation", old_formation)
+
+        self._assert_staff_can_use_formation(new_formation)
+
+        with transaction.atomic():
+            updated = serializer.save()
+            try:
+                updated.save(user=self.request.user)
+            except TypeError:
+                pass
+
+        if getattr(old_formation, "id", None) != getattr(new_formation, "id", None):
+            self._cascade_update_prospections_on_formation_change(
+                candidat=updated, old_form=old_formation, new_form=new_formation
+            )
+
     @action(detail=True, methods=["post"], url_path="creer-compte")
     def creer_compte(self, request, pk=None):
         """POST : appelle candidat.creer_ou_lier_compte_utilisateur() ; 400 si ValidationError."""
         candidat = self.get_object()
         try:
             user = candidat.valider_comme_stagiaire()
-        except ValidationError as e:
+        except (ValidationError, DjangoValidationError) as e:
             raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
 
         return Response(
@@ -353,7 +374,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
         try:
             user = candidat.creer_ou_lier_compte_utilisateur()
-        except ValidationError as e:
+        except (ValidationError, DjangoValidationError) as e:
             raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
 
         candidat.demande_compte_statut = Candidat.DemandeCompteStatut.ACCEPTEE
@@ -403,29 +424,25 @@ class CandidatViewSet(viewsets.ModelViewSet):
         )
 
     def _cascade_update_prospections_on_formation_change(self, candidat, old_form, new_form):
-        """Met à jour les Prospections (owner=candidat.compte_utilisateur) : formation/centre selon new_form ou partenaire.default_centre_id ; uniquement formation NULL ou == old_form."""
-        new_formation = serializer.validated_data.get("formation", serializer.instance.formation)
-        self._assert_staff_can_use_formation(new_formation)
+        """Met à jour les Prospections (owner=candidat.compte_utilisateur) lorsqu'une formation change.
 
-        old_formation = serializer.instance.formation
+        Seules les prospections qui n'ont pas de formation ou qui ont l'ancienne formation sont mises à jour.
+        """
+        if not candidat or not getattr(candidat, "compte_utilisateur_id", None):
+            return
 
-        with transaction.atomic():
-            instance = serializer.save()
+        qs = Prospection.objects.filter(owner_id=candidat.compte_utilisateur_id)
 
-            try:
-                instance.save(user=self.request.user)
-            except TypeError:
-                pass
+        if old_form is not None:
+            qs = qs.filter(Q(formation__isnull=True) | Q(formation=old_form))
+        else:
+            qs = qs.filter(formation__isnull=True)
 
-            old_id = getattr(old_formation, "id", None)
-            new_id = getattr(instance.formation, "id", None)
-
-            if old_id != new_id:
-                self._cascade_update_prospections_on_formation_change(
-                    candidat=instance,
-                    old_form=old_formation,
-                    new_form=instance.formation,
-                )
+        if new_form is not None:
+            centre_id = getattr(new_form, "centre_id", None)
+            qs.update(formation=new_form, centre_id=centre_id)
+        else:
+            qs.update(formation=None)
 
     @extend_schema(responses=None)
     @action(

@@ -5,6 +5,52 @@ from django.db.models import Q, QuerySet
 from .roles import get_staff_centre_ids_cached
 
 
+class FieldMaskingMixin:
+    """
+    Mixin DRF pour masquer des champs sensibles dans `to_representation`.
+
+    Les serializers peuvent surcharger `masked_fields_for_non_staff`,
+    `masked_fields_for_non_owner` et `owner_attr` si nécessaire.
+    """
+
+    masked_fields_for_non_staff: Tuple[str, ...] = ()
+    masked_fields_for_non_owner: Tuple[str, ...] = ()
+    owner_attr: str = "compte_utilisateur_id"
+
+    def _get_request_user(self):
+        request = getattr(self, "context", {}).get("request")
+        user = getattr(request, "user", None)
+        if user and getattr(user, "is_authenticated", False):
+            return user
+        return None
+
+    def _is_staff_like(self, user) -> bool:
+        if not user:
+            return False
+        return bool(getattr(user, "is_superuser", False) or getattr(user, "role", "") in {"staff", "staff_read", "admin", "superadmin"})
+
+    def _is_owner(self, instance, user) -> bool:
+        if not user:
+            return False
+        owner_id = getattr(instance, self.owner_attr, None)
+        return owner_id == getattr(user, "id", None)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        user = self._get_request_user()
+
+        if not self._is_staff_like(user):
+            for field in self.masked_fields_for_non_staff:
+                data.pop(field, None)
+
+        if not self._is_owner(instance, user):
+            for field in self.masked_fields_for_non_owner:
+                data.pop(field, None)
+
+        return data
+
+
 class StaffCentresScopeMixin:
     """
     Mixin pour restreindre le queryset selon les centres ou départements de rattachement du staff.

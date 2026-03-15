@@ -113,10 +113,12 @@ class FormationSecurityTests(APITestCase):
         self.assertNotIn(formation_hidden.id, returned_ids)
 
 
+from io import BytesIO
 from datetime import timedelta
 
 import pytest
 from django.utils import timezone
+from openpyxl import load_workbook
 from rest_framework.test import APIClient
 
 from rap_app.models.centres import Centre
@@ -169,10 +171,17 @@ def test_export_xlsx_respects_centre_scope():
     # Vérifie que c'est bien un Excel
     assert response["Content-Type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-    content = response.content.decode(errors="ignore")
+    workbook = load_workbook(filename=BytesIO(response.content))
+    worksheet = workbook.active
+    exported_values = {
+        str(cell)
+        for row in worksheet.iter_rows(values_only=True)
+        for cell in row
+        if cell not in (None, "")
+    }
 
     # La formation du centre visible doit apparaître
-    assert "Formation Visible" in content
+    assert "Formation Visible" in exported_values
 
     # La formation d'un autre centre ne doit PAS apparaître
-    assert "Formation Cachee" not in content
+    assert "Formation Cachee" not in exported_values

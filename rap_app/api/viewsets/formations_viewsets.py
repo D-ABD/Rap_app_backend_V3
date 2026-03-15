@@ -21,6 +21,7 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from PIL import Image as PILImage
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -596,10 +597,6 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get", "post"], url_path="export-xlsx")
     def export_xlsx(self, request):
         """GET/POST : export Excel ; GET avec_archivees ; POST avec_archivees et ids ; attachment."""
-        import mimetypes
-
-        # Fix openpyxl / mimetypes pour certains environnements où .webp n'est pas enregistré
-        mimetypes.add_type("image/webp", ".webp")
         inclure_archivees = False
         if request.method == "GET":
             inclure_archivees = request.query_params.get("avec_archivees", "false").lower() == "true"
@@ -635,7 +632,17 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         try:
             logo_path = Path(settings.BASE_DIR) / "rap_app/static/images/logo.png"
             if logo_path.exists():
-                img = XLImage(str(logo_path))
+                # Convertit le logo en PNG en mémoire pour éviter les extensions non
+                # supportées par openpyxl/mimetypes selon l'environnement.
+                with PILImage.open(logo_path) as pil_img:
+                    if pil_img.mode not in ("RGB", "RGBA"):
+                        pil_img = pil_img.convert("RGBA")
+
+                    png_buffer = BytesIO()
+                    pil_img.save(png_buffer, format="PNG")
+                    png_buffer.seek(0)
+
+                    img = XLImage(png_buffer)
                 img.height = 60
                 img.width = 60
                 ws.add_image(img, "A1")

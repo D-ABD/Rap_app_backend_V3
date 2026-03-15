@@ -17,6 +17,7 @@ from ...models.candidat import (
 )
 from ...models.centres import Centre
 from ...models.formations import Formation
+from ..mixins import FieldMaskingMixin
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
 )
@@ -180,7 +181,7 @@ class AppairageLiteSerializer(serializers.ModelSerializer):
         )
     ]
 )
-class CandidatSerializer(serializers.ModelSerializer):
+class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
     """Sérialiseur détail candidat : champs calculés, formation_info, last_appairage ; to_representation normalise nom et masque champs selon rôle ; NIR selon droits."""
 
     age = serializers.IntegerField(read_only=True)

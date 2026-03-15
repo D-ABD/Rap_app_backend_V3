@@ -139,9 +139,10 @@ class MonCandidatView(RetrieveUpdateAPIView):
     def get_object(self):
         # Sécurité : seul le candidat lié à l'utilisateur courant
         user = self.request.user
-        if not hasattr(user, "candidat"):
+        # Le lien depuis l'utilisateur vers son profil candidat est défini par le related_name "candidat_associe".
+        if not hasattr(user, "candidat_associe"):
             raise exceptions.NotFound("Aucun profil candidat associé à cet utilisateur.")
-        return user.candidat
+        return user.candidat_associe
 
 
 class DemandeCompteCandidatView(APIView):
@@ -169,11 +170,12 @@ class DemandeCompteCandidatView(APIView):
     )
     def post(self, request, *args, **kwargs):
         user = request.user
-        candidat = getattr(user, "candidat", None)
+        # Le lien depuis l'utilisateur vers son profil candidat est défini par le related_name "candidat_associe".
+        candidat = getattr(user, "candidat_associe", None)
         if not candidat:
             raise exceptions.NotFound("Aucun profil candidat associé à cet utilisateur.")
 
-        if candidat.compte_utilisateur_id:
+        if candidat.compte_utilisateur_id and candidat.compte_utilisateur_id != user.id:
             return Response(
                 {
                     "success": False,

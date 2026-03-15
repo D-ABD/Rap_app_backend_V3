@@ -355,3 +355,57 @@ class CanAccessCVTheque(BasePermission):
             )
 
         return False
+
+
+class CanAccessCandidatObject(BasePermission):
+    """Permission objet pour limiter l'accès aux candidats.
+
+    - Les administrateurs et le staff (hors "staff_read") peuvent accéder aux candidats de leur périmètre centre.
+    - Les utilisateurs "staff_read" ont accès en lecture seule aux candidats de leur périmètre.
+    - Les candidats peuvent accéder uniquement à leur propre profil.
+    """
+
+    message = "Accès refusé."
+
+    def has_permission(self, request, view):
+        """Autorisation préalable avant résolution de l'objet."""
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+
+        # Tous les super-admin / admin / staff peuvent accéder (les droits seront affinés en objet)
+        if is_admin_like(user) or is_staff_like(user):
+            return True
+
+        # Les candidats ne peuvent pas créer / supprimer, mais peuvent consulter / modifier leur propre profil.
+        if is_candidate(user):
+            if request.method in SAFE_METHODS + ("PUT", "PATCH"):
+                return True
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+
+        if is_admin_like(user):
+            return True
+
+        # Staff & staff_read : périmètre par centres
+        if is_staff_like(user):
+            centres = get_staff_centre_ids_cached(request)
+            if centres is None:
+                return True
+            if not centres:
+                return False
+
+            formation = getattr(obj, "formation", None)
+            return formation is not None and getattr(formation, "centre_id", None) in centres
+
+        # Les candidats n'ont accès qu'à leur propre profil
+        if is_candidate(user):
+            return getattr(obj, "compte_utilisateur_id", None) == user.id
+
+        return False
