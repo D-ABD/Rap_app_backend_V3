@@ -692,7 +692,7 @@ P3
 
 # 7. Ordre d’exécution concret recommandé
 
-## Lot 1 — sécurité objet
+## Lot 1 — sécurité objet (Déjà corrigé)
 1. `rap_app/api/viewsets/appairage_viewsets.py`
 2. tests API appairage
 3. `rap_app/api/viewsets/formations_viewsets.py`
