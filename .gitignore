@@ -49,3 +49,7 @@ backups/
 !utils/backup_db.sh
 !utils/check_alert.sh
 !deploy.sh
+
+
+TECHNICAL_AUDIT.md
+CORRECTION_AUDIT.md

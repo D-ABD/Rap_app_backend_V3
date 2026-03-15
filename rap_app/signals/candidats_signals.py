@@ -89,6 +89,15 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
         safe_prenom = _safe_non_blank(instance.first_name)
 
         if email:
+            # Si un candidat existe déjà et est déjà lié à un utilisateur (différent), on n'intervient pas.
+            if Candidat.objects.filter(email__iexact=email, compte_utilisateur__isnull=False).exists():
+                logger.warning(
+                    "⚠️ Candidat déjà lié à un utilisateur avec email %s, pas de création pour User #%s",
+                    email,
+                    instance.pk,
+                )
+                return
+
             try:
                 with transaction.atomic():
                     cand = (
@@ -106,12 +115,20 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
                         return
             except IntegrityError as e:
                 logger.warning("⚠️ Conflit réconciliation User->Candidat (email=%s): %s", email, e)
+                return  # Ajout : sortir en cas d'erreur pour éviter la création
 
-        Candidat.objects.get_or_create(
-            compte_utilisateur=instance,
-            defaults={"nom": safe_nom, "prenom": safe_prenom, "email": email or None},
-        )
-        logger.info("➕ Candidat créé pour User #%s (role=%s)", instance.pk, role)
+        # Envelopper la création dans une transaction pour rollback si échec
+        try:
+            with transaction.atomic():
+                Candidat.objects.get_or_create(
+                    compte_utilisateur=instance,
+                    defaults={"nom": safe_nom, "prenom": safe_prenom, "email": email or None},
+                )
+                logger.info("➕ Candidat créé pour User #%s (role=%s)", instance.pk, role)
+        except IntegrityError as e:
+            logger.error("❌ Erreur création Candidat pour User #%s : %s", instance.pk, e)
+            # Rollback automatique via atomic()
+
         return
 
     cand = getattr(instance, "candidat_associe", None)

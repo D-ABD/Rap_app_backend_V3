@@ -106,6 +106,14 @@ python3 manage.py createsuperuser
 # 4. GESTION GIT
 # --------------------------
 
+Chaque fichier modifié doit être vérifié : Avant de faire ton git add, fais un git diff sur le fichier. C'est le seul moyen de voir ce que tu as réellement changé.
+
+Commit "Atomique" : Ne fais pas un seul commit pour toute la journée.
+
+Tu as fini le P0-01 (Signals) ? Fais un commit : git commit -am "Fix: Sécurisation du signal sync_candidat".
+
+Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourras revenir en arrière uniquement sur ce commit avec git revert au lieu de devoir restaurer tout ton Zip.
+
 # Configuration initiale
 git init
 git add .
