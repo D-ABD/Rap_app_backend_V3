@@ -148,18 +148,6 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
             if getattr(cand, "_unlinking_from_user_sync", False):
                 delattr(cand, "_unlinking_from_user_sync")
 
-
-@receiver(post_save, sender=Candidat, dispatch_uid="rap_app.candidats_signals.ensure_user_for_candidate")
-def ensure_user_for_candidate(sender, instance: Candidat, created: bool, **kwargs):
-    """
-    Ne fait aucune création ni liaison automatique de CustomUser pour un Candidat.
-    """
-    logger.debug(
-        "⏭️ ensure_user_for_candidate neutralisé – aucune création/lien automatique pour Candidat #%s",
-        instance.pk,
-    )
-
-
 @receiver(pre_save, sender=Prospection, dispatch_uid="rap_app.candidats_signals.sync_formation_from_owner")
 def sync_formation_from_owner(sender, instance: Prospection, **kwargs):
     """
