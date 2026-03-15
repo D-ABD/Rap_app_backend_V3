@@ -1,14 +1,14 @@
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field
 
 from ...models.atelier_tre import AtelierTRE, AtelierTREPresence, PresenceStatut
 from ...models.candidat import Candidat
 from ...models.centres import Centre
 
 
-
 class CandidatMiniSerializer(serializers.ModelSerializer):
     """Sérialiseur minimal Candidat : id, nom (source nom_complet), read_only."""
+
     nom = serializers.CharField(source="nom_complet", read_only=True)
 
     class Meta:
@@ -18,6 +18,7 @@ class CandidatMiniSerializer(serializers.ModelSerializer):
 
 class CentreMiniSerializer(serializers.ModelSerializer):
     """Sérialiseur minimal Centre : id, label (source nom), read_only."""
+
     label = serializers.CharField(source="nom", read_only=True)
 
     class Meta:
@@ -25,28 +26,28 @@ class CentreMiniSerializer(serializers.ModelSerializer):
         fields = ["id", "label"]
 
 
-
 class AtelierTREPresenceSerializer(serializers.ModelSerializer):
     """Présence candidat à un atelier TRE : candidat, candidat_id, statut, statut_display, commentaire, dates."""
+
     candidat = CandidatMiniSerializer(read_only=True)
     candidat_id = serializers.PrimaryKeyRelatedField(
         source="candidat", queryset=Candidat.objects.all(), write_only=True
     )
-    statut_display = serializers.CharField(
-        source="get_statut_display", read_only=True
-    )
+    statut_display = serializers.CharField(source="get_statut_display", read_only=True)
 
     class Meta:
         model = AtelierTREPresence
         fields = [
             "id",
-            "candidat", "candidat_id",
-            "statut", "statut_display",
+            "candidat",
+            "candidat_id",
+            "statut",
+            "statut_display",
             "commentaire",
-            "created_at", "updated_at",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "candidat", "statut_display", "created_at", "updated_at"]
-
 
 
 @extend_schema_serializer()
@@ -57,12 +58,8 @@ class AtelierTRESerializer(serializers.ModelSerializer):
     nb_inscrits = serializers.SerializerMethodField(read_only=True)
     presence_counts = serializers.SerializerMethodField(read_only=True)
 
-    centre = serializers.PrimaryKeyRelatedField(
-        queryset=Centre.objects.all(), allow_null=True, required=False
-    )
-    candidats = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Candidat.objects.all(), required=False
-    )
+    centre = serializers.PrimaryKeyRelatedField(queryset=Centre.objects.all(), allow_null=True, required=False)
+    candidats = serializers.PrimaryKeyRelatedField(many=True, queryset=Candidat.objects.all(), required=False)
 
     centre_detail = CentreMiniSerializer(source="centre", read_only=True)
     candidats_detail = CandidatMiniSerializer(source="candidats", many=True, read_only=True)
@@ -73,18 +70,28 @@ class AtelierTRESerializer(serializers.ModelSerializer):
         model = AtelierTRE
         fields = [
             "id",
-            "type_atelier", "type_atelier_display",
+            "type_atelier",
+            "type_atelier_display",
             "date_atelier",
-            "centre", "centre_detail",
-            "candidats", "candidats_detail",
+            "centre",
+            "centre_detail",
+            "candidats",
+            "candidats_detail",
             "presences",
             "nb_inscrits",
             "presence_counts",
-            "created_by", "created_at", "updated_at",
+            "created_by",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "type_atelier_display", "nb_inscrits",
-            "created_by", "created_at", "updated_at", "presence_counts",
+            "id",
+            "type_atelier_display",
+            "nb_inscrits",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "presence_counts",
         ]
 
     @extend_schema_field(str)
@@ -159,10 +166,10 @@ class AtelierTRESerializer(serializers.ModelSerializer):
         return instance
 
 
-
 @extend_schema_serializer()
 class AtelierTREMetaSerializer(serializers.Serializer):
     """Choix pour l'UI : type_atelier, centre, candidat, presence_statut (format {value, label})."""
+
     type_atelier_choices = serializers.SerializerMethodField()
     centre_choices = serializers.SerializerMethodField()
     candidat_choices = serializers.SerializerMethodField()

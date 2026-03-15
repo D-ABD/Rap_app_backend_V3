@@ -3,13 +3,13 @@
 import logging
 from datetime import timedelta
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models.functions import Now
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import ValidationError
-from django.db.models import Q, Count, Subquery, OuterRef
-from django.db.models.functions import Now
-from django.conf import settings
 
 from .base import BaseModel
 from .partenaires import Partenaire
@@ -23,6 +23,7 @@ MAX_STATUT_LENGTH = 20
 MAX_MOTIF_LENGTH = 30
 MAX_OBJECTIF_LENGTH = 30
 MAX_MOYEN_LENGTH = 50
+
 
 class ProspectionManager(models.Manager):
     """
@@ -46,10 +47,7 @@ class ProspectionManager(models.Manager):
         Retourne les prospections actives dont la date de relance est échue ou atteinte.
         """
         date = date or timezone.now().date()
-        return (
-            self.actives()
-            .filter(relance_prevue__isnull=False, relance_prevue__lte=date)
-        )
+        return self.actives().filter(relance_prevue__isnull=False, relance_prevue__lte=date)
 
     def par_partenaire(self, partenaire_id):
         """
@@ -140,9 +138,7 @@ class Prospection(BaseModel):
         related_name="prospections",
     )
 
-    date_prospection = models.DateTimeField(
-        default=timezone.now, verbose_name=_("Date de prospection")
-    )
+    date_prospection = models.DateTimeField(default=timezone.now, verbose_name=_("Date de prospection"))
 
     relance_prevue = models.DateField(
         blank=True,
@@ -204,9 +200,7 @@ class Prospection(BaseModel):
             models.Index(fields=["moyen_contact"]),
         ]
         constraints = [
-            models.CheckConstraint(
-                check=Q(date_prospection__lte=Now()), name="prosp_date_not_future"
-            ),
+            models.CheckConstraint(check=Q(date_prospection__lte=Now()), name="prosp_date_not_future"),
         ]
 
     def __str__(self):
@@ -236,9 +230,7 @@ class Prospection(BaseModel):
                     )
 
         if self.date_prospection and self.date_prospection > timezone.now():
-            errors["date_prospection"] = ValidationError(
-                _("La date de prospection ne peut pas être dans le futur.")
-            )
+            errors["date_prospection"] = ValidationError(_("La date de prospection ne peut pas être dans le futur."))
 
         if (
             self.statut
@@ -326,20 +318,18 @@ class Prospection(BaseModel):
         ancien = None
         if not is_new and self.pk:
             try:
-                ancien = (
-                    Prospection.objects.only(
-                        "statut",
-                        "relance_prevue",
-                        "moyen_contact",
-                        "formation_id",
-                        "partenaire_id",
-                        "centre_id",
-                        "type_prospection",
-                        "objectif",
-                        "motif",
-                        "commentaire",
-                    ).get(pk=self.pk)
-                )
+                ancien = Prospection.objects.only(
+                    "statut",
+                    "relance_prevue",
+                    "moyen_contact",
+                    "formation_id",
+                    "partenaire_id",
+                    "centre_id",
+                    "type_prospection",
+                    "objectif",
+                    "motif",
+                    "commentaire",
+                ).get(pk=self.pk)
             except Prospection.DoesNotExist:
                 ancien = None
 
@@ -436,10 +426,7 @@ class Prospection(BaseModel):
                 created_by=user,
             )
         except Exception as e:
-            logger.warning(
-                f"Impossible de créer un historique pour Prospection #{self.pk} "
-                f"({champ_modifie}) : {e}"
-            )
+            logger.warning(f"Impossible de créer un historique pour Prospection #{self.pk} " f"({champ_modifie}) : {e}")
 
     @property
     def is_active(self):
@@ -453,11 +440,7 @@ class Prospection(BaseModel):
         """
         Retourne True si la prospection est active et que la date de relance est échue ou atteinte.
         """
-        return bool(
-            self.is_active
-            and self.relance_prevue
-            and self.relance_prevue <= timezone.now().date()
-        )
+        return bool(self.is_active and self.relance_prevue and self.relance_prevue <= timezone.now().date())
 
     @property
     def historique_recent(self):
@@ -479,19 +462,15 @@ class HistoriqueProspectionManager(models.Manager):
         today = timezone.now().date()
         start = today - timedelta(days=today.weekday())
         end = start + timedelta(days=6)
-        return self.filter(
-            prochain_contact__range=(start, end)
-        ).select_related('prospection', 'prospection__partenaire')
+        return self.filter(prochain_contact__range=(start, end)).select_related(
+            "prospection", "prospection__partenaire"
+        )
 
     def derniers_par_prospection(self):
         """
         Retourne le dernier historique pour chaque prospection.
         """
-        sub = (
-            self.filter(prospection=OuterRef('prospection'))
-            .order_by('-date_modification')
-            .values('id')[:1]
-        )
+        sub = self.filter(prospection=OuterRef("prospection")).order_by("-date_modification").values("id")[:1]
         return self.filter(id__in=Subquery(sub))
 
 
@@ -499,43 +478,43 @@ class HistoriqueProspection(BaseModel):
     """
     Historique des modifications de Prospection.
     """
-    prospection = models.ForeignKey(
-        Prospection, on_delete=models.CASCADE,
-        related_name="historiques", verbose_name=_("Prospection")
-    )
-    date_modification = models.DateTimeField(
-        auto_now_add=True, verbose_name=_("Date de modification")
-    )
 
-    champ_modifie   = models.CharField(max_length=50, verbose_name=_("Champ modifié"))
+    prospection = models.ForeignKey(
+        Prospection, on_delete=models.CASCADE, related_name="historiques", verbose_name=_("Prospection")
+    )
+    date_modification = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de modification"))
+
+    champ_modifie = models.CharField(max_length=50, verbose_name=_("Champ modifié"))
     ancienne_valeur = models.TextField(blank=True, null=True, verbose_name=_("Ancienne valeur"))
     nouvelle_valeur = models.TextField(blank=True, null=True, verbose_name=_("Nouvelle valeur"))
 
     ancien_statut = models.CharField(
         max_length=MAX_STATUT_LENGTH,
         choices=ProspectionChoices.PROSPECTION_STATUS_CHOICES,
-        verbose_name=_("Ancien statut")
+        verbose_name=_("Ancien statut"),
     )
     nouveau_statut = models.CharField(
         max_length=MAX_STATUT_LENGTH,
         choices=ProspectionChoices.PROSPECTION_STATUS_CHOICES,
-        verbose_name=_("Nouveau statut")
+        verbose_name=_("Nouveau statut"),
     )
     type_prospection = models.CharField(
         max_length=MAX_TYPE_LENGTH,
         choices=ProspectionChoices.TYPE_PROSPECTION_CHOICES,
         default=ProspectionChoices.TYPE_NOUVEAU_PROSPECT,
-        verbose_name=_("Type de prospection")
+        verbose_name=_("Type de prospection"),
     )
-    commentaire      = models.TextField(blank=True, null=True, verbose_name=_("Commentaire"))
-    resultat         = models.TextField(blank=True, null=True, verbose_name=_("Résultat"))
+    commentaire = models.TextField(blank=True, null=True, verbose_name=_("Commentaire"))
+    resultat = models.TextField(blank=True, null=True, verbose_name=_("Résultat"))
     # on garde ce champ côté historique pour tracer les choix saisis à ce moment-là
     prochain_contact = models.DateField(blank=True, null=True, verbose_name=_("Prochain contact"))
 
     moyen_contact = models.CharField(
         max_length=MAX_MOYEN_LENGTH,
         choices=ProspectionChoices.MOYEN_CONTACT_CHOICES,
-        blank=True, null=True, verbose_name=_("Moyen de contact")
+        blank=True,
+        null=True,
+        verbose_name=_("Moyen de contact"),
     )
 
     objects = models.Manager()
@@ -544,12 +523,12 @@ class HistoriqueProspection(BaseModel):
     class Meta:
         verbose_name = _("Historique de prospection")
         verbose_name_plural = _("Historiques de prospections")
-        ordering = ['-date_modification']
+        ordering = ["-date_modification"]
         indexes = [
-            models.Index(fields=['prospection']),
-            models.Index(fields=['date_modification']),
-            models.Index(fields=['prochain_contact']),
-            models.Index(fields=['nouveau_statut']),
+            models.Index(fields=["prospection"]),
+            models.Index(fields=["date_modification"]),
+            models.Index(fields=["prochain_contact"]),
+            models.Index(fields=["nouveau_statut"]),
         ]
 
     def __str__(self):
@@ -564,15 +543,13 @@ class HistoriqueProspection(BaseModel):
         """
         super().clean()
         if self.ancien_statut == self.nouveau_statut:
-            logger.warning(
-                f"Historique sans changement de statut pour prospection #{self.prospection_id}"
-            )
+            logger.warning(f"Historique sans changement de statut pour prospection #{self.prospection_id}")
 
     def save(self, *args, **kwargs):
         """
         Effectue la validation et la sauvegarde de l'historique.
         """
-        skip_history = kwargs.pop('skip_history', False)
+        skip_history = kwargs.pop("skip_history", False)
         self.full_clean()
         with transaction.atomic():
             super().save(*args, **kwargs)
@@ -610,12 +587,13 @@ class HistoriqueProspection(BaseModel):
         today = timezone.now().date()
         limite = today + timedelta(days=jours)
         return (
-            cls.objects
-            .filter(prochain_contact__range=(today, limite))
-            .exclude(prospection__statut__in=[
-                ProspectionChoices.STATUT_REFUSEE,
-                ProspectionChoices.STATUT_ANNULEE,
-            ])
-            .select_related('prospection', 'prospection__partenaire')
-            .order_by('prochain_contact')
+            cls.objects.filter(prochain_contact__range=(today, limite))
+            .exclude(
+                prospection__statut__in=[
+                    ProspectionChoices.STATUT_REFUSEE,
+                    ProspectionChoices.STATUT_ANNULEE,
+                ]
+            )
+            .select_related("prospection", "prospection__partenaire")
+            .order_by("prochain_contact")
         )

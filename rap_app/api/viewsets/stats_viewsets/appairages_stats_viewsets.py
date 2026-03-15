@@ -1,21 +1,21 @@
 # rap_app/api/viewsets/stats_viewsets/appairages_stats_viewsets.py
 from __future__ import annotations
-from ...serializers.base_serializers import EmptySerializer
-from typing import Dict, Optional, List, Literal
+
 import logging
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from typing import Dict, List, Literal, Optional
 
 from django.db.models import Count, Q, QuerySet, Value
-from django.db.models.functions import Substr, Coalesce
+from django.db.models.functions import Coalesce, Substr
 from django.utils.dateparse import parse_date
-
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import GenericViewSet
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from ....models.appairage import Appairage, AppairageActivite, AppairageStatut
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 logger = logging.getLogger(__name__)
 
@@ -206,13 +206,13 @@ class AppairageStatsViewSet(GenericViewSet):
             return list(user.centres.values_list("id", flat=True))
         return []
 
-
     def _staff_departement_codes(self, user) -> List[str]:
         """
         Récupère les codes département ([:2]) depuis user / user.profile via
         attributs departements_codes|departements (liste/M2M/str).
         Cela sert à restreindre la visibilité pour certains comptes staff.
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -265,9 +265,9 @@ class AppairageStatsViewSet(GenericViewSet):
             if dep_codes:
                 q_dep = Q()
                 for code in dep_codes:
-                    q_dep |= Q(
-                        formation__centre__code_postal__startswith=code
-                    ) | Q(partenaire__zip_code__startswith=code)
+                    q_dep |= Q(formation__centre__code_postal__startswith=code) | Q(
+                        partenaire__zip_code__startswith=code
+                    )
                 q |= q_dep
             return qs.filter(q).distinct()
 
@@ -288,13 +288,15 @@ class AppairageStatsViewSet(GenericViewSet):
 
         # 🔹 Gestion des archivés via query param
         inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in [
-            "1", "true", "yes", "on"
+            "1",
+            "true",
+            "yes",
+            "on",
         ]
         if not inclure_archivees:
             qs = qs.filter(activite=AppairageActivite.ACTIF)
 
         return qs
-
 
     def _apply_common_filters(self, qs: QuerySet) -> QuerySet:
         """
@@ -336,7 +338,7 @@ class AppairageStatsViewSet(GenericViewSet):
         statut = p.get("statut")
         if statut:
             statut_key = _safe_status_key(statut)
-            inv = { _safe_status_key(k): k for k, _ in AppairageStatut.choices }
+            inv = {_safe_status_key(k): k for k, _ in AppairageStatut.choices}
             if statut_key in inv:
                 qs = qs.filter(statut=inv[statut_key])
             else:
@@ -360,15 +362,15 @@ class AppairageStatsViewSet(GenericViewSet):
     # LIST (overview) — KPIs globaux + taux de transformation
     # ────────────────────────────────────────────────────────────
     @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="avec_archivees",
-            type=bool,
-            required=False,
-            description="Inclure les appairages archivés (true/false)"
-        ),
-    ],
-)
+        parameters=[
+            OpenApiParameter(
+                name="avec_archivees",
+                type=bool,
+                required=False,
+                description="Inclure les appairages archivés (true/false)",
+            ),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         """
         Endpoint GET /appairage-stats/
@@ -412,12 +414,9 @@ class AppairageStatsViewSet(GenericViewSet):
         )
 
         # Comptes par statut (sécurisé avec distinct)
-        raw_counts = dict(
-            qs.values("statut").annotate(c=Count("id", distinct=True)).values_list("statut", "c")
-        )
+        raw_counts = dict(qs.values("statut").annotate(c=Count("id", distinct=True)).values_list("statut", "c"))
         status_map: Dict[str, int] = {
-            _safe_status_key(code): int(raw_counts.get(code, 0))
-            for code, _ in AppairageStatut.choices
+            _safe_status_key(code): int(raw_counts.get(code, 0)) for code, _ in AppairageStatut.choices
         }
 
         # Taux de transformation = appairage_ok / total
@@ -433,7 +432,11 @@ class AppairageStatsViewSet(GenericViewSet):
         ]
 
         payload = {
-            "kpis": {**{k: int(v or 0) for k, v in agg.items()}, "statuts": status_map, "taux_transformation": taux_transformation},
+            "kpis": {
+                **{k: int(v or 0) for k, v in agg.items()},
+                "statuts": status_map,
+                "taux_transformation": taux_transformation,
+            },
             "repartition": {"par_statut": by_statut},
             "filters_echo": {k: v for k, v in request.query_params.items()},
         }
@@ -443,15 +446,15 @@ class AppairageStatsViewSet(GenericViewSet):
     # Grouped — KPIs par groupe + taux_transformation
     # ────────────────────────────────────────────────────────────
     @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="avec_archivees",
-            type=bool,
-            required=False,
-            description="Inclure les appairages archivés (true/false)"
-        ),
-    ],
-)
+        parameters=[
+            OpenApiParameter(
+                name="avec_archivees",
+                type=bool,
+                required=False,
+                description="Inclure les appairages archivés (true/false)",
+            ),
+        ],
+    )
     @action(detail=False, methods=["GET"], url_path="grouped")
     def grouped(self, request):
         """
@@ -513,13 +516,15 @@ class AppairageStatsViewSet(GenericViewSet):
         }
 
         rows = list(
-            qs.values(*group_fields).annotate(
+            qs.values(*group_fields)
+            .annotate(
                 appairages_total=Count("id", distinct=True),
                 nb_candidats=Count("candidat", distinct=True),
                 nb_partenaires=Count("partenaire", distinct=True),
                 nb_formations=Count("formation", distinct=True),
                 **status_annots,
-            ).order_by(*group_fields)
+            )
+            .order_by(*group_fields)
         )
 
         # Post-traitement : group_key / group_label + taux_transformation
@@ -557,25 +562,27 @@ class AppairageStatsViewSet(GenericViewSet):
 
             results.append(out)
 
-        return Response({
-            "group_by": by,
-            "results": results,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "group_by": by,
+                "results": results,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )
 
     # ────────────────────────────────────────────────────────────
     # Tops — partenaires / formations
     # ────────────────────────────────────────────────────────────
     @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="avec_archivees",
-            type=bool,
-            required=False,
-            description="Inclure les appairages archivés (true/false)"
-        ),
-    ],
-)
+        parameters=[
+            OpenApiParameter(
+                name="avec_archivees",
+                type=bool,
+                required=False,
+                description="Inclure les appairages archivés (true/false)",
+            ),
+        ],
+    )
     @action(detail=False, methods=["GET"], url_path="tops")
     def tops(self, request):
         """
@@ -598,11 +605,7 @@ class AppairageStatsViewSet(GenericViewSet):
         qs = self._apply_common_filters(self.get_queryset())
 
         def _top(qs: QuerySet, id_field: str, label_field: str, label_fallback_prefix: str):
-            rows = list(
-                qs.values(id_field, label_field)
-                .annotate(cnt=Count("id", distinct=True))
-                .order_by("-cnt")[:10]
-            )
+            rows = list(qs.values(id_field, label_field).annotate(cnt=Count("id", distinct=True)).order_by("-cnt")[:10])
             out = []
             for r in rows:
                 _id = r.get(id_field)
@@ -613,8 +616,10 @@ class AppairageStatsViewSet(GenericViewSet):
         top_partenaires = _top(qs, "partenaire_id", "partenaire__nom", "Partenaire")
         top_formations = _top(qs, "formation_id", "formation__nom", "Formation")
 
-        return Response({
-            "top_partenaires": top_partenaires,
-            "top_formations": top_formations,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "top_partenaires": top_partenaires,
+                "top_formations": top_formations,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )

@@ -1,7 +1,8 @@
 import logging
+
 from django.contrib import admin, messages
-from django.utils.translation import gettext_lazy as _
 from django.db.models import Count, Q
+from django.utils.translation import gettext_lazy as _
 
 from ..models.atelier_tre import AtelierTRE, AtelierTREPresence, PresenceStatut
 
@@ -12,6 +13,7 @@ class AtelierTREPresenceInline(admin.TabularInline):
     """
     Inline pour les présences à un atelier.
     """
+
     model = AtelierTREPresence
     extra = 0
     verbose_name = _("Présence")
@@ -96,6 +98,7 @@ class AtelierTREAdmin(admin.ModelAdmin):
         """
         label = obj.get_type_atelier_display()
         return label if not obj.date_atelier else f"{label} – {obj.date_atelier:%d/%m/%Y %H:%M}"
+
     get_label.short_description = _("Atelier")
 
     def nb_inscrits_display(self, obj):
@@ -103,6 +106,7 @@ class AtelierTREAdmin(admin.ModelAdmin):
         Retourne le nombre d'inscrits.
         """
         return obj.nb_inscrits
+
     nb_inscrits_display.short_description = _("Nb inscrits")
 
     def nb_presents(self, obj):
@@ -113,6 +117,7 @@ class AtelierTREAdmin(admin.ModelAdmin):
         if annot is not None:
             return annot
         return obj.presences.filter(statut=PresenceStatut.PRESENT).count()
+
     nb_presents.short_description = _("Nb présents")
 
     def get_queryset(self, request):

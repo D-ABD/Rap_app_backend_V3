@@ -1,40 +1,42 @@
 # rap_app/api/viewsets/cvtheque_viewset.py
 
 import mimetypes
-import urllib.parse
 import os
-from rest_framework import viewsets, status, filters
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+import urllib.parse
+
 import django_filters
-from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import FileResponse
-from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
-    extend_schema,
-    extend_schema_view,
     OpenApiResponse,
     OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
 )
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.response import Response
 
-from ...models.cvtheque import CVTheque
 from ...api.paginations import RapAppPagination
-from ..permissions import CanAccessCVTheque
 from ...api.roles import (
     is_admin_like,
-    is_staff_or_staffread,
-    is_staff_like,
     is_candidate,
+    is_staff_like,
+    is_staff_or_staffread,
 )
-
+from ...models.cvtheque import CVTheque
+from ..permissions import CanAccessCVTheque
 from ..serializers.cvtheque_serializers import (
-    CVThequeListSerializer,
     CVThequeDetailSerializer,
+    CVThequeListSerializer,
     CVThequeWriteSerializer,
 )
 
+
 class CVThequeFilterSet(django_filters.FilterSet):
     """Filtres : centre_id, formation_id, type_offre_id, statut_formation, ville (icontains), document_type."""
+
     centre_id = django_filters.NumberFilter(field_name="candidat__formation__centre__id")
     formation_id = django_filters.NumberFilter(field_name="candidat__formation__id")
     type_offre_id = django_filters.NumberFilter(field_name="candidat__formation__type_offre__id")
@@ -53,6 +55,7 @@ class CVThequeFilterSet(django_filters.FilterSet):
             "ville",
         ]
 
+
 @extend_schema_view(
     list=extend_schema(
         summary="Liste des documents CVThèque",
@@ -67,6 +70,7 @@ class CVThequeFilterSet(django_filters.FilterSet):
 )
 class CVThequeViewSet(viewsets.ModelViewSet):
     """ViewSet CRUD pour CVTheque. CanAccessCVTheque. get_queryset : admin tout, candidat ses docs, staff par user.centres ; preview/download sans scope. list retourne results + filters (_get_filter_values). download (attachment), preview (inline PDF)."""
+
     queryset = CVTheque.objects.select_related(
         "candidat",
         "candidat__formation",
@@ -160,9 +164,7 @@ class CVThequeViewSet(viewsets.ModelViewSet):
         ).distinct()
 
         return {
-            "document_types": [
-                {"value": key, "label": label} for key, label in CVTheque.DOCUMENT_TYPES
-            ],
+            "document_types": [{"value": key, "label": label} for key, label in CVTheque.DOCUMENT_TYPES],
             "centres": [
                 {"value": c["candidat__formation__centre_id"], "label": c["candidat__formation__centre__nom"]}
                 for c in centres
@@ -217,14 +219,12 @@ class CVThequeViewSet(viewsets.ModelViewSet):
         obj = self.get_object()
 
         if not obj.fichier:
-            return Response({"success": False, "message": "Aucun fichier associé."},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response({"success": False, "message": "Aucun fichier associé."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
             file = obj.fichier.open("rb")
         except FileNotFoundError:
-            return Response({"success": False, "message": "Fichier introuvable."},
-                            status=status.HTTP_404_NOT_FOUND)
+            return Response({"success": False, "message": "Fichier introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
         mime_type, _ = mimetypes.guess_type(obj.fichier.name)
         response = FileResponse(file, content_type=mime_type or "application/octet-stream")
@@ -245,15 +245,11 @@ class CVThequeViewSet(viewsets.ModelViewSet):
         obj = self.get_object()
 
         if not obj.fichier:
-            return Response(
-                {"success": False, "message": "Aucun fichier associé."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"success": False, "message": "Aucun fichier associé."}, status=status.HTTP_404_NOT_FOUND)
 
         if not os.path.exists(obj.fichier.path):
             return Response(
-                {"success": False, "message": "Fichier introuvable sur le serveur."},
-                status=status.HTTP_404_NOT_FOUND
+                {"success": False, "message": "Fichier introuvable sur le serveur."}, status=status.HTTP_404_NOT_FOUND
             )
 
         file = obj.fichier.open("rb")

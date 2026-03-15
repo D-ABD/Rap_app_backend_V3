@@ -1,7 +1,7 @@
 # rap_app/admin.py
 from __future__ import annotations
 
-from typing import Iterable, Tuple, Optional
+from typing import Iterable, Optional, Tuple
 
 from django.contrib import admin
 from django.db.models import QuerySet
@@ -23,9 +23,7 @@ class DepartementListFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin) -> Iterable[Tuple[str, str]]:
         # Récupère les 2 premiers chars du code postal des centres liés
-        qs = Prospection.objects.filter(comments__isnull=False).values_list(
-            "centre__code_postal", flat=True
-        )
+        qs = Prospection.objects.filter(comments__isnull=False).values_list("centre__code_postal", flat=True)
         codes = set()
         for cp in qs:
             if not cp:
@@ -138,7 +136,7 @@ class ProspectionCommentAdmin(admin.ModelAdmin):
         if not change and hasattr(obj, "created_by") and not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
     # (Optionnel) restreindre la vue si tu ouvres l'admin à des non-staff
     # def has_view_permission(self, request, obj=None) -> bool:
     #     return bool(getattr(request.user, "is_staff", False) or getattr(request.user, "is_superuser", False))
-

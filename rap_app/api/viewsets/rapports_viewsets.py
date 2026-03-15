@@ -1,13 +1,17 @@
-from rest_framework import viewsets, status, filters
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import filters, status, viewsets
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
-from ...models.rapports import Rapport
-from ...api.serializers.rapports_serializers import RapportChoiceGroupSerializer, RapportSerializer
-from ...api.permissions import IsStaffOrAbove
 from ...api.paginations import RapAppPagination
+from ...api.permissions import IsStaffOrAbove
+from ...api.serializers.rapports_serializers import (
+    RapportChoiceGroupSerializer,
+    RapportSerializer,
+)
 from ...models.logs import LogUtilisateur
+from ...models.rapports import Rapport
 from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -86,7 +90,7 @@ class RapportViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_CREATE,
             user=self.request.user,
-            details="Création d’un rapport"
+            details="Création d’un rapport",
         )
 
     def perform_update(self, serializer):
@@ -99,7 +103,7 @@ class RapportViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_UPDATE,
             user=self.request.user,
-            details="Modification d’un rapport"
+            details="Modification d’un rapport",
         )
 
     def destroy(self, request, *args, **kwargs):
@@ -114,13 +118,12 @@ class RapportViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
             user=request.user,
-            details="Suppression logique du rapport"
+            details="Suppression logique du rapport",
         )
-        return Response({
-            "success": True,
-            "message": "Rapport supprimé avec succès.",
-            "data": None
-        }, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"success": True, "message": "Rapport supprimé avec succès.", "data": None},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
     def create(self, request, *args, **kwargs):
         """
@@ -130,11 +133,14 @@ class RapportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        return Response({
-            "success": True,
-            "message": "Rapport créé avec succès.",
-            "data": serializer.instance.to_serializable_dict()
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "success": True,
+                "message": "Rapport créé avec succès.",
+                "data": serializer.instance.to_serializable_dict(),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     def update(self, request, *args, **kwargs):
         """
@@ -146,11 +152,13 @@ class RapportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        return Response({
-            "success": True,
-            "message": "Rapport mis à jour avec succès.",
-            "data": serializer.instance.to_serializable_dict()
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Rapport mis à jour avec succès.",
+                "data": serializer.instance.to_serializable_dict(),
+            }
+        )
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -159,11 +167,13 @@ class RapportViewSet(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": "Rapport récupéré avec succès.",
-            "data": serializer.instance.to_serializable_dict()
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Rapport récupéré avec succès.",
+                "data": serializer.instance.to_serializable_dict(),
+            }
+        )
 
     def list(self, request, *args, **kwargs):
         """
@@ -177,16 +187,16 @@ class RapportViewSet(viewsets.ModelViewSet):
             # DRF gère ici la structure de la pagination (voir RapAppPagination).
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "success": True,
-            "message": "Liste des rapports récupérée avec succès.",
-            "data": serializer.data
-        })
+        return Response(
+            {"success": True, "message": "Liste des rapports récupérée avec succès.", "data": serializer.data}
+        )
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
+
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 
 class RapportChoicesView(APIView):
     """
@@ -200,18 +210,21 @@ class RapportChoicesView(APIView):
         summary="Liste des choix possibles pour les rapports",
         description="Retourne les choix disponibles pour les types de rapports, périodicité et formats.",
         responses={200: OpenApiResponse(response=RapportChoiceGroupSerializer)},
-        tags=["Rapports"]
+        tags=["Rapports"],
     )
     def get(self, request):
         """
         Retourne les choix disponibles pour les champs type_rapport,
         periode et format du modèle Rapport.
         """
+
         def serialize_choices(choices):
             return [{"value": k, "label": v} for k, v in choices]
 
-        return Response({
-            "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
-            "periode": serialize_choices(Rapport.PERIODE_CHOICES),
-            "format": serialize_choices(Rapport.FORMAT_CHOICES),
-        })
+        return Response(
+            {
+                "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
+                "periode": serialize_choices(Rapport.PERIODE_CHOICES),
+                "format": serialize_choices(Rapport.FORMAT_CHOICES),
+            }
+        )

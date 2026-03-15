@@ -1,12 +1,12 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
+from rest_framework import serializers
 
-from ...models.rapports import Rapport
 from ...models.centres import Centre
+from ...models.formations import Formation
+from ...models.rapports import Rapport
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ...models.formations import Formation
 
 
 @extend_schema_serializer(
@@ -30,7 +30,7 @@ from ...models.formations import Formation
                 "temps_generation": 3.21,
                 "created_at": "2024-05-17T13:00:00Z",
                 "created_by": 5,
-                "is_active": True
+                "is_active": True,
             },
             response_only=True,
         )
@@ -41,29 +41,58 @@ class RapportSerializer(serializers.ModelSerializer):
     Sérialiseur pour le modèle Rapport : champs du modèle, champs _display et _nom (source modèle ou relation). to_representation : enveloppe la sortie dans {success, message, data} avec data = instance.to_serializable_dict(). validate : instancie Rapport(**attrs) et appelle clean() pour la validation métier.
     """
 
-    type_rapport_display = serializers.CharField(source='get_type_rapport_display', read_only=True)
-    periode_display = serializers.CharField(source='get_periode_display', read_only=True)
-    format_display = serializers.CharField(source='get_format_display', read_only=True)
+    type_rapport_display = serializers.CharField(source="get_type_rapport_display", read_only=True)
+    periode_display = serializers.CharField(source="get_periode_display", read_only=True)
+    format_display = serializers.CharField(source="get_format_display", read_only=True)
 
-    centre_nom = serializers.CharField(source='centre.nom', read_only=True)
-    type_offre_nom = serializers.CharField(source='type_offre.nom', read_only=True)
-    statut_nom = serializers.CharField(source='statut.nom', read_only=True)
-    formation_nom = serializers.CharField(source='formation.nom', read_only=True)
+    centre_nom = serializers.CharField(source="centre.nom", read_only=True)
+    type_offre_nom = serializers.CharField(source="type_offre.nom", read_only=True)
+    statut_nom = serializers.CharField(source="statut.nom", read_only=True)
+    formation_nom = serializers.CharField(source="formation.nom", read_only=True)
 
     class Meta:
         model = Rapport
         fields = [
-            "id", "nom", "type_rapport", "type_rapport_display",
-            "periode", "periode_display", "date_debut", "date_fin",
-            "format", "format_display", "centre", "centre_nom",
-            "type_offre", "type_offre_nom", "statut", "statut_nom",
-            "formation", "formation_nom", "donnees", "temps_generation",
-            "created_at", "created_by", "updated_at", "updated_by", "is_active"
+            "id",
+            "nom",
+            "type_rapport",
+            "type_rapport_display",
+            "periode",
+            "periode_display",
+            "date_debut",
+            "date_fin",
+            "format",
+            "format_display",
+            "centre",
+            "centre_nom",
+            "type_offre",
+            "type_offre_nom",
+            "statut",
+            "statut_nom",
+            "formation",
+            "formation_nom",
+            "donnees",
+            "temps_generation",
+            "created_at",
+            "created_by",
+            "updated_at",
+            "updated_by",
+            "is_active",
         ]
         read_only_fields = [
-            "id", "created_at", "updated_at", "created_by", "updated_by", "is_active",
-            "type_rapport_display", "periode_display", "format_display",
-            "centre_nom", "type_offre_nom", "statut_nom", "formation_nom"
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "is_active",
+            "type_rapport_display",
+            "periode_display",
+            "format_display",
+            "centre_nom",
+            "type_offre_nom",
+            "statut_nom",
+            "formation_nom",
         ]
         extra_kwargs = {
             "nom": {"help_text": "Titre descriptif du rapport"},
@@ -82,11 +111,7 @@ class RapportSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         """Retourne {success: True, message: '...', data: instance.to_serializable_dict()}."""
-        return {
-            "success": True,
-            "message": "Rapport récupéré avec succès.",
-            "data": instance.to_serializable_dict()
-        }
+        return {"success": True, "message": "Rapport récupéré avec succès.", "data": instance.to_serializable_dict()}
 
     def validate(self, attrs):
         """Instancie Rapport(**attrs) et appelle clean() ; propage ValidationError du modèle."""
@@ -94,24 +119,26 @@ class RapportSerializer(serializers.ModelSerializer):
         instance.clean()
         return attrs
 
+
 from rest_framework import serializers
+
 from ...models.rapports import Rapport
+
 
 class RapportChoiceSerializer(serializers.Serializer):
     """
     Option (value, label) pour un choix de rapport (type, période, format). Pas de validation personnalisée.
     """
-    value = serializers.CharField(
-        help_text="Valeur interne (ex: 'occupation')"
-    )
-    label = serializers.CharField(
-        help_text="Libellé lisible (ex: 'Rapport d'occupation des formations')"
-    )
+
+    value = serializers.CharField(help_text="Valeur interne (ex: 'occupation')")
+    label = serializers.CharField(help_text="Libellé lisible (ex: 'Rapport d'occupation des formations')")
+
 
 class RapportChoiceGroupSerializer(serializers.Serializer):
     """
     Structure de sortie des groupes d'options : type_rapport, periode, format (listes de RapportChoiceSerializer).
     """
+
     type_rapport = RapportChoiceSerializer(many=True)
     periode = RapportChoiceSerializer(many=True)
     format = RapportChoiceSerializer(many=True)

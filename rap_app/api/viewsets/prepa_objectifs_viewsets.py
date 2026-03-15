@@ -1,31 +1,32 @@
 # rap_app/api/viewsets/prepa_objectifs_viewset.py
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
+from collections import OrderedDict
+from io import BytesIO
+
+from django.http import HttpResponse
 from drf_spectacular.utils import (
+    OpenApiParameter,
     extend_schema,
     extend_schema_view,
-    OpenApiParameter,
 )
-from django.http import HttpResponse
-from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from collections import OrderedDict
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from ...models.centres import Centre
-from ...models.prepa import ObjectifPrepa, Prepa
-from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
-from ..permissions import IsPrepaStaffOrAbove
 from ...api.roles import (
     is_admin_like,
-    is_staff_or_staffread,
-    is_prepa_staff,
     is_candidate,
+    is_prepa_staff,
+    is_staff_or_staffread,
 )
+from ...models.centres import Centre
+from ...models.prepa import ObjectifPrepa, Prepa
+from ..permissions import IsPrepaStaffOrAbove
+from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
 
 
 @extend_schema_view(
@@ -34,8 +35,12 @@ from ...api.roles import (
         description="Retourne la liste paginée des objectifs Prépa (format DRF standard).",
         parameters=[
             OpenApiParameter(name="annee", description="Filtrer par année", required=False, type=int),
-            OpenApiParameter(name="centre_id", description="Filtrer par identifiant de centre", required=False, type=int),
-            OpenApiParameter(name="departement", description="Filtrer par code département (ex: 59, 75)", required=False, type=str),
+            OpenApiParameter(
+                name="centre_id", description="Filtrer par identifiant de centre", required=False, type=int
+            ),
+            OpenApiParameter(
+                name="departement", description="Filtrer par code département (ex: 59, 75)", required=False, type=str
+            ),
         ],
         responses={200: ObjectifPrepaSerializer(many=True)},
     ),
@@ -185,10 +190,7 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
 
         annees = qs.order_by("-annee").values_list("annee", flat=True).distinct()
         centres = qs.values("centre__id", "centre__nom", "centre__code_postal").distinct()
-        departements = sorted({
-            (c["centre__code_postal"] or "")[:2]
-            for c in centres if c.get("centre__code_postal")
-        })
+        departements = sorted({(c["centre__code_postal"] or "")[:2] for c in centres if c.get("centre__code_postal")})
 
         data = OrderedDict(
             annee=[{"value": a, "label": str(a)} for a in annees],
@@ -239,16 +241,21 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
         header_fill = PatternFill("solid", fgColor="4F81BD")
         center_align = Alignment(horizontal="center", vertical="center")
         thin_border = Border(
-            left=Side(style="thin"), right=Side(style="thin"),
-            top=Side(style="thin"), bottom=Side(style="thin")
+            left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
         )
 
         # === En-têtes ===
         headers = [
-            "Centre", "Département", "Année", "Objectif",
-            "Réalisé (entrées Atelier 1)", "Adhésions",
-            "Taux prescription (%)", "Taux présence IC (%)",
-            "Taux adhésion IC (%)", "Taux atteinte (%)",
+            "Centre",
+            "Département",
+            "Année",
+            "Objectif",
+            "Réalisé (entrées Atelier 1)",
+            "Adhésions",
+            "Taux prescription (%)",
+            "Taux présence IC (%)",
+            "Taux adhésion IC (%)",
+            "Taux atteinte (%)",
             "Taux rétention (%)",
             "Reste à faire",
         ]
@@ -265,14 +272,22 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
         for obj in qs:
             # La structure de data dépend du retour de obj.synthese_globale().
             data = obj.synthese_globale()
-            ws.append([
-                data["centre"], obj.centre.departement,
-                data["annee"], data["objectif"], data["realise"],
-                data["adhesions"], data["taux_prescription"],
-                data["taux_presence"], data["taux_adhesion"],
-                data["taux_atteinte"], data.get("taux_retention", 0),
-                data["reste_a_faire"],
-            ])
+            ws.append(
+                [
+                    data["centre"],
+                    obj.centre.departement,
+                    data["annee"],
+                    data["objectif"],
+                    data["realise"],
+                    data["adhesions"],
+                    data["taux_prescription"],
+                    data["taux_presence"],
+                    data["taux_adhesion"],
+                    data["taux_atteinte"],
+                    data.get("taux_retention", 0),
+                    data["reste_a_faire"],
+                ]
+            )
 
         # === Ajustement largeur colonnes ===
         for col in ws.columns:

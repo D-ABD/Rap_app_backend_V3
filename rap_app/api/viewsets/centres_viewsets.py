@@ -1,20 +1,20 @@
 # rap_app/api/viewsets/centre_viewsets.py
 
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from drf_spectacular.utils import extend_schema, extend_schema_view
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.decorators import action
-from rest_framework.views import APIView
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from ..serializers.centres_serializers import CentreSerializer
 from ...models.centres import Centre
-from ..permissions import ReadWriteAdminReadStaff
-from ..paginations import RapAppPagination
 from ...models.logs import LogUtilisateur
+from ..paginations import RapAppPagination
+from ..permissions import ReadWriteAdminReadStaff
+from ..serializers.centres_serializers import CentreSerializer
 
 
 @extend_schema_view(
@@ -74,7 +74,6 @@ class CentreViewSet(viewsets.ModelViewSet):
 
         return qs
 
-    
     @action(detail=False, methods=["get"], url_path="liste-simple")
     def liste_simple(self, request):
         """GET : liste id/label des centres (get_queryset), filtre search/q sur nom ou code_postal, page_size (défaut 200)."""
@@ -91,7 +90,6 @@ class CentreViewSet(viewsets.ModelViewSet):
         qs = qs.order_by("nom")[:page_size]
         data = [{"id": c.id, "label": c.nom} for c in qs]
         return Response({"results": data})
-
 
     def create(self, request, *args, **kwargs):
         """Crée un centre (CentreSerializer), save(user), LogUtilisateur.log_action CREATE, retourne success/message/data."""
@@ -170,5 +168,3 @@ class CentreViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_204_NO_CONTENT,
         )
-
-

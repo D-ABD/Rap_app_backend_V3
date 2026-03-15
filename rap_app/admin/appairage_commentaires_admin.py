@@ -1,4 +1,5 @@
 import logging
+
 from django.contrib import admin, messages
 from django.utils.translation import gettext_lazy as _
 
@@ -9,6 +10,7 @@ logger = logging.getLogger("application.commentaires_appairage")
 
 class CommentaireAppairageInline(admin.TabularInline):
     """Affichage en ligne des commentaires d'appairage dans l'admin."""
+
     model = CommentaireAppairage
     extra = 0
     can_delete = False
@@ -26,6 +28,7 @@ class CommentaireAppairageInline(admin.TabularInline):
 @admin.register(CommentaireAppairage)
 class CommentaireAppairageAdmin(admin.ModelAdmin):
     """Admin des commentaires d'appairage."""
+
     date_hierarchy = "created_at"
     ordering = ("-created_at", "-id")
 
@@ -75,6 +78,7 @@ class CommentaireAppairageAdmin(admin.ModelAdmin):
     def auteur_nom(self, obj):
         """Nom de l'auteur du commentaire."""
         return obj.auteur_nom()
+
     auteur_nom.short_description = _("Auteur")
 
     def short_body(self, obj):
@@ -82,6 +86,7 @@ class CommentaireAppairageAdmin(admin.ModelAdmin):
         if not obj.body:
             return "-"
         return (obj.body[:70] + "…") if len(obj.body) > 70 else obj.body
+
     short_body.short_description = _("Aperçu")
 
     def get_queryset(self, request):

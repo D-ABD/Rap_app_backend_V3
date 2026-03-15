@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+
 from django.db.models import Q, QuerySet
 
 from .roles import get_staff_centre_ids_cached
@@ -21,8 +22,7 @@ class StaffCentresScopeMixin:
         Retourne True si l'utilisateur est admin ou superuser.
         """
         return bool(
-            getattr(u, "is_superuser", False)
-            or (hasattr(u, "is_admin") and callable(u.is_admin) and u.is_admin())
+            getattr(u, "is_superuser", False) or (hasattr(u, "is_admin") and callable(u.is_admin) and u.is_admin())
         )
 
     def _is_staff_or_read(self, u) -> bool:
@@ -81,11 +81,7 @@ class StaffCentresScopeMixin:
                         return list(set(codes))
 
                 if isinstance(val, (list, tuple, set)):
-                    codes = [
-                        str(x)[: self.departement_code_len]
-                        for x in val
-                        if x is not None and str(x).strip() != ""
-                    ]
+                    codes = [str(x)[: self.departement_code_len] for x in val if x is not None and str(x).strip() != ""]
                     if codes:
                         return list(set(codes))
 
@@ -131,4 +127,3 @@ class StaffCentresScopeMixin:
         """
         base = super().get_queryset()
         return self.scope_queryset_to_centres(base)
-

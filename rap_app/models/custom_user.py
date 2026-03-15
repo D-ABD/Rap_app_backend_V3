@@ -1,13 +1,14 @@
 # rap_app/models/custom_user.py
 
 import logging
+
+from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.functional import cached_property
-from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.contrib.auth.base_user import BaseUserManager
 from django.utils import timezone
+from django.utils.functional import cached_property
 
 logger = logging.getLogger("rap_app.customuser")
 
@@ -84,7 +85,8 @@ class CustomUserManager(BaseUserManager):
 
         extra_fields.setdefault(
             "is_staff",
-            role in [
+            role
+            in [
                 CustomUser.ROLE_ADMIN,
                 CustomUser.ROLE_SUPERADMIN,
                 CustomUser.ROLE_STAFF,
@@ -273,7 +275,6 @@ class CustomUser(AbstractUser):
 
         action = "créé" if is_new else "mis à jour"
         logger.info(f"✅ Utilisateur {action} : {self.email} (rôle : {self.get_role_display()})")
-
 
     def __str__(self):
         """Retourne le username ou l'email."""

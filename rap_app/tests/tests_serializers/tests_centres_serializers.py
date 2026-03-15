@@ -1,6 +1,9 @@
 from django.test import TestCase
+
 from rap_app.models.centres import Centre
+
 from ...api.serializers.centres_serializers import CentreSerializer
+
 
 class CentreSerializerTestCase(TestCase):
     def setUp(self):

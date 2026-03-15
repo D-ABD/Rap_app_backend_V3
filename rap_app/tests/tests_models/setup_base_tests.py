@@ -2,6 +2,7 @@
 
 from django.test import TestCase
 from django.utils.timezone import now
+
 from ...models import CustomUser
 
 
@@ -18,50 +19,39 @@ class BaseModelTestSetupMixin(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = self.create_user(
-            email="testuser@example.com",
-            role=CustomUser.ROLE_STAGIAIRE
-        )
+        self.user = self.create_user(email="testuser@example.com", role=CustomUser.ROLE_STAGIAIRE)
         self.test_date = now()
 
     def create_user(self, email, role=CustomUser.ROLE_STAGIAIRE, password="password123", **extra_fields):
         """
         Crée un utilisateur valide basé sur CustomUser avec validation complète.
-        
+
         Args:
             email (str): Email requis
             role (str): Un des rôles définis dans CustomUser
             password (str): Mot de passe
             **extra_fields: Prénom, nom, bio, téléphone, etc.
-        
+
         Returns:
             CustomUser: utilisateur créé et sauvegardé
         """
         return CustomUser.objects.create_user_with_role(
-            email=email,
-            username=email.split('@')[0],
-            password=password,
-            role=role,
-            **extra_fields
+            email=email, username=email.split("@")[0], password=password, role=role, **extra_fields
         )
 
     def get_user_by_role(self, role, suffix="user", **kwargs):
         """
         Crée et retourne un utilisateur pour un rôle donné, utile dans les tests multi-profils.
-        
+
         Args:
             role (str): Un des rôles définis dans CustomUser
             suffix (str): Suffixe pour générer un email unique
             **kwargs: Champs supplémentaires
-        
+
         Returns:
             CustomUser: utilisateur créé
         """
-        return self.create_user(
-            email=f"{role}_{suffix}@example.com",
-            role=role,
-            **kwargs
-        )
+        return self.create_user(email=f"{role}_{suffix}@example.com", role=role, **kwargs)
 
     def create_instance(self, model_class, **kwargs):
         """
@@ -86,6 +76,3 @@ class BaseModelTestSetupMixin(TestCase):
         if self.user.avatar and self.user.avatar.storage.exists(self.user.avatar.name):
             self.user.avatar.delete(save=False)
         super().tearDown()
-
-
-        

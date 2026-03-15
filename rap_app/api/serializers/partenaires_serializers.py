@@ -1,16 +1,21 @@
 # serializers.py (ou ton fichier actuel des serializers Partenaire)
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.centres import Centre
-
 from ...models.partenaires import Partenaire
+
 
 class CentreLiteSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom) pour imbrication (ex. default_centre du partenaire). Lecture seule.
     """
+
     class Meta:
         model = Centre
         fields = ["id", "nom"]
@@ -52,9 +57,7 @@ class PartenaireSerializer(serializers.ModelSerializer):
         allow_null=True,
         write_only=True,
     )
-    default_centre_nom = serializers.CharField(
-        source="default_centre.nom", read_only=True, allow_blank=True
-    )
+    default_centre_nom = serializers.CharField(source="default_centre.nom", read_only=True, allow_blank=True)
 
     full_address = serializers.SerializerMethodField()
     contact_info = serializers.SerializerMethodField()
@@ -86,43 +89,87 @@ class PartenaireSerializer(serializers.ModelSerializer):
     class Meta:
         model = Partenaire
         fields = [
-            "id", "nom", "type", "type_display", "secteur_activite", "was_reused",
-
-            "street_number", "street_name", "street_complement",
-            "zip_code", "city", "country",
-
-            "telephone", "email",
-
-            "contact_nom", "contact_poste", "contact_telephone", "contact_email",
-
-            "website", "social_network_url",
-
-            "actions", "actions_display", "action_description", "description",
-
-            "siret", "type_employeur", "employeur_specifique",
-            "code_ape", "effectif_total", "idcc", "assurance_chomage_speciale",
-
-            "maitre1_nom_naissance", "maitre1_prenom", "maitre1_date_naissance",
-            "maitre1_courriel", "maitre1_emploi_occupe",
-            "maitre1_diplome_titre", "maitre1_niveau_diplome",
-
-            "maitre2_nom_naissance", "maitre2_prenom", "maitre2_date_naissance",
-            "maitre2_courriel", "maitre2_emploi_occupe",
-            "maitre2_diplome_titre", "maitre2_niveau_diplome",
-
-            "slug", "default_centre", "default_centre_id", "default_centre_nom",
-            "created_by", "created_at", "updated_at", "is_active",
-
-            "full_address", "contact_info", "has_contact", "has_address", "has_web",
-
-            "prospections", "appairages", "formations", "candidats",
+            "id",
+            "nom",
+            "type",
+            "type_display",
+            "secteur_activite",
+            "was_reused",
+            "street_number",
+            "street_name",
+            "street_complement",
+            "zip_code",
+            "city",
+            "country",
+            "telephone",
+            "email",
+            "contact_nom",
+            "contact_poste",
+            "contact_telephone",
+            "contact_email",
+            "website",
+            "social_network_url",
+            "actions",
+            "actions_display",
+            "action_description",
+            "description",
+            "siret",
+            "type_employeur",
+            "employeur_specifique",
+            "code_ape",
+            "effectif_total",
+            "idcc",
+            "assurance_chomage_speciale",
+            "maitre1_nom_naissance",
+            "maitre1_prenom",
+            "maitre1_date_naissance",
+            "maitre1_courriel",
+            "maitre1_emploi_occupe",
+            "maitre1_diplome_titre",
+            "maitre1_niveau_diplome",
+            "maitre2_nom_naissance",
+            "maitre2_prenom",
+            "maitre2_date_naissance",
+            "maitre2_courriel",
+            "maitre2_emploi_occupe",
+            "maitre2_diplome_titre",
+            "maitre2_niveau_diplome",
+            "slug",
+            "default_centre",
+            "default_centre_id",
+            "default_centre_nom",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "is_active",
+            "full_address",
+            "contact_info",
+            "has_contact",
+            "has_address",
+            "has_web",
+            "prospections",
+            "appairages",
+            "formations",
+            "candidats",
         ]
 
         read_only_fields = [
-            "id", "slug", "created_at", "updated_at", "is_active",
-            "type_display", "actions_display",
-            "full_address", "contact_info", "has_contact", "has_address", "has_web",
-            "created_by", "default_centre", "default_centre_nom", "was_reused",
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "is_active",
+            "type_display",
+            "actions_display",
+            "full_address",
+            "contact_info",
+            "has_contact",
+            "has_address",
+            "has_web",
+            "created_by",
+            "default_centre",
+            "default_centre_nom",
+            "was_reused",
         ]
 
     @extend_schema_field(str)
@@ -219,10 +266,12 @@ class PartenaireSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class PartenaireChoiceSerializer(serializers.Serializer):
     """
     Option (value, label) pour les types ou actions partenaire. Pas de validation personnalisée.
     """
+
     value = serializers.CharField(help_text="Valeur interne (ex: 'entreprise')")
     label = serializers.CharField(help_text="Libellé lisible (ex: 'Entreprise')")
 
@@ -231,5 +280,6 @@ class PartenaireChoicesResponseSerializer(serializers.Serializer):
     """
     Structure de sortie des choix partenaire : types et actions (listes de PartenaireChoiceSerializer).
     """
+
     types = PartenaireChoiceSerializer(many=True)
     actions = PartenaireChoiceSerializer(many=True)

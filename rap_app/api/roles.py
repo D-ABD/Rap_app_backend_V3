@@ -1,5 +1,6 @@
 # Helpers de détection de rôles utilisateur pour le contrôle d'accès applicatif.
 
+
 def is_candidate(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et possède une méthode
@@ -12,6 +13,7 @@ def is_candidate(u) -> bool:
         return fn()
     return False
 
+
 def is_staff_read(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et a pour rôle 'staff_read'.
@@ -20,6 +22,7 @@ def is_staff_read(u) -> bool:
         return False
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() == "staff_read"
+
 
 def is_staff_standard(u) -> bool:
     """
@@ -30,6 +33,7 @@ def is_staff_standard(u) -> bool:
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() == "staff"
 
+
 def is_staff_or_staffread(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et a pour rôle 'staff' ou 'staff_read'.
@@ -38,6 +42,7 @@ def is_staff_or_staffread(u) -> bool:
         return False
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() in {"staff", "staff_read"}
+
 
 def is_admin_like(u) -> bool:
     """
@@ -49,6 +54,7 @@ def is_admin_like(u) -> bool:
         return True
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() in {"admin", "superadmin"}
+
 
 def is_staff_like(u) -> bool:
     """
@@ -65,6 +71,7 @@ def is_staff_like(u) -> bool:
         return True
     return False
 
+
 def is_declic_staff(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et a pour rôle 'declic_staff'.
@@ -74,6 +81,7 @@ def is_declic_staff(u) -> bool:
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() == "declic_staff"
 
+
 def is_prepa_staff(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et a pour rôle 'prepa_staff'.
@@ -82,6 +90,7 @@ def is_prepa_staff(u) -> bool:
         return False
     role = getattr(u, "role", None)
     return isinstance(role, str) and role.lower() == "prepa_staff"
+
 
 def staff_centre_ids(u):
     """
@@ -94,11 +103,7 @@ def staff_centre_ids(u):
         return []
     if is_admin_like(u):
         return None
-    if any([
-        is_staff_like(u),
-        is_prepa_staff(u),
-        is_declic_staff(u)
-    ]):
+    if any([is_staff_like(u), is_prepa_staff(u), is_declic_staff(u)]):
         centres = getattr(u, "centres", None)
         if hasattr(centres, "all") or hasattr(centres, "values_list"):
             try:
@@ -108,7 +113,9 @@ def staff_centre_ids(u):
         return []
     return []
 
+
 _STAFF_CENTRE_IDS_UNSET = object()
+
 
 def get_staff_centre_ids_cached(request):
     """
@@ -124,6 +131,7 @@ def get_staff_centre_ids_cached(request):
     ids = staff_centre_ids(user) if user else []
     request._staff_centre_ids = ids
     return ids
+
 
 def role_of(u) -> str:
     """

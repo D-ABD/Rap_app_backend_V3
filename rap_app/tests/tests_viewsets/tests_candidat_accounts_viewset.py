@@ -1,10 +1,10 @@
 import pytest
-from rest_framework.test import APIClient
 from django.urls import reverse
+from rest_framework.test import APIClient
 
 from ...models.candidat import Candidat
-from ...models.custom_user import CustomUser
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 
 
@@ -133,4 +133,3 @@ def test_demande_compte_candidat_flow():
     cand.refresh_from_db()
     assert cand.demande_compte_statut == Candidat.DemandeCompteStatut.ACCEPTEE
     assert cand.compte_utilisateur is not None
-

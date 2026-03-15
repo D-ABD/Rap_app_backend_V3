@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from ...serializers.base_serializers import EmptySerializer
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from django.db.models import Count, Q, Sum, Case, When, IntegerField, Value
-from django.db.models.functions import Substr, Coalesce
+from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import Coalesce, Substr
 from django.utils.dateparse import parse_date
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from ...permissions import IsStaffOrAbove, is_staff_or_staffread
 from ....models.atelier_tre import AtelierTRE, AtelierTREPresence, PresenceStatut
+from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 
 def _parse_date(value: str | None):
@@ -94,12 +94,12 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
     ─────────────────────────────────────────────────────────────
 
     - grouped (GET /grouped/)
-        - Objectif métier : obtenir des statistiques agrégées groupées selon l’un des axes suivants : 
+        - Objectif métier : obtenir des statistiques agrégées groupées selon l’un des axes suivants :
             centre, département ou type d’atelier (paramètre required : by=centre|departement|type_atelier, par défaut centre).
         - Structure de la requête :
             - Paramètre GET “by” obligatoire (centre|departement|type_atelier)
             - Filtres additionnels identiques à ceux de list
-        - Structure de la réponse : 
+        - Structure de la réponse :
             {
                 "by": "<axe de regroupement>",
                 "results": [
@@ -166,7 +166,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
 
     def _staff_centre_ids(self, user) -> Optional[List[int]]:
         """
-        Retourne la liste des ids de centres accessibles pour un utilisateur staff/staff_read, 
+        Retourne la liste des ids de centres accessibles pour un utilisateur staff/staff_read,
         ou None si administrateur (droit total sur tous les centres).
 
         - Si l’utilisateur n’a pas accès à de centres, retourne [] (liste vide).
@@ -184,6 +184,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
 
         - Si aucun département, retourne [].
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -305,7 +306,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
     def list(self, request, *args, **kwargs):
         """
         Action standard DRF (GET /api/ateliertre-stats/ ):
-        Fournit une vue synthétique agrégée des ateliers TRE accessibles à l’utilisateur courant, 
+        Fournit une vue synthétique agrégée des ateliers TRE accessibles à l’utilisateur courant,
         comprenant les principaux indicateurs quantitatifs, répartitions, et taux de présence (filtrables via GET).
 
         - Permissions : voir permission_classes (IsStaffOrAbove)
@@ -316,6 +317,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
         nb_ateliers = qs.count()
 
         from rap_app.models.candidat import Candidat
+
         nb_candidats_uniques = Candidat.objects.filter(ateliers_tre__in=qs).distinct().count()
 
         inscrits_total = qs.aggregate(total=Count("candidats", distinct=True))["total"] or 0
@@ -328,9 +330,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
             + pres_map.get(PresenceStatut.ABSENT, 0)
             + pres_map.get(PresenceStatut.EXCUSE, 0)
         )
-        taux_presence = (
-            round((pres_map.get(PresenceStatut.PRESENT, 0) / denom * 100.0), 1) if denom > 0 else None
-        )
+        taux_presence = round((pres_map.get(PresenceStatut.PRESENT, 0) / denom * 100.0), 1) if denom > 0 else None
 
         data = {
             "kpis": {
@@ -385,23 +385,31 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
             group_fields = ("type_atelier",)
 
         # Pré-calcul des présences par statut avec annotation
-        present = Sum(Case(When(presences__statut=PresenceStatut.PRESENT, then=1), default=0, output_field=IntegerField()))
-        absent = Sum(Case(When(presences__statut=PresenceStatut.ABSENT, then=1), default=0, output_field=IntegerField()))
-        excuse = Sum(Case(When(presences__statut=PresenceStatut.EXCUSE, then=1), default=0, output_field=IntegerField()))
-        inconnu = Sum(Case(When(presences__statut=PresenceStatut.INCONNU, then=1), default=0, output_field=IntegerField()))
+        present = Sum(
+            Case(When(presences__statut=PresenceStatut.PRESENT, then=1), default=0, output_field=IntegerField())
+        )
+        absent = Sum(
+            Case(When(presences__statut=PresenceStatut.ABSENT, then=1), default=0, output_field=IntegerField())
+        )
+        excuse = Sum(
+            Case(When(presences__statut=PresenceStatut.EXCUSE, then=1), default=0, output_field=IntegerField())
+        )
+        inconnu = Sum(
+            Case(When(presences__statut=PresenceStatut.INCONNU, then=1), default=0, output_field=IntegerField())
+        )
 
         base = (
             qs.values(*group_fields)
-              .annotate(
-                  nb_ateliers=Count("id", distinct=True),
-                  candidats_uniques=Count("candidats", distinct=True),
-                  presences_total=Count("presences", distinct=True),
-                  present=present,
-                  absent=absent,
-                  excuse=excuse,
-                  inconnu=inconnu,
-              )
-              .order_by(*group_fields)
+            .annotate(
+                nb_ateliers=Count("id", distinct=True),
+                candidats_uniques=Count("candidats", distinct=True),
+                presences_total=Count("presences", distinct=True),
+                present=present,
+                absent=absent,
+                excuse=excuse,
+                inconnu=inconnu,
+            )
+            .order_by(*group_fields)
         )
 
         results: List[Dict[str, Any]] = []
@@ -421,18 +429,22 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
             denom = (row["present"] or 0) + (row["absent"] or 0) + (row["excuse"] or 0)
             taux_presence = round((row["present"] / denom * 100.0), 1) if denom > 0 else None
 
-            results.append({
-                "group_key": group_key,
-                "group_label": group_label,
-                **row,
-                "taux_presence": taux_presence,  # ✅ ajouté
-            })
+            results.append(
+                {
+                    "group_key": group_key,
+                    "group_label": group_label,
+                    **row,
+                    "taux_presence": taux_presence,  # ✅ ajouté
+                }
+            )
 
-        return Response({
-            "by": by,
-            "results": results,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "by": by,
+                "results": results,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )
 
     # ─────────────────────────────────────────────────────────────
     # Tops
@@ -442,7 +454,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
         """
         Action personnalisée GET /tops/
         Retourne les "top 10" parmi :
-            - les types d’atelier les plus proposés 
+            - les types d’atelier les plus proposés
             - les centres organisant le plus d’ateliers
         ainsi que le “filters_echo”.
 
@@ -475,14 +487,18 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
             for r in top_types_qs
         ]
 
-        top_centres_qs = qs.values("centre_id", "centre__nom").annotate(count=Count("id", distinct=True)).order_by("-count")[:10]
+        top_centres_qs = (
+            qs.values("centre_id", "centre__nom").annotate(count=Count("id", distinct=True)).order_by("-count")[:10]
+        )
         top_centres = [
             {"id": r["centre_id"], "nom": r["centre__nom"] or f"Centre #{r['centre_id']}", "count": r["count"]}
             for r in top_centres_qs
         ]
 
-        return Response({
-            "top_types": top_types,
-            "top_centres": top_centres,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "top_types": top_types,
+                "top_centres": top_centres,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )

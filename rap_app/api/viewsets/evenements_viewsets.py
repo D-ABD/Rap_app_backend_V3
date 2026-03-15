@@ -1,15 +1,19 @@
 import csv
 import logging
-from rest_framework import viewsets, status
+
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
-from ...services.evenements_export import csv_export_evenements
-from ...models.evenements import Evenement
-from ...api.serializers.evenements_serializers import EvenementChoiceSerializer, EvenementSerializer
 from ...api.paginations import RapAppPagination
 from ...api.permissions import IsOwnerOrStaffOrAbove
+from ...api.serializers.evenements_serializers import (
+    EvenementChoiceSerializer,
+    EvenementSerializer,
+)
+from ...models.evenements import Evenement
+from ...services.evenements_export import csv_export_evenements
 from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 
 logger = logging.getLogger("application.api")
@@ -151,7 +155,7 @@ class EvenementViewSet(viewsets.ModelViewSet):
             OpenApiParameter("date_min", str, description="Date minimale (YYYY-MM-DD)"),
             OpenApiParameter("date_max", str, description="Date maximale (YYYY-MM-DD)"),
         ],
-        responses={200: OpenApiResponse(response=EvenementSerializer(many=True))}
+        responses={200: OpenApiResponse(response=EvenementSerializer(many=True))},
     )
     def list(self, request, *args, **kwargs):
         """
@@ -194,10 +198,10 @@ class EvenementViewSet(viewsets.ModelViewSet):
         responses={
             200: OpenApiResponse(
                 description="Réponse CSV contenant les événements",
-                response=None  # ✅ On ne fournit pas de serializer ici
+                response=None,  # ✅ On ne fournit pas de serializer ici
             )
         },
-        examples=[]  # optionnel
+        examples=[],  # optionnel
     )
     @action(detail=False, methods=["get"], url_path="export-csv")
     def export_csv(self, request):
@@ -223,9 +227,9 @@ class EvenementViewSet(viewsets.ModelViewSet):
         responses={
             200: OpenApiResponse(
                 description="Dictionnaire des types d'événements avec leurs occurrences",
-                response=None  # tu peux ajouter un serializer si besoin plus tard
+                response=None,  # tu peux ajouter un serializer si besoin plus tard
             )
-        }
+        },
     )
     @action(detail=False, methods=["get"], url_path="stats-par-type")
     def stats_par_type(self, request):
@@ -251,7 +255,7 @@ class EvenementViewSet(viewsets.ModelViewSet):
         summary="Liste des types d’événements possibles",
         description="Retourne la liste des valeurs possibles pour `type_evenement`, avec leur libellé lisible.",
         tags=["Événements"],
-        responses={200: OpenApiResponse(response=EvenementChoiceSerializer(many=True))}
+        responses={200: OpenApiResponse(response=EvenementChoiceSerializer(many=True))},
     )
     def choices(self, request):
         """
@@ -270,12 +274,7 @@ class EvenementViewSet(viewsets.ModelViewSet):
         - Les types disponibles sont ceux définis par Evenement.TypeEvenement.choices (Enum Django).
         - Pas de filtrage/pagination ; tous les types sont retournés.
         """
-        data = [
-            {"value": key, "label": label}
-            for key, label in Evenement.TypeEvenement.choices
-        ]
-        return Response({
-            "success": True,
-            "message": "Liste des types d’événements récupérée avec succès.",
-            "data": data
-        })
+        data = [{"value": key, "label": label} for key, label in Evenement.TypeEvenement.choices]
+        return Response(
+            {"success": True, "message": "Liste des types d’événements récupérée avec succès.", "data": data}
+        )

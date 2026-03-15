@@ -1,56 +1,45 @@
-from django.db.models import Q, Count
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.filters import OrderingFilter
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from datetime import datetime
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import Alignment, Font
-from django.http import HttpResponse
-from drf_spectacular.utils import extend_schema
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from weasyprint import HTML, CSS
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-
 import csv
 import logging
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from datetime import datetime
 
 from django.conf import settings
+from django.db.models import Count, Q
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.utils import timezone as dj_timezone
-
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, OpenApiTypes, extend_schema
 from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import (
-    Font,
     Alignment,
-    PatternFill,
     Border,
+    Font,
+    PatternFill,
     Side,
 )
-from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils import get_column_letter
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from weasyprint import CSS, HTML
 
 from ...models.atelier_tre import (
     AtelierTRE,
     PresenceStatut,
 )
 from ...models.candidat import Candidat
-from ..serializers.atelier_tre_serializers import (
-    AtelierTRESerializer,
-    AtelierTREMetaSerializer,
-)
-from ..permissions import IsStaffOrAbove, is_staff_or_staffread
 from ..paginations import RapAppPagination
+from ..permissions import IsStaffOrAbove, is_staff_or_staffread
+from ..serializers.atelier_tre_serializers import (
+    AtelierTREMetaSerializer,
+    AtelierTRESerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +55,16 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = {
-        "type_atelier": ["exact", "in"],       # Filtrage par type d’atelier (exact ou liste)
-        "centre": ["exact", "isnull"],         # Filtrage par centre exact ou null
+        "type_atelier": ["exact", "in"],  # Filtrage par type d’atelier (exact ou liste)
+        "centre": ["exact", "isnull"],  # Filtrage par centre exact ou null
         "date_atelier": ["exact", "date", "gte", "lte"],  # Dates précises ou par bornes
     }
     ordering_fields = ["date_atelier", "type_atelier", "id"]  # Champs autorisés pour le tri
-    ordering = ["-date_atelier", "-id"]                      # Tri par défaut (du plus récent au plus ancien)
+    ordering = ["-date_atelier", "-id"]  # Tri par défaut (du plus récent au plus ancien)
 
     def _is_admin_like(self, user) -> bool:
         """True si admin ou superadmin."""
-        return getattr(user, "is_superuser", False) or (
-            hasattr(user, "is_admin") and user.is_admin()
-        )
+        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
 
     def _staff_centre_ids(self, user):
         """
@@ -131,8 +118,7 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Queryset annoté (nb_inscrits_calc, pres_*), select_related/prefetch_related ; _scope_qs_to_user_centres."""
         base = (
-            AtelierTRE.objects
-            .annotate(
+            AtelierTRE.objects.annotate(
                 nb_inscrits_calc=Count("candidats", distinct=True),
                 pres_present=Count("presences", filter=Q(presences__statut=PresenceStatut.PRESENT), distinct=True),
                 pres_absent=Count("presences", filter=Q(presences__statut=PresenceStatut.ABSENT), distinct=True),
@@ -187,9 +173,12 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
     # --- Actions candidats (ajout/retrait sans remplacer toute la liste) ------
 
     @extend_schema(
-        request={"application/json": {"type": "object", "properties": {
-            "candidats": {"type": "array", "items": {"type": "integer"}}
-        }}},
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}},
+            }
+        },
         responses=AtelierTRESerializer,
         summary="Ajouter des candidats",
         description=(
@@ -220,8 +209,7 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
 
         atelier_centre_id = getattr(atelier.centre, "id", None)
         mismatched = [
-            c.id for c in qs
-            if getattr(getattr(c, "formation", None), "centre_id", None) != atelier_centre_id
+            c.id for c in qs if getattr(getattr(c, "formation", None), "centre_id", None) != atelier_centre_id
         ]
         if mismatched:
             return Response(
@@ -233,9 +221,12 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(atelier).data)
 
     @extend_schema(
-        request={"application/json": {"type": "object", "properties": {
-            "candidats": {"type": "array", "items": {"type": "integer"}}
-        }}},
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}},
+            }
+        },
         responses=AtelierTRESerializer,
         summary="Retirer des candidats",
         description="Retire des candidats (IDs) de l'atelier.",
@@ -319,11 +310,14 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         existing_ids = set(Candidat.objects.filter(id__in=wanted_ids).values_list("id", flat=True))
         unknown = wanted_ids - existing_ids
         if unknown:
-            return Response({"detail": f"Candidats introuvables: {sorted(unknown)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": f"Candidats introuvables: {sorted(unknown)}"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         atelier_centre_id = getattr(atelier.centre, "id", None)
         mismatch = [
-            cid for cid in wanted_ids
+            cid
+            for cid in wanted_ids
             if getattr(getattr(Candidat.objects.get(id=cid), "formation", None), "centre_id", None) != atelier_centre_id
         ]
         if mismatch:
@@ -343,12 +337,19 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         for cid in wanted_ids:
             data = pairs[cid]
             c = Candidat.objects.get(id=cid)
-            atelier.set_presence(candidat=c, statut=data["statut"], commentaire=data.get("commentaire"), user=request.user)
+            atelier.set_presence(
+                candidat=c, statut=data["statut"], commentaire=data.get("commentaire"), user=request.user
+            )
 
         return Response(self.get_serializer(atelier).data)
 
     @extend_schema(
-        request={"application/json": {"type": "object", "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}}}},
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}},
+            }
+        },
         responses=AtelierTRESerializer,
         summary="Marquer présents",
     )
@@ -365,8 +366,9 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response({"detail": "'candidats' doit être une liste d'entiers."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "'candidats' doit être une liste d'entiers."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         qs = atelier.candidats.filter(id__in=ids)
         for c in qs:
@@ -374,7 +376,12 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(atelier).data)
 
     @extend_schema(
-        request={"application/json": {"type": "object", "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}}}},
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"candidats": {"type": "array", "items": {"type": "integer"}}},
+            }
+        },
         responses=AtelierTRESerializer,
         summary="Marquer absents",
     )
@@ -384,13 +391,15 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response({"detail": "'candidats' doit être une liste d'entiers."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "'candidats' doit être une liste d'entiers."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         qs = atelier.candidats.filter(id__in=ids)
         for c in qs:
             atelier.set_presence(c, PresenceStatut.ABSENT, user=request.user)
         return Response(self.get_serializer(atelier).data)
+
     @extend_schema(
         summary="Exporter les ateliers TRE (Excel)",
         description=(
@@ -448,9 +457,20 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         ws.append([])
 
         headers = [
-            "ID", "Type d’atelier", "Centre", "Date de l’atelier",
-            "Nb inscrits", "Présents", "Absents", "Excusés", "Inconnus",
-            "Noms inscrits", "Noms présents", "Créé par", "Créé le", "Modifié le",
+            "ID",
+            "Type d’atelier",
+            "Centre",
+            "Date de l’atelier",
+            "Nb inscrits",
+            "Présents",
+            "Absents",
+            "Excusés",
+            "Inconnus",
+            "Noms inscrits",
+            "Noms présents",
+            "Créé par",
+            "Créé le",
+            "Modifié le",
         ]
         ws.append(headers)
 
@@ -479,29 +499,35 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
             inscrits_txt = ", ".join(sorted(set(inscrits))) or ""
 
             pres_qs = getattr(atelier, "presences", None)
-            presents = [
-                getattr(p.candidat, "nom", "")
-                for p in pres_qs.all()
-                if getattr(p, "statut", None) == PresenceStatut.PRESENT
-            ] if pres_qs else []
+            presents = (
+                [
+                    getattr(p.candidat, "nom", "")
+                    for p in pres_qs.all()
+                    if getattr(p, "statut", None) == PresenceStatut.PRESENT
+                ]
+                if pres_qs
+                else []
+            )
             presents_txt = ", ".join(sorted(set(presents))) or ""
 
-            ws.append([
-                atelier.id,
-                getattr(atelier.type_atelier, "label", str(atelier.type_atelier)),
-                getattr(atelier.centre, "nom", ""),
-                atelier.date_atelier.strftime("%d/%m/%Y") if atelier.date_atelier else "",
-                getattr(atelier, "nb_inscrits_calc", 0),
-                getattr(atelier, "pres_present", 0),
-                getattr(atelier, "pres_absent", 0),
-                getattr(atelier, "pres_excuse", 0),
-                getattr(atelier, "pres_inconnu", 0),
-                inscrits_txt,
-                presents_txt,
-                getattr(getattr(atelier, "created_by", None), "username", ""),
-                atelier.created_at.strftime("%d/%m/%Y %H:%M") if atelier.created_at else "",
-                atelier.updated_at.strftime("%d/%m/%Y %H:%M") if atelier.updated_at else "",
-            ])
+            ws.append(
+                [
+                    atelier.id,
+                    getattr(atelier.type_atelier, "label", str(atelier.type_atelier)),
+                    getattr(atelier.centre, "nom", ""),
+                    atelier.date_atelier.strftime("%d/%m/%Y") if atelier.date_atelier else "",
+                    getattr(atelier, "nb_inscrits_calc", 0),
+                    getattr(atelier, "pres_present", 0),
+                    getattr(atelier, "pres_absent", 0),
+                    getattr(atelier, "pres_excuse", 0),
+                    getattr(atelier, "pres_inconnu", 0),
+                    inscrits_txt,
+                    presents_txt,
+                    getattr(getattr(atelier, "created_by", None), "username", ""),
+                    atelier.created_at.strftime("%d/%m/%Y %H:%M") if atelier.created_at else "",
+                    atelier.updated_at.strftime("%d/%m/%Y %H:%M") if atelier.updated_at else "",
+                ]
+            )
 
             fill = even_fill if i % 2 == 0 else odd_fill
             for j, cell in enumerate(ws[ws.max_row], start=1):

@@ -1,15 +1,15 @@
-from rest_framework import status
-from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from rest_framework import status
 
+from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.documents import Document
 from ...models.formations import Formation
-from ...models.centres import Centre
-from ...models.types_offre import TypeOffre
 from ...models.statut import Statut
-from ..test_utils import AuthenticatedTestCase
+from ...models.types_offre import TypeOffre
 from ..factories import UserFactory
-from ...models.custom_user import CustomUser
+from ..test_utils import AuthenticatedTestCase
 
 
 class DocumentViewSetTestCase(AuthenticatedTestCase):
@@ -22,11 +22,7 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         self.statut = Statut.objects.create(nom="non_defini", couleur="#000000", created_by=self.user)
 
         self.formation = Formation.objects.create(
-            nom="FormationDoc",
-            centre=self.centre,
-            type_offre=self.type_offre,
-            statut=self.statut,
-            created_by=self.user
+            nom="FormationDoc", centre=self.centre, type_offre=self.type_offre, statut=self.statut, created_by=self.user
         )
 
         self.file = SimpleUploadedFile("doc_test.pdf", b"file_content", content_type="application/pdf")
@@ -35,7 +31,7 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
             nom_fichier="doc_test.pdf",
             fichier=self.file,
             type_document=Document.PDF,
-            created_by=self.user
+            created_by=self.user,
         )
 
     def test_list_documents(self):

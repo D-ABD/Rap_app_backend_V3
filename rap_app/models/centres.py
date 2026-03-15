@@ -1,15 +1,17 @@
-from django.utils.timezone import now
 import logging
-from django.db import models
-from django.core.validators import RegexValidator
+
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db import models
+from django.db.models import Count, F, Q
 from django.urls import reverse
 from django.utils.functional import cached_property
-from django.db.models import Count, F, Q
+from django.utils.timezone import now
 
 from .base import BaseModel
 
 logger = logging.getLogger(__name__)
+
 
 class CentreManager(models.Manager):
     """Manager de requêtes pour Centre."""
@@ -26,9 +28,8 @@ class CentreManager(models.Manager):
         """Filtre sur nom ou code_postal selon la requête."""
         if not query:
             return self.all()
-        return self.filter(
-            Q(nom__icontains=query) | Q(code_postal__startswith=query)
-        )
+        return self.filter(Q(nom__icontains=query) | Q(code_postal__startswith=query))
+
 
 class Centre(BaseModel):
     """Modèle de centre de formation."""
@@ -37,9 +38,9 @@ class Centre(BaseModel):
     CODE_POSTAL_LENGTH = 5
 
     STATUS_CHOICES = [
-        ('actif', 'Actif'),
-        ('inactif', 'Inactif'),
-        ('temporaire', 'Temporaire'),
+        ("actif", "Actif"),
+        ("inactif", "Inactif"),
+        ("temporaire", "Temporaire"),
     ]
 
     # ---------- Informations principales ----------
@@ -63,9 +64,7 @@ class Centre(BaseModel):
         blank=True,
         verbose_name="Code postal",
         help_text="Code postal à 5 chiffres du centre",
-        validators=[
-            RegexValidator(regex=r'^\d{5}$', message="Le code postal doit contenir exactement 5 chiffres")
-        ]
+        validators=[RegexValidator(regex=r"^\d{5}$", message="Le code postal doit contenir exactement 5 chiffres")],
     )
 
     commune = models.CharField(max_length=255, blank=True, null=True)
@@ -82,12 +81,8 @@ class Centre(BaseModel):
     cfa_responsable_denomination = models.CharField(
         max_length=255, blank=True, null=True, verbose_name="Dénomination du CFA responsable"
     )
-    cfa_responsable_uai = models.CharField(
-        max_length=20, blank=True, null=True, verbose_name="N° UAI du CFA"
-    )
-    cfa_responsable_siret = models.CharField(
-        max_length=14, blank=True, null=True, verbose_name="N° SIRET du CFA"
-    )
+    cfa_responsable_uai = models.CharField(max_length=20, blank=True, null=True, verbose_name="N° UAI du CFA")
+    cfa_responsable_siret = models.CharField(max_length=14, blank=True, null=True, verbose_name="N° SIRET du CFA")
     cfa_responsable_numero = models.CharField(max_length=10, blank=True, null=True)
     cfa_responsable_voie = models.CharField(max_length=255, blank=True, null=True)
     cfa_responsable_complement = models.CharField(max_length=255, blank=True, null=True)
@@ -100,22 +95,23 @@ class Centre(BaseModel):
     class Meta:
         verbose_name = "Centre"
         verbose_name_plural = "Centres"
-        ordering = ['nom']
+        ordering = ["nom"]
         indexes = [
-            models.Index(fields=['nom'], name='centre_nom_idx'),
-            models.Index(fields=['code_postal'], name='centre_cp_idx'),
+            models.Index(fields=["nom"], name="centre_nom_idx"),
+            models.Index(fields=["code_postal"], name="centre_cp_idx"),
         ]
         constraints = [
-            models.CheckConstraint(check=~Q(nom=''), name='centre_nom_not_empty'),
+            models.CheckConstraint(check=~Q(nom=""), name="centre_nom_not_empty"),
         ]
 
     class APIInfo:
         """Données utilisées par l'API (configuration de liste, filtres, tris)."""
+
         description = "Centres de formation"
-        allowed_methods = ['GET', 'POST', 'PUT', 'DELETE']
-        filterable_fields = ['nom', 'code_postal']
-        searchable_fields = ['nom']
-        ordering_fields = ['nom', 'created_at']
+        allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+        filterable_fields = ["nom", "code_postal"]
+        searchable_fields = ["nom"]
+        ordering_fields = ["nom", "created_at"]
 
     def __str__(self):
         """Chaîne nom du centre."""
@@ -134,7 +130,7 @@ class Centre(BaseModel):
 
     def to_serializable_dict(self, include_related=False) -> dict:
         """Dictionnaire sérialisable du centre."""
-        base_dict = super().to_serializable_dict(exclude=['created_by', 'updated_by'])
+        base_dict = super().to_serializable_dict(exclude=["created_by", "updated_by"])
         centre_dict = {
             "id": self.pk,
             "nom": self.nom,
@@ -155,8 +151,8 @@ class Centre(BaseModel):
 
         changes = []
         if not is_new and self.pk and self._state.adding is False and self._loaded_values is not None:
-            old_nom = getattr(self, '_loaded_nom', None)
-            old_code_postal = getattr(self, '_loaded_code_postal', None)
+            old_nom = getattr(self, "_loaded_nom", None)
+            old_code_postal = getattr(self, "_loaded_code_postal", None)
             if old_nom is not None and old_nom != self.nom:
                 changes.append(f"nom: '{old_nom}' → '{self.nom}'")
             if old_code_postal is not None and old_code_postal != self.code_postal:
@@ -184,8 +180,8 @@ class Centre(BaseModel):
     def __init__(self, *args, **kwargs):
         """Initialise les variables de suivi de champs pour la persistance."""
         super().__init__(*args, **kwargs)
-        self._loaded_nom = self.__dict__.get('nom')
-        self._loaded_code_postal = self.__dict__.get('code_postal')
+        self._loaded_nom = self.__dict__.get("nom")
+        self._loaded_code_postal = self.__dict__.get("code_postal")
         self._loaded_values = True
 
     def delete(self, *args, **kwargs):
@@ -201,7 +197,9 @@ class Centre(BaseModel):
             if not self.code_postal.isdigit():
                 raise ValidationError({"code_postal": "Le code postal doit être numérique."})
             if len(self.code_postal) != self.CODE_POSTAL_LENGTH:
-                raise ValidationError({"code_postal": f"Le code postal doit contenir exactement {self.CODE_POSTAL_LENGTH} chiffres."})
+                raise ValidationError(
+                    {"code_postal": f"Le code postal doit contenir exactement {self.CODE_POSTAL_LENGTH} chiffres."}
+                )
 
     def mark_as_inactive(self):
         """Retourne False, sans modification de statut."""
@@ -217,37 +215,31 @@ class Centre(BaseModel):
     def get_centres_by_region(cls, region=None):
         """Retourne les centres ordonnés par nom."""
         queryset = cls.objects.all()
-        return queryset.order_by('nom')
+        return queryset.order_by("nom")
 
     @classmethod
     def get_centres_with_stats(cls):
         """Retourne les centres ordonnés par nom."""
-        return cls.custom.all().order_by('nom')
+        return cls.custom.all().order_by("nom")
 
     @classmethod
     def get_csv_fields(cls):
         """Liste des champs exportés pour le CSV."""
-        return ['id', 'nom', 'code_postal', 'created_at', 'updated_at']
+        return ["id", "nom", "code_postal", "created_at", "updated_at"]
 
     @classmethod
     def get_csv_headers(cls):
         """Libellés des colonnes du CSV."""
-        return [
-            'ID',
-            'Nom du centre',
-            'Code postal',
-            'Date de création',
-            'Date de mise à jour'
-        ]
+        return ["ID", "Nom du centre", "Code postal", "Date de création", "Date de mise à jour"]
 
     def to_csv_row(self):
         """Retourne une ligne de valeurs pour export CSV."""
         return [
             self.pk,
             self.nom,
-            self.code_postal or '',
-            self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else '',
-            self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else ''
+            self.code_postal or "",
+            self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else "",
+            self.updated_at.strftime("%Y-%m-%d %H:%M") if self.updated_at else "",
         ]
 
     @property

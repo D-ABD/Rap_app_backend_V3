@@ -1,8 +1,9 @@
 # rap_app/admin/partenaire_admin.py
-from django.contrib import admin
-from django.utils.timezone import localtime
-from django.http import HttpResponse
 import csv
+
+from django.contrib import admin
+from django.http import HttpResponse
+from django.utils.timezone import localtime
 
 from ..models.partenaires import Partenaire
 
@@ -29,14 +30,17 @@ class PartenaireAdmin(admin.ModelAdmin):
 
     def contact_display(self, obj):
         return obj.contact_info or "—"
+
     contact_display.short_description = "Contact"
 
     def has_web_presence_display(self, obj):
         return "✅" if obj.has_web_presence else "—"
+
     has_web_presence_display.short_description = "Web"
 
     def created_at_display(self, obj):
         return localtime(obj.created_at).strftime("%Y-%m-%d") if obj.created_at else "—"
+
     created_at_display.short_description = "Créé le"
 
     # === Listes / filtres / recherche ==================================================
@@ -92,56 +96,91 @@ class PartenaireAdmin(admin.ModelAdmin):
 
     # === Organisation par sections (fieldsets) =========================================
     fieldsets = (
-        ("🏷️ Informations générales", {
-            "fields": ("type", "nom", "secteur_activite", "description", "actions", "action_description"),
-        }),
-        ("🏫 Centre", {
-            "fields": ("default_centre",),
-        }),
-        ("📍 Localisation", {
-            "fields": (
-                "street_number", "street_name", "street_complement",
-                "zip_code", "city", "country"
-            ),
-        }),
-        ("📞 Coordonnées générales", {
-            "fields": ("telephone", "email"),
-        }),
-        ("👤 Contact principal", {
-            "fields": ("contact_nom", "contact_poste", "contact_email", "contact_telephone"),
-        }),
-        ("🌐 Web & Réseaux sociaux", {
-            "fields": ("website", "social_network_url"),
-        }),
-        ("🏢 Données employeur", {
-            "fields": (
-                "siret",
-                "type_employeur",
-                "employeur_specifique",
-                "code_ape",
-                "effectif_total",
-                "idcc",
-                "assurance_chomage_speciale",
-            ),
-        }),
-        ("🎓 Maître d’apprentissage n°1", {
-            "fields": (
-                "maitre1_nom_naissance", "maitre1_prenom", "maitre1_date_naissance",
-                "maitre1_courriel", "maitre1_emploi_occupe",
-                "maitre1_diplome_titre", "maitre1_niveau_diplome",
-            ),
-        }),
-        ("🎓 Maître d’apprentissage n°2", {
-            "fields": (
-                "maitre2_nom_naissance", "maitre2_prenom", "maitre2_date_naissance",
-                "maitre2_courriel", "maitre2_emploi_occupe",
-                "maitre2_diplome_titre", "maitre2_niveau_diplome",
-            ),
-        }),
-        ("🧾 Suivi", {
-            "fields": ("created_by", "created_at", "updated_by", "updated_at"),
-            "classes": ("collapse",),
-        }),
+        (
+            "🏷️ Informations générales",
+            {
+                "fields": ("type", "nom", "secteur_activite", "description", "actions", "action_description"),
+            },
+        ),
+        (
+            "🏫 Centre",
+            {
+                "fields": ("default_centre",),
+            },
+        ),
+        (
+            "📍 Localisation",
+            {
+                "fields": ("street_number", "street_name", "street_complement", "zip_code", "city", "country"),
+            },
+        ),
+        (
+            "📞 Coordonnées générales",
+            {
+                "fields": ("telephone", "email"),
+            },
+        ),
+        (
+            "👤 Contact principal",
+            {
+                "fields": ("contact_nom", "contact_poste", "contact_email", "contact_telephone"),
+            },
+        ),
+        (
+            "🌐 Web & Réseaux sociaux",
+            {
+                "fields": ("website", "social_network_url"),
+            },
+        ),
+        (
+            "🏢 Données employeur",
+            {
+                "fields": (
+                    "siret",
+                    "type_employeur",
+                    "employeur_specifique",
+                    "code_ape",
+                    "effectif_total",
+                    "idcc",
+                    "assurance_chomage_speciale",
+                ),
+            },
+        ),
+        (
+            "🎓 Maître d’apprentissage n°1",
+            {
+                "fields": (
+                    "maitre1_nom_naissance",
+                    "maitre1_prenom",
+                    "maitre1_date_naissance",
+                    "maitre1_courriel",
+                    "maitre1_emploi_occupe",
+                    "maitre1_diplome_titre",
+                    "maitre1_niveau_diplome",
+                ),
+            },
+        ),
+        (
+            "🎓 Maître d’apprentissage n°2",
+            {
+                "fields": (
+                    "maitre2_nom_naissance",
+                    "maitre2_prenom",
+                    "maitre2_date_naissance",
+                    "maitre2_courriel",
+                    "maitre2_emploi_occupe",
+                    "maitre2_diplome_titre",
+                    "maitre2_niveau_diplome",
+                ),
+            },
+        ),
+        (
+            "🧾 Suivi",
+            {
+                "fields": ("created_by", "created_at", "updated_by", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     # === Optimisations ================================================================
@@ -156,30 +195,70 @@ class PartenaireAdmin(admin.ModelAdmin):
         response["Content-Disposition"] = "attachment; filename=partenaires.csv"
 
         writer = csv.writer(response)
-        writer.writerow([
-            "ID", "Nom", "Type", "Secteur", "SIRET", "Type employeur",
-            "Code APE", "Effectif", "IDCC", "Ville", "CP", "Centre",
-            "Téléphone", "Email", "Contact", "Web",
-            "Maitre1 Nom", "Maitre1 Prénom", "Maitre1 Courriel",
-            "Maitre2 Nom", "Maitre2 Prénom", "Maitre2 Courriel",
-            "Prospections", "Formations", "Appairages",
-            "Créé le", "Créé par",
-        ])
+        writer.writerow(
+            [
+                "ID",
+                "Nom",
+                "Type",
+                "Secteur",
+                "SIRET",
+                "Type employeur",
+                "Code APE",
+                "Effectif",
+                "IDCC",
+                "Ville",
+                "CP",
+                "Centre",
+                "Téléphone",
+                "Email",
+                "Contact",
+                "Web",
+                "Maitre1 Nom",
+                "Maitre1 Prénom",
+                "Maitre1 Courriel",
+                "Maitre2 Nom",
+                "Maitre2 Prénom",
+                "Maitre2 Courriel",
+                "Prospections",
+                "Formations",
+                "Appairages",
+                "Créé le",
+                "Créé par",
+            ]
+        )
 
         for p in queryset:
-            writer.writerow([
-                p.pk, p.nom, p.get_type_display(), p.secteur_activite or "",
-                p.siret or "", p.get_type_employeur_display() if p.type_employeur else "",
-                p.code_ape or "", p.effectif_total or "", p.idcc or "",
-                p.city or "", p.zip_code or "", getattr(p.default_centre, "nom", "") or "",
-                p.telephone or "", p.email or "", p.contact_info or "",
-                p.website or "",
-                p.maitre1_nom_naissance or "", p.maitre1_prenom or "", p.maitre1_courriel or "",
-                p.maitre2_nom_naissance or "", p.maitre2_prenom or "", p.maitre2_courriel or "",
-                p.nb_prospections, p.nb_formations, p.nb_appairages,
-                localtime(p.created_at).strftime("%d/%m/%Y") if p.created_at else "",
-                getattr(p.created_by, "username", ""),
-            ])
+            writer.writerow(
+                [
+                    p.pk,
+                    p.nom,
+                    p.get_type_display(),
+                    p.secteur_activite or "",
+                    p.siret or "",
+                    p.get_type_employeur_display() if p.type_employeur else "",
+                    p.code_ape or "",
+                    p.effectif_total or "",
+                    p.idcc or "",
+                    p.city or "",
+                    p.zip_code or "",
+                    getattr(p.default_centre, "nom", "") or "",
+                    p.telephone or "",
+                    p.email or "",
+                    p.contact_info or "",
+                    p.website or "",
+                    p.maitre1_nom_naissance or "",
+                    p.maitre1_prenom or "",
+                    p.maitre1_courriel or "",
+                    p.maitre2_nom_naissance or "",
+                    p.maitre2_prenom or "",
+                    p.maitre2_courriel or "",
+                    p.nb_prospections,
+                    p.nb_formations,
+                    p.nb_appairages,
+                    localtime(p.created_at).strftime("%d/%m/%Y") if p.created_at else "",
+                    getattr(p.created_by, "username", ""),
+                ]
+            )
         return response
 
     # === Sauvegarde enrichie ==========================================================

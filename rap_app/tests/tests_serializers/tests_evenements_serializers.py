@@ -1,25 +1,38 @@
 from datetime import date, timedelta
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 
-from ...models.formations import Formation, Centre, HistoriqueFormation, TypeOffre, Statut
-from ...models.evenements import Evenement
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+
 from ...api.serializers.evenements_serializers import EvenementSerializer
+from ...models.evenements import Evenement
+from ...models.formations import (
+    Centre,
+    Formation,
+    HistoriqueFormation,
+    Statut,
+    TypeOffre,
+)
 
 User = get_user_model()
 
 
 class EvenementSerializerTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testuser', email='test@example.com', password='pass')
-        self.formation = Formation.objects.create(nom="Formation Hist", centre=Centre.objects.create(nom="X"), type_offre=TypeOffre.objects.create(nom="crif"), statut=Statut.objects.create(nom="formation_en_cours", couleur="#123456"), created_by=self.user)
+        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
+        self.formation = Formation.objects.create(
+            nom="Formation Hist",
+            centre=Centre.objects.create(nom="X"),
+            type_offre=TypeOffre.objects.create(nom="crif"),
+            statut=Statut.objects.create(nom="formation_en_cours", couleur="#123456"),
+            created_by=self.user,
+        )
         self.histo = HistoriqueFormation.objects.create(
             formation=self.formation,
             champ_modifie="nom",
             ancienne_valeur="Old",
             nouvelle_valeur="New",
             commentaire="Nom modifié",
-            created_by=self.user
+            created_by=self.user,
         )
 
     def test_serializer_valid_data(self):
@@ -51,7 +64,7 @@ class EvenementSerializerTestCase(TestCase):
             event_date=date.today(),
             participants_prevus=10,
             participants_reels=7,
-            created_by=self.user
+            created_by=self.user,
         )
         serializer = EvenementSerializer(instance=evenement)
         rep = serializer.data

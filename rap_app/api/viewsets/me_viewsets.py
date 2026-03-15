@@ -1,19 +1,19 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from rest_framework.generics import RetrieveUpdateAPIView
-from rest_framework import exceptions
 from django.utils import timezone as dj_timezone
-
-from ..serializers.candidat_serializers import CandidatCreateUpdateSerializer
-
-from ..serializers.base_serializers import EmptySerializer
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import exceptions, status
+from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from ...models.custom_user import CustomUser
 from ...models.logs import LogUtilisateur
-from ..serializers.user_profil_serializers import CustomUserSerializer, RoleChoiceSerializer
+from ..serializers.base_serializers import EmptySerializer
+from ..serializers.candidat_serializers import CandidatCreateUpdateSerializer
+from ..serializers.user_profil_serializers import (
+    CustomUserSerializer,
+    RoleChoiceSerializer,
+)
 
 
 class MeAPIView(APIView):
@@ -112,6 +112,7 @@ class RoleChoicesView(APIView):
     Vue publique retournant la liste des rôles utilisateurs définis
     dans CustomUser.ROLE_CHOICES.
     """
+
     permission_classes = [AllowAny]
 
     @extend_schema(

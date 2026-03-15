@@ -1,24 +1,24 @@
 from datetime import date
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import localdate
+from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
 from .centres import Centre
+
 
 class PrepaQuerySet(models.QuerySet):
     """
     QuerySet pour filtrer les activités Prépa.
     """
+
     def ateliers(self):
         """
         Retourne les activités de type atelier ou 'autre'.
         """
-        return self.filter(
-            models.Q(type_prepa__startswith="atelier") | models.Q(type_prepa="autre")
-        )
+        return self.filter(models.Q(type_prepa__startswith="atelier") | models.Q(type_prepa="autre"))
 
     def ic(self):
         """
@@ -38,6 +38,7 @@ class Prepa(BaseModel):
         """
         Types d'activités Prépa.
         """
+
         INFO_COLLECTIVE = "info_collective", _("Information collective")
         ATELIER1 = "atelier_1", _("Atelier 1")
         ATELIER2 = "atelier_2", _("Atelier 2")
@@ -47,15 +48,8 @@ class Prepa(BaseModel):
         ATELIER6 = "atelier_6", _("Atelier 6")
         AUTRE = "autre", _("Autre activité Prépa")
 
-    type_prepa = models.CharField(
-        max_length=40,
-        choices=TypePrepa.choices,
-        verbose_name=_("Type d’activité")
-    )
-    date_prepa = models.DateField(
-        _("Date"),
-        help_text=_("Date de la séance ou de la semaine concernée")
-    )
+    type_prepa = models.CharField(max_length=40, choices=TypePrepa.choices, verbose_name=_("Type d’activité"))
+    date_prepa = models.DateField(_("Date"), help_text=_("Date de la séance ou de la semaine concernée"))
 
     centre = models.ForeignKey(
         Centre,
@@ -167,8 +161,7 @@ class Prepa(BaseModel):
                 centre=centre,
                 date_prepa__year=date.year,
                 type_prepa=self.TypePrepa.ATELIER1,
-            )
-            .aggregate(total=models.Sum("nb_presents_prepa"))["total"]
+            ).aggregate(total=models.Sum("nb_presents_prepa"))["total"]
             or 0
         )
 
@@ -192,8 +185,7 @@ class Prepa(BaseModel):
                 centre=centre,
                 date_prepa__year=date.year,
                 type_prepa=self.TypePrepa.ATELIER1,
-            )
-            .aggregate(total=models.Sum("nb_presents_prepa"))["total"]
+            ).aggregate(total=models.Sum("nb_presents_prepa"))["total"]
             or 0
         )
         return max(obj_annuel - realise, 0)
@@ -210,7 +202,9 @@ class Prepa(BaseModel):
                 centre=centre,
                 type_prepa=cls.TypePrepa.ATELIER1,
                 date_prepa__year=annee,
-            ).aggregate(total=models.Sum("nb_presents_prepa"))["total"]
+            ).aggregate(
+                total=models.Sum("nb_presents_prepa")
+            )["total"]
             or 0
         )
         fin = (
@@ -218,7 +212,9 @@ class Prepa(BaseModel):
                 centre=centre,
                 type_prepa=cls.TypePrepa.ATELIER6,
                 date_prepa__year=annee,
-            ).aggregate(total=models.Sum("nb_presents_prepa"))["total"]
+            ).aggregate(
+                total=models.Sum("nb_presents_prepa")
+            )["total"]
             or 0
         )
         return round((fin / debut) * 100, 1) if debut else 0
@@ -240,9 +236,7 @@ class Prepa(BaseModel):
         if departement is not None:
             qs = qs.select_related("centre")
             return sum(
-                d.nb_presents_prepa
-                for d in qs
-                if d.centre and getattr(d.centre, "departement", None) == departement
+                d.nb_presents_prepa for d in qs if d.centre and getattr(d.centre, "departement", None) == departement
             )
 
         return qs.aggregate(total=models.Sum("nb_presents_prepa"))["total"] or 0
@@ -311,9 +305,7 @@ class Prepa(BaseModel):
         """
         annee = annee or localdate().year
         objectif_total = (
-            ObjectifPrepa.objects.filter(annee=annee)
-            .aggregate(total=models.Sum("valeur_objectif"))["total"]
-            or 0
+            ObjectifPrepa.objects.filter(annee=annee).aggregate(total=models.Sum("valeur_objectif"))["total"] or 0
         )
         realise_total = cls.total_accueillis(annee=annee)
         return max(objectif_total - realise_total, 0)
@@ -325,15 +317,12 @@ class Prepa(BaseModel):
         """
         annee = annee or localdate().year
         objectif_total = (
-            ObjectifPrepa.objects.filter(annee=annee)
-            .aggregate(total=models.Sum("valeur_objectif"))["total"]
-            or 0
+            ObjectifPrepa.objects.filter(annee=annee).aggregate(total=models.Sum("valeur_objectif"))["total"] or 0
         )
         realise_total = (
-            cls.objects.filter(
-                date_prepa__year=annee,
-                type_prepa=cls.TypePrepa.ATELIER1
-            ).aggregate(total=models.Sum("nb_presents_prepa"))["total"]
+            cls.objects.filter(date_prepa__year=annee, type_prepa=cls.TypePrepa.ATELIER1).aggregate(
+                total=models.Sum("nb_presents_prepa")
+            )["total"]
             or 0
         )
         taux_atteinte = round((realise_total / objectif_total) * 100, 1) if objectif_total else 0
@@ -388,9 +377,7 @@ class ObjectifPrepa(BaseModel):
         verbose_name = _("Objectif Prépa (centre)")
         verbose_name_plural = _("Objectifs Prépa (centres)")
         ordering = ["-annee"]
-        constraints = [
-            models.UniqueConstraint(fields=["centre", "annee"], name="uniq_objectif_prepa_centre_annee")
-        ]
+        constraints = [models.UniqueConstraint(fields=["centre", "annee"], name="uniq_objectif_prepa_centre_annee")]
         indexes = [models.Index(fields=["centre", "annee"])]
 
     def __str__(self):
@@ -420,7 +407,8 @@ class ObjectifPrepa(BaseModel):
                 total_prescriptions=models.Sum("nombre_prescriptions"),
                 total_presents_info=models.Sum("nb_presents_info"),
                 total_adhesions=models.Sum("nb_adhesions"),
-            ) or {}
+            )
+            or {}
         )
 
         agg_ateliers = (
@@ -446,7 +434,8 @@ class ObjectifPrepa(BaseModel):
                         output_field=models.IntegerField(),
                     )
                 ),
-            ) or {}
+            )
+            or {}
         )
 
         self._data_prepa_cache = {

@@ -1,12 +1,13 @@
-from django.db import models
-from django.core.validators import RegexValidator
-from django.utils.text import slugify
-from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import ValidationError
-from django.db.models import Count, Q
-
 import logging
+
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db import models
+from django.db.models import Count, Q
+from django.urls import reverse
+from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
+
 from .base import BaseModel
 
 logger = logging.getLogger("application.partenaires")
@@ -14,19 +15,13 @@ logger = logging.getLogger("application.partenaires")
 # Validators
 
 phone_regex = RegexValidator(
-    regex=r'^(0[1-9]\d{8})$|^(?:\+33|0033)[1-9]\d{8}$',
-    message=_("Entrez un numéro de téléphone français valide.")
+    regex=r"^(0[1-9]\d{8})$|^(?:\+33|0033)[1-9]\d{8}$", message=_("Entrez un numéro de téléphone français valide.")
 )
 
-zip_code_regex = RegexValidator(
-    regex=r'^[0-9]{5}$',
-    message=_("Le code postal doit être composé de 5 chiffres.")
-)
+zip_code_regex = RegexValidator(regex=r"^[0-9]{5}$", message=_("Le code postal doit être composé de 5 chiffres."))
 
-url_regex = RegexValidator(
-    regex=r'^(http|https)://',
-    message=_("L'URL doit commencer par http:// ou https://")
-)
+url_regex = RegexValidator(regex=r"^(http|https)://", message=_("L'URL doit commencer par http:// ou https://"))
+
 
 class PartenaireManager(models.Manager):
     """
@@ -56,14 +51,8 @@ class PartenaireManager(models.Manager):
         Retourne les partenaires ayant au moins un champ de contact non vide.
         """
         return self.filter(
-            Q(contact_nom__isnull=False) |
-            Q(contact_email__isnull=False) |
-            Q(contact_telephone__isnull=False)
-        ).exclude(
-            Q(contact_nom__exact='') &
-            Q(contact_email__exact='') &
-            Q(contact_telephone__exact='')
-        )
+            Q(contact_nom__isnull=False) | Q(contact_email__isnull=False) | Q(contact_telephone__isnull=False)
+        ).exclude(Q(contact_nom__exact="") & Q(contact_email__exact="") & Q(contact_telephone__exact=""))
 
     def par_secteur(self, secteur):
         """
@@ -78,11 +67,11 @@ class PartenaireManager(models.Manager):
         if not query:
             return self.all()
         return self.filter(
-            Q(nom__icontains=query) |
-            Q(secteur_activite__icontains=query) |
-            Q(contact_nom__icontains=query) |
-            Q(description__icontains=query) |
-            Q(city__icontains=query)
+            Q(nom__icontains=query)
+            | Q(secteur_activite__icontains=query)
+            | Q(contact_nom__icontains=query)
+            | Q(description__icontains=query)
+            | Q(city__icontains=query)
         )
 
     def avec_statistiques(self):
@@ -90,12 +79,13 @@ class PartenaireManager(models.Manager):
         Annoter chaque partenaire avec nb_prospections et nb_formations.
         """
         return self.annotate(
-            nb_prospections=Count('prospections', distinct=True),
+            nb_prospections=Count("prospections", distinct=True),
             nb_formations=(
-                Count('appairages__formation', filter=Q(appairages__formation__isnull=False), distinct=True)
-                + Count('prospections__formation', filter=Q(prospections__formation__isnull=False), distinct=True)
+                Count("appairages__formation", filter=Q(appairages__formation__isnull=False), distinct=True)
+                + Count("prospections__formation", filter=Q(prospections__formation__isnull=False), distinct=True)
             ),
         )
+
 
 class Partenaire(BaseModel):
     """
@@ -125,24 +115,24 @@ class Partenaire(BaseModel):
     ]
 
     CHOICES_TYPE_OF_ACTION = [
-        ('recrutement_emploi', _('Recrutement - Emploi')),
-        ('recrutement_stage', _('Recrutement - Stage')),
-        ('recrutement_apprentissage', _('Recrutement - Apprentissage')),
-        ('presentation_metier_entreprise', _('Présentation métier/entreprise')),
-        ('visite_entreprise', _("Visite d'entreprise")),
-        ('coaching', _('Coaching')),
-        ('partenariat', _('Partenariat')),
-        ('autre', _('Autre')),
-        ('non_definie', _('Non définie')),
+        ("recrutement_emploi", _("Recrutement - Emploi")),
+        ("recrutement_stage", _("Recrutement - Stage")),
+        ("recrutement_apprentissage", _("Recrutement - Apprentissage")),
+        ("presentation_metier_entreprise", _("Présentation métier/entreprise")),
+        ("visite_entreprise", _("Visite d'entreprise")),
+        ("coaching", _("Coaching")),
+        ("partenariat", _("Partenariat")),
+        ("autre", _("Autre")),
+        ("non_definie", _("Non définie")),
     ]
 
     default_centre = models.ForeignKey(
-        'rap_app.Centre',
+        "rap_app.Centre",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='partenaires_default',
-        verbose_name='Centre par défaut'
+        related_name="partenaires_default",
+        verbose_name="Centre par défaut",
     )
 
     type = models.CharField(
@@ -151,14 +141,11 @@ class Partenaire(BaseModel):
         default=TYPE_INSTITUTIONNEL,
         verbose_name=_("Type de partenaire"),
         help_text=_("Définit s'il s'agit d'une entreprise, d'un partenaire ou d'une personne physique"),
-        db_index=True
+        db_index=True,
     )
 
     nom = models.CharField(
-        max_length=NOM_MAX_LENGTH,
-        unique=True,
-        verbose_name=_("Nom"),
-        help_text=_("Nom complet de l'entité")
+        max_length=NOM_MAX_LENGTH, unique=True, verbose_name=_("Nom"), help_text=_("Nom complet de l'entité")
     )
 
     secteur_activite = models.CharField(
@@ -166,7 +153,7 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Secteur d'activité"),
-        help_text=_("Domaine d'activité principal")
+        help_text=_("Domaine d'activité principal"),
     )
 
     street_number = models.CharField(
@@ -174,15 +161,11 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Numéro de rue"),
-        help_text=_("Numéro dans la voie (ex: 12B)")
+        help_text=_("Numéro dans la voie (ex: 12B)"),
     )
 
     street_name = models.CharField(
-        max_length=STREET_MAX_LENGTH,
-        blank=True,
-        null=True,
-        verbose_name=_("Adresse"),
-        help_text=_("Nom de la rue")
+        max_length=STREET_MAX_LENGTH, blank=True, null=True, verbose_name=_("Adresse"), help_text=_("Nom de la rue")
     )
 
     street_complement = models.CharField(
@@ -190,7 +173,7 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Complément d'adresse"),
-        help_text=_("Bâtiment, étage, entrée, etc.")
+        help_text=_("Bâtiment, étage, entrée, etc."),
     )
 
     zip_code = models.CharField(
@@ -199,15 +182,11 @@ class Partenaire(BaseModel):
         null=True,
         validators=[zip_code_regex],
         verbose_name=_("Code postal"),
-        help_text=_("Code postal à 5 chiffres")
+        help_text=_("Code postal à 5 chiffres"),
     )
 
     city = models.CharField(
-        max_length=CITY_MAX_LENGTH,
-        blank=True,
-        null=True,
-        verbose_name=_("Ville"),
-        help_text=_("Ville")
+        max_length=CITY_MAX_LENGTH, blank=True, null=True, verbose_name=_("Ville"), help_text=_("Ville")
     )
 
     country = models.CharField(
@@ -216,7 +195,7 @@ class Partenaire(BaseModel):
         null=True,
         default="France",
         verbose_name=_("Pays"),
-        help_text=_("Pays (France par défaut)")
+        help_text=_("Pays (France par défaut)"),
     )
 
     contact_nom = models.CharField(
@@ -224,7 +203,7 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Nom du contact"),
-        help_text=_("Nom et prénom du contact principal")
+        help_text=_("Nom et prénom du contact principal"),
     )
 
     contact_poste = models.CharField(
@@ -232,7 +211,7 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Poste du contact"),
-        help_text=_("Fonction occupée par le contact")
+        help_text=_("Fonction occupée par le contact"),
     )
 
     contact_telephone = models.CharField(
@@ -241,14 +220,11 @@ class Partenaire(BaseModel):
         null=True,
         validators=[phone_regex],
         verbose_name=_("Téléphone"),
-        help_text=_("Numéro de téléphone au format français")
+        help_text=_("Numéro de téléphone au format français"),
     )
 
     contact_email = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name=_("Email"),
-        help_text=_("Adresse email du contact")
+        blank=True, null=True, verbose_name=_("Email"), help_text=_("Adresse email du contact")
     )
 
     website = models.URLField(
@@ -256,14 +232,11 @@ class Partenaire(BaseModel):
         null=True,
         validators=[url_regex],
         verbose_name=_("Site web"),
-        help_text=_("Site web officiel (http:// ou https://)")
+        help_text=_("Site web officiel (http:// ou https://)"),
     )
 
     social_network_url = models.URLField(
-        blank=True,
-        null=True,
-        verbose_name=_("Réseau social"),
-        help_text=_("URL d'un profil LinkedIn, Twitter, etc.")
+        blank=True, null=True, verbose_name=_("Réseau social"), help_text=_("URL d'un profil LinkedIn, Twitter, etc.")
     )
 
     actions = models.CharField(
@@ -272,21 +245,21 @@ class Partenaire(BaseModel):
         null=True,
         choices=CHOICES_TYPE_OF_ACTION,
         verbose_name=_("Type d'action"),
-        help_text=_("Catégorie principale d'interaction avec ce partenaire")
+        help_text=_("Catégorie principale d'interaction avec ce partenaire"),
     )
 
     action_description = models.TextField(
         blank=True,
         null=True,
         verbose_name=_("Description de l'action"),
-        help_text=_("Détails sur les actions menées ou envisagées")
+        help_text=_("Détails sur les actions menées ou envisagées"),
     )
 
     description = models.TextField(
         blank=True,
         null=True,
         verbose_name=_("Description générale"),
-        help_text=_("Informations générales sur le partenaire")
+        help_text=_("Informations générales sur le partenaire"),
     )
 
     siret = models.CharField(
@@ -295,12 +268,12 @@ class Partenaire(BaseModel):
         null=True,
         verbose_name=_("SIRET"),
         help_text=_("Numéro SIRET (14 chiffres)"),
-        validators=[RegexValidator(r'^\d{14}$', _("Le SIRET doit comporter 14 chiffres."))]
+        validators=[RegexValidator(r"^\d{14}$", _("Le SIRET doit comporter 14 chiffres."))],
     )
 
     TYPE_EMPLOYEUR_CHOICES = [
-        ('prive', _("Privé")),
-        ('public', _("Public")),
+        ("prive", _("Privé")),
+        ("public", _("Public")),
     ]
     type_employeur = models.CharField(
         max_length=20,
@@ -308,7 +281,7 @@ class Partenaire(BaseModel):
         null=True,
         choices=TYPE_EMPLOYEUR_CHOICES,
         verbose_name=_("Type d'employeur"),
-        help_text=_("Définit si l'employeur est privé ou public")
+        help_text=_("Définit si l'employeur est privé ou public"),
     )
 
     employeur_specifique = models.CharField(
@@ -316,36 +289,25 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Employeur spécifique"),
-        help_text=_("Ex: artisan, profession libérale…")
+        help_text=_("Ex: artisan, profession libérale…"),
     )
 
     code_ape = models.CharField(
-        max_length=10,
-        blank=True,
-        null=True,
-        verbose_name=_("Code APE"),
-        help_text=_("Code APE de l'entreprise")
+        max_length=10, blank=True, null=True, verbose_name=_("Code APE"), help_text=_("Code APE de l'entreprise")
     )
 
     effectif_total = models.PositiveIntegerField(
-        blank=True,
-        null=True,
-        verbose_name=_("Effectif total"),
-        help_text=_("Nombre total de salariés")
+        blank=True, null=True, verbose_name=_("Effectif total"), help_text=_("Nombre total de salariés")
     )
 
     idcc = models.CharField(
-        max_length=10,
-        blank=True,
-        null=True,
-        verbose_name=_("IDCC"),
-        help_text=_("Code convention collective")
+        max_length=10, blank=True, null=True, verbose_name=_("IDCC"), help_text=_("Code convention collective")
     )
 
     assurance_chomage_speciale = models.BooleanField(
         default=False,
         verbose_name=_("Assurance chômage spéciale"),
-        help_text=_("Cochez si l'employeur est soumis à un régime particulier (souvent public)")
+        help_text=_("Cochez si l'employeur est soumis à un régime particulier (souvent public)"),
     )
 
     telephone = models.CharField(
@@ -354,108 +316,75 @@ class Partenaire(BaseModel):
         null=True,
         validators=[phone_regex],
         verbose_name=_("Téléphone général"),
-        help_text=_("Numéro de téléphone principal de l'entreprise")
+        help_text=_("Numéro de téléphone principal de l'entreprise"),
     )
 
     email = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name=_("Email général"),
-        help_text=_("Adresse email principale de l'entreprise")
+        blank=True, null=True, verbose_name=_("Email général"), help_text=_("Adresse email principale de l'entreprise")
     )
 
     maitre1_nom_naissance = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Nom de naissance")
+        max_length=150, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°1 - Nom de naissance")
     )
 
     maitre1_prenom = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Prénom")
+        max_length=150, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°1 - Prénom")
     )
 
     maitre1_date_naissance = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Date de naissance")
+        blank=True, null=True, verbose_name=_("Maître d’apprentissage n°1 - Date de naissance")
     )
 
-    maitre1_courriel = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Courriel")
-    )
+    maitre1_courriel = models.EmailField(blank=True, null=True, verbose_name=_("Maître d’apprentissage n°1 - Courriel"))
 
     maitre1_emploi_occupe = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Emploi occupé")
+        max_length=255, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°1 - Emploi occupé")
     )
 
     maitre1_diplome_titre = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Diplôme ou titre le plus élevé obtenu")
+        verbose_name=_("Maître d’apprentissage n°1 - Diplôme ou titre le plus élevé obtenu"),
     )
 
     maitre1_niveau_diplome = models.CharField(
         max_length=50,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Niveau de diplôme ou titre le plus élevé obtenu")
+        verbose_name=_("Maître d’apprentissage n°1 - Niveau de diplôme ou titre le plus élevé obtenu"),
     )
 
     maitre2_nom_naissance = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Nom de naissance")
+        max_length=150, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°2 - Nom de naissance")
     )
 
     maitre2_prenom = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Prénom")
+        max_length=150, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°2 - Prénom")
     )
 
     maitre2_date_naissance = models.DateField(
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Date de naissance")
+        blank=True, null=True, verbose_name=_("Maître d’apprentissage n°2 - Date de naissance")
     )
 
-    maitre2_courriel = models.EmailField(
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Courriel")
-    )
+    maitre2_courriel = models.EmailField(blank=True, null=True, verbose_name=_("Maître d’apprentissage n°2 - Courriel"))
 
     maitre2_emploi_occupe = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Emploi occupé")
+        max_length=255, blank=True, null=True, verbose_name=_("Maître d’apprentissage n°2 - Emploi occupé")
     )
 
     maitre2_diplome_titre = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Diplôme ou titre le plus élevé obtenu")
+        verbose_name=_("Maître d’apprentissage n°2 - Diplôme ou titre le plus élevé obtenu"),
     )
 
     maitre2_niveau_diplome = models.CharField(
         max_length=50,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Niveau de diplôme ou titre le plus élevé obtenu")
+        verbose_name=_("Maître d’apprentissage n°2 - Niveau de diplôme ou titre le plus élevé obtenu"),
     )
 
     slug = models.SlugField(
@@ -464,7 +393,7 @@ class Partenaire(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Slug"),
-        help_text=_("Identifiant URL unique généré automatiquement à partir du nom")
+        help_text=_("Identifiant URL unique généré automatiquement à partir du nom"),
     )
 
     objects = models.Manager()
@@ -473,21 +402,16 @@ class Partenaire(BaseModel):
     class Meta:
         verbose_name = _("Partenaire")
         verbose_name_plural = _("Partenaires")
-        ordering = ['nom']
+        ordering = ["nom"]
         indexes = [
-            models.Index(fields=['nom'], name='partenaire_nom_idx'),
-            models.Index(fields=['secteur_activite'], name='partenaire_secteur_idx'),
-            models.Index(fields=['slug'], name='partenaire_slug_idx'),
-            models.Index(fields=['zip_code'], name='partenaire_cp_idx'),
-            models.Index(fields=['type'], name='partenaire_type_idx'),
-            models.Index(fields=['actions'], name='partenaire_actions_idx'),
+            models.Index(fields=["nom"], name="partenaire_nom_idx"),
+            models.Index(fields=["secteur_activite"], name="partenaire_secteur_idx"),
+            models.Index(fields=["slug"], name="partenaire_slug_idx"),
+            models.Index(fields=["zip_code"], name="partenaire_cp_idx"),
+            models.Index(fields=["type"], name="partenaire_type_idx"),
+            models.Index(fields=["actions"], name="partenaire_actions_idx"),
         ]
-        constraints = [
-            models.CheckConstraint(
-                check=~Q(nom=''),
-                name='partenaire_nom_not_empty'
-            )
-        ]
+        constraints = [models.CheckConstraint(check=~Q(nom=""), name="partenaire_nom_not_empty")]
 
     def __str__(self) -> str:
         """
@@ -526,17 +450,19 @@ class Partenaire(BaseModel):
         if self.zip_code and not self.city:
             raise ValidationError({"city": _("La ville doit être renseignée si le code postal est fourni.")})
 
-        if self.website and not (self.website.startswith('http://') or self.website.startswith('https://')):
+        if self.website and not (self.website.startswith("http://") or self.website.startswith("https://")):
             raise ValidationError({"website": _("L'URL doit commencer par http:// ou https://")})
 
-        if self.social_network_url and not (self.social_network_url.startswith('http://') or self.social_network_url.startswith('https://')):
+        if self.social_network_url and not (
+            self.social_network_url.startswith("http://") or self.social_network_url.startswith("https://")
+        ):
             raise ValidationError({"social_network_url": _("L'URL doit commencer par http:// ou https://")})
 
     def save(self, *args, **kwargs):
         """
         Surcharge save pour normalisation et unicité métier.
         """
-        user = kwargs.pop('user', None)
+        user = kwargs.pop("user", None)
         is_new = self.pk is None
 
         if self.nom:
@@ -551,9 +477,7 @@ class Partenaire(BaseModel):
             except Partenaire.DoesNotExist:
                 existing = None
             if existing:
-                logger.info(
-                    f"Réutilisation du partenaire existant : {existing.nom} (ID: {existing.pk})"
-                )
+                logger.info(f"Réutilisation du partenaire existant : {existing.nom} (ID: {existing.pk})")
                 self._was_reused = True
                 self.pk = existing.pk
                 self.slug = existing.slug
@@ -583,24 +507,21 @@ class Partenaire(BaseModel):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        logger.info(
-            f"{'Création' if is_new else 'Mise à jour'} du partenaire : {self.nom} (ID: {self.pk})"
-        )
+        logger.info(f"{'Création' if is_new else 'Mise à jour'} du partenaire : {self.nom} (ID: {self.pk})")
 
     def _formations_qs(self):
         """
         QuerySet des formations liées par appairage ou prospection.
         """
         from .formations import Formation
-        return Formation.objects.filter(
-            Q(appairages__partenaire=self) | Q(prospections__partenaire=self)
-        ).distinct()
+
+        return Formation.objects.filter(Q(appairages__partenaire=self) | Q(prospections__partenaire=self)).distinct()
 
     def get_formations_info(self, with_list: bool = False) -> dict:
         """
         Retourne un dict avec le nombre de formations liées, et éventuellement la liste.
         """
-        qs = self._formations_qs().order_by('-start_date')
+        qs = self._formations_qs().order_by("-start_date")
         info = {"count": qs.count()}
         if with_list:
             info["formations"] = list(qs)
@@ -617,7 +538,7 @@ class Partenaire(BaseModel):
         """
         URL nommée Django pour la suppression du partenaire.
         """
-        return reverse('partenaire-delete', kwargs={'pk': self.pk})
+        return reverse("partenaire-delete", kwargs={"pk": self.pk})
 
     def get_full_address(self) -> str:
         """
@@ -627,7 +548,7 @@ class Partenaire(BaseModel):
             f"{self.street_number or ''} {self.street_name or ''}".strip(),
             self.street_complement,
             f"{self.zip_code or ''} {self.city or ''}".strip(),
-            self.country
+            self.country,
         ]
         return ", ".join(filter(None, parts)) or _("Adresse non spécifiée")
 
@@ -695,7 +616,7 @@ class Partenaire(BaseModel):
         """
         Statistiques simples sur les prospections rattachées.
         """
-        queryset = self.prospections.all().order_by('-date_prospection')
+        queryset = self.prospections.all().order_by("-date_prospection")
         info = {"count": queryset.count()}
         if with_list:
             info["prospections"] = queryset

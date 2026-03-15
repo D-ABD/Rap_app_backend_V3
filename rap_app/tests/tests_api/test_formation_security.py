@@ -1,26 +1,23 @@
-from rest_framework import status
-from rest_framework.test import APITestCase
-from django.utils import timezone
 from datetime import timedelta
 
-from rap_app.tests.factories import UserFactory
-from rap_app.models.formations import Formation
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from rap_app.models.centres import Centre
-from rap_app.models.types_offre import TypeOffre
+from rap_app.models.formations import Formation
 from rap_app.models.statut import Statut
+from rap_app.models.types_offre import TypeOffre
+from rap_app.tests.factories import UserFactory
 
 
 class FormationSecurityTests(APITestCase):
     def _create_formation(self, centre, nom="Formation Test"):
         today = timezone.localdate()
 
-        type_offre = TypeOffre.objects.create(
-            nom=TypeOffre.CRIF
-        )
+        type_offre = TypeOffre.objects.create(nom=TypeOffre.CRIF)
 
-        statut = Statut.objects.create(
-            nom=Statut.NON_DEFINI
-        )
+        statut = Statut.objects.create(nom=Statut.NON_DEFINI)
 
         return Formation.objects.create(
             nom=nom,
@@ -116,16 +113,17 @@ class FormationSecurityTests(APITestCase):
         self.assertNotIn(formation_hidden.id, returned_ids)
 
 
-import pytest
 from datetime import timedelta
+
+import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from rap_app.tests.factories import UserFactory
-from rap_app.models.formations import Formation
 from rap_app.models.centres import Centre
-from rap_app.models.types_offre import TypeOffre
+from rap_app.models.formations import Formation
 from rap_app.models.statut import Statut
+from rap_app.models.types_offre import TypeOffre
+from rap_app.tests.factories import UserFactory
 
 
 @pytest.mark.django_db

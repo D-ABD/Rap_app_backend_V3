@@ -1,23 +1,24 @@
 # Tests corrigés pour correspondre aux ViewSets nettoyés et à la pagination enrichie
 
 import unittest
-from rest_framework import status
-from django.urls import reverse
-from django.contrib.contenttypes.models import ContentType
 from datetime import timedelta
-from django.utils import timezone
 
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+
+from ...api.serializers.prospection_serializers import ProspectionSerializer
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
+from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
-from ...models.prospection import Prospection, HistoriqueProspection, ProspectionChoices
+from ...models.prospection import HistoriqueProspection, Prospection, ProspectionChoices
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ...models.logs import LogUtilisateur
-from ...api.serializers.prospection_serializers import ProspectionSerializer
-from ..test_utils import AuthenticatedTestCase
 from ..factories import UserFactory
-from ...models.custom_user import CustomUser
+from ..test_utils import AuthenticatedTestCase
 
 
 class ProspectionViewSetTestCase(AuthenticatedTestCase):
@@ -36,7 +37,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
             type_offre=self.type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=5),
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.partenaire = Partenaire.objects.create(nom="Partenaire Y", type="entreprise", created_by=self.user)
@@ -49,7 +50,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
             "motif": ProspectionChoices.MOTIF_PARTENARIAT,
             "statut": ProspectionChoices.STATUT_A_FAIRE,
             "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
-            "commentaire": "Premier contact"
+            "commentaire": "Premier contact",
         }
 
         self.prospection = Prospection.objects.create(
@@ -61,7 +62,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
             statut=ProspectionChoices.STATUT_EN_COURS,
             objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
             commentaire="Initial",
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.list_url = reverse("prospection-list")
@@ -77,7 +78,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Prospection),
             object_id=obj_id,
             action=LogUtilisateur.ACTION_CREATE,
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de création manquant")
 
@@ -93,7 +94,9 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
     def test_changer_statut(self):
         url = reverse("prospection-changer-statut", args=[self.prospection.id])
         from datetime import timedelta
+
         from django.utils import timezone as tz
+
         payload = {
             "statut": ProspectionChoices.STATUT_A_RELANCER,
             "relance_prevue": (tz.now().date() + timedelta(days=7)).isoformat(),
@@ -113,7 +116,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
             statut=ProspectionChoices.STATUT_EN_COURS,
             objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
             commentaire="Suppression test",
-            created_by=self.user
+            created_by=self.user,
         )
         url = reverse("prospection-detail", args=[prospection.id])
         response = self.client.delete(url)
@@ -134,11 +137,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
         self.assertIn("date_prospection", serializer.errors)
 
     def test_valid_update(self):
-        serializer = ProspectionSerializer(
-            instance=self.prospection,
-            data={"commentaire": "Mise à jour"},
-            partial=True
-        )
+        serializer = ProspectionSerializer(instance=self.prospection, data={"commentaire": "Mise à jour"}, partial=True)
         self.assertTrue(serializer.is_valid())
         updated = serializer.save()
         self.assertEqual(updated.commentaire, "Mise à jour")
@@ -161,7 +160,7 @@ class HistoriqueProspectionViewSetTestCase(AuthenticatedTestCase):
             type_offre=type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=5),
-            created_by=self.user
+            created_by=self.user,
         )
 
         partenaire = Partenaire.objects.create(nom="Entreprise ABC", type="entreprise", created_by=self.user)
@@ -175,7 +174,7 @@ class HistoriqueProspectionViewSetTestCase(AuthenticatedTestCase):
             statut=ProspectionChoices.STATUT_EN_COURS,
             objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
             commentaire="Initial",
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.historique = HistoriqueProspection.objects.create(

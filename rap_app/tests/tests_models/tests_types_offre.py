@@ -1,5 +1,6 @@
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
+
 from ...models.types_offre import TypeOffre
 from .setup_base_tests import BaseModelTestSetupMixin
 
@@ -76,4 +77,3 @@ class TypeOffreModelTest(BaseModelTestSetupMixin, TestCase):
             to.save(skip_validation=True, user=self.user)
         except ValidationError:
             self.fail("skip_validation=True devrait désactiver la validation")
-

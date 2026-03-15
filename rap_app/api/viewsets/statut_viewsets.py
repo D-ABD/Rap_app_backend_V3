@@ -1,12 +1,13 @@
 import logging
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
-from rest_framework.decorators import action
 
-from ...models.statut import calculer_couleur_texte, get_default_color, Statut
-from ..serializers.statut_serializers import StatutChoiceSerializer, StatutSerializer
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from ...api.permissions import IsStaffOrAbove
+from ...models.statut import Statut, calculer_couleur_texte, get_default_color
+from ..serializers.statut_serializers import StatutChoiceSerializer, StatutSerializer
 
 logger = logging.getLogger("application.statut")
 
@@ -16,33 +17,33 @@ logger = logging.getLogger("application.statut")
         summary="Liste des statuts",
         description="Récupère tous les statuts actifs avec libellés, couleurs et badges HTML.",
         tags=["Statuts"],
-        responses={200: OpenApiResponse(response=StatutSerializer)}
+        responses={200: OpenApiResponse(response=StatutSerializer)},
     ),
     retrieve=extend_schema(
         summary="Détail d’un statut",
         description="Retourne les détails d’un statut par ID.",
         tags=["Statuts"],
-        responses={200: OpenApiResponse(response=StatutSerializer)}
+        responses={200: OpenApiResponse(response=StatutSerializer)},
     ),
     create=extend_schema(
         summary="Créer un statut",
         description="Crée un nouveau statut avec validation stricte des couleurs et du champ 'autre'.",
         tags=["Statuts"],
         request=StatutSerializer,
-        responses={201: OpenApiResponse(response=StatutSerializer)}
+        responses={201: OpenApiResponse(response=StatutSerializer)},
     ),
     update=extend_schema(
         summary="Mettre à jour un statut",
         description="Met à jour un statut existant (partiellement ou complètement).",
         tags=["Statuts"],
         request=StatutSerializer,
-        responses={200: OpenApiResponse(response=StatutSerializer)}
+        responses={200: OpenApiResponse(response=StatutSerializer)},
     ),
     destroy=extend_schema(
         summary="Supprimer un statut",
         description="Supprime logiquement un statut en le désactivant (is_active = False).",
         tags=["Statuts"],
-        responses={204: OpenApiResponse(description="Suppression réussie")}
+        responses={204: OpenApiResponse(description="Suppression réussie")},
     ),
 )
 class StatutViewSet(viewsets.ModelViewSet):
@@ -51,6 +52,7 @@ class StatutViewSet(viewsets.ModelViewSet):
     autorisés par IsStaffOrAbove et utilisant StatutSerializer pour les
     opérations standard et StatutChoiceSerializer pour les choix.
     """
+
     queryset = Statut.objects.all()
     serializer_class = StatutSerializer
     permission_classes = [IsStaffOrAbove]
@@ -64,11 +66,10 @@ class StatutViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         logger.info(f"🟢 Statut créé : {instance}")
-        return Response({
-            "success": True,
-            "message": "Statut créé avec succès.",
-            "data": instance.to_serializable_dict()
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {"success": True, "message": "Statut créé avec succès.", "data": instance.to_serializable_dict()},
+            status=status.HTTP_201_CREATED,
+        )
 
     def update(self, request, *args, **kwargs):
         """
@@ -81,11 +82,9 @@ class StatutViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         logger.info(f"📝 Statut mis à jour : {instance}")
-        return Response({
-            "success": True,
-            "message": "Statut mis à jour avec succès.",
-            "data": instance.to_serializable_dict()
-        })
+        return Response(
+            {"success": True, "message": "Statut mis à jour avec succès.", "data": instance.to_serializable_dict()}
+        )
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -95,11 +94,10 @@ class StatutViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         instance.delete()
         logger.warning(f"🗑️ Statut supprimé définitivement : {instance}")
-        return Response({
-            "success": True,
-            "message": "Statut supprimé avec succès.",
-            "data": None
-        }, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"success": True, "message": "Statut supprimé avec succès.", "data": None},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -107,11 +105,13 @@ class StatutViewSet(viewsets.ModelViewSet):
         sérialisé avec success et message.
         """
         instance = self.get_object()
-        return Response({
-            "success": True,
-            "message": "Détail du statut chargé avec succès.",
-            "data": instance.to_serializable_dict()
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Détail du statut chargé avec succès.",
+                "data": instance.to_serializable_dict(),
+            }
+        )
 
     def list(self, request, *args, **kwargs):
         """
@@ -123,21 +123,22 @@ class StatutViewSet(viewsets.ModelViewSet):
 
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return Response({
-                "count": self.paginator.page.paginator.count,
-                "next": self.paginator.get_next_link(),
-                "previous": self.paginator.get_previous_link(),
-                "results": serializer.data
-            })
+            return Response(
+                {
+                    "count": self.paginator.page.paginator.count,
+                    "next": self.paginator.get_next_link(),
+                    "previous": self.paginator.get_previous_link(),
+                    "results": serializer.data,
+                }
+            )
 
     @extend_schema(
         summary="Liste des choix possibles de statuts",
         description="Retourne la liste des valeurs `nom` possibles pour un statut, avec libellé, couleur par défaut et couleur de texte.",
         tags=["Statuts"],
-        responses={200: OpenApiResponse(
-            response=StatutChoiceSerializer(many=True),
-            description="Liste des choix disponibles"
-        )}
+        responses={
+            200: OpenApiResponse(response=StatutChoiceSerializer(many=True), description="Liste des choix disponibles")
+        },
     )
     @action(detail=False, methods=["get"], url_path="choices", url_name="choices")
     def get_choices(self, request):
@@ -150,13 +151,8 @@ class StatutViewSet(viewsets.ModelViewSet):
                 "value": key,
                 "label": label,
                 "default_color": (color := get_default_color(key)),
-                "text_color": calculer_couleur_texte(color)
+                "text_color": calculer_couleur_texte(color),
             }
             for key, label in Statut.STATUT_CHOICES
         ]
-        return Response({
-            "count": len(results),
-            "next": None,
-            "previous": None,
-            "results": results
-        })
+        return Response({"count": len(results), "next": None, "previous": None, "results": results})

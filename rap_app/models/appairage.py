@@ -1,15 +1,16 @@
+import logging
+
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
 from django.forms import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-import logging
 
 from .base import BaseModel
 from .candidat import Candidat, ResultatPlacementChoices
-from .partenaires import Partenaire
 from .formations import Formation
+from .partenaires import Partenaire
 
 logger = logging.getLogger("application.appairages")
 
@@ -18,6 +19,7 @@ class AppairageManager(models.Manager):
     """
     Manager pour filtrer les appairages actifs ou archivés.
     """
+
     def actifs(self):
         """
         Retourne les appairages actifs.
@@ -35,6 +37,7 @@ class AppairageStatut(models.TextChoices):
     """
     Liste des statuts possibles pour un appairage.
     """
+
     TRANSMIS = "transmis", _("Transmis au partenaire")
     EN_ATTENTE = "en_attente", _("En attente de réponse")
     ACCEPTE = "accepte", _("Accepté")
@@ -45,10 +48,12 @@ class AppairageStatut(models.TextChoices):
     CONTRAT_EN_ATTENTE = "contrat_en_attente", _("Contrat en attente")
     APPAIRAGE_OK = "appairage_ok", _("Appairage OK")
 
+
 class AppairageActivite(models.TextChoices):
     """
     Niveau d'activité d'un appairage.
     """
+
     ACTIF = "actif", _("Actif")
     ARCHIVE = "archive", _("Archivé")
 
@@ -62,10 +67,7 @@ class Appairage(BaseModel):
 
     candidat = models.ForeignKey(Candidat, on_delete=models.CASCADE, related_name="appairages")
     partenaire = models.ForeignKey(Partenaire, on_delete=models.CASCADE, related_name="appairages")
-    formation = models.ForeignKey(
-        Formation, on_delete=models.CASCADE, related_name="appairages",
-        null=True, blank=True
-    )
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name="appairages", null=True, blank=True)
 
     date_appairage = models.DateTimeField(default=timezone.now, verbose_name=_("Date de mise en relation"))
 
@@ -124,9 +126,7 @@ class Appairage(BaseModel):
         """
         super().clean()
         if self.formation and self.candidat.formation_id != self.formation_id:
-            raise ValidationError(
-                _("L'appairage doit lier le candidat à sa formation d'origine.")
-            )
+            raise ValidationError(_("L'appairage doit lier le candidat à sa formation d'origine."))
 
     def get_formation_identite_complete(self):
         """
@@ -157,7 +157,7 @@ class Appairage(BaseModel):
                 "Appairage #%s archivé (%s → %s)",
                 self.pk,
                 self.candidat_id if hasattr(self, "candidat_id") else self.candidat,
-                self.partenaire_id if hasattr(self, "partenaire_id") else self.partenaire
+                self.partenaire_id if hasattr(self, "partenaire_id") else self.partenaire,
             )
 
     def desarchiver(self, user=None):
@@ -171,7 +171,7 @@ class Appairage(BaseModel):
                 "Appairage #%s désarchivé (%s → %s)",
                 self.pk,
                 self.candidat_id if hasattr(self, "candidat_id") else self.candidat,
-                self.partenaire_id if hasattr(self, "partenaire_id") else self.partenaire
+                self.partenaire_id if hasattr(self, "partenaire_id") else self.partenaire,
             )
 
     @classmethod
@@ -182,7 +182,7 @@ class Appairage(BaseModel):
         qs = cls.objects.filter(formation=formation, activite=AppairageActivite.ACTIF)
         updated = qs.update(activite=AppairageActivite.ARCHIVE)
         if updated:
-            for app_id in qs.values_list('id', flat=True):
+            for app_id in qs.values_list("id", flat=True):
                 logger.info("Appairage #%s archivé (batch, formation)", app_id)
 
     @classmethod
@@ -193,7 +193,7 @@ class Appairage(BaseModel):
         qs = cls.objects.filter(formation=formation, activite=AppairageActivite.ARCHIVE)
         updated = qs.update(activite=AppairageActivite.ACTIF)
         if updated:
-            for app_id in qs.values_list('id', flat=True):
+            for app_id in qs.values_list("id", flat=True):
                 logger.info("Appairage #%s désarchivé (batch, formation)", app_id)
 
     _STATUS_PRIORITY = {
@@ -236,9 +236,7 @@ class Appairage(BaseModel):
             .objects.filter(candidat_id=candidat.pk, activite=AppairageActivite.ACTIF)
             .order_by("-date_appairage", "-pk")
             .select_related("partenaire")
-            .only(
-                "id", "date_appairage", "statut", "partenaire_id", "updated_by_id", "created_by_id"
-            )
+            .only("id", "date_appairage", "statut", "partenaire_id", "updated_by_id", "created_by_id")
             .first()
         )
 
@@ -302,7 +300,8 @@ class Appairage(BaseModel):
         except Exception as e:
             logger.exception(
                 "Sync candidat (dernier appairage) impossible (candidat id=%s): %s",
-                getattr(candidat, "pk", None), str(e)
+                getattr(candidat, "pk", None),
+                str(e),
             )
 
     def save(self, *args, **kwargs):
@@ -316,11 +315,7 @@ class Appairage(BaseModel):
         original_candidat_id = None
 
         if not is_new:
-            original = (
-                type(self)
-                .objects.only("id", "candidat_id", "statut", "retour_partenaire")
-                .get(pk=self.pk)
-            )
+            original = type(self).objects.only("id", "candidat_id", "statut", "retour_partenaire").get(pk=self.pk)
             original_candidat_id = original.candidat_id
 
         with transaction.atomic():
@@ -385,6 +380,7 @@ class HistoriqueAppairage(models.Model):
     """
     Historique des statuts d'un appairage.
     """
+
     appairage = models.ForeignKey(
         Appairage,
         on_delete=models.CASCADE,

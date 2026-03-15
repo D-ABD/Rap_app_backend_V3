@@ -2,10 +2,10 @@ from django.urls import reverse
 from rest_framework import status
 
 from ...models.centres import Centre
-from ...models.logs import LogUtilisateur
-from ..test_utils import AuthenticatedTestCase
-from ..factories import UserFactory
 from ...models.custom_user import CustomUser
+from ...models.logs import LogUtilisateur
+from ..factories import UserFactory
+from ..test_utils import AuthenticatedTestCase
 
 
 class LogUtilisateurViewSetTestCase(AuthenticatedTestCase):
@@ -15,10 +15,7 @@ class LogUtilisateurViewSetTestCase(AuthenticatedTestCase):
         self.client.force_authenticate(user=self.user)
         self.centre = Centre.objects.create(nom="Centre log", created_by=self.user)
         self.log = LogUtilisateur.log_action(
-            instance=self.centre,
-            action=LogUtilisateur.ACTION_CREATE,
-            user=self.user,
-            details="Création test"
+            instance=self.centre, action=LogUtilisateur.ACTION_CREATE, user=self.user, details="Création test"
         )
 
         self.list_url = reverse("logutilisateur-list")

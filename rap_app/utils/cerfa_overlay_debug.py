@@ -1,14 +1,15 @@
-import os
-import json
 import csv
+import json
+import os
+from io import BytesIO
+
 import fitz  # PyMuPDF
 import pytesseract
-from PIL import Image
-from io import BytesIO
-from pdfrw import PdfReader, PdfWriter, PageMerge
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
 from pdf2image import convert_from_path
+from pdfrw import PageMerge, PdfReader, PdfWriter
+from PIL import Image
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
 
 
 def _mk_overlay(width, height, labels):
@@ -36,13 +37,15 @@ def extract_labels_from_pdf(pdf_path):
             x1, y1, x2, y2, text, *_ = block
             text = text.strip()
             if text:
-                labels.append({
-                    "text": text,
-                    "x": x1,
-                    "y": y1,
-                    "x2": x2,
-                    "y2": y2,
-                })
+                labels.append(
+                    {
+                        "text": text,
+                        "x": x1,
+                        "y": y1,
+                        "x2": x2,
+                        "y2": y2,
+                    }
+                )
         labels_by_page[page_number] = labels
     return labels_by_page
 
@@ -50,12 +53,7 @@ def extract_labels_from_pdf(pdf_path):
 def ocr_label_near_field(image, rect, margin=80, lang="fra"):
     """OCR autour du champ pour trouver le texte le plus proche."""
     x1, y1, x2, y2 = rect
-    crop_box = (
-        max(x1 - margin, 0),
-        max(y1 - margin, 0),
-        x2 + margin,
-        y2 + margin
-    )
+    crop_box = (max(x1 - margin, 0), max(y1 - margin, 0), x2 + margin, y2 + margin)
     cropped = image.crop(crop_box)
     ocr_text = pytesseract.image_to_string(cropped, lang=lang)
     lines = [l.strip() for l in ocr_text.splitlines() if l.strip()]
@@ -75,10 +73,23 @@ def find_nearest_label(field_rect, labels, max_vertical=60, max_horizontal=80):
             continue
         lower = text.lower()
 
-        if any(skip in lower for skip in [
-            "apprenti", "employeur", "maître", "code idcc", "cerfa", "page", "notice",
-            "reportez-vous", "familles", "diplôme", "formation", "rémunération"
-        ]):
+        if any(
+            skip in lower
+            for skip in [
+                "apprenti",
+                "employeur",
+                "maître",
+                "code idcc",
+                "cerfa",
+                "page",
+                "notice",
+                "reportez-vous",
+                "familles",
+                "diplôme",
+                "formation",
+                "rémunération",
+            ]
+        ):
             continue
         if text.isupper() and len(text) > 3:
             continue
@@ -136,14 +147,16 @@ def make_pdf_field_overlay(template_path, output_pdf, output_json=None, output_c
             combined_label = f"{name} ({label_text or '❓'})"
             labels.append((x1, y2 + 2, combined_label))
 
-            all_fields.append({
-                "page": page_idx,
-                "pdf_name": name,
-                "label_text": label_text or "",
-                "coords": [x1, y1, x2, y2],
-                "width": round(x2 - x1, 2),
-                "height": round(y2 - y1, 2),
-            })
+            all_fields.append(
+                {
+                    "page": page_idx,
+                    "pdf_name": name,
+                    "label_text": label_text or "",
+                    "coords": [x1, y1, x2, y2],
+                    "width": round(x2 - x1, 2),
+                    "height": round(y2 - y1, 2),
+                }
+            )
 
         if labels:
             mb = page.MediaBox
@@ -164,11 +177,13 @@ def make_pdf_field_overlay(template_path, output_pdf, output_json=None, output_c
             writer = csv.DictWriter(csvfile, fieldnames=["page", "pdf_name", "label_text"])
             writer.writeheader()
             for row in all_fields:
-                writer.writerow({
-                    "page": row["page"],
-                    "pdf_name": row["pdf_name"],
-                    "label_text": row["label_text"],
-                })
+                writer.writerow(
+                    {
+                        "page": row["page"],
+                        "pdf_name": row["pdf_name"],
+                        "label_text": row["label_text"],
+                    }
+                )
         (f"✅ Export CSV généré → {output_csv}")
 
     (f"📊 Total champs détectés : {len(all_fields)}")

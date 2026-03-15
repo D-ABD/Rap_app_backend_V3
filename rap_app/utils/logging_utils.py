@@ -1,11 +1,13 @@
 # utils/logging_utils.py
 import sys
+
 from django.apps import apps
+
 
 def skip_logging_during_migration() -> bool:
     """
     Détermine s'il faut ignorer certaines opérations de logging lors des phases de migration Django.
-    
+
     Fonctionnalité :
         Retourne True si l'application Django n'est pas encore prête (apps.ready == False)
         ou si l'exécution courante correspond à une commande 'migrate' ou 'makemigrations'.
@@ -30,10 +32,10 @@ def skip_logging_during_migration() -> bool:
         - Dépend du framework Django ; attend la présence de django.apps.
         - Repose sur la convention d'appel des commandes via sys.argv pour détecter les migrations.
         - Cette fonction ne doit pas être utilisée hors contexte Django.
-        - Si appelée très tôt dans le cycle (avant configuration complète d'apps), 
+        - Si appelée très tôt dans le cycle (avant configuration complète d'apps),
           la détection peut ne pas être fiable selon les systèmes de lancement.
 
-        - Spécifier précisément le comportement attendu si 'apps.ready' n'est pas initialisé 
+        - Spécifier précisément le comportement attendu si 'apps.ready' n'est pas initialisé
           (non couvert hors projet Django).
     """
-    return not apps.ready or 'migrate' in sys.argv or 'makemigrations' in sys.argv
+    return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv

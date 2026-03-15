@@ -2,10 +2,9 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from ...models.centres import Centre
-from ...models.types_offre import TypeOffre
-
 from ...models.formations import Formation
-from ...models.statut import Statut, get_default_color, calculer_couleur_texte
+from ...models.statut import Statut, calculer_couleur_texte, get_default_color
+from ...models.types_offre import TypeOffre
 from .setup_base_tests import BaseModelTestSetupMixin
 
 
@@ -28,7 +27,6 @@ class StatutModelTest(BaseModelTestSetupMixin, TestCase):
             type_offre=self.type_offre,
             statut=self.statut,
         )
-
 
     def test_create_valid_statut(self):
         statut = Statut.objects.create(nom=Statut.PLEINE, created_by=self.user)
@@ -96,16 +94,11 @@ class StatutModelTest(BaseModelTestSetupMixin, TestCase):
             self.fail(f"invalidate_caches a levé une exception : {e}")
 
     def test_save_with_skip_validation(self):
-        statut = Statut(
-            nom=Statut.AUTRE, 
-            description_autre="",  # Invalide normalement
-            created_by=self.user
-        )
+        statut = Statut(nom=Statut.AUTRE, description_autre="", created_by=self.user)  # Invalide normalement
         try:
             statut.save(skip_validation=True)
         except ValidationError:
             self.fail("Le paramètre skip_validation=True aurait dû désactiver la validation")
-
 
     def test_created_by_fallback_is_system(self):
         statut = Statut(nom=Statut.NON_DEFINI)

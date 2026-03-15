@@ -1,34 +1,39 @@
 # rap_app/api/viewsets/prepa_viewset.py
 
-from django.db.models import Q, Count
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django.utils.timezone import localdate
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from io import BytesIO
+from pathlib import Path
+
+from django.conf import settings
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
+from django.utils.timezone import localdate
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
-from pathlib import Path
-from io import BytesIO
-from django.conf import settings
-
-from ..serializers.prepa_serializers import PrepaSerializer
-from ...models.prepa import ObjectifPrepa, Prepa
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from ...models.centres import Centre
-
+from ...models.prepa import ObjectifPrepa, Prepa
 from ..permissions import IsPrepaStaffOrAbove
 from ..roles import (
     is_admin_like,
-    is_staff_or_staffread,
-    is_prepa_staff,
     is_candidate,
+    is_prepa_staff,
+    is_staff_or_staffread,
 )
+from ..serializers.prepa_serializers import PrepaSerializer
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -37,12 +42,23 @@ from ..roles import (
         parameters=[
             OpenApiParameter(name="annee", description="Filtrer par année", required=False, type=int),
             OpenApiParameter(name="centre", description="Filtrer par centre (ID)", required=False, type=int),
-            OpenApiParameter(name="departement", description="Filtrer par département (préfixe CP ou champ centre.departement)", required=False, type=str),
-            OpenApiParameter(name="type_prepa", description="Filtrer par type d’activité Prépa", required=False, type=str),
+            OpenApiParameter(
+                name="departement",
+                description="Filtrer par département (préfixe CP ou champ centre.departement)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="type_prepa", description="Filtrer par type d’activité Prépa", required=False, type=str
+            ),
             OpenApiParameter(name="date_min", description="Date minimale (YYYY-MM-DD)", required=False, type=str),
             OpenApiParameter(name="date_max", description="Date maximale (YYYY-MM-DD)", required=False, type=str),
-            OpenApiParameter(name="search", description="Recherche sur le nom du centre ou le commentaire", required=False, type=str),
-            OpenApiParameter(name="ordering", description="Tri (ex: -date_prepa, centre__nom)", required=False, type=str),
+            OpenApiParameter(
+                name="search", description="Recherche sur le nom du centre ou le commentaire", required=False, type=str
+            ),
+            OpenApiParameter(
+                name="ordering", description="Tri (ex: -date_prepa, centre__nom)", required=False, type=str
+            ),
         ],
         responses={200: PrepaSerializer},
     ),
@@ -75,14 +91,13 @@ class PrepaViewSet(viewsets.ModelViewSet):
         Prépa (années, départements, centres et types de Prépa) en
         fonction du périmètre de centres accessible.
         """
-        from ...models.centres import Centre  # import local pour éviter les imports circulaires
+        from ...models.centres import (
+            Centre,  # import local pour éviter les imports circulaires
+        )
+
         # (aucun changement fonctionnel, docstring uniquement)
         # Cf. code source pour détail total des valeurs retournées.
-        annees = (
-            Prepa.objects.order_by()
-            .values_list("date_prepa__year", flat=True)
-            .distinct()
-        )
+        annees = Prepa.objects.order_by().values_list("date_prepa__year", flat=True).distinct()
         annees = sorted([a for a in annees if a is not None], reverse=True)
 
         centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
@@ -94,22 +109,26 @@ class PrepaViewSet(viewsets.ModelViewSet):
             if dep:
                 departements_set.add(dep)
 
-            centres_data.append({
-                "value": c.id,
-                "label": c.nom,
-                "departement": dep,
-                "code_postal": code_postal,
-            })
+            centres_data.append(
+                {
+                    "value": c.id,
+                    "label": c.nom,
+                    "departement": dep,
+                    "code_postal": code_postal,
+                }
+            )
 
         departements = [{"value": d, "label": f"Département {d}"} for d in sorted(departements_set)]
         types = [{"value": t[0], "label": t[1]} for t in Prepa.TypePrepa.choices]
 
-        return Response({
-            "annees": annees,
-            "departements": departements,
-            "centres": centres_data,
-            "type_prepa": types,
-        })
+        return Response(
+            {
+                "annees": annees,
+                "departements": departements,
+                "centres": centres_data,
+                "type_prepa": types,
+            }
+        )
 
     # ---------------------------------------------------
     # 🔹 Filtrage principal (get_queryset)
@@ -144,10 +163,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(centre_id=centre_id)
 
         # Supporte type_prepa=xx, type_prepa[]=xx, et plusieurs valeurs
-        type_prepa_list = (
-            params.getlist("type_prepa") +
-            params.getlist("type_prepa[]")
-        )
+        type_prepa_list = params.getlist("type_prepa") + params.getlist("type_prepa[]")
 
         # Nettoyage
         type_prepa_list = [t for t in type_prepa_list if t]
@@ -165,15 +181,11 @@ class PrepaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(date_prepa__lte=date_max)
 
         if search:
-            qs = qs.filter(
-                Q(centre__nom__icontains=search)
-                | Q(commentaire__icontains=search)
-            )
+            qs = qs.filter(Q(centre__nom__icontains=search) | Q(commentaire__icontains=search))
 
         qs = qs.order_by(ordering or "-date_prepa", "-id")
 
         return qs
-    
 
     # ---------------------------------------------------
     # 🔹 Métadonnées pour le front (usePrepaMeta)
@@ -278,7 +290,6 @@ class PrepaViewSet(viewsets.ModelViewSet):
         if allowed_ids and getattr(centre, "id", None) not in allowed_ids:
             raise PermissionDenied("Centre hors de votre périmètre d'accès.")
 
-
     # ---------------------------------------------------
     # 🔹 CREATE / UPDATE contrôlé
     # ---------------------------------------------------
@@ -308,7 +319,6 @@ class PrepaViewSet(viewsets.ModelViewSet):
             instance.save(user=self.request.user)
         except TypeError:
             instance.save()
-
 
     # ---------------------------------------------------
     # 🔹 Actions statistiques
@@ -342,7 +352,6 @@ class PrepaViewSet(viewsets.ModelViewSet):
         annee = int(request.query_params.get("annee", localdate().year))
         total = Prepa.reste_a_faire_total(annee)
         return Response({"annee": annee, "reste_total": total})
-
 
     # ---------------------------------------------------
     # 🔹 Export Excel complet PREPA
@@ -387,18 +396,40 @@ class PrepaViewSet(viewsets.ModelViewSet):
         ws["B2"] = f"Export réalisé le {dj_timezone.now().strftime('%d/%m/%Y à %H:%M')}"
         ws["B2"].font = Font(name="Calibri", italic=True, size=10, color="666666")
         ws["B2"].alignment = Alignment(horizontal="center", vertical="center")
-        ws.append([]); ws.append([])
+        ws.append([])
+        ws.append([])
 
         # === En-têtes ===
         headers = [
-            "ID", "Type activité", "Date", "Centre",
-            "Places ouvertes (IC)", "Prescriptions (IC)", "Présents (IC)", "Absents (IC)", "Adhésions (IC)",
-            "Inscrits (Atelier)", "Présents (Atelier)", "Absents (Atelier)",
-            "Taux prescription (%)", "Taux présence IC (%)", "Taux adhésion (%)", "Taux présence atelier (%)",
-            "Année objectif", "Objectif annuel (centre)", "Réalisé (IC cumulés)", "Taux atteinte annuel (%)", "Reste à faire",
-            "Département centre", "Taux prescription (objectif)", "Taux présence (objectif)",
-            "Taux adhésion (objectif)", "Taux atteinte (objectif)", "Reste à faire (objectif centre)",
-            "Commentaire séance", "Commentaire objectif"
+            "ID",
+            "Type activité",
+            "Date",
+            "Centre",
+            "Places ouvertes (IC)",
+            "Prescriptions (IC)",
+            "Présents (IC)",
+            "Absents (IC)",
+            "Adhésions (IC)",
+            "Inscrits (Atelier)",
+            "Présents (Atelier)",
+            "Absents (Atelier)",
+            "Taux prescription (%)",
+            "Taux présence IC (%)",
+            "Taux adhésion (%)",
+            "Taux présence atelier (%)",
+            "Année objectif",
+            "Objectif annuel (centre)",
+            "Réalisé (IC cumulés)",
+            "Taux atteinte annuel (%)",
+            "Reste à faire",
+            "Département centre",
+            "Taux prescription (objectif)",
+            "Taux présence (objectif)",
+            "Taux adhésion (objectif)",
+            "Taux atteinte (objectif)",
+            "Reste à faire (objectif centre)",
+            "Commentaire séance",
+            "Commentaire objectif",
         ]
         ws.append(headers)
         header_fill = PatternFill("solid", fgColor="DCE6F1")
@@ -425,23 +456,39 @@ class PrepaViewSet(viewsets.ModelViewSet):
             obj_data = obj.synthese_globale() if obj else {}
             dep = obj.departement if obj else getattr(s.centre, "departement", "")
 
-            ws.append([
-                s.id,
-                s.get_type_prepa_display(),
-                s.date_prepa.strftime("%d/%m/%Y") if s.date_prepa else "",
-                getattr(s.centre, "nom", ""),
-                s.nombre_places_ouvertes, s.nombre_prescriptions,
-                s.nb_presents_info, s.nb_absents_info, s.nb_adhesions,
-                s.nb_inscrits_prepa, s.nb_presents_prepa, s.nb_absents_prepa,
-                s.taux_prescription, s.taux_presence_info, s.taux_adhesion, s.taux_presence_prepa,
-                key[1], s.objectif_annuel, s.nb_presents_info, s.taux_atteinte_annuel, s.reste_a_faire,
-                dep,
-                obj_data.get("taux_prescription", ""), obj_data.get("taux_presence", ""),
-                obj_data.get("taux_adhesion", ""), obj_data.get("taux_atteinte", ""),
-                obj_data.get("reste_a_faire", ""),
-                (s.commentaire or "").replace("\n", " "),
-                (obj.commentaire if obj else "") or "",
-            ])
+            ws.append(
+                [
+                    s.id,
+                    s.get_type_prepa_display(),
+                    s.date_prepa.strftime("%d/%m/%Y") if s.date_prepa else "",
+                    getattr(s.centre, "nom", ""),
+                    s.nombre_places_ouvertes,
+                    s.nombre_prescriptions,
+                    s.nb_presents_info,
+                    s.nb_absents_info,
+                    s.nb_adhesions,
+                    s.nb_inscrits_prepa,
+                    s.nb_presents_prepa,
+                    s.nb_absents_prepa,
+                    s.taux_prescription,
+                    s.taux_presence_info,
+                    s.taux_adhesion,
+                    s.taux_presence_prepa,
+                    key[1],
+                    s.objectif_annuel,
+                    s.nb_presents_info,
+                    s.taux_atteinte_annuel,
+                    s.reste_a_faire,
+                    dep,
+                    obj_data.get("taux_prescription", ""),
+                    obj_data.get("taux_presence", ""),
+                    obj_data.get("taux_adhesion", ""),
+                    obj_data.get("taux_atteinte", ""),
+                    obj_data.get("reste_a_faire", ""),
+                    (s.commentaire or "").replace("\n", " "),
+                    (obj.commentaire if obj else "") or "",
+                ]
+            )
 
             fill = even_fill if i % 2 == 0 else odd_fill
             for cell in ws[ws.max_row]:

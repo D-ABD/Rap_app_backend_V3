@@ -2,8 +2,8 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from ...models.candidat import Candidat
-from ...models.custom_user import CustomUser
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 
 
@@ -195,4 +195,3 @@ def test_candidat_delete_does_not_delete_user():
 
     assert not Candidat.objects.filter(id=cand_id).exists()
     assert CustomUser.objects.filter(id=user_id).exists()
-

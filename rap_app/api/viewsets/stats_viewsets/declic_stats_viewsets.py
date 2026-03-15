@@ -1,29 +1,29 @@
-from django.db.models import Sum, F, Value
-from django.db.models.functions import Substr, Coalesce
-from django.utils.timezone import localdate
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from drf_spectacular.utils import (
-    extend_schema,
-    OpenApiParameter,
-    OpenApiResponse,
-    OpenApiExample,
-)
-
-from django.http import HttpResponse
 from io import BytesIO
 from pathlib import Path
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.utils import get_column_letter
+
 from django.conf import settings
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Coalesce, Substr
+from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
+from django.utils.timezone import localdate
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+)
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from ....models.declic import Declic, ObjectifDeclic
-from ...permissions import IsDeclicStaffOrAbove
 from ...paginations import RapAppPagination
+from ...permissions import IsDeclicStaffOrAbove
 from ...serializers.base_serializers import EmptySerializer
 
 
@@ -116,6 +116,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         - Toute permission ou business logic relevant de 'roles.is_admin_like', de la permission 'IsDeclicStaffOrAbove', ou de méthodes de modèle invoquées (e.g. Declic.synthese_objectifs) NE PEUT être documentée dans le détail ici sans consulter ces composants.
 
     """
+
     serializer_class = EmptySerializer
     permission_classes = [IsDeclicStaffOrAbove]
     pagination_class = RapAppPagination
@@ -126,7 +127,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
     # ----------------------------------------------------------
     def _filtered_qs(self, request):
         """
-        Fonction utilitaire appliquant le filtrage business sur les objets Déclic, 
+        Fonction utilitaire appliquant le filtrage business sur les objets Déclic,
         en fonction des droits d'accès de l'utilisateur et des paramètres de requête.
 
         - L'accès est plus étendu si l'utilisateur est "admin_like" (cf. roles.is_admin_like).
@@ -148,10 +149,11 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             centre_ids = list(getattr(user, "staff_centre_ids", []) or [])
 
-            departements = {
-                (c.code_postal or "")[:2]
-                for c in getattr(user, "centres", []).all()
-            } if hasattr(user, "centres") and user.centres.exists() else set()
+            departements = (
+                {(c.code_postal or "")[:2] for c in getattr(user, "centres", []).all()}
+                if hasattr(user, "centres") and user.centres.exists()
+                else set()
+            )
 
             if centre_param:
                 qs = qs.filter(centre_id=centre_param)
@@ -199,9 +201,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
             group_fields = ["centre_id_ref", "group_key"]
 
         elif by == "departement":
-            qs = qs.annotate(
-                group_key=Substr(Coalesce("centre__code_postal", Value("")), 1, 2)
-            )
+            qs = qs.annotate(group_key=Substr(Coalesce("centre__code_postal", Value("")), 1, 2))
             group_fields = ["group_key"]
 
         elif by == "type_declic":
@@ -227,30 +227,25 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
             pres = d["nb_presents_declic"] or 0
             absn = d["nb_absents_declic"] or 0
 
-            taux_presence = (
-                round(pres / (pres + absn) * 100, 1)
-                if pres + absn > 0 else None
-            )
+            taux_presence = round(pres / (pres + absn) * 100, 1) if pres + absn > 0 else None
 
-            taux_retention = (
-                round(pres / insc * 100, 1)
-                if insc > 0 else None
-            )
+            taux_retention = round(pres / insc * 100, 1) if insc > 0 else None
 
-            results.append({
-                "id": d.get("centre_id_ref"),
-                "group_key": d["group_key"],
-                "nb_inscrits_declic": insc,
-                "nb_presents_declic": pres,
-                "nb_absents_declic": absn,
-                "taux_presence_declic": taux_presence,
-                "taux_retention": taux_retention,
-            })
+            results.append(
+                {
+                    "id": d.get("centre_id_ref"),
+                    "group_key": d["group_key"],
+                    "nb_inscrits_declic": insc,
+                    "nb_presents_declic": pres,
+                    "nb_absents_declic": absn,
+                    "taux_presence_declic": taux_presence,
+                    "taux_retention": taux_retention,
+                }
+            )
 
         return Response({"by": by, "results": results})
 
-
-# ----------------------------------------------------------
+    # ----------------------------------------------------------
     # 2️⃣ SYNTHÈSE ANNUELLE
     # ----------------------------------------------------------
     @action(detail=False, methods=["get"], url_path="synthese")
@@ -302,15 +297,9 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         pres = agg["presents"] or 0
         absn = agg["absents"] or 0
 
-        taux_presence = (
-            round(pres / (pres + absn) * 100, 1)
-            if pres + absn > 0 else 0
-        )
+        taux_presence = round(pres / (pres + absn) * 100, 1) if pres + absn > 0 else 0
 
-        taux_retention = (
-            round(pres / inscrits * 100, 1)
-            if inscrits > 0 else 0
-        )
+        taux_retention = round(pres / inscrits * 100, 1) if inscrits > 0 else 0
 
         # Objectifs →
         annee = int(request.query_params.get("annee", localdate().year))
@@ -331,16 +320,19 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         reste = objectif - realise_total
         taux_atteinte = round((realise_total / objectif) * 100, 1) if objectif else 0
 
-        return Response({
-            "annee": annee,
-            "objectif_total": objectif,
-            "realise_total": realise_total,
-            "taux_atteinte_total": taux_atteinte,
-            "reste_a_faire_total": reste,
-            "inscrits_total": inscrits,
-            "taux_presence_declic": taux_presence,
-            "taux_retention": taux_retention,
-        })
+        return Response(
+            {
+                "annee": annee,
+                "objectif_total": objectif,
+                "realise_total": realise_total,
+                "taux_atteinte_total": taux_atteinte,
+                "reste_a_faire_total": reste,
+                "inscrits_total": inscrits,
+                "taux_presence_declic": taux_presence,
+                "taux_retention": taux_retention,
+            }
+        )
+
     # ==========================================================
     # 📤 4️⃣ Export Excel unifié
     # ==========================================================
@@ -408,7 +400,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
             "Absents (Atelier)",
             "Taux Présence Atelier %",
             "Reste à faire",
-            "Taux rétention (%)", 
+            "Taux rétention (%)",
         ]
         ws.append(headers)
 
@@ -435,11 +427,8 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
             # 🧮 Calcul du taux de rétention (Atelier 1 → Atelier 6)
             taux_retention = (
-                round(s.nb_presents_declic / s.nb_inscrits_declic * 100, 1)
-                if s.nb_inscrits_declic > 0
-                else None
+                round(s.nb_presents_declic / s.nb_inscrits_declic * 100, 1) if s.nb_inscrits_declic > 0 else None
             )
-
 
             ws.append(
                 [
@@ -478,9 +467,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         buffer = BytesIO()
         wb.save(buffer)
         content = buffer.getvalue()
-        filename = (
-            f"declic_stats_{annee}_{dj_timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        )
+        filename = f"declic_stats_{annee}_{dj_timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 
         response = HttpResponse(
             content,

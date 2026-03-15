@@ -1,29 +1,31 @@
 import logging
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, OpenApiExample, extend_schema_field
-from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import ValidationError
 
-from ..serializers.centres_serializers import CentreSerializer
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.centres import Centre
+from ...models.commentaires import Commentaire
+from ...models.documents import Document
+from ...models.evenements import Evenement
+from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-
+from ..serializers.centres_serializers import CentreSerializer
 from ..serializers.commentaires_serializers import CommentaireSerializer
 from ..serializers.documents_serializers import DocumentSerializer
 from ..serializers.evenements_serializers import EvenementSerializer
 from ..serializers.partenaires_serializers import PartenaireSerializer
 from ..serializers.prospection_serializers import ProspectionSerializer
-
 from ..serializers.types_offre_serializers import TypeOffreSerializer
 
-from ...models.formations import Formation
-from ...models.commentaires import Commentaire
-from ...models.documents import Document
-from ...models.evenements import Evenement
-
 logger = logging.getLogger("application.api.formation")
+
 
 @extend_schema_serializer(
     examples=[
@@ -40,14 +42,9 @@ logger = logging.getLogger("application.api.formation")
                     "id": 2,
                     "nom": "poec",
                     "libelle": "POEC (Préparation opérationnelle)",
-                    "couleur": "#3399ff"
+                    "couleur": "#3399ff",
                 },
-                "statut": {
-                    "id": 3,
-                    "nom": "en_cours",
-                    "libelle": "En cours",
-                    "couleur": "#ffc107"
-                },
+                "statut": {"id": 3, "nom": "en_cours", "libelle": "En cours", "couleur": "#ffc107"},
                 "prevus_crif": 8,
                 "prevus_mp": 7,
                 "inscrits_crif": 5,
@@ -61,13 +58,12 @@ logger = logging.getLogger("application.api.formation")
                 "taux_transformation": 45,
                 "transformation_badge": "badge-warning",
                 "nombre_candidats": 20,
-                "nombre_entretiens": 12
+                "nombre_entretiens": 12,
             },
-            response_only=True
+            response_only=True,
         )
     ]
 )
-
 class FormationListSerializer(serializers.Serializer):
     """
     Structure de sortie pour la liste des formations : champs du modèle et champs calculés (inscrits_total, prevus_total, taux_transformation, transformation_badge, saturation_badge, centre, statut, type_offre).
@@ -194,14 +190,9 @@ class FormationListSerializer(serializers.Serializer):
                         "id": 2,
                         "nom": "poec",
                         "libelle": "POEC (Préparation opérationnelle)",
-                        "couleur": "#3399ff"
+                        "couleur": "#3399ff",
                     },
-                    "statut": {
-                        "id": 3,
-                        "nom": "en_cours",
-                        "libelle": "En cours",
-                        "couleur": "#ffc107"
-                    },
+                    "statut": {"id": 3, "nom": "en_cours", "libelle": "En cours", "couleur": "#ffc107"},
                     "start_date": "2025-07-01",
                     "end_date": "2025-09-15",
                     "num_kairos": "KA-789456",
@@ -225,10 +216,10 @@ class FormationListSerializer(serializers.Serializer):
                     "nombre_entretiens": 12,
                     "dernier_commentaire": "Tout se passe bien.",
                     "created_at": "2025-06-20T10:15:00Z",
-                    "updated_at": "2025-06-25T14:00:00Z"
-                }
+                    "updated_at": "2025-06-25T14:00:00Z",
+                },
             },
-            response_only=True
+            response_only=True,
         )
     ]
 )
@@ -243,6 +234,7 @@ class FormationLightSerializer(serializers.ModelSerializer):
     class Meta:
         model = Formation
         fields = ["id", "nom", "type_offre", "centre", "num_offre"]
+
 
 class FormationDetailSerializer(serializers.Serializer):
     """
@@ -423,33 +415,38 @@ class FormationDetailSerializer(serializers.Serializer):
 
 class FormationCreateSerializer(serializers.ModelSerializer):
     centre_id = serializers.PrimaryKeyRelatedField(
-        source='centre',
-        queryset=Centre.objects.all(),
-        write_only=True,
-        required=True
+        source="centre", queryset=Centre.objects.all(), write_only=True, required=True
     )
     type_offre_id = serializers.PrimaryKeyRelatedField(
-        source='type_offre',
-        queryset=TypeOffre.objects.all(),
-        write_only=True,
-        required=True
+        source="type_offre", queryset=TypeOffre.objects.all(), write_only=True, required=True
     )
     statut_id = serializers.PrimaryKeyRelatedField(
-        source='statut',
-        queryset=Statut.objects.all(),
-        write_only=True,
-        required=True
+        source="statut", queryset=Statut.objects.all(), write_only=True, required=True
     )
 
     class Meta:
         model = Formation
         fields = [
-            "id", "nom", "num_offre", "start_date", "end_date",
-            "centre_id", "type_offre_id", "statut_id",
-            "intitule_diplome", "code_diplome", "code_rncp",
-            "total_heures", "heures_distanciel",
-            "prevus_crif", "prevus_mp", "inscrits_crif", "inscrits_mp",
-            "cap", "nombre_candidats", "nombre_entretiens",
+            "id",
+            "nom",
+            "num_offre",
+            "start_date",
+            "end_date",
+            "centre_id",
+            "type_offre_id",
+            "statut_id",
+            "intitule_diplome",
+            "code_diplome",
+            "code_rncp",
+            "total_heures",
+            "heures_distanciel",
+            "prevus_crif",
+            "prevus_mp",
+            "inscrits_crif",
+            "inscrits_mp",
+            "cap",
+            "nombre_candidats",
+            "nombre_entretiens",
             "convocation_envoie",
         ]
 
@@ -457,10 +454,12 @@ class FormationCreateSerializer(serializers.ModelSerializer):
         start = data.get("start_date")
         end = data.get("end_date")
         if start and end and start > end:
-            raise serializers.ValidationError({
-                "start_date": "La date de début doit être antérieure à la date de fin.",
-                "end_date": "La date de fin doit être postérieure à la date de début.",
-            })
+            raise serializers.ValidationError(
+                {
+                    "start_date": "La date de début doit être antérieure à la date de fin.",
+                    "end_date": "La date de fin doit être postérieure à la date de début.",
+                }
+            )
         return data
 
     def create(self, validated_data):

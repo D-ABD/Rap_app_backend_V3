@@ -1,26 +1,30 @@
 # rap_app/models/cvtheque.py
 
-import os
 import logging
-from django.db import models, transaction
-from django.core.validators import FileExtensionValidator
-from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+import os
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
+from django.db import models, transaction
+from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
+
 from .base import BaseModel
 
 logger = logging.getLogger(__name__)
+
 
 def cv_upload_path(instance, filename):
     """
     Renvoie le chemin de stockage du fichier CV téléversé par le candidat.
     """
     base_name, ext = os.path.splitext(filename)
-    safe_name = f"cv_{instance.candidat.id}_{base_name[:50]}{ext}".replace(' ', '_')
-    path = f'cvtheque/candidat_{instance.candidat.id}/{safe_name}'
+    safe_name = f"cv_{instance.candidat.id}_{base_name[:50]}{ext}".replace(" ", "_")
+    path = f"cvtheque/candidat_{instance.candidat.id}/{safe_name}"
     logger.debug(f"Génération du chemin de stockage : {path}")
     return path
+
 
 class CVTheque(BaseModel):
     """
@@ -28,73 +32,51 @@ class CVTheque(BaseModel):
     """
 
     DOCUMENT_TYPES = [
-        ('CV', 'Curriculum Vitae'),
-        ('LM', 'Lettre de motivation'),
-        ('DIPLOME', 'Diplôme/Certificat'),
-        ('AUTRE', 'Autre document'),
+        ("CV", "Curriculum Vitae"),
+        ("LM", "Lettre de motivation"),
+        ("DIPLOME", "Diplôme/Certificat"),
+        ("AUTRE", "Autre document"),
     ]
 
-    candidat = models.ForeignKey(
-        'Candidat',
-        on_delete=models.CASCADE,
-        related_name='cvs',
-        verbose_name=_("Candidat")
-    )
+    candidat = models.ForeignKey("Candidat", on_delete=models.CASCADE, related_name="cvs", verbose_name=_("Candidat"))
     document_type = models.CharField(
-        max_length=20,
-        choices=DOCUMENT_TYPES,
-        default='CV',
-        verbose_name=_("Type de document")
+        max_length=20, choices=DOCUMENT_TYPES, default="CV", verbose_name=_("Type de document")
     )
     fichier = models.FileField(
         upload_to=cv_upload_path,
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])],
+        validators=[FileExtensionValidator(allowed_extensions=["pdf", "doc", "docx"])],
         verbose_name=_("Fichier"),
-        help_text=_("Formats acceptés : PDF, DOC, DOCX (max. 5Mo)")
+        help_text=_("Formats acceptés : PDF, DOC, DOCX (max. 5Mo)"),
     )
     titre = models.CharField(
         max_length=255,
         verbose_name=_("Titre du document"),
-        help_text=_("Ex: CV 2023, Lettre de motivation pour poste X")
+        help_text=_("Ex: CV 2023, Lettre de motivation pour poste X"),
     )
-    date_depot = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Date de dépôt")
-    )
+    date_depot = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de dépôt"))
     est_public = models.BooleanField(
         default=False,
         verbose_name=_("Visible par les recruteurs"),
-        help_text=_("Ce document peut-il être visible par les recruteurs ?")
+        help_text=_("Ce document peut-il être visible par les recruteurs ?"),
     )
     mots_cles = models.TextField(
-        blank=True,
-        verbose_name=_("Mots-clés"),
-        help_text=_("Mots-clés pour la recherche (séparés par des virgules)")
+        blank=True, verbose_name=_("Mots-clés"), help_text=_("Mots-clés pour la recherche (séparés par des virgules)")
     )
     consentement_stockage_cv = models.BooleanField(
-        default=False,
-        help_text="Le candidat accepte que son CV soit stocké dans la CVThèque."
+        default=False, help_text="Le candidat accepte que son CV soit stocké dans la CVThèque."
     )
     consentement_transmission_cv = models.BooleanField(
-        default=False,
-        help_text="Le candidat accepte que son CV soit transmis à un employeur."
+        default=False, help_text="Le candidat accepte que son CV soit transmis à un employeur."
     )
     date_consentement_cv = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Date du consentement donné ou retiré."
+        null=True, blank=True, help_text="Date du consentement donné ou retiré."
     )
 
     class Meta:
         verbose_name = _("CVthèque")
         verbose_name_plural = _("CVthèque")
-        ordering = ['-date_depot']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['candidat', 'titre'],
-                name='unique_cv_per_candidat'
-            )
-        ]
+        ordering = ["-date_depot"]
+        constraints = [models.UniqueConstraint(fields=["candidat", "titre"], name="unique_cv_per_candidat")]
 
     def __str__(self):
         """
@@ -140,7 +122,7 @@ class CVTheque(BaseModel):
         """
         Retourne l'URL vers le détail du document.
         """
-        url = reverse('cvtheque:detail', kwargs={'pk': self.pk})
+        url = reverse("cvtheque:detail", kwargs={"pk": self.pk})
         logger.debug(f"URL absolue générée pour le document {self.pk}: {url}")
         return url
 
@@ -155,15 +137,13 @@ class CVTheque(BaseModel):
             logger.error("Tentative de sauvegarde sans titre")
             raise ValidationError({"titre": _("Le titre du document est obligatoire.")})
 
-        if self.fichier and hasattr(self.fichier, 'size'):
+        if self.fichier and hasattr(self.fichier, "size"):
             max_size = 5 * 1024 * 1024
             if self.fichier.size > max_size:
                 logger.warning(
                     f"Fichier trop volumineux ({self.fichier.size} bytes) pour le document {self.pk or 'nouveau'}"
                 )
-                raise ValidationError({
-                    "fichier": _("Le fichier ne doit pas dépasser 5 Mo.")
-                })
+                raise ValidationError({"fichier": _("Le fichier ne doit pas dépasser 5 Mo.")})
         logger.info(f"Nettoyage terminé pour le document {self.pk or 'nouveau'}")
 
     def save(self, *args, **kwargs):
@@ -182,6 +162,7 @@ class CVTheque(BaseModel):
                     logger.info(f"Nouveau document créé: {self} (ID: {self.pk})")
                     try:
                         from ..signals import document_created
+
                         document_created.send(sender=self.__class__, instance=self)
                     except ImportError:
                         logger.debug("Signal document_created non importé (aucun audit branché)")
@@ -216,9 +197,9 @@ class CVTheque(BaseModel):
         """
         Retourne la ville du candidat associé si disponible.
         """
-        if hasattr(self, '_candidat_cache'):
+        if hasattr(self, "_candidat_cache"):
             return self._candidat_cache.ville
-        if hasattr(self.candidat, 'ville'):
+        if hasattr(self.candidat, "ville"):
             return self.candidat.ville
         return None
 
@@ -227,7 +208,7 @@ class CVTheque(BaseModel):
         """
         Retourne le type de contrat du candidat associé.
         """
-        if hasattr(self, '_candidat_cache'):
+        if hasattr(self, "_candidat_cache"):
             return self._candidat_cache.type_contrat
         return self.candidat.type_contrat
 
@@ -236,8 +217,8 @@ class CVTheque(BaseModel):
         """
         Retourne le libellé du type de contrat du candidat.
         """
-        if hasattr(self, '_candidat_cache'):
-            if hasattr(self._candidat_cache, 'get_type_contrat_display'):
+        if hasattr(self, "_candidat_cache"):
+            if hasattr(self._candidat_cache, "get_type_contrat_display"):
                 return self._candidat_cache.get_type_contrat_display()
         if self.candidat.type_contrat:
             return self.candidat.get_type_contrat_display()
@@ -248,7 +229,7 @@ class CVTheque(BaseModel):
         """
         Retourne le statut du CV principal du candidat.
         """
-        if hasattr(self, '_candidat_cache'):
+        if hasattr(self, "_candidat_cache"):
             return self._candidat_cache.cv_statut
         return self.candidat.cv_statut
 
@@ -257,8 +238,8 @@ class CVTheque(BaseModel):
         """
         Retourne le libellé du statut du CV du candidat.
         """
-        if hasattr(self, '_candidat_cache'):
-            if hasattr(self._candidat_cache, 'get_cv_statut_display'):
+        if hasattr(self, "_candidat_cache"):
+            if hasattr(self._candidat_cache, "get_cv_statut_display"):
                 return self._candidat_cache.get_cv_statut_display()
         if self.candidat.cv_statut:
             return self.candidat.get_cv_statut_display()
@@ -269,8 +250,8 @@ class CVTheque(BaseModel):
         """
         Retourne l'objet Formation du candidat si disponible.
         """
-        candidat_obj = getattr(self, '_candidat_cache', self.candidat)
-        if hasattr(candidat_obj, 'formation'):
+        candidat_obj = getattr(self, "_candidat_cache", self.candidat)
+        if hasattr(candidat_obj, "formation"):
             return candidat_obj.formation
         return None
 
@@ -296,7 +277,7 @@ class CVTheque(BaseModel):
         Retourne le nom du type d'offre lié à la formation.
         """
         formation_obj = self.formation
-        if formation_obj and hasattr(formation_obj, 'type_offre'):
+        if formation_obj and hasattr(formation_obj, "type_offre"):
             return getattr(formation_obj.type_offre, "nom", None)
         return None
 
@@ -306,7 +287,7 @@ class CVTheque(BaseModel):
         Retourne le statut de la formation.
         """
         formation_obj = self.formation
-        if formation_obj and hasattr(formation_obj, 'statut'):
+        if formation_obj and hasattr(formation_obj, "statut"):
             return getattr(formation_obj.statut, "nom", None)
         return None
 
@@ -316,7 +297,7 @@ class CVTheque(BaseModel):
         Retourne le nom du centre associé à la formation du candidat.
         """
         formation_obj = self.formation
-        if formation_obj and hasattr(formation_obj, 'centre'):
+        if formation_obj and hasattr(formation_obj, "centre"):
             return getattr(formation_obj.centre, "nom", None)
         return None
 
@@ -342,6 +323,6 @@ class CVTheque(BaseModel):
         Retourne le résumé de la formation si disponible.
         """
         f = self.formation
-        if not f or not hasattr(f, 'get_formation_identite_complete'):
+        if not f or not hasattr(f, "get_formation_identite_complete"):
             return None
         return f.get_formation_identite_complete()

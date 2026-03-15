@@ -1,59 +1,53 @@
-from rest_framework import viewsets, filters
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.styles import PatternFill, Font, Alignment
-from pathlib import Path
-from django.conf import settings
-from django.utils import timezone as dj_timezone
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from uuid import uuid4
-from django.db import transaction
-from rest_framework.exceptions import ValidationError
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema
-from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse
-from django.db import transaction
-from django.db.models import Q, Count, OuterRef, Subquery, IntegerField, Value, Prefetch
-from django.template.loader import render_to_string
-from weasyprint import HTML, CSS
-
 import csv
 import logging
-from django.db.models.functions import Coalesce
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
 from io import BytesIO
+from pathlib import Path
+from uuid import uuid4
 
-from ...models.custom_user import CustomUser
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Count, IntegerField, OuterRef, Prefetch, Q, Subquery, Value
+from django.db.models.functions import Coalesce
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.utils import timezone as dj_timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import filters, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
+from weasyprint import CSS, HTML
+
 from ...models import atelier_tre
-
+from ...models.appairage import Appairage
 from ...models.candidat import (
+    NIVEAU_CHOICES,
     Candidat,
     HistoriquePlacement,
     ResultatPlacementChoices,
-    NIVEAU_CHOICES,
 )
-from ...models.appairage import Appairage
-from ...models.prospection import Prospection
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
-
-from ..serializers.candidat_serializers import (
-    CandidatLiteSerializer,
-    CandidatSerializer,
-    CandidatListSerializer,
-    CandidatCreateUpdateSerializer,
-    CandidatQueryParamsSerializer,
-)
-
-from ..permissions import IsStaffOrAbove
-from ..paginations import RapAppPagination
+from ...models.prospection import Prospection
 from ...utils.filters import CandidatFilter
+from ..paginations import RapAppPagination
+from ..permissions import IsStaffOrAbove
+from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..serializers.candidat_serializers import (
+    CandidatCreateUpdateSerializer,
+    CandidatListSerializer,
+    CandidatLiteSerializer,
+    CandidatQueryParamsSerializer,
+    CandidatSerializer,
+)
 
 logger = logging.getLogger("rap_app.candidats")
 
@@ -76,17 +70,11 @@ def _build_candidat_meta(user=None) -> dict:
     if is_admin_like(user):
         centres_qs = Centre.objects.order_by("nom").only("id", "nom")
         formations_qs = (
-            Formation.objects.select_related("centre")
-            .only("id", "nom", "num_offre", "centre__nom")
-            .order_by("nom")
+            Formation.objects.select_related("centre").only("id", "nom", "num_offre", "centre__nom").order_by("nom")
         )
     elif is_staff_or_staffread(user):
         centre_ids = staff_centre_ids(user) or []
-        centres_qs = (
-            Centre.objects.filter(id__in=centre_ids)
-            .order_by("nom")
-            .only("id", "nom")
-        )
+        centres_qs = Centre.objects.filter(id__in=centre_ids).order_by("nom").only("id", "nom")
         formations_qs = (
             Formation.objects.select_related("centre")
             .filter(centre_id__in=centre_ids)
@@ -115,10 +103,12 @@ def _build_candidat_meta(user=None) -> dict:
         ],
     }
 
+
 class CandidatViewSet(viewsets.ModelViewSet):
     """
     ViewSet pour les candidats. IsStaffOrAbove ; scope par centre (_scope_qs_to_user_centres, _assert_staff_can_use_formation). get_serializer_class : list + lite=1 => CandidatLiteSerializer, list => CandidatListSerializer, create/update/partial => CandidatCreateUpdateSerializer, sinon CandidatSerializer. Actions : meta (GET), creer-compte, valider-stagiaire, valider-demande-compte, refuser-demande-compte (POST), export-xlsx (GET).
     """
+
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
 
@@ -218,45 +208,41 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
     def base_queryset(self):
         """Queryset de base : select_related, prefetch_related, annotations nb_appairages_calc, nb_prospections_calc, flags ateliers."""
-        qs = (
-            Candidat.objects.select_related(
-                "formation",
-                "formation__centre",
-                "formation__type_offre",
-                "evenement",
-                "compte_utilisateur",
-                "responsable_placement",
-                "vu_par",
-                "entreprise_placement",
-                "entreprise_validee",
-                "placement_appairage",
-                "placement_appairage__partenaire",
-                "placement_appairage__created_by",
-                "placement_appairage__updated_by",
-            )
-            .prefetch_related(
-                Prefetch(
-                    "appairages",
-                    queryset=Appairage.objects.select_related(
-                        "partenaire",
-                        "created_by",
-                    ).prefetch_related(
-                        "commentaires",
-                        "commentaires__created_by",
-                    ),
+        qs = Candidat.objects.select_related(
+            "formation",
+            "formation__centre",
+            "formation__type_offre",
+            "evenement",
+            "compte_utilisateur",
+            "responsable_placement",
+            "vu_par",
+            "entreprise_placement",
+            "entreprise_validee",
+            "placement_appairage",
+            "placement_appairage__partenaire",
+            "placement_appairage__created_by",
+            "placement_appairage__updated_by",
+        ).prefetch_related(
+            Prefetch(
+                "appairages",
+                queryset=Appairage.objects.select_related(
+                    "partenaire",
+                    "created_by",
+                ).prefetch_related(
+                    "commentaires",
+                    "commentaires__created_by",
                 ),
-                Prefetch(
-                    "ateliers_tre",
-                    queryset=atelier_tre.AtelierTRE.objects.only("id", "type_atelier"),
-                ),
-            )
+            ),
+            Prefetch(
+                "ateliers_tre",
+                queryset=atelier_tre.AtelierTRE.objects.only("id", "type_atelier"),
+            ),
         )
 
         qs = qs.annotate(nb_appairages_calc=Count("appairages", distinct=True))
 
         prospection_cnt = (
-            Prospection.objects
-            .filter(owner_id=OuterRef("compte_utilisateur_id"))
+            Prospection.objects.filter(owner_id=OuterRef("compte_utilisateur_id"))
             .values("owner_id")
             .annotate(c=Count("id"))
             .values("c")[:1]
@@ -271,7 +257,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
         qs = atelier_tre.AtelierTRE.annotate_candidats_with_atelier_flags(qs)
         return qs
-    
+
     def get_queryset(self):
         """Retourne base_queryset() filtré par _scope_qs_to_user_centres."""
         return self._scope_qs_to_user_centres(self.base_queryset())
@@ -282,7 +268,9 @@ class CandidatViewSet(viewsets.ModelViewSet):
         qp_ser.is_valid(raise_exception=False)
         logger.debug(
             "qp valid=%s errors=%s cleaned=%s",
-            qp_ser.is_valid(), qp_ser.errors, qp_ser.validated_data,
+            qp_ser.is_valid(),
+            qp_ser.errors,
+            qp_ser.validated_data,
         )
 
         base_qs = self.get_queryset()
@@ -359,13 +347,9 @@ class CandidatViewSet(viewsets.ModelViewSet):
         candidat = self.get_object()
 
         if candidat.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError(
-                {"detail": "Aucune demande de compte en attente pour ce candidat."}
-            )
+            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
         if candidat.compte_utilisateur_id:
-            raise ValidationError(
-                {"detail": "Un compte utilisateur est déjà lié à ce candidat."}
-            )
+            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
 
         try:
             user = candidat.creer_ou_lier_compte_utilisateur()
@@ -398,9 +382,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
         candidat = self.get_object()
 
         if candidat.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError(
-                {"detail": "Aucune demande de compte en attente pour ce candidat."}
-            )
+            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
 
         candidat.demande_compte_statut = Candidat.DemandeCompteStatut.REFUSEE
         candidat.demande_compte_traitee_par = request.user
@@ -512,22 +494,75 @@ class CandidatViewSet(viewsets.ModelViewSet):
         ws.append([])
 
         headers = [
-            "ID", "Sexe", "Nom de naissance", "Nom d’usage", "Prénom", "Date de naissance",
-            "Département de naissance", "Commune de naissance", "Pays de naissance", "Nationalité",
-            "NIR", "Âge", "Email", "Téléphone", "Numéro de voie", "Nom de la rue",
-            "Complément d’adresse", "Code postal", "Ville", "Statut", "CV", "Type de contrat",
-            "Disponibilité", "Entretien réalisé", "Test d’entrée OK", "RQTH", "Permis B",
-            "Dernier diplôme préparé", "Diplôme/titre obtenu", "Dernière classe fréquentée",
-            "Intitulé diplôme préparé", "Situation avant contrat", "Régime social",
-            "Sportif de haut niveau", "Équivalence jeunes", "Extension BOE", "Situation actuelle",
-            "Lien représentant", "Nom naissance représentant", "Prénom représentant",
-            "Email représentant", "Adresse représentant", "CP représentant", "Ville représentant",
-            "Formation", "Num offre", "Centre formation", "Type formation", "Origine sourcing",
-            "Date inscription", "Résultat placement", "Contrat signé", "Date placement",
-            "Entreprise placement", "Entreprise validée", "Responsable placement", "Vu par (staff)",
-            "Nb appairages", "Nb prospections", "Inscrit GESPERS", "Courrier rentrée envoyé",
-            "Date rentrée", "Admissible", "OSIA", "Communication ★", "Expérience ★", "CSP ★",
-            "Projet création entreprise", "Notes",
+            "ID",
+            "Sexe",
+            "Nom de naissance",
+            "Nom d’usage",
+            "Prénom",
+            "Date de naissance",
+            "Département de naissance",
+            "Commune de naissance",
+            "Pays de naissance",
+            "Nationalité",
+            "NIR",
+            "Âge",
+            "Email",
+            "Téléphone",
+            "Numéro de voie",
+            "Nom de la rue",
+            "Complément d’adresse",
+            "Code postal",
+            "Ville",
+            "Statut",
+            "CV",
+            "Type de contrat",
+            "Disponibilité",
+            "Entretien réalisé",
+            "Test d’entrée OK",
+            "RQTH",
+            "Permis B",
+            "Dernier diplôme préparé",
+            "Diplôme/titre obtenu",
+            "Dernière classe fréquentée",
+            "Intitulé diplôme préparé",
+            "Situation avant contrat",
+            "Régime social",
+            "Sportif de haut niveau",
+            "Équivalence jeunes",
+            "Extension BOE",
+            "Situation actuelle",
+            "Lien représentant",
+            "Nom naissance représentant",
+            "Prénom représentant",
+            "Email représentant",
+            "Adresse représentant",
+            "CP représentant",
+            "Ville représentant",
+            "Formation",
+            "Num offre",
+            "Centre formation",
+            "Type formation",
+            "Origine sourcing",
+            "Date inscription",
+            "Résultat placement",
+            "Contrat signé",
+            "Date placement",
+            "Entreprise placement",
+            "Entreprise validée",
+            "Responsable placement",
+            "Vu par (staff)",
+            "Nb appairages",
+            "Nb prospections",
+            "Inscrit GESPERS",
+            "Courrier rentrée envoyé",
+            "Date rentrée",
+            "Admissible",
+            "OSIA",
+            "Communication ★",
+            "Expérience ★",
+            "CSP ★",
+            "Projet création entreprise",
+            "Notes",
         ]
         ws.append(headers)
 
@@ -551,52 +586,83 @@ class CandidatViewSet(viewsets.ModelViewSet):
         odd_fill = PatternFill("solid", fgColor="FFFFFF")
 
         for i, c in enumerate(qs, start=1):
-            ws.append([
-                c.id, c.sexe or "", c.nom_naissance or "", c.nom or "", c.prenom or "",
-                c.date_naissance.strftime("%d/%m/%Y") if c.date_naissance else "",
-                c.departement_naissance or "", c.commune_naissance or "", c.pays_naissance or "",
-                c.nationalite or "", c.nir or "", c.age or "", c.email or "", c.telephone or "",
-                c.street_number or "", c.street_name or "", c.street_complement or "",
-                c.code_postal or "", c.ville or "",
-                c.get_statut_display() if hasattr(c, "get_statut_display") else c.statut,
-                c.get_cv_statut_display() if hasattr(c, "get_cv_statut_display") else c.cv_statut,
-                c.get_type_contrat_display() if hasattr(c, "get_type_contrat_display") else c.type_contrat,
-                c.get_disponibilite_display() if hasattr(c, "get_disponibilite_display") else c.disponibilite,
-                "Oui" if c.entretien_done else "Non", "Oui" if c.test_is_ok else "Non",
-                "Oui" if c.rqth else "Non", "Oui" if c.permis_b else "Non",
-                c.dernier_diplome_prepare or "", c.diplome_plus_eleve_obtenu or "",
-                c.derniere_classe or "", c.intitule_diplome_prepare or "",
-                c.situation_avant_contrat or "", c.regime_social or "",
-                "Oui" if c.sportif_haut_niveau else "Non",
-                "Oui" if c.equivalence_jeunes else "Non",
-                "Oui" if c.extension_boe else "Non", c.situation_actuelle or "",
-                c.representant_lien or "", c.representant_nom_naissance or "",
-                c.representant_prenom or "", c.representant_email or "",
-                c.representant_street_name or "", c.representant_zip_code or "",
-                c.representant_city or "",
-                getattr(c.formation, "nom", "") if c.formation else "",
-                getattr(c.formation, "num_offre", "") if c.formation else "",
-                getattr(getattr(c.formation, "centre", None), "nom", "") if c.formation else "",
-                getattr(getattr(c.formation, "type_offre", None), "nom", "") if c.formation else "",
-                c.origine_sourcing or "",
-                c.date_inscription.strftime("%d/%m/%Y") if c.date_inscription else "",
-                c.get_resultat_placement_display() if hasattr(c, "get_resultat_placement_display") else c.resultat_placement,
-                c.get_contrat_signe_display() if hasattr(c, "get_contrat_signe_display") else c.contrat_signe,
-                c.date_placement.strftime("%d/%m/%Y") if c.date_placement else "",
-                getattr(c.entreprise_placement, "nom", ""),
-                getattr(c.entreprise_validee, "nom", ""),
-                getattr(c.responsable_placement, "username", ""),
-                getattr(c.vu_par, "username", ""),
-                getattr(c, "nb_appairages_calc", 0),
-                getattr(c, "nb_prospections_calc", 0),
-                "Oui" if c.inscrit_gespers else "Non",
-                "Oui" if c.courrier_rentree else "Non",
-                c.date_rentree.strftime("%d/%m/%Y") if c.date_rentree else "",
-                "Oui" if c.admissible else "Non", c.numero_osia or "",
-                c.communication or "", c.experience or "", c.csp or "",
-                "Oui" if c.projet_creation_entreprise else "Non",
-                (c.notes or "").replace("\n", " "),
-            ])
+            ws.append(
+                [
+                    c.id,
+                    c.sexe or "",
+                    c.nom_naissance or "",
+                    c.nom or "",
+                    c.prenom or "",
+                    c.date_naissance.strftime("%d/%m/%Y") if c.date_naissance else "",
+                    c.departement_naissance or "",
+                    c.commune_naissance or "",
+                    c.pays_naissance or "",
+                    c.nationalite or "",
+                    c.nir or "",
+                    c.age or "",
+                    c.email or "",
+                    c.telephone or "",
+                    c.street_number or "",
+                    c.street_name or "",
+                    c.street_complement or "",
+                    c.code_postal or "",
+                    c.ville or "",
+                    c.get_statut_display() if hasattr(c, "get_statut_display") else c.statut,
+                    c.get_cv_statut_display() if hasattr(c, "get_cv_statut_display") else c.cv_statut,
+                    c.get_type_contrat_display() if hasattr(c, "get_type_contrat_display") else c.type_contrat,
+                    c.get_disponibilite_display() if hasattr(c, "get_disponibilite_display") else c.disponibilite,
+                    "Oui" if c.entretien_done else "Non",
+                    "Oui" if c.test_is_ok else "Non",
+                    "Oui" if c.rqth else "Non",
+                    "Oui" if c.permis_b else "Non",
+                    c.dernier_diplome_prepare or "",
+                    c.diplome_plus_eleve_obtenu or "",
+                    c.derniere_classe or "",
+                    c.intitule_diplome_prepare or "",
+                    c.situation_avant_contrat or "",
+                    c.regime_social or "",
+                    "Oui" if c.sportif_haut_niveau else "Non",
+                    "Oui" if c.equivalence_jeunes else "Non",
+                    "Oui" if c.extension_boe else "Non",
+                    c.situation_actuelle or "",
+                    c.representant_lien or "",
+                    c.representant_nom_naissance or "",
+                    c.representant_prenom or "",
+                    c.representant_email or "",
+                    c.representant_street_name or "",
+                    c.representant_zip_code or "",
+                    c.representant_city or "",
+                    getattr(c.formation, "nom", "") if c.formation else "",
+                    getattr(c.formation, "num_offre", "") if c.formation else "",
+                    getattr(getattr(c.formation, "centre", None), "nom", "") if c.formation else "",
+                    getattr(getattr(c.formation, "type_offre", None), "nom", "") if c.formation else "",
+                    c.origine_sourcing or "",
+                    c.date_inscription.strftime("%d/%m/%Y") if c.date_inscription else "",
+                    (
+                        c.get_resultat_placement_display()
+                        if hasattr(c, "get_resultat_placement_display")
+                        else c.resultat_placement
+                    ),
+                    c.get_contrat_signe_display() if hasattr(c, "get_contrat_signe_display") else c.contrat_signe,
+                    c.date_placement.strftime("%d/%m/%Y") if c.date_placement else "",
+                    getattr(c.entreprise_placement, "nom", ""),
+                    getattr(c.entreprise_validee, "nom", ""),
+                    getattr(c.responsable_placement, "username", ""),
+                    getattr(c.vu_par, "username", ""),
+                    getattr(c, "nb_appairages_calc", 0),
+                    getattr(c, "nb_prospections_calc", 0),
+                    "Oui" if c.inscrit_gespers else "Non",
+                    "Oui" if c.courrier_rentree else "Non",
+                    c.date_rentree.strftime("%d/%m/%Y") if c.date_rentree else "",
+                    "Oui" if c.admissible else "Non",
+                    c.numero_osia or "",
+                    c.communication or "",
+                    c.experience or "",
+                    c.csp or "",
+                    "Oui" if c.projet_creation_entreprise else "Non",
+                    (c.notes or "").replace("\n", " "),
+                ]
+            )
 
             fill = even_fill if i % 2 == 0 else odd_fill
             for j, cell in enumerate(ws[ws.max_row], start=1):

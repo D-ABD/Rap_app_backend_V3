@@ -126,9 +126,7 @@ class Command(BaseCommand):
         doublons_sans = self._detect_doublons_sans_formation()
 
         total_groupes = len(doublons_avec) + len(doublons_sans)
-        total_lignes = sum(len(v) for v in doublons_avec.values()) + sum(
-            len(v) for v in doublons_sans.values()
-        )
+        total_lignes = sum(len(v) for v in doublons_avec.values()) + sum(len(v) for v in doublons_sans.values())
         self.stdout.write(
             self.style.SUCCESS(
                 f"\nRésumé diagnostic : {total_groupes} groupe(s) de doublons, "
@@ -171,14 +169,11 @@ class Command(BaseCommand):
         result = defaultdict(list)
         for g in groupes:
             key = (g["candidat_id"], g["partenaire_id"], g["formation_id"])
-            qs = (
-                Appairage.objects.filter(
-                    candidat_id=g["candidat_id"],
-                    partenaire_id=g["partenaire_id"],
-                    formation_id=g["formation_id"],
-                )
-                .order_by("date_appairage", "id")
-            )
+            qs = Appairage.objects.filter(
+                candidat_id=g["candidat_id"],
+                partenaire_id=g["partenaire_id"],
+                formation_id=g["formation_id"],
+            ).order_by("date_appairage", "id")
             result[key] = list(qs)
             self._print_groupe("AVEC_FORMATION", key, result[key])
 
@@ -204,14 +199,11 @@ class Command(BaseCommand):
         result = defaultdict(list)
         for g in groupes:
             key = (g["candidat_id"], g["partenaire_id"])
-            qs = (
-                Appairage.objects.filter(
-                    candidat_id=g["candidat_id"],
-                    partenaire_id=g["partenaire_id"],
-                    formation__isnull=True,
-                )
-                .order_by("date_appairage", "id")
-            )
+            qs = Appairage.objects.filter(
+                candidat_id=g["candidat_id"],
+                partenaire_id=g["partenaire_id"],
+                formation__isnull=True,
+            ).order_by("date_appairage", "id")
             result[key] = list(qs)
             self._print_groupe("SANS_FORMATION", key, result[key])
 
@@ -239,15 +231,13 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"    -> Règle 'garder le plus récent' : conservé id={kept.id} "
-                "(dernier par date_appairage/id)."
+                f"    -> Règle 'garder le plus récent' : conservé id={kept.id} " "(dernier par date_appairage/id)."
             )
         )
         if to_delete:
             self.stdout.write(
                 self.style.SUCCESS(
-                    "    -> Marqués à supprimer (Appairage) : "
-                    + ", ".join(str(i.id) for i in to_delete)
+                    "    -> Marqués à supprimer (Appairage) : " + ", ".join(str(i.id) for i in to_delete)
                 )
             )
         else:
@@ -293,17 +283,14 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.WARNING(
-                "\n[APPLY] Démarrage du nettoyage dans une TRANSACTION GLOBALE unique "
-                "(AVEC + SANS formation)…"
+                "\n[APPLY] Démarrage du nettoyage dans une TRANSACTION GLOBALE unique " "(AVEC + SANS formation)…"
             )
         )
 
         with transaction.atomic():
             # 1) Doublons avec formation
             self.stdout.write(
-                self.style.WARNING(
-                    "\n[APPLY] Nettoyage des doublons AVEC formation (candidat, partenaire, formation)…"
-                )
+                self.style.WARNING("\n[APPLY] Nettoyage des doublons AVEC formation (candidat, partenaire, formation)…")
             )
             for key, instances in doublons_avec.items():
                 kept = self._choose_to_keep(instances)
@@ -360,4 +347,3 @@ class Command(BaseCommand):
                 f"Total Appairage explicitement supprimés : {total_deleted_appairages}."
             )
         )
-

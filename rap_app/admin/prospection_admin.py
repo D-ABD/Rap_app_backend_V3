@@ -5,11 +5,11 @@ from django.contrib import admin, messages
 from django.utils import timezone
 from django.utils.html import format_html
 
-from ..models.prospection import Prospection, HistoriqueProspection
+from ..models.prospection import HistoriqueProspection, Prospection
 from ..models.prospection_choices import ProspectionChoices
 
-
 # ───────────────────────── Inlines ─────────────────────────
+
 
 class HistoriqueProspectionInline(admin.TabularInline):
     model = HistoriqueProspection
@@ -41,8 +41,10 @@ class HistoriqueProspectionInline(admin.TabularInline):
 
 # ─────────────────────── Filtres custom ─────────────────────
 
+
 class RelanceEtatFilter(admin.SimpleListFilter):
     """Filtre pratique pour l’état de relance."""
+
     title = "Relance"
     parameter_name = "relance_etat"
 
@@ -57,8 +59,9 @@ class RelanceEtatFilter(admin.SimpleListFilter):
         today = timezone.now().date()
         v = self.value()
         if v == "a_relancer":
-            return queryset.filter(relance_prevue__isnull=False, relance_prevue__lte=today) \
-                           .exclude(statut__in=[ProspectionChoices.STATUT_REFUSEE, ProspectionChoices.STATUT_ANNULEE])
+            return queryset.filter(relance_prevue__isnull=False, relance_prevue__lte=today).exclude(
+                statut__in=[ProspectionChoices.STATUT_REFUSEE, ProspectionChoices.STATUT_ANNULEE]
+            )
         if v == "planifiee":
             return queryset.filter(relance_prevue__gt=today)
         if v == "sans":
@@ -68,6 +71,7 @@ class RelanceEtatFilter(admin.SimpleListFilter):
 
 # ─────────────────────── Admin principal ────────────────────
 
+
 @admin.register(Prospection)
 class ProspectionAdmin(admin.ModelAdmin):
     date_hierarchy = "date_prospection"
@@ -76,7 +80,7 @@ class ProspectionAdmin(admin.ModelAdmin):
         "id",
         "partenaire",
         "formation",
-        "centre",            # ✅ nouveau : afficher le centre
+        "centre",  # ✅ nouveau : afficher le centre
         "owner",
         "statut_badge",
         "type_prospection",
@@ -100,7 +104,7 @@ class ProspectionAdmin(admin.ModelAdmin):
         "owner",
         "partenaire",
         "formation",
-        "centre",            # ✅ nouveau : filtre par centre
+        "centre",  # ✅ nouveau : filtre par centre
         ("date_prospection", admin.DateFieldListFilter),
         ("relance_prevue", admin.DateFieldListFilter),
     )
@@ -110,7 +114,7 @@ class ProspectionAdmin(admin.ModelAdmin):
         "commentaire",
         "partenaire__nom",
         "formation__nom",
-        "centre__nom",       # ✅ nouveau : recherche par nom de centre
+        "centre__nom",  # ✅ nouveau : recherche par nom de centre
         "created_by__username",
         "owner__username",
     )
@@ -121,26 +125,38 @@ class ProspectionAdmin(admin.ModelAdmin):
     readonly_fields = ("created_by", "created_at", "updated_at")
 
     fieldsets = (
-        ("Ciblage", {
-            "fields": ("partenaire", "formation", "centre", "owner"),  # ✅ centre visible/éditable
-        }),
-        ("Détails prospection", {
-            "fields": (
-                "date_prospection",
-                "type_prospection",
-                "motif",
-                "objectif",
-                "statut",
-                "moyen_contact",
-                "commentaire",
-            )
-        }),
-        ("Relance", {
-            "fields": ("relance_prevue",),
-        }),
-        ("Métadonnées", {
-            "fields": ("created_by", "created_at", "updated_at"),
-        }),
+        (
+            "Ciblage",
+            {
+                "fields": ("partenaire", "formation", "centre", "owner"),  # ✅ centre visible/éditable
+            },
+        ),
+        (
+            "Détails prospection",
+            {
+                "fields": (
+                    "date_prospection",
+                    "type_prospection",
+                    "motif",
+                    "objectif",
+                    "statut",
+                    "moyen_contact",
+                    "commentaire",
+                )
+            },
+        ),
+        (
+            "Relance",
+            {
+                "fields": ("relance_prevue",),
+            },
+        ),
+        (
+            "Métadonnées",
+            {
+                "fields": ("created_by", "created_at", "updated_at"),
+            },
+        ),
     )
 
     inlines = [HistoriqueProspectionInline]
@@ -155,12 +171,12 @@ class ProspectionAdmin(admin.ModelAdmin):
     # Badge coloré de statut
     def statut_badge(self, obj: Prospection):
         colors = {
-            ProspectionChoices.STATUT_A_FAIRE: "#6b7280",      # gris
-            ProspectionChoices.STATUT_EN_COURS: "#2563eb",     # bleu
-            ProspectionChoices.STATUT_A_RELANCER: "#d97706",   # orange
-            ProspectionChoices.STATUT_ACCEPTEE: "#16a34a",     # vert
-            ProspectionChoices.STATUT_REFUSEE: "#b91c1c",      # rouge
-            ProspectionChoices.STATUT_ANNULEE: "#374151",      # gris foncé
+            ProspectionChoices.STATUT_A_FAIRE: "#6b7280",  # gris
+            ProspectionChoices.STATUT_EN_COURS: "#2563eb",  # bleu
+            ProspectionChoices.STATUT_A_RELANCER: "#d97706",  # orange
+            ProspectionChoices.STATUT_ACCEPTEE: "#16a34a",  # vert
+            ProspectionChoices.STATUT_REFUSEE: "#b91c1c",  # rouge
+            ProspectionChoices.STATUT_ANNULEE: "#374151",  # gris foncé
             ProspectionChoices.STATUT_NON_RENSEIGNE: "#9ca3af",
         }
         color = colors.get(obj.statut, "#9ca3af")
@@ -168,8 +184,10 @@ class ProspectionAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="display:inline-block;padding:.15rem .5rem;border-radius:9999px;'
             'background:{bg};color:#fff;font-size:12px">{label}</span>',
-            bg=color, label=label
+            bg=color,
+            label=label,
         )
+
     statut_badge.short_description = "Statut"
 
     # État de relance (affichage)
@@ -183,6 +201,7 @@ class ProspectionAdmin(admin.ModelAdmin):
         if delta == 0:
             return "⏰ Aujourd’hui"
         return f"📆 J+{delta}"
+
     relance_etat.short_description = "Relance"
 
     # Propager l’utilisateur à la sauvegarde
@@ -268,6 +287,7 @@ class ProspectionAdmin(admin.ModelAdmin):
 
 # ───────────────────── Historique (admin direct) ─────────────────────
 
+
 @admin.register(HistoriqueProspection)
 class HistoriqueProspectionAdmin(admin.ModelAdmin):
     date_hierarchy = "date_modification"
@@ -290,14 +310,22 @@ class HistoriqueProspectionAdmin(admin.ModelAdmin):
         ("date_modification", admin.DateFieldListFilter),
         ("prochain_contact", admin.DateFieldListFilter),
     )
-    search_fields = ("id", "prospection__partenaire__nom", "prospection__formation__nom", "champ_modifie", "commentaire")
+    search_fields = (
+        "id",
+        "prospection__partenaire__nom",
+        "prospection__formation__nom",
+        "champ_modifie",
+        "commentaire",
+    )
     ordering = ("-date_modification", "-id")
     raw_id_fields = ("prospection", "created_by", "updated_by")
     readonly_fields = ("created_by", "created_at", "updated_at")
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related("prospection", "prospection__partenaire", "prospection__formation", "created_by", "updated_by")
+        return qs.select_related(
+            "prospection", "prospection__partenaire", "prospection__formation", "created_by", "updated_by"
+        )
 
     def save_model(self, request, obj, form, change):
         # Historique est normalement RO, mais si besoin…

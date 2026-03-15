@@ -3,9 +3,10 @@
 Factories factory_boy pour générer User (CustomUser) et LogUtilisateur en tests.
 Utilisation : UserFactory(), LogUtilisateurFactory(), UserFactory(role=CustomUser.ROLE_STAFF), etc.
 """
+
+import factory
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-import factory
 
 from ..models.logs import LogUtilisateur
 
@@ -47,9 +48,7 @@ class LogUtilisateurFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = LogUtilisateur
 
-    content_type = factory.LazyFunction(
-        lambda: ContentType.objects.get_for_model(LogUtilisateur)
-    )
+    content_type = factory.LazyFunction(lambda: ContentType.objects.get_for_model(LogUtilisateur))
     object_id = None
     action = LogUtilisateur.ACTION_VIEW
     details = factory.Faker("sentence", nb_words=4, locale="fr_FR")
@@ -58,8 +57,4 @@ class LogUtilisateurFactory(factory.django.DjangoModelFactory):
     @classmethod
     def for_instance(cls, instance, **kwargs):
         """Crée un log lié à une instance de modèle (ex: formation, centre)."""
-        return cls(
-            content_type=ContentType.objects.get_for_model(instance),
-            object_id=instance.pk,
-            **kwargs
-        )
+        return cls(content_type=ContentType.objects.get_for_model(instance), object_id=instance.pk, **kwargs)

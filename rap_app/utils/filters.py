@@ -1,13 +1,13 @@
 import django_filters
 from django.db.models import Q
 
-from ..models.prospection_comments import ProspectionComment
 from ..models.appairage import Appairage
-from ..models.prospection import Prospection
+from ..models.atelier_tre import AtelierTRE
+from ..models.candidat import Candidat, ResultatPlacementChoices
 from ..models.custom_user import CustomUser
 from ..models.formations import HistoriqueFormation
-from ..models.candidat import Candidat, ResultatPlacementChoices
-from ..models.atelier_tre import AtelierTRE
+from ..models.prospection import Prospection
+from ..models.prospection_comments import ProspectionComment
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -16,11 +16,11 @@ from ..models.atelier_tre import AtelierTRE
 class AtelierTREFilter(django_filters.FilterSet):
     """
     Filtre sur le modèle AtelierTRE pour les besoins du front.
-    
+
     Fonctionnalité :
         Permet de filtrer les objets AtelierTRE selon la date de début (jour ou heure précise)
         et selon le type d'atelier (via les choices du modèle).
-    
+
     Contrat technique :
         - Hérite de django_filters.FilterSet.
         - Les filtres sont basés sur des champs du modèle (date, datetimes, choices).
@@ -33,6 +33,7 @@ class AtelierTREFilter(django_filters.FilterSet):
         - Dépend du modèle AtelierTRE et de ses champs (debut, type_atelier).
         - type_atelier suppose la présence de TypeAtelier.choices sur le modèle.
     """
+
     # ✅ Compat front : filtre par JOUR sur le champ DateTime "debut"
     date_min = django_filters.DateFilter(field_name="debut", lookup_expr="date__gte")
     date_max = django_filters.DateFilter(field_name="debut", lookup_expr="date__lte")
@@ -59,7 +60,7 @@ class AtelierTREFilter(django_filters.FilterSet):
 class _SafeBaseInFilter(django_filters.filters.BaseInFilter):
     """
     Variante "safe" des filtres __in de django-filter.
-    
+
     Fonctionnalité :
         Ignore les filtres __in où la valeur passée est vide, nulle ou une liste vide.
         Nettoie en supprimant None, "", et [] des valeurs reçues, pour ne pas
@@ -80,6 +81,7 @@ class _SafeBaseInFilter(django_filters.filters.BaseInFilter):
         - Dépend de django_filters.filters.BaseInFilter (dépendance forte au package).
         - Hypothèse sur l'accès à super().filter(qs, cleaned).
     """
+
     def filter(self, qs, value):
         if not value:
             return qs
@@ -87,6 +89,7 @@ class _SafeBaseInFilter(django_filters.filters.BaseInFilter):
         if not cleaned:
             return qs
         return super().filter(qs, cleaned)
+
 
 class SafeNumberInFilter(_SafeBaseInFilter, django_filters.NumberFilter):
     """
@@ -104,7 +107,9 @@ class SafeNumberInFilter(_SafeBaseInFilter, django_filters.NumberFilter):
     Limite :
         - Hypothèse sur la nature numérique du champ (vérification côté FilterSet).
     """
+
     pass
+
 
 class SafeCharInFilter(_SafeBaseInFilter, django_filters.CharFilter):
     """
@@ -119,7 +124,9 @@ class SafeCharInFilter(_SafeBaseInFilter, django_filters.CharFilter):
         - Utilisé pour des champs caractères.
         - Retour : QuerySet filtré.
     """
+
     pass
+
 
 # (Compat éventuelle avec ancien code)
 class CharInFilter(_SafeBaseInFilter, django_filters.CharFilter):
@@ -133,7 +140,9 @@ class CharInFilter(_SafeBaseInFilter, django_filters.CharFilter):
         - Arguments hérités.
         - Pas de différence d'implémentation.
     """
+
     pass
+
 
 class NumberInFilter(_SafeBaseInFilter, django_filters.NumberFilter):
     """
@@ -146,6 +155,7 @@ class NumberInFilter(_SafeBaseInFilter, django_filters.NumberFilter):
         - Arguments hérités.
         - Pas de différence d'implémentation.
     """
+
     pass
 
 
@@ -174,7 +184,8 @@ class CandidatFilter(django_filters.FilterSet):
         - Certains filtres utilisent des choices du modèle.
         - Le filtre has_osia dépend du champ numero_osia (et conventions associées).
     """
-    id__in = SafeNumberInFilter(field_name='id', lookup_expr='in')
+
+    id__in = SafeNumberInFilter(field_name="id", lookup_expr="in")
 
     # 📅 bornes date d'inscription + alias
     date_inscription_min = django_filters.DateFilter(field_name="date_inscription", lookup_expr="gte")
@@ -262,21 +273,41 @@ class CandidatFilter(django_filters.FilterSet):
     class Meta:
         model = Candidat
         fields = [
-            "statut", "statut__in", "statut_i",
-            "type_contrat", "type_contrat__in", "type_contrat_i", "type_contrat_isnull",
+            "statut",
+            "statut__in",
+            "statut_i",
+            "type_contrat",
+            "type_contrat__in",
+            "type_contrat_i",
+            "type_contrat_isnull",
             "disponibilite",
-            "contrat_signe", "contrat_signe__in", "contrat_signe_i", "contrat_signe_isnull",
+            "contrat_signe",
+            "contrat_signe__in",
+            "contrat_signe_i",
+            "contrat_signe_isnull",
             "resultat_placement",
-            "cv_statut", "cv_statut__in",
-            "formation", "centre",
-            "responsable_placement", "vu_par",
-            "admissible", "entretien_done", "test_is_ok",
-            "entreprise_placement", "entreprise_validee",
-            "ville", "code_postal", "id__in",
-            "rqth", "permis_b",
-            "date_inscription_min", "date_inscription_max",
-            "date_min", "date_max",
-            "date_naissance_min", "date_naissance_max",
+            "cv_statut",
+            "cv_statut__in",
+            "formation",
+            "centre",
+            "responsable_placement",
+            "vu_par",
+            "admissible",
+            "entretien_done",
+            "test_is_ok",
+            "entreprise_placement",
+            "entreprise_validee",
+            "ville",
+            "code_postal",
+            "id__in",
+            "rqth",
+            "permis_b",
+            "date_inscription_min",
+            "date_inscription_max",
+            "date_min",
+            "date_max",
+            "date_naissance_min",
+            "date_naissance_max",
             "has_osia",
         ]
 
@@ -303,6 +334,7 @@ class HistoriqueFormationFilter(django_filters.FilterSet):
         - Dépend du modèle HistoriqueFormation et de la relation à formation.
         - "formation_etat" attend que le champ "etat" existe sur la relation "formation".
     """
+
     centre_id = django_filters.NumberFilter(field_name="formation__centre_id")
     type_offre_id = django_filters.NumberFilter(field_name="formation__type_offre_id")
     statut_id = django_filters.NumberFilter(field_name="formation__statut_id")
@@ -324,7 +356,7 @@ class HistoriqueFormationFilter(django_filters.FilterSet):
             - Retour : QuerySet filtré
 
         Ex :
-            filter_etat(qs, 'formation_etat', 'clôturée') -> tous les historiques 
+            filter_etat(qs, 'formation_etat', 'clôturée') -> tous les historiques
             dont la formation liée est "clôturée"
 
         Limite : dépendance au champ formation.etat
@@ -354,6 +386,7 @@ class UserFilterSet(django_filters.FilterSet):
         - Utilisation de la relation "candidat_associe" : suppose existence et cohérence métier
         - Hypothèse sur la structure du modèle CustomUser et des FK associées
     """
+
     role = django_filters.CharFilter(field_name="role", lookup_expr="exact")
     is_active = django_filters.BooleanFilter(field_name="is_active")
     date_joined_min = django_filters.DateFilter(field_name="date_joined", lookup_expr="gte")
@@ -361,15 +394,13 @@ class UserFilterSet(django_filters.FilterSet):
 
     formation = django_filters.NumberFilter(field_name="candidat_associe__formation__id", lookup_expr="exact")
     centre = django_filters.NumberFilter(field_name="candidat_associe__formation__centre__id", lookup_expr="exact")
-    type_offre = django_filters.NumberFilter(field_name="candidat_associe__formation__type_offre__id", lookup_expr="exact")
+    type_offre = django_filters.NumberFilter(
+        field_name="candidat_associe__formation__type_offre__id", lookup_expr="exact"
+    )
 
     class Meta:
         model = CustomUser
-        fields = [
-            "role", "is_active",
-            "formation", "centre", "type_offre",
-            "date_joined_min", "date_joined_max"
-        ]
+        fields = ["role", "is_active", "formation", "centre", "type_offre", "date_joined_min", "date_joined_max"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -394,6 +425,7 @@ class ProspectionFilterSet(django_filters.FilterSet):
         - Dépend du modèle Prospection, des related_name, des filters custom.
         - "historique_moyen_contact" requiert une relation "historiques" sur Prospection (FK ou related_name).
     """
+
     # 🆕 pratiques
     id__in = SafeNumberInFilter(field_name="id", lookup_expr="in")
     date_min = django_filters.DateFilter(field_name="date_prospection", lookup_expr="date__gte")
@@ -434,13 +466,24 @@ class ProspectionFilterSet(django_filters.FilterSet):
         model = Prospection
         fields = [
             # FK
-            "centre", "formation", "partenaire", "owner",
+            "centre",
+            "formation",
+            "partenaire",
+            "owner",
             # choices
-            "statut", "objectif", "motif", "type_prospection",
+            "statut",
+            "objectif",
+            "motif",
+            "type_prospection",
             # moyens/relance/dates
-            "moyen_contact", "relance_min", "relance_max", "date_min", "date_max",
+            "moyen_contact",
+            "relance_min",
+            "relance_max",
+            "date_min",
+            "date_max",
             # formation liés
-            "formation_type_offre", "formation_statut",
+            "formation_type_offre",
+            "formation_statut",
             # utilitaires
             "id__in",
         ]
@@ -492,6 +535,7 @@ class AppairageFilterSet(django_filters.FilterSet):
         - Dépend fortement du modèle Appairage et de ses relations.
         - La logique de filter_centre dépend de relations précises.
     """
+
     statut = django_filters.CharFilter(lookup_expr="exact")
     formation = django_filters.NumberFilter(field_name="formation_id")
     centre = django_filters.NumberFilter(method="filter_centre")
@@ -518,10 +562,7 @@ class AppairageFilterSet(django_filters.FilterSet):
         Limite :
             - Dépend du schéma relationnel (formation__centre_id, candidat__formation__centre_id).
         """
-        return qs.filter(
-            Q(formation__centre_id=value) |
-            Q(candidat__formation__centre_id=value)
-        )
+        return qs.filter(Q(formation__centre_id=value) | Q(candidat__formation__centre_id=value))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -553,6 +594,7 @@ class ProspectionCommentFilter(django_filters.FilterSet):
         - Les champs "prospection_owner" et "prospection_partenaire" nécessitent que
           ProspectionComment soit lié à Prospection, et Prospection à owner/partenaire.
     """
+
     formation_nom = django_filters.CharFilter(field_name="prospection__formation__nom", lookup_expr="icontains")
     partenaire_nom = django_filters.CharFilter(field_name="prospection__partenaire__nom", lookup_expr="icontains")
     created_by_username = django_filters.CharFilter(field_name="created_by__username", lookup_expr="icontains")

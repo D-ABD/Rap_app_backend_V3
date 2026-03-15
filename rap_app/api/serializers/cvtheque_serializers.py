@@ -1,12 +1,14 @@
 from rest_framework import serializers
-from ...models.cvtheque import CVTheque
+
 from ...models.candidat import Candidat
+from ...models.cvtheque import CVTheque
 
 
 class CandidatMiniSerializer(serializers.ModelSerializer):
     """
     Sérialiseur minimal du modèle Candidat pour inclusion en lecture seule dans les sérialiseurs CVthèque.
     """
+
     class Meta:
         model = Candidat
         fields = [
@@ -91,7 +93,6 @@ class CVThequeListSerializer(CVThequeBaseSerializer):
             "preview_url",
             "download_url",
             "candidat",
-
             "formation_nom",
             "formation_centre",
             "formation_type_offre",
@@ -124,7 +125,6 @@ class CVThequeDetailSerializer(CVThequeBaseSerializer):
             "preview_url",
             "download_url",
             "candidat",
-
             "formation_nom",
             "formation_num_offre",
             "formation_type_offre",
@@ -167,11 +167,7 @@ class CVThequeWriteSerializer(serializers.ModelSerializer):
     create/update : affectent created_by et updated_by à l'utilisateur authentifié ; en update sans fichier, l'ancien fichier est conservé.
     """
 
-    candidat = serializers.PrimaryKeyRelatedField(
-        queryset=Candidat.objects.all(),
-        required=False,
-        allow_null=True
-    )
+    candidat = serializers.PrimaryKeyRelatedField(queryset=Candidat.objects.all(), required=False, allow_null=True)
     fichier = serializers.FileField(required=False)
 
     class Meta:

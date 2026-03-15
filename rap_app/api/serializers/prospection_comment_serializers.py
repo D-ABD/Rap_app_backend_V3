@@ -1,10 +1,10 @@
-from rest_framework import serializers
-from django.utils.translation import gettext_lazy as _
 import bleach
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
+from rest_framework import serializers
 
-from ...models.prospection_comments import ProspectionComment
 from ...models.prospection import Prospection
+from ...models.prospection_comments import ProspectionComment
 
 
 class ProspectionCommentSerializer(serializers.ModelSerializer):
@@ -30,9 +30,7 @@ class ProspectionCommentSerializer(serializers.ModelSerializer):
     prospection_owner_username = serializers.CharField(source="prospection.owner.username", read_only=True)
     prospection_partenaire = serializers.IntegerField(source="prospection.partenaire_id", read_only=True)
 
-    statut_commentaire_display = serializers.CharField(
-        source="get_statut_commentaire_display", read_only=True
-    )
+    statut_commentaire_display = serializers.CharField(source="get_statut_commentaire_display", read_only=True)
 
     class Meta:
         model = ProspectionComment
@@ -116,9 +114,7 @@ class ProspectionCommentSerializer(serializers.ModelSerializer):
 
         prospection = attrs.get("prospection") or getattr(self.instance, "prospection", None)
         is_internal = attrs.get("is_internal", getattr(self.instance, "is_internal", False))
-        statut_commentaire = attrs.get(
-            "statut_commentaire", getattr(self.instance, "statut_commentaire", "actif")
-        )
+        statut_commentaire = attrs.get("statut_commentaire", getattr(self.instance, "statut_commentaire", "actif"))
 
         if not user or not user.is_authenticated:
             raise serializers.ValidationError(_("Authentification requise."))

@@ -1,36 +1,38 @@
 # rap_app/api/viewsets/declic_viewset.py
 
+from io import BytesIO
+from pathlib import Path
+
+from django.conf import settings
 from django.db.models import Q, Sum
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django.utils.timezone import localdate
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
+from django.utils.timezone import localdate
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
-from pathlib import Path
-from io import BytesIO
-from django.conf import settings
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
-from ...models.centres import Centre
-from ...models.declic import Declic, ObjectifDeclic
-from ..serializers.declic_serializers import DeclicSerializer
-from ..permissions import IsDeclicStaffOrAbove
 from ...api.roles import (
     is_admin_like,
-    is_staff_or_staffread,
-    is_declic_staff,
     is_candidate,
+    is_declic_staff,
+    is_staff_or_staffread,
 )
+from ...models.centres import Centre
+from ...models.declic import Declic, ObjectifDeclic
+from ..permissions import IsDeclicStaffOrAbove
+from ..serializers.declic_serializers import DeclicSerializer
 
 # =====================================================================================
 # 🔧 HELPERS SCOPE — (MANQUAIENT DANS TON FICHIER) → POUR L'AUTORISATION PAR CENTRES
 # =====================================================================================
+
 
 class ScopeMixin:
     """
@@ -89,6 +91,7 @@ class ScopeMixin:
 # =====================================================================================
 # 📊 DÉCLIC VIEWSET — ATELIERS UNIQUEMENT
 # =====================================================================================
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -243,11 +246,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         Réponse : JSON contenant "annees", "departements", "centres", "type_declic"
         (voir exemple dans docstring de la classe).
         """
-        annees = (
-            Declic.objects.order_by()
-            .values_list("date_declic__year", flat=True)
-            .distinct()
-        )
+        annees = Declic.objects.order_by().values_list("date_declic__year", flat=True).distinct()
         annees = sorted([a for a in annees if a], reverse=True)
 
         centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
@@ -261,22 +260,26 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
             if dep:
                 deps.add(dep)
 
-            centres.append({
-                "value": c.id,
-                "label": c.nom,
-                "departement": dep,
-                "code_postal": c.code_postal,
-            })
+            centres.append(
+                {
+                    "value": c.id,
+                    "label": c.nom,
+                    "departement": dep,
+                    "code_postal": c.code_postal,
+                }
+            )
 
         # Liste des types atelier uniquement (tuple formaté value/label)
         types = [{"value": t[0], "label": t[1]} for t in Declic.TypeDeclic.choices]
 
-        return Response({
-            "annees": annees,
-            "departements": [{"value": d, "label": f"Département {d}"} for d in sorted(deps)],
-            "centres": centres,
-            "type_declic": types,
-        })
+        return Response(
+            {
+                "annees": annees,
+                "departements": [{"value": d, "label": f"Département {d}"} for d in sorted(deps)],
+                "centres": centres,
+                "type_declic": types,
+            }
+        )
 
     # -------------------------------------------------------------------------
     # 🔍 QUERYSET PRINCIPAL
@@ -322,8 +325,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         if departement:
             departement = str(departement)
             qs = qs.filter(
-                Q(centre__departement__startswith=departement)
-                | Q(centre__code_postal__startswith=departement)
+                Q(centre__departement__startswith=departement) | Q(centre__code_postal__startswith=departement)
             )
 
         if date_min:
@@ -332,10 +334,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
             qs = qs.filter(date_declic__lte=date_max)
 
         if search:
-            qs = qs.filter(
-                Q(centre__nom__icontains=search) |
-                Q(commentaire__icontains=search)
-            )
+            qs = qs.filter(Q(centre__nom__icontains=search) | Q(commentaire__icontains=search))
 
         return qs.order_by(ordering or "-date_declic", "-id")
 
@@ -439,8 +438,9 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         ]
         ws.append(headers)
 
-        border = Border(left=Side(style="thin"), right=Side(style="thin"),
-                        top=Side(style="thin"), bottom=Side(style="thin"))
+        border = Border(
+            left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin")
+        )
 
         for s in qs:
             objectif = s.objectif_annuel
@@ -449,26 +449,31 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
                 Declic.objects.filter(
                     centre=s.centre,
                     date_declic__year=s.date_declic.year,
-                ).aggregate(total=Sum("nb_presents_declic"))["total"] or 0
+                ).aggregate(
+                    total=Sum("nb_presents_declic")
+                )["total"]
+                or 0
             )
 
             taux = round((realise / objectif) * 100, 1) if objectif else 0
 
-            ws.append([
-                s.id,
-                s.get_type_declic_display(),
-                s.date_declic.strftime("%d/%m/%Y"),
-                s.centre.nom if s.centre else "",
-                s.nb_inscrits_declic,
-                s.nb_presents_declic,
-                s.nb_absents_declic,
-                s.taux_presence_declic,
-                objectif,
-                realise,
-                taux,
-                max(objectif - realise, 0),
-                (s.commentaire or "").replace("\n", " "),
-            ])
+            ws.append(
+                [
+                    s.id,
+                    s.get_type_declic_display(),
+                    s.date_declic.strftime("%d/%m/%Y"),
+                    s.centre.nom if s.centre else "",
+                    s.nb_inscrits_declic,
+                    s.nb_presents_declic,
+                    s.nb_absents_declic,
+                    s.taux_presence_declic,
+                    objectif,
+                    realise,
+                    taux,
+                    max(objectif - realise, 0),
+                    (s.commentaire or "").replace("\n", " "),
+                ]
+            )
 
         buffer = BytesIO()
         wb.save(buffer)

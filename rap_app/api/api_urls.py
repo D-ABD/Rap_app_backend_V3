@@ -9,50 +9,52 @@ Déclaration centralisée des routes d'API pour RAP_APP.
 
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-
-# Imports des ViewSets et vues nécessaires aux routes
-from .viewsets.cvtheque_viewset import CVThequeViewSet
-from .viewsets.stats_viewsets.prepa_stats_viewsets import PrepaStatsViewSet
-from .viewsets.prepa_objectifs_viewsets import ObjectifPrepaViewSet
-from .viewsets.declic_objectifs_viewsets import ObjectifDeclicViewSet
-from .viewsets.stats_viewsets.declic_stats_viewsets import DeclicStatsViewSet
-from .viewsets.stats_viewsets.prospection_comment_stats_viewset import ProspectionCommentStatsViewSet
-from .viewsets.stats_viewsets.commentaires_stats_viewsets import CommentaireStatsViewSet
-from .viewsets.stats_viewsets.atelier_tre_stats_viewset import AtelierTREStatsViewSet
-from .viewsets.stats_viewsets.appairages_stats_viewsets import AppairageStatsViewSet
-from .viewsets.stats_viewsets.partenaires_stats_viewsets import PartenaireStatsViewSet
-from .viewsets.stats_viewsets.candidats_stats_viewsets import CandidatStatsViewSet
-from .viewsets.stats_viewsets.prospection_stats_viewsets import ProspectionStatsViewSet
-from .viewsets.stats_viewsets.formation_stats_viewsets import FormationStatsViewSet
-from .viewsets.stats_viewsets.appairage_comment_stats_viewset import AppairageCommentaireStatsViewSet
-
-from .viewsets.appairage_viewsets import AppairageViewSet
-from .viewsets.appairage_commentaires_viewset import CommentaireAppairageViewSet
-from .viewsets.atelier_tre_viewsets import AtelierTREViewSet
 from rest_framework_simplejwt.views import TokenRefreshView
+
+from .viewsets.appairage_commentaires_viewset import CommentaireAppairageViewSet
+from .viewsets.appairage_viewsets import AppairageViewSet
+from .viewsets.atelier_tre_viewsets import AtelierTREViewSet
 from .viewsets.auth_viewset import EmailTokenObtainPairView
 from .viewsets.candidat_viewsets import CandidatViewSet
 from .viewsets.centres_viewsets import CentreViewSet
 from .viewsets.commentaires_viewsets import CommentaireViewSet
+
+# Imports des ViewSets et vues nécessaires aux routes
+from .viewsets.cvtheque_viewset import CVThequeViewSet
+from .viewsets.declic_objectifs_viewsets import ObjectifDeclicViewSet
+from .viewsets.declic_viewset import DeclicViewSet
 from .viewsets.documents_viewsets import DocumentViewSet
 from .viewsets.evenements_viewsets import EvenementViewSet
 from .viewsets.formations_viewsets import FormationViewSet
+from .viewsets.health_viewset import HealthViewSet
 from .viewsets.logs_viewsets import LogUtilisateurViewSet
+from .viewsets.me_viewsets import DemandeCompteCandidatView, MeAPIView, RoleChoicesView
 from .viewsets.partenaires_viewsets import PartenaireViewSet
-from .viewsets.prospection_viewsets import ProspectionViewSet
+from .viewsets.prepa_objectifs_viewsets import ObjectifPrepaViewSet
+from .viewsets.prepa_viewset import PrepaViewSet
 from .viewsets.prospection_comment_viewsets import ProspectionCommentViewSet
+from .viewsets.prospection_viewsets import ProspectionViewSet
 from .viewsets.rapports_viewsets import RapportViewSet
 from .viewsets.search_viewset import SearchView
+from .viewsets.stats_viewsets.appairage_comment_stats_viewset import (
+    AppairageCommentaireStatsViewSet,
+)
+from .viewsets.stats_viewsets.appairages_stats_viewsets import AppairageStatsViewSet
+from .viewsets.stats_viewsets.atelier_tre_stats_viewset import AtelierTREStatsViewSet
+from .viewsets.stats_viewsets.candidats_stats_viewsets import CandidatStatsViewSet
+from .viewsets.stats_viewsets.commentaires_stats_viewsets import CommentaireStatsViewSet
+from .viewsets.stats_viewsets.declic_stats_viewsets import DeclicStatsViewSet
+from .viewsets.stats_viewsets.formation_stats_viewsets import FormationStatsViewSet
+from .viewsets.stats_viewsets.partenaires_stats_viewsets import PartenaireStatsViewSet
+from .viewsets.stats_viewsets.prepa_stats_viewsets import PrepaStatsViewSet
+from .viewsets.stats_viewsets.prospection_comment_stats_viewset import (
+    ProspectionCommentStatsViewSet,
+)
+from .viewsets.stats_viewsets.prospection_stats_viewsets import ProspectionStatsViewSet
 from .viewsets.statut_viewsets import StatutViewSet
 from .viewsets.temporaire_viewset import test_token_view
 from .viewsets.types_offre_viewsets import TypeOffreViewSet
 from .viewsets.user_viewsets import CustomUserViewSet, RegisterView
-
-from .viewsets.me_viewsets import MeAPIView, RoleChoicesView, DemandeCompteCandidatView
-
-from .viewsets.prepa_viewset import PrepaViewSet
-from .viewsets.declic_viewset import DeclicViewSet
-from .viewsets.health_viewset import HealthViewSet
 
 # Initialisation du router DRF
 router = DefaultRouter()
@@ -97,7 +99,9 @@ router.register(r"ateliertre-stats", AtelierTREStatsViewSet, basename="ateliertr
 router.register(r"appairage-stats", AppairageStatsViewSet, basename="appairage-stats")
 router.register(r"commentaire-stats", CommentaireStatsViewSet, basename="commentaire-stats")
 router.register(r"prospection-comment-stats", ProspectionCommentStatsViewSet, basename="prospection-comment-stats")
-router.register(r"appairage-commentaire-stats", AppairageCommentaireStatsViewSet, basename="appairage-commentaire-stats")
+router.register(
+    r"appairage-commentaire-stats", AppairageCommentaireStatsViewSet, basename="appairage-commentaire-stats"
+)
 
 # Endpoints déclarés explicitement hors router (authentification, utilitaires)
 urlpatterns = [

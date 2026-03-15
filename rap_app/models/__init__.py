@@ -9,42 +9,52 @@ l'enregistrement des signaux Django au démarrage. Les modèles sont définis da
 spécialisés (un fichier par domaine métier).
 """
 
-# Modèles principaux
-from .base import BaseModel
-from .centres import Centre
-from .statut import Statut
-from .types_offre import TypeOffre
-from .formations import Formation, FormationManager, HistoriqueFormation
-from .commentaires import Commentaire
-from .evenements import Evenement
-from .documents import Document
-from .partenaires import Partenaire
-from .rapports import Rapport
-from .prospection import Prospection, HistoriqueProspection
-from .vae import   VAE, HistoriqueStatutVAE
-from .jury import SuiviJury
-from .logs import LogUtilisateur
-from .custom_user import CustomUser
-from .models_test import DummyModel
-from .candidat import Candidat
 from .appairage import Appairage, HistoriqueAppairage
 from .atelier_tre import AtelierTRE
-from .commentaires_appairage import CommentaireAppairage
+
+# Modèles principaux
+from .base import BaseModel
+from .candidat import Candidat
+from .centres import Centre
+
 # Modèle de contrat CERFA (snapshot administratif pour génération de PDF)
 from .cerfa_contrats import CerfaContrat
+from .commentaires import Commentaire
+from .commentaires_appairage import CommentaireAppairage
+from .custom_user import CustomUser
+from .documents import Document
+from .evenements import Evenement
+from .formations import Formation, FormationManager, HistoriqueFormation
+from .jury import SuiviJury
+from .logs import LogUtilisateur
+from .models_test import DummyModel
+from .partenaires import Partenaire
+from .prospection import HistoriqueProspection, Prospection
+from .rapports import Rapport
+from .statut import Statut
+from .types_offre import TypeOffre
+from .vae import VAE, HistoriqueStatutVAE
 
-__all__ = ['CustomUser']
+__all__ = ["CustomUser"]
 
 default_app_config = "rap_app.apps.RapAppConfig"
 
 
 # Import des sous-modules contenant des signaux (nécessaire pour leur enregistrement).
 from . import (
+    appairage,
+    atelier_tre,
+    candidat,
     centres,
+    cerfa_contrats,
     commentaires,
+    commentaires_appairage,
+    custom_user,
+    declic,
     documents,
     evenements,
     formations,
+    jury,
     logs,
     partenaires,
     prepa,
@@ -52,12 +62,4 @@ from . import (
     rapports,
     statut,
     types_offre,
-    custom_user,
-    jury,
-    candidat,
-    appairage,
-    atelier_tre,
-    commentaires_appairage,
-    cerfa_contrats,
-    declic,
 )

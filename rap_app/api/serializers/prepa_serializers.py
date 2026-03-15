@@ -1,17 +1,12 @@
 # rap_app/api/serializers/prepa_serializers.py
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
+from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import Prepa
 
 
-@extend_schema_serializer(
-    examples=[{
-        "id": 1, "nom": "Centre de Lille",
-        "departement": "59", "code_postal": "59000"
-    }]
-)
+@extend_schema_serializer(examples=[{"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}])
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les séances Prépa. Lecture seule.
@@ -29,19 +24,13 @@ class CentreLightSerializer(serializers.ModelSerializer):
             "type_prepa": "info_collective",
             "type_prepa_display": "Information collective",
             "date_prepa": "2025-09-12",
-            "centre": {
-                "id": 2, "nom": "Centre de Lille",
-                "departement": "59", "code_postal": "59000"
-            },
+            "centre": {"id": 2, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"},
             "centre_nom": "Centre de Lille",
-
             "nb_presents_info": 10,
             "nb_absents_info": 2,
             "nb_adhesions": 8,
-
             "nb_presents_prepa": 8,
             "nb_absents_prepa": 2,
-
             "taux_presence_info": 83.3,
             "taux_presence_atelier": None,
             "taux_presence_global": 83.3,
@@ -55,10 +44,7 @@ class PrepaSerializer(serializers.ModelSerializer):
 
     centre = CentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
-        queryset=Centre.objects.all(),
-        source="centre",
-        write_only=True,
-        help_text="Identifiant du centre concerné."
+        queryset=Centre.objects.all(), source="centre", write_only=True, help_text="Identifiant du centre concerné."
     )
     centre_nom = serializers.CharField(source="centre.nom", read_only=True)
 
@@ -84,10 +70,13 @@ class PrepaSerializer(serializers.ModelSerializer):
         model = Prepa
         fields = [
             "id",
-            "type_prepa", "type_prepa_display",
-            "date_prepa", "date_display",
-            "centre", "centre_id", "centre_nom",
-
+            "type_prepa",
+            "type_prepa_display",
+            "date_prepa",
+            "date_display",
+            "centre",
+            "centre_id",
+            "centre_nom",
             "nombre_places_ouvertes",
             "nombre_prescriptions",
             "nb_presents_info",
@@ -96,23 +85,24 @@ class PrepaSerializer(serializers.ModelSerializer):
             "nb_inscrits_prepa",
             "nb_presents_prepa",
             "nb_absents_prepa",
-
-            "inscrits", "presents", "absents", "adhesions_ic",
-
+            "inscrits",
+            "presents",
+            "absents",
+            "adhesions_ic",
             "taux_prescription",
             "taux_presence_info",
             "taux_presence_atelier",
             "taux_presence_global",
             "taux_adhesion",
             "taux_presence_prepa",
-
             "objectif_annuel",
             "taux_atteinte_annuel",
             "reste_a_faire",
-
             "commentaire",
-            "created_at", "updated_at",
-            "created_by", "updated_by",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
         ]
         read_only_fields = ["created_at", "updated_at", "created_by", "updated_by"]
 
@@ -179,29 +169,17 @@ class PrepaSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.IntegerField)
     def get_inscrits(self, obj):
         """Nombre d'inscrits : nombre_prescriptions si IC, sinon nb_inscrits_prepa."""
-        return (
-            obj.nombre_prescriptions
-            if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE
-            else obj.nb_inscrits_prepa
-        )
+        return obj.nombre_prescriptions if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE else obj.nb_inscrits_prepa
 
     @extend_schema_field(serializers.IntegerField)
     def get_presents(self, obj):
         """Nombre de présents : nb_presents_info si IC, sinon nb_presents_prepa."""
-        return (
-            obj.nb_presents_info
-            if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE
-            else obj.nb_presents_prepa
-        )
+        return obj.nb_presents_info if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE else obj.nb_presents_prepa
 
     @extend_schema_field(serializers.IntegerField)
     def get_absents(self, obj):
         """Nombre d'absents : nb_absents_info si IC, sinon nb_absents_prepa."""
-        return (
-            obj.nb_absents_info
-            if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE
-            else obj.nb_absents_prepa
-        )
+        return obj.nb_absents_info if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE else obj.nb_absents_prepa
 
     @extend_schema_field(serializers.IntegerField)
     def get_adhesions_ic(self, obj):

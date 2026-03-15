@@ -1,70 +1,59 @@
 # views/prospection.py
 
-from django.db import transaction
-from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status, filters, serializers
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Count, OuterRef, Subquery
-from drf_spectacular.utils import (
-    extend_schema,
-    extend_schema_view,
-    OpenApiResponse,
-    OpenApiParameter,
-    OpenApiExample,
-)
 import datetime
-from django.db.models import Q, Exists, OuterRef
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-from openpyxl.utils import get_column_letter
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from io import BytesIO
-from django.http import HttpResponse
-from django.utils import timezone as dj_timezone
 from io import BytesIO
 from pathlib import Path
-import datetime
-from django.http import HttpResponse
-from django.utils import timezone as dj_timezone
-from django.conf import settings
-from django.templatetags.static import static
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.drawing.image import Image as XLImage
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
-from django.contrib.auth import get_user_model
-from rest_framework.exceptions import PermissionDenied
 
-from ...models.prospection_comments import ProspectionComment
-from ...models.formations import Formation
-from ...utils.filters import ProspectionFilterSet
-from ...models.partenaires import Partenaire
-from ...models.custom_user import CustomUser
-from ...api.paginations import RapAppPagination
-from ...models.prospection import Prospection, ProspectionChoices
-from ..serializers.prospection_serializers import (
-    ProspectionChoiceListSerializer,
-    ProspectionListSerializer,
-    ProspectionSerializer,
-    ProspectionDetailSerializer,
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.templatetags.static import static
+from django.utils import timezone as dj_timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
 )
-from ...models.logs import LogUtilisateur
-from ...models.candidat import Candidat
-from ..permissions import CanAccessProspectionComment, IsOwnerOrStaffOrAbove
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import filters, serializers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+
+from ...api.paginations import RapAppPagination
 from ...api.roles import (
     is_admin_like,
-    is_staff_or_staffread,
     is_candidate,
     is_staff_like,
-    staff_centre_ids,
+    is_staff_or_staffread,
     role_of,
+    staff_centre_ids,
 )
+from ...models.candidat import Candidat
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
+from ...models.logs import LogUtilisateur
+from ...models.partenaires import Partenaire
+from ...models.prospection import Prospection, ProspectionChoices
+from ...models.prospection_comments import ProspectionComment
+from ...utils.filters import ProspectionFilterSet
+from ..permissions import CanAccessProspectionComment, IsOwnerOrStaffOrAbove
+from ..serializers.prospection_serializers import (
+    ProspectionChoiceListSerializer,
+    ProspectionDetailSerializer,
+    ProspectionListSerializer,
+    ProspectionSerializer,
+)
+
 
 # -----------------------------------------------------------------------------
 # Helpers formation
@@ -77,6 +66,7 @@ def get_candidate_formation(user):
     cand = getattr(user, "candidat_associe", None) or getattr(user, "candidat", None)
     return getattr(cand, "formation", None)
 
+
 def get_owner_formation(owner):
     """
     Retourne la formation associée à l'utilisateur owner via son
@@ -86,6 +76,7 @@ def get_owner_formation(owner):
         return None
     cand = getattr(owner, "candidat_associe", None) or getattr(owner, "candidat", None)
     return getattr(cand, "formation", None)
+
 
 def annotate_last_visible_comment(queryset, user):
     """
@@ -120,14 +111,26 @@ class PartenaireCreateFromProspectionSerializer(serializers.ModelSerializer):
     """
     Serializer de création de partenaire à partir d'une prospection.
     """
+
     class Meta:
         model = Partenaire
         fields = [
-            "nom", "type", "secteur_activite",
-            "street_name", "zip_code", "city", "country",
-            "contact_nom", "contact_poste", "contact_telephone", "contact_email",
-            "website", "social_network_url",
-            "actions", "action_description", "description",
+            "nom",
+            "type",
+            "secteur_activite",
+            "street_name",
+            "zip_code",
+            "city",
+            "country",
+            "contact_nom",
+            "contact_poste",
+            "contact_telephone",
+            "contact_email",
+            "website",
+            "social_network_url",
+            "actions",
+            "action_description",
+            "description",
         ]
 
 
@@ -137,9 +140,8 @@ class CandidatCreateFromProspectionSerializer(serializers.ModelSerializer):
     prospection, avec contrôle sur le champ formation et statuts
     par défaut.
     """
-    formation = serializers.PrimaryKeyRelatedField(
-        queryset=Formation.objects.all(), required=False, allow_null=True
-    )
+
+    formation = serializers.PrimaryKeyRelatedField(queryset=Formation.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Candidat
@@ -159,17 +161,28 @@ class CandidatCreateFromProspectionSerializer(serializers.ModelSerializer):
         attrs.setdefault("cv_statut", getattr(Candidat.CVStatut, "EN_COURS", "en_cours"))
         return attrs
 
+
 class CandidatReadMinimalSerializer(serializers.ModelSerializer):
     """
     Serializer en lecture seule pour exposer un candidat minimal dans
     les réponses.
     """
+
     class Meta:
         model = Candidat
         fields = [
-            "id", "nom", "prenom", "email", "telephone",
-            "ville", "code_postal", "formation",
-            "statut", "cv_statut", "created_at", "updated_at",
+            "id",
+            "nom",
+            "prenom",
+            "email",
+            "telephone",
+            "ville",
+            "code_postal",
+            "formation",
+            "statut",
+            "cv_statut",
+            "created_at",
+            "updated_at",
         ]
 
 
@@ -184,7 +197,9 @@ class CandidatReadMinimalSerializer(serializers.ModelSerializer):
             OpenApiParameter("owner", int, description="Filtrer par responsable (id)"),
             OpenApiParameter("search", str, description="Recherche texte (commentaire, partenaire, etc.)"),
             # ✅ Nouveaux filtres formation
-            OpenApiParameter("formation_type_offre", str, description="ID ou liste d’IDs type d’offre (ex: 1 ou 1,2,3)"),
+            OpenApiParameter(
+                "formation_type_offre", str, description="ID ou liste d’IDs type d’offre (ex: 1 ou 1,2,3)"
+            ),
             OpenApiParameter("formation_statut", str, description="ID ou liste d’IDs statut de formation"),
             OpenApiParameter("centre", str, description="ID ou liste d’IDs centre de formation"),
             # (facultatif) autres filtres déjà supportés par DjangoFilterBackend via ProspectionFilterSet
@@ -211,6 +226,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
     des actions métier (filtres, archivage, changement de statut,
     choix) et l'export XLSX.
     """
+
     queryset = Prospection.objects.select_related(
         "partenaire",
         "formation",
@@ -227,12 +243,21 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
     search_fields = [
         "commentaire",
-        "statut", "objectif", "motif", "type_prospection",
-        "owner__username", "created_by__username",
-        "partenaire__nom", "partenaire__city", "partenaire__zip_code",
-        "partenaire__secteur_activite", "partenaire__contact_nom",
-        "partenaire__contact_email", "partenaire__contact_telephone",
-        "formation__nom", "formation__num_offre",
+        "statut",
+        "objectif",
+        "motif",
+        "type_prospection",
+        "owner__username",
+        "created_by__username",
+        "partenaire__nom",
+        "partenaire__city",
+        "partenaire__zip_code",
+        "partenaire__secteur_activite",
+        "partenaire__contact_nom",
+        "partenaire__contact_email",
+        "partenaire__contact_telephone",
+        "formation__nom",
+        "formation__num_offre",
     ]
 
     # -------------------------------------------------------------------------
@@ -293,7 +318,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         """
         Retourne le queryset filtered approprié, annoté avec le dernier commentaire visible selon l'utilisateur.
 
-        - Applique un filtrage spécifique sur le champ "activite" et gère les paramètres d’inclusion des archives, 
+        - Applique un filtrage spécifique sur le champ "activite" et gère les paramètres d’inclusion des archives,
           en plus du scoping selon le rôle (voir docstring de classe).
         - Annote chaque prospection sur :
             * dernier commentaire visible,
@@ -305,7 +330,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         qs = annotate_last_visible_comment(base, user)
         qs = self._scoped_for_user(qs, user)
 
-        # 🆕 Gestion du filtre d'activité (active / archivée), 
+        # 🆕 Gestion du filtre d'activité (active / archivée),
         # via "activite", ou via "inclure_archives" et "avec_archivees"
         activite_param = self.request.query_params.get("activite")
         inclure_archivees = any(
@@ -331,7 +356,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         """
         Point d'entrée API : GET /prospections/filtres
 
-        Objectif métier : 
+        Objectif métier :
             - Fournir les listes de valeurs disponibles et visibles pour l'utilisateur (scopées).
             - À utiliser pour peupler l'UI de filtres avancés.
 
@@ -343,6 +368,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         Réponse : format JSON, cf. code ci-dessous ("data": {...}).
         - Impossible de garantir l'exhaustivité du contrat ici si ProspectionChoices.* n'est pas visible.
         """
+
         def to_choice(queryset, label_attr="nom"):
             return [{"value": obj.id, "label": getattr(obj, label_attr)} for obj in queryset]
 
@@ -365,23 +391,10 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         ]
 
         type_offres = (
-            formations_qs
-            .values("type_offre_id", "type_offre__nom")
-            .exclude(type_offre_id__isnull=True)
-            .distinct()
+            formations_qs.values("type_offre_id", "type_offre__nom").exclude(type_offre_id__isnull=True).distinct()
         )
-        statuts = (
-            formations_qs
-            .values("statut_id", "statut__nom")
-            .exclude(statut_id__isnull=True)
-            .distinct()
-        )
-        centres = (
-            formations_qs
-            .values("centre_id", "centre__nom")
-            .exclude(centre_id__isnull=True)
-            .distinct()
-        )
+        statuts = formations_qs.values("statut_id", "statut__nom").exclude(statut_id__isnull=True).distinct()
+        centres = formations_qs.values("centre_id", "centre__nom").exclude(centre_id__isnull=True).distinct()
 
         return Response(
             {
@@ -389,28 +402,56 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                     "formations": formations,
                     "partenaires": to_choice(partenaires),
                     "owners": to_choice(owners, label_attr="username"),
-                    "statut": ProspectionChoices.get_statut_choices() if hasattr(ProspectionChoices, "get_statut_choices") else [{"value": k, "label": str(v)} for k, v in getattr(ProspectionChoices, "PROSPECTION_STATUS_CHOICES", [])],
-                    "objectif": ProspectionChoices.get_objectif_choices() if hasattr(ProspectionChoices, "get_objectif_choices") else [{"value": k, "label": str(v)} for k, v in getattr(ProspectionChoices, "PROSPECTION_OBJECTIF_CHOICES", [])],
-                    "motif": ProspectionChoices.get_motif_choices() if hasattr(ProspectionChoices, "get_motif_choices") else [{"value": k, "label": str(v)} for k, v in getattr(ProspectionChoices, "PROSPECTION_MOTIF_CHOICES", [])],
-                    "type_prospection": ProspectionChoices.get_type_choices() if hasattr(ProspectionChoices, "get_type_choices") else [{"value": k, "label": str(v)} for k, v in getattr(ProspectionChoices, "TYPE_PROSPECTION_CHOICES", [])],
-                    "moyen_contact": ProspectionChoices.get_moyen_contact_choices() if hasattr(ProspectionChoices, "get_moyen_contact_choices") else [{"value": k, "label": str(v)} for k, v in getattr(ProspectionChoices, "MOYEN_CONTACT_CHOICES", [])],
+                    "statut": (
+                        ProspectionChoices.get_statut_choices()
+                        if hasattr(ProspectionChoices, "get_statut_choices")
+                        else [
+                            {"value": k, "label": str(v)}
+                            for k, v in getattr(ProspectionChoices, "PROSPECTION_STATUS_CHOICES", [])
+                        ]
+                    ),
+                    "objectif": (
+                        ProspectionChoices.get_objectif_choices()
+                        if hasattr(ProspectionChoices, "get_objectif_choices")
+                        else [
+                            {"value": k, "label": str(v)}
+                            for k, v in getattr(ProspectionChoices, "PROSPECTION_OBJECTIF_CHOICES", [])
+                        ]
+                    ),
+                    "motif": (
+                        ProspectionChoices.get_motif_choices()
+                        if hasattr(ProspectionChoices, "get_motif_choices")
+                        else [
+                            {"value": k, "label": str(v)}
+                            for k, v in getattr(ProspectionChoices, "PROSPECTION_MOTIF_CHOICES", [])
+                        ]
+                    ),
+                    "type_prospection": (
+                        ProspectionChoices.get_type_choices()
+                        if hasattr(ProspectionChoices, "get_type_choices")
+                        else [
+                            {"value": k, "label": str(v)}
+                            for k, v in getattr(ProspectionChoices, "TYPE_PROSPECTION_CHOICES", [])
+                        ]
+                    ),
+                    "moyen_contact": (
+                        ProspectionChoices.get_moyen_contact_choices()
+                        if hasattr(ProspectionChoices, "get_moyen_contact_choices")
+                        else [
+                            {"value": k, "label": str(v)}
+                            for k, v in getattr(ProspectionChoices, "MOYEN_CONTACT_CHOICES", [])
+                        ]
+                    ),
                     "formation_type_offre": [
-                        {"value": row["type_offre_id"], "label": row["type_offre__nom"]}
-                        for row in type_offres
+                        {"value": row["type_offre_id"], "label": row["type_offre__nom"]} for row in type_offres
                     ],
-                    "formation_statut": [
-                        {"value": row["statut_id"], "label": row["statut__nom"]}
-                        for row in statuts
-                    ],
-                    "centres": [
-                        {"value": row["centre_id"], "label": row["centre__nom"]}
-                        for row in centres
-                    ],
+                    "formation_statut": [{"value": row["statut_id"], "label": row["statut__nom"]} for row in statuts],
+                    "centres": [{"value": row["centre_id"], "label": row["centre__nom"]} for row in centres],
                     "user_role": getattr(request.user, "role", None),
                 }
             }
         )
-    
+
     @action(detail=True, methods=["post"], url_path="archiver")
     @extend_schema(
         summary="🗃 Archiver une prospection",
@@ -427,10 +468,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         resultat = request.data.get("resultat")
         instance.archiver(user=request.user, resultat=resultat)
         LogUtilisateur.log_action(
-            instance,
-            LogUtilisateur.ACTION_UPDATE,
-            request.user,
-            f"Archivée ({resultat or 'sans résultat'})"
+            instance, LogUtilisateur.ACTION_UPDATE, request.user, f"Archivée ({resultat or 'sans résultat'})"
         )
         serializer = self.get_serializer(instance)
         return Response(
@@ -465,7 +503,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             {"success": True, "message": "Prospection désarchivée avec succès.", "data": serializer.data},
             status=status.HTTP_200_OK,
         )
-    
+
     def get_object(self):
         """
         Récupère une prospection sans filtrage sur l'activité puis
@@ -535,10 +573,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             )
 
         LogUtilisateur.log_action(
-            instance,
-            LogUtilisateur.ACTION_CREATE,
-            user,
-            f"Création d’une prospection (owner={instance.owner or '—'})"
+            instance, LogUtilisateur.ACTION_CREATE, user, f"Création d’une prospection (owner={instance.owner or '—'})"
         )
 
     def perform_update(self, serializer):
@@ -565,7 +600,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         # 🧩 Cas 2 — staff/admin
         else:
             new_owner = serializer.validated_data.get("owner", instance.owner)
-            owner_changed = (new_owner is not None and new_owner.pk != instance.owner_id)
+            owner_changed = new_owner is not None and new_owner.pk != instance.owner_id
 
             # Si on change d’owner → la formation suit celle du candidat (s’il en a une)
             if owner_changed:
@@ -640,8 +675,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
         # 🟢 Ré-annote le queryset pour inclure last_comment / last_comment_at / comments_count
         qs = annotate_last_visible_comment(
-            Prospection.objects.filter(pk=instance.pk)
-            .select_related(
+            Prospection.objects.filter(pk=instance.pk).select_related(
                 "partenaire",
                 "formation",
                 "formation__centre",
@@ -654,11 +688,13 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         instance = qs.first()
 
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": "Détail de la prospection",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Détail de la prospection",
+                "data": serializer.data,
+            }
+        )
 
     def create(self, request, *args, **kwargs):
         """
@@ -685,7 +721,9 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         output_serializer = self.get_serializer(serializer.instance, context={"request": request})
-        return Response({"success": True, "message": "Prospection mise à jour avec succès.", "data": output_serializer.data})
+        return Response(
+            {"success": True, "message": "Prospection mise à jour avec succès.", "data": output_serializer.data}
+        )
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -694,7 +732,9 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         instance_id = instance.id
-        LogUtilisateur.log_action(instance, LogUtilisateur.ACTION_DELETE, request.user, "Suppression définitive de la prospection")
+        LogUtilisateur.log_action(
+            instance, LogUtilisateur.ACTION_DELETE, request.user, "Suppression définitive de la prospection"
+        )
         instance.delete()
         return Response(
             {"success": True, "message": f"Prospection #{instance_id} supprimée définitivement."},
@@ -799,7 +839,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             instance,
             LogUtilisateur.ACTION_UPDATE,
             request.user,
-            f"Mise à jour via changer-statut : {ancien_statut} → {nouveau_statut}"
+            f"Mise à jour via changer-statut : {ancien_statut} → {nouveau_statut}",
         )
 
         return Response(
@@ -809,7 +849,6 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                 "data": ProspectionSerializer(instance, context={"request": request}).data,
             }
         )
-
 
     @action(detail=False, methods=["get"], url_path="choices")
     @extend_schema(
@@ -823,6 +862,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         type de prospection, moyen de contact) ainsi que les owners et
         partenaires visibles pour l'utilisateur.
         """
+
         def fmt(choices):
             return [{"value": k, "label": str(l)} for k, l in choices]
 
@@ -839,7 +879,9 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         partenaire_ids = scoped_qs.values_list("partenaire_id", flat=True).distinct()
         partenaires = [
             {"value": p.id, "label": p.nom}
-            for p in Partenaire.objects.filter(id__in=partenaire_ids,).order_by("nom")
+            for p in Partenaire.objects.filter(
+                id__in=partenaire_ids,
+            ).order_by("nom")
         ]
 
         return Response(
@@ -863,7 +905,6 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                 },
             }
         )
-
 
     @extend_schema(summary="Exporter les prospections au format XLSX")
     @action(detail=False, methods=["get", "post"], url_path="export-xlsx")
@@ -944,12 +985,31 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         # 📋 En-têtes
         # ==========================================================
         headers = [
-            "ID", "Date prospection", "Statut", "Activité", "Type prospection",
-            "Objectif", "Motif", "Dernier commentaire", "Date Relance prévue",
-            "Partenaire", "Code postal", "Contact", "Email", "Téléphone",
-            "Formation", "Centre", "Type offre", "Statut formation",
-            "Date début", "Date fin", "Numéro offre",
-            "Places dispo", "Taux saturation (%)", "Places totales", "Inscrits totaux",
+            "ID",
+            "Date prospection",
+            "Statut",
+            "Activité",
+            "Type prospection",
+            "Objectif",
+            "Motif",
+            "Dernier commentaire",
+            "Date Relance prévue",
+            "Partenaire",
+            "Code postal",
+            "Contact",
+            "Email",
+            "Téléphone",
+            "Formation",
+            "Centre",
+            "Type offre",
+            "Statut formation",
+            "Date début",
+            "Date fin",
+            "Numéro offre",
+            "Places dispo",
+            "Taux saturation (%)",
+            "Places totales",
+            "Inscrits totaux",
         ]
         ws.append(headers)
 
@@ -1030,8 +1090,10 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             ws.append(row)
 
             # Alternance et archive
-            fill = archived_fill if getattr(p, "activite", "") == Prospection.ACTIVITE_ARCHIVEE else (
-                even_fill if i % 2 == 0 else odd_fill
+            fill = (
+                archived_fill
+                if getattr(p, "activite", "") == Prospection.ACTIVITE_ARCHIVEE
+                else (even_fill if i % 2 == 0 else odd_fill)
             )
 
             for cell in ws[ws.max_row]:
@@ -1047,13 +1109,13 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                 taux_value = 0.0
 
             if taux_value <= 30:
-                taux_color, taux_fill = ("9C0006", "FFC7CE")   # Rouge clair
+                taux_color, taux_fill = ("9C0006", "FFC7CE")  # Rouge clair
             elif taux_value <= 50:
-                taux_color, taux_fill = ("9C6500", "FFEB9C")   # Orange
+                taux_color, taux_fill = ("9C6500", "FFEB9C")  # Orange
             elif taux_value < 100:
-                taux_color, taux_fill = ("1F4E79", "BDD7EE")   # Bleu
+                taux_color, taux_fill = ("1F4E79", "BDD7EE")  # Bleu
             else:
-                taux_color, taux_fill = ("006100", "C6EFCE")   # Vert
+                taux_color, taux_fill = ("006100", "C6EFCE")  # Vert
 
             taux_cell.fill = PatternFill("solid", fgColor=taux_fill)
             taux_cell.font = Font(color=taux_color, bold=True)

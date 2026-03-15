@@ -1,6 +1,6 @@
-from django.test import TestCase
-from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.test import TestCase
 from django.utils.timezone import now
 
 from rap_app.models.centres import Centre
@@ -14,10 +14,7 @@ class CustomUserModelTest(TestCase):
         self.email = "test@example.com"
         self.password = "testpass123"
         self.user = CustomUser.objects.create_user(
-            email=self.email,
-            username="testuser",
-            password=self.password,
-            role=CustomUser.ROLE_STAGIAIRE
+            email=self.email, username="testuser", password=self.password, role=CustomUser.ROLE_STAGIAIRE
         )
 
     def test_str_and_repr(self):
@@ -40,30 +37,18 @@ class CustomUserModelTest(TestCase):
             CustomUser.objects.create_user(email=None, password="pass")
 
     def test_create_superuser_with_flags(self):
-        admin = CustomUser.objects.create_superuser(
-            email="admin@example.com",
-            password="adminpass"
-        )
+        admin = CustomUser.objects.create_superuser(email="admin@example.com", password="adminpass")
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.is_staff)
         self.assertEqual(admin.role, CustomUser.ROLE_SUPERADMIN)
 
     def test_invalid_superadmin_without_flag(self):
-        user = CustomUser(
-            email="fail@example.com",
-            role=CustomUser.ROLE_SUPERADMIN,
-            is_superuser=False
-        )
+        user = CustomUser(email="fail@example.com", role=CustomUser.ROLE_SUPERADMIN, is_superuser=False)
         with self.assertRaises(ValidationError):
             user.full_clean()
 
     def test_normalisation_email_phone_role(self):
-        user = CustomUser(
-            email="  TEST@Email.COM  ",
-            username="u1",
-            phone="06-12 34 56",
-            role=" ADMIN "
-        )
+        user = CustomUser(email="  TEST@Email.COM  ", username="u1", phone="06-12 34 56", role=" ADMIN ")
         user.set_password("xxx")
         user.save()
         self.assertEqual(user.email, "test@email.com")
@@ -110,7 +95,6 @@ class CustomUserModelTest(TestCase):
         )
         self.assertTrue(admin.has_module_perms("admin"))
         self.assertFalse(staff.has_module_perms("admin"))
-
 
     def test_staff_roles_are_marked_as_staff(self):
         for role in [

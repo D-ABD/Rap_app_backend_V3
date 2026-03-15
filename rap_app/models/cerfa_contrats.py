@@ -652,6 +652,7 @@ class CerfaContrat(models.Model):
 
     class Meta:
         """Options de métadonnées : libellés admin et ordre par défaut (created_at décroissant)."""
+
         verbose_name = "CERFA Contrat complet"
         verbose_name_plural = "CERFAs Contrat complets"
         ordering = ["-created_at"]

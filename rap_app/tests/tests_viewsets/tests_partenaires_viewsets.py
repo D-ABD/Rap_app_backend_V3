@@ -1,17 +1,18 @@
 # tests/test_partenaire_viewsets.py
 
 import unittest
-from rest_framework import status
-from django.urls import reverse
+
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from ...models.partenaires import Partenaire
 from ...models.centres import Centre
-from ...models.logs import LogUtilisateur
-from ..test_utils import AuthenticatedTestCase
-from ..factories import UserFactory
 from ...models.custom_user import CustomUser
+from ...models.logs import LogUtilisateur
+from ...models.partenaires import Partenaire
+from ..factories import UserFactory
+from ..test_utils import AuthenticatedTestCase
 
 
 class PartenaireViewSetTestCase(AuthenticatedTestCase):
@@ -44,7 +45,7 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Partenaire),
             object_id=partenaire_id,
             action__icontains="création",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de création manquant.")
 
@@ -74,7 +75,7 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Partenaire),
             object_id=partenaire.id,
             action__icontains="modification",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de modification manquant.")
 
@@ -91,10 +92,9 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Partenaire),
             object_id=partenaire.id,
             action__icontains="suppression",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de suppression manquant.")
-
 
     @unittest.skip(
         "Comportement API actuel : un stagiaire peut obtenir 200 sur PATCH partenaire d’un autre. "
@@ -107,11 +107,7 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         partenaire = Partenaire.objects.create(**self.valid_data, created_by=self.user)
 
         autre_user = CustomUser.objects.create_user(
-            email="nonstaff@example.com",
-            username="other",
-            password="OtherPass123",
-            role="stagiaire",
-            is_staff=False
+            email="nonstaff@example.com", username="other", password="OtherPass123", role="stagiaire", is_staff=False
         )
         refresh = RefreshToken.for_user(autre_user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(refresh.access_token)}")

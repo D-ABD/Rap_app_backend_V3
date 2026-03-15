@@ -1,11 +1,13 @@
 import logging
+
 from django.contrib import admin, messages
-from django.utils.translation import gettext_lazy as _
 from django.db.models import Count, Q
+from django.utils.translation import gettext_lazy as _
 
 from ..models.centres import Centre
 
 logger = logging.getLogger("application.centres")
+
 
 @admin.register(Centre)
 class CentreAdmin(admin.ModelAdmin):
@@ -46,48 +48,63 @@ class CentreAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (_("Informations principales"), {
-            "fields": (
-                "nom",
-                "cfa_entreprise",
-                "numero_voie",
-                "nom_voie",
-                "complement_adresse",
-                "code_postal",
-                "commune",
-            )
-        }),
-        (_("Informations administratives"), {
-            "fields": (
-                "numero_uai_centre",
-                "siret_centre",
-            )
-        }),
-        (_("CFA responsable"), {
-            "fields": (
-                "cfa_responsable_est_lieu_principal",
-                "cfa_responsable_denomination",
-                "cfa_responsable_uai",
-                "cfa_responsable_siret",
-                "cfa_responsable_numero",
-                "cfa_responsable_voie",
-                "cfa_responsable_complement",
-                "cfa_responsable_code_postal",
-                "cfa_responsable_commune",
-            ),
-            "classes": ("collapse",),
-        }),
-        (_("Statistiques"), {
-            "fields": (),
-        }),
-        (_("Métadonnées"), {
-            "fields": (
-                "created_by",
-                "created_at",
-                "updated_by",
-                "updated_at",
-            )
-        }),
+        (
+            _("Informations principales"),
+            {
+                "fields": (
+                    "nom",
+                    "cfa_entreprise",
+                    "numero_voie",
+                    "nom_voie",
+                    "complement_adresse",
+                    "code_postal",
+                    "commune",
+                )
+            },
+        ),
+        (
+            _("Informations administratives"),
+            {
+                "fields": (
+                    "numero_uai_centre",
+                    "siret_centre",
+                )
+            },
+        ),
+        (
+            _("CFA responsable"),
+            {
+                "fields": (
+                    "cfa_responsable_est_lieu_principal",
+                    "cfa_responsable_denomination",
+                    "cfa_responsable_uai",
+                    "cfa_responsable_siret",
+                    "cfa_responsable_numero",
+                    "cfa_responsable_voie",
+                    "cfa_responsable_complement",
+                    "cfa_responsable_code_postal",
+                    "cfa_responsable_commune",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Statistiques"),
+            {
+                "fields": (),
+            },
+        ),
+        (
+            _("Métadonnées"),
+            {
+                "fields": (
+                    "created_by",
+                    "created_at",
+                    "updated_by",
+                    "updated_at",
+                )
+            },
+        ),
     )
 
     # ───────────────────────────────
@@ -115,6 +132,7 @@ class CentreAdmin(admin.ModelAdmin):
     def act_export_csv(self, request, queryset):
         import csv
         from io import StringIO
+
         buffer = StringIO()
         writer = csv.writer(buffer)
         writer.writerow(Centre.get_csv_headers())

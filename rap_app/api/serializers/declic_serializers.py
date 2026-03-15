@@ -1,26 +1,31 @@
 # rap_app/api/serializers/declic_serializers.py
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer
+from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.declic import Declic
 
+
 @extend_schema_serializer(
-    examples=[{
-        "id": 1,
-        "nom": "Centre de Lille",
-        "departement": "59",
-        "code_postal": "59000",
-    }]
+    examples=[
+        {
+            "id": 1,
+            "nom": "Centre de Lille",
+            "departement": "59",
+            "code_postal": "59000",
+        }
+    ]
 )
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les Déclics.
     Lecture seule.
     """
+
     class Meta:
         model = Centre
         fields = ["id", "nom", "departement", "code_postal"]
+
 
 class DeclicSerializer(serializers.ModelSerializer):
     """
@@ -41,10 +46,7 @@ class DeclicSerializer(serializers.ModelSerializer):
     taux_atteinte_annuel = serializers.SerializerMethodField()
     reste_a_faire = serializers.SerializerMethodField()
 
-    type_declic_display = serializers.CharField(
-        source="get_type_declic_display",
-        read_only=True
-    )
+    type_declic_display = serializers.CharField(source="get_type_declic_display", read_only=True)
 
     date_display = serializers.SerializerMethodField()
 
@@ -54,26 +56,19 @@ class DeclicSerializer(serializers.ModelSerializer):
             "id",
             "type_declic",
             "type_declic_display",
-
             "date_declic",
             "date_display",
-
             "centre",
             "centre_id",
             "centre_nom",
-
             "nb_inscrits_declic",
             "nb_presents_declic",
             "nb_absents_declic",
-
             "taux_presence_atelier",
-
             "objectif_annuel",
             "taux_atteinte_annuel",
             "reste_a_faire",
-
             "commentaire",
-
             "created_at",
             "updated_at",
             "created_by",

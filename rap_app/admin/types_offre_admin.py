@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+
 from ..models.types_offre import TypeOffre
 
 
@@ -34,13 +35,19 @@ class TypeOffreAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (_("Informations générales"), {
-            "fields": ("nom", "autre", "couleur", "is_active", "badge_preview"),  # 👈 Ajout ici
-        }),
-        (_("🧾 Métadonnées"), {
-            "fields": ("created_at", "updated_at", "created_by"),
-            "classes": ("collapse",),
-        }),
+        (
+            _("Informations générales"),
+            {
+                "fields": ("nom", "autre", "couleur", "is_active", "badge_preview"),  # 👈 Ajout ici
+            },
+        ),
+        (
+            _("🧾 Métadonnées"),
+            {
+                "fields": ("created_at", "updated_at", "created_by"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     def get_queryset(self, request):
@@ -48,21 +55,25 @@ class TypeOffreAdmin(admin.ModelAdmin):
 
     def badge_affichage(self, obj):
         return format_html(obj.get_badge_html())
+
     badge_affichage.short_description = _("Aperçu")
 
     def badge_preview(self, obj):
         if obj.pk:
             return format_html(obj.get_badge_html())
         return _("Le badge sera affiché après enregistrement.")
+
     badge_preview.short_description = _("Aperçu du badge")
 
     def get_formations_count(self, obj):
         return obj.get_formations_count()
+
     get_formations_count.short_description = _("Nb formations")
     get_formations_count.admin_order_field = "formations"
 
     def created_by_display(self, obj):
         return str(obj.created_by) if obj.created_by else "—"
+
     created_by_display.short_description = _("Créé par")
 
     def save_model(self, request, obj, form, change):

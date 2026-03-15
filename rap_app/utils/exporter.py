@@ -1,12 +1,12 @@
 # rap_app/utils/exporter.py
 
-import io
 import csv
+import io
 
 from django.http import HttpResponse
 from docx import Document
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 
 class Exporter:
@@ -121,7 +121,7 @@ class Exporter:
         Exemple
         -------
             self.fields = ["nom", "created_by.email"]
-            Pour chaque obj avec obj.nom = "A", obj.created_by.email = "a@x.fr"     
+            Pour chaque obj avec obj.nom = "A", obj.created_by.email = "a@x.fr"
             yield ["A", "a@x.fr"]
 
         Limites/dépendances :
@@ -162,7 +162,7 @@ class Exporter:
         return HttpResponse(
             buffer.getvalue(),
             content_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     def export_word(self, filename="export.docx"):
@@ -206,7 +206,7 @@ class Exporter:
         return HttpResponse(
             f.read(),
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     def export_pdf(self, filename="export.pdf"):
@@ -319,7 +319,7 @@ class Exporter:
                 - Pas de gestion multilingue ni découpe sur mots
                 - Coupe la chaîne sans tenir compte des espaces ni du contenu
             """
-            return [text[i:i+max_length] for i in range(0, len(text), max_length)]
+            return [text[i : i + max_length] for i in range(0, len(text), max_length)]
 
         y = draw_header()
         for row in self.get_data():
@@ -337,5 +337,5 @@ class Exporter:
             headers={
                 "Content-Disposition": f'attachment; filename="{filename}"',
                 "Content-Length": str(buffer.getbuffer().nbytes),
-            }
+            },
         )

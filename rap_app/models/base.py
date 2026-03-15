@@ -1,10 +1,11 @@
 import logging
-from django.db import models
-from django.utils.timezone import now
+
 from django.conf import settings
-from django.forms.models import model_to_dict
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
+from django.db import models
+from django.forms.models import model_to_dict
+from django.utils.timezone import now
 
 from ..middleware import get_current_user
 
@@ -17,53 +18,49 @@ class BaseModel(models.Model):
     """
 
     created_at = models.DateTimeField(
-        auto_now_add=True, 
-        editable=False, 
+        auto_now_add=True,
+        editable=False,
         verbose_name="Date de création",
-        help_text="Date et heure de création de l'enregistrement"
+        help_text="Date et heure de création de l'enregistrement",
     )
-    
+
     updated_at = models.DateTimeField(
-        auto_now=True, 
-        verbose_name="Date de mise à jour",
-        help_text="Date et heure de la dernière modification"
+        auto_now=True, verbose_name="Date de mise à jour", help_text="Date et heure de la dernière modification"
     )
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, 
+        null=True,
         blank=True,
         editable=False,
         on_delete=models.SET_NULL,
         related_name="created_%(class)s_set",
         verbose_name="Créé par",
-        help_text="Utilisateur ayant créé l'enregistrement"
+        help_text="Utilisateur ayant créé l'enregistrement",
     )
-    
+
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, 
+        null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="updated_%(class)s_set",
         verbose_name="Modifié par",
-        help_text="Dernier utilisateur ayant modifié l'enregistrement"
+        help_text="Dernier utilisateur ayant modifié l'enregistrement",
     )
 
     is_active = models.BooleanField(
-        default=True, 
-        verbose_name="Actif",
-        help_text="Indique si l'objet est actif ou archivé"
+        default=True, verbose_name="Actif", help_text="Indique si l'objet est actif ou archivé"
     )
 
     class Meta:
         abstract = True
-        ordering = ['-created_at']
-        get_latest_by = 'created_at'
+        ordering = ["-created_at"]
+        get_latest_by = "created_at"
         verbose_name = "Objet de base"
         verbose_name_plural = "Objets de base"
         indexes = [
-            models.Index(fields=['is_active'], name='%(app_label)s_%(class)s_active_idx'),
+            models.Index(fields=["is_active"], name="%(app_label)s_%(class)s_active_idx"),
         ]
 
     def __str__(self):
@@ -91,7 +88,7 @@ class BaseModel(models.Model):
         try:
             super().validate_unique(exclude=exclude)
         except ValidationError as e:
-            if hasattr(e, 'message_dict'):
+            if hasattr(e, "message_dict"):
                 for field, msgs in e.message_dict.items():
                     try:
                         field_verbose = self._meta.get_field(field).verbose_name
@@ -99,7 +96,6 @@ class BaseModel(models.Model):
                     except Exception:
                         continue
             raise e
-
 
     @classmethod
     def get_current_user(cls):
@@ -129,7 +125,7 @@ class BaseModel(models.Model):
             changes = {}
             for field in self._meta.fields:
                 name = field.name
-                if name in ('created_at', 'updated_at', 'created_by', 'updated_by'):
+                if name in ("created_at", "updated_at", "created_by", "updated_by"):
                     continue
                 old_val = getattr(old, name, None)
                 new_val = getattr(self, name, None)
@@ -143,15 +139,15 @@ class BaseModel(models.Model):
         """
         Loggue un message debug si la configuration l'autorise.
         """
-        if getattr(settings, 'ENABLE_MODEL_LOGGING', settings.DEBUG):
+        if getattr(settings, "ENABLE_MODEL_LOGGING", settings.DEBUG):
             logger.debug(f"[{self.__class__.__name__}] {message}")
 
     def save(self, *args, **kwargs):
         """
         Surcharge save pour gérer audit utilisateur, validation, log, cache.
         """
-        user = kwargs.pop('user', None) or self.get_current_user()
-        skip_validation = kwargs.pop('skip_validation', False)
+        user = kwargs.pop("user", None) or self.get_current_user()
+        skip_validation = kwargs.pop("skip_validation", False)
         is_new = self.pk is None
         changed_fields = {} if is_new else self.get_changed_fields()
 
@@ -180,7 +176,7 @@ class BaseModel(models.Model):
         """
         Surcharge delete pour gestion du log et des caches liés à l'objet.
         """
-        user = kwargs.pop('user', None) or self.get_current_user()
+        user = kwargs.pop("user", None) or self.get_current_user()
         self.log_debug(f"Suppression de #{self.pk} par {user}")
         self.invalidate_caches()
         result = super().delete(*args, **kwargs)
@@ -193,19 +189,19 @@ class BaseModel(models.Model):
         """
         exclude = exclude or []
         data = {}
-        
+
         for field in self._meta.fields:
             name = field.name
             if name in exclude:
                 continue
             value = getattr(self, name)
-            
-            if hasattr(value, 'isoformat'):
+
+            if hasattr(value, "isoformat"):
                 data[name] = value.isoformat()
-            elif hasattr(value, 'url'):
+            elif hasattr(value, "url"):
                 data[name] = value.url
             elif isinstance(value, models.Model):
-                data[name] = {'id': value.pk, 'str': str(value)}
+                data[name] = {"id": value.pk, "str": str(value)}
             else:
                 data[name] = value
 
@@ -213,7 +209,7 @@ class BaseModel(models.Model):
             if field.name in exclude:
                 continue
             related_objects = getattr(self, field.name).all()
-            data[field.name] = [{'id': obj.pk, 'str': str(obj)} for obj in related_objects]
+            data[field.name] = [{"id": obj.pk, "str": str(obj)} for obj in related_objects]
 
         return data
 

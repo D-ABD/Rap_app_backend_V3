@@ -1,56 +1,50 @@
 import csv
+import datetime
 import logging
-from django.http import HttpResponse
-from django.db.models import Q, Count
-from django.db.models.functions import TruncMonth
 from io import BytesIO
 from pathlib import Path
-import datetime
-from django.shortcuts import get_object_or_404
-from django.utils import timezone as dj_timezone
-from django.templatetags.static import static
-from django.conf import settings
-from drf_spectacular.utils import extend_schema
+
 import pytz
-from rest_framework.decorators import action
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from rest_framework import serializers
+from django.conf import settings
 from django.db import transaction
-
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.templatetags.static import static
 from django.utils import timezone
-
-
-from rest_framework import viewsets, status
+from django.utils import timezone as dj_timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from rest_framework import filters, serializers, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
 from rest_framework.views import APIView
 
-
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
-
-from ...models.statut import Statut
-from ...models.types_offre import TypeOffre
-from ...models.formations import Formation
 from ...api.paginations import RapAppPagination
 from ...api.permissions import IsStaffOrAbove, UserVisibilityScopeMixin
 from ...api.serializers.formations_serializers import (
     FormationCreateSerializer,
-    FormationListSerializer,
     FormationDetailSerializer,
+    FormationListSerializer,
 )
+from ...models.formations import Formation
+from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
+from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 
 logger = logging.getLogger("application.api")
 
-from bs4 import BeautifulSoup
 import re
+
+from bs4 import BeautifulSoup
+
 
 def strip_html_tags_pretty(html: str) -> str:
     """Supprime les balises HTML et conserve un format lisible (sauts de ligne)."""
@@ -66,8 +60,10 @@ def strip_html_tags_pretty(html: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
+
 class FormationSearchFilter(filters.SearchFilter):
     search_param = "texte"
+
 
 @extend_schema(tags=["Formations"])
 class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
@@ -77,16 +73,17 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
 
-    filter_backends = [
-            DjangoFilterBackend,
-            FormationSearchFilter,
-            filters.SearchFilter,
-            filters.OrderingFilter
-        ]
+    filter_backends = [DjangoFilterBackend, FormationSearchFilter, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["centre", "type_offre", "statut", "created_by", "start_date"]
     serializer_class = FormationListSerializer
-    search_fields = ["nom", "num_offre", "centre__nom", "type_offre__nom","assistante",]
-    ordering_fields = ["start_date", "end_date", "nom", "centre__nom",  "created_at"]
+    search_fields = [
+        "nom",
+        "num_offre",
+        "centre__nom",
+        "type_offre__nom",
+        "assistante",
+    ]
+    ordering_fields = ["start_date", "end_date", "nom", "centre__nom", "created_at"]
     ordering = ["start_date"]
 
     def _normalize_payload_for_fk(self, data):
@@ -117,6 +114,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             missing.append("statut_id (ou statut.id)")
         if missing:
             from rest_framework.exceptions import ValidationError
+
             raise ValidationError({"detail": f"Champs obligatoires manquants: {', '.join(missing)}"})
 
     def get_serializer_class(self):
@@ -132,9 +130,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         return super().get_serializer_class()
 
     @extend_schema(
-        summary="Créer une formation",
-        request=FormationCreateSerializer,
-        responses={201: FormationDetailSerializer}
+        summary="Créer une formation", request=FormationCreateSerializer, responses={201: FormationDetailSerializer}
     )
     def create(self, request, *args, **kwargs):
         """Crée une formation ; _normalize_payload_for_fk, _ensure_required_refs ; transaction.atomic ; retourne success/message/data."""
@@ -145,8 +141,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             formation = serializer.save()
         formation = (
-            Formation.objects
-            .select_related("centre", "type_offre", "statut")
+            Formation.objects.select_related("centre", "type_offre", "statut")
             .prefetch_related("commentaires", "documents", "evenements", "partenaires", "prospections")
             .get(pk=formation.pk)
         )
@@ -159,7 +154,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
     @extend_schema(
         summary="Mettre à jour une formation",
         request=FormationDetailSerializer,
-        responses={200: FormationDetailSerializer}
+        responses={200: FormationDetailSerializer},
     )
     def update(self, request, *args, **kwargs):
         """Met à jour la formation ; _normalize_payload_for_fk ; transaction.atomic ; retourne success/message/data."""
@@ -170,8 +165,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             formation = serializer.save()
         formation = (
-            Formation.objects
-            .select_related("centre", "type_offre", "statut")
+            Formation.objects.select_related("centre", "type_offre", "statut")
             .prefetch_related("commentaires", "documents", "evenements", "partenaires", "prospections")
             .get(pk=formation.pk)
         )
@@ -185,23 +179,23 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         """Admin : tout ; staff/staffread : centre_id in staff_centre_ids ; sinon mixin."""
         # Définition indispensable de 'u' à partir de la requête
         u = self.request.user
-        
+
         # Sécurité : vérification si l'utilisateur est authentifié
         if not u.is_authenticated:
             return qs.none()
 
         if is_admin_like(u):
             return qs
-            
+
         if is_staff_or_staffread(u):
             centres = staff_centre_ids(u)
             # Utilisation de print ou d'un logger propre
             logger.debug("Utilisateur %s (%s) → centres visibles: %s", u.username, u.role, centres)
-            
+
             if not centres:
                 return qs.none()
             return qs.filter(centre_id__in=centres)
-        
+
         return qs
 
     def _build_base_queryset(self):
@@ -216,10 +210,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         if annee:
             try:
                 annee = int(annee)
-                qs = qs.filter(
-                    Q(start_date__year=annee)
-                    | Q(end_date__year=annee)
-                )
+                qs = qs.filter(Q(start_date__year=annee) | Q(end_date__year=annee))
             except ValueError:
                 pass
         if activite:
@@ -279,10 +270,12 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             OpenApiParameter("statut", str, description="ID du statut"),
             OpenApiParameter("date_debut", str, description="Date de début minimale (AAAA-MM-JJ)"),
             OpenApiParameter("date_fin", str, description="Date de fin maximale (AAAA-MM-JJ)"),
-            OpenApiParameter("places_disponibles", str, description="Filtre les formations avec des places disponibles"),
+            OpenApiParameter(
+                "places_disponibles", str, description="Filtre les formations avec des places disponibles"
+            ),
             OpenApiParameter("tri", str, description="Alias de tri (équivalent à ?ordering=, ex: -start_date, nom)"),
         ],
-        responses={200: OpenApiResponse(response=FormationListSerializer(many=True))}
+        responses={200: OpenApiResponse(response=FormationListSerializer(many=True))},
     )
     def list(self, request, *args, **kwargs):
         """Liste paginée des formations ; filtres (dans, date_debut, date_fin, places_disponibles, tri) ; success/message/data avec results."""
@@ -328,23 +321,27 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(page or qs, many=True)
 
         if page is not None:
-            return Response({
+            return Response(
+                {
+                    "success": True,
+                    "message": "Liste paginée des formations",
+                    "data": {
+                        "count": self.paginator.page.paginator.count,
+                        "results": serializer.data,
+                    },
+                }
+            )
+
+        return Response(
+            {
                 "success": True,
-                "message": "Liste paginée des formations",
+                "message": "Liste complète des formations",
                 "data": {
-                    "count": self.paginator.page.paginator.count,
+                    "count": len(serializer.data),
                     "results": serializer.data,
                 },
-            })
-
-        return Response({
-            "success": True,
-            "message": "Liste complète des formations",
-            "data": {
-                "count": len(serializer.data),
-                "results": serializer.data,
-            },
-        })
+            }
+        )
 
     @extend_schema(summary="Filtres disponibles (centres, statuts, types d’offre, activités, périodes à venir)")
     @action(detail=False, methods=["get"])
@@ -355,17 +352,10 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         qs = self.get_queryset()
         if is_admin_like(user):
             from ...models.centres import Centre
-            centres_qs = (
-                Centre.objects.filter(is_active=True)
-                .values_list("id", "nom")
-                .order_by("nom")
-            )
+
+            centres_qs = Centre.objects.filter(is_active=True).values_list("id", "nom").order_by("nom")
         else:
-            centres_qs = (
-                qs.values_list("centre_id", "centre__nom")
-                .distinct()
-                .order_by("centre__nom")
-            )
+            centres_qs = qs.values_list("centre_id", "centre__nom").distinct().order_by("centre__nom")
         centres = [{"id": c[0], "nom": c[1]} for c in centres_qs if c[0]]
         if ref_complet:
             statuts_qs = Statut.objects.all().values_list("id", "nom").order_by("nom")
@@ -373,16 +363,8 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             statuts = [{"id": s[0], "nom": s[1]} for s in statuts_qs]
             type_offres = [{"id": t[0], "nom": t[1]} for t in type_offres_qs]
         else:
-            statuts_qs = (
-                qs.values_list("statut_id", "statut__nom")
-                .distinct()
-                .order_by("statut__nom")
-            )
-            type_offres_qs = (
-                qs.values_list("type_offre_id", "type_offre__nom")
-                .distinct()
-                .order_by("type_offre__nom")
-            )
+            statuts_qs = qs.values_list("statut_id", "statut__nom").distinct().order_by("statut__nom")
+            type_offres_qs = qs.values_list("type_offre_id", "type_offre__nom").distinct().order_by("type_offre__nom")
             statuts = [{"id": s[0], "nom": s[1]} for s in statuts_qs if s[0]]
             type_offres = [{"id": t[0], "nom": t[1]} for t in type_offres_qs if t[0]]
         periodes_a_venir = [
@@ -433,10 +415,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         limit = request.query_params.get("limit")
         with_saturation = request.query_params.get("saturation") == "true"
         qs = f.get_commentaires(include_saturation=with_saturation, limit=int(limit) if limit else None)
-        return Response({
-            "success": True,
-            "data": [c.to_serializable_dict(include_full_content=True) for c in qs]
-        })
+        return Response({"success": True, "data": [c.to_serializable_dict(include_full_content=True) for c in qs]})
 
     @extend_schema(summary="Lister les documents d'une formation")
     @action(detail=True, methods=["get"])
@@ -453,10 +432,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         """GET : prospections de la formation."""
         formation = self.get_object()
         prosps = formation.prospections.all()
-        return Response({
-            "success": True,
-            "data": [p.to_serializable_dict() for p in prosps]
-        })
+        return Response({"success": True, "data": [p.to_serializable_dict() for p in prosps]})
 
     @extend_schema(summary="Ajouter un commentaire à une formation")
     @action(detail=True, methods=["post"])
@@ -464,9 +440,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         """POST : add_commentaire(contenu, saturation) ; retourne success/data ou 400."""
         try:
             c = self.get_object().add_commentaire(
-                user=request.user,
-                contenu=request.data.get("contenu"),
-                saturation=request.data.get("saturation")
+                user=request.user, contenu=request.data.get("contenu"), saturation=request.data.get("saturation")
             )
             return Response({"success": True, "data": c.to_serializable_dict()})
         except Exception as e:
@@ -483,7 +457,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
                 event_date=request.data.get("event_date"),
                 details=request.data.get("details"),
                 description_autre=request.data.get("description_autre"),
-                user=request.user
+                user=request.user,
             )
             return Response({"success": True, "data": e.to_serializable_dict()})
         except Exception as e:
@@ -499,7 +473,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
                 user=request.user,
                 fichier=request.FILES.get("fichier"),
                 nom_fichier=request.data.get("nom_fichier"),
-                type_document=request.data.get("type_document")
+                type_document=request.data.get("type_document"),
             )
             return Response({"success": True, "data": doc.to_serializable_dict()})
         except Exception as e:
@@ -533,12 +507,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         date_field = self._detect_date_field()
         if annee:
             qs = qs.filter(**{f"{date_field}__year": int(annee)})
-        agg = (
-            qs.annotate(mois=TruncMonth(date_field))
-              .values("mois")
-              .annotate(total=Count("id"))
-              .order_by("mois")
-        )
+        agg = qs.annotate(mois=TruncMonth(date_field)).values("mois").annotate(total=Count("id")).order_by("mois")
         out = []
         for row in agg:
             m = row["mois"]
@@ -557,42 +526,39 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             stats_global = self._stats_from_queryset(Formation.objects.all(), annee=annee)
         qs_scoped = self.get_queryset()
         stats_global_scoped = self._stats_from_queryset(qs_scoped, annee=annee)
-        centre_rows = (
-            qs_scoped.values_list("centre_id", "centre__nom")
-            .distinct()
-            .order_by("centre__nom")
-        )
+        centre_rows = qs_scoped.values_list("centre_id", "centre__nom").distinct().order_by("centre__nom")
         par_centre = []
         for cid, cnom in centre_rows:
             if cid is None:
                 continue
             stats_c = self._stats_from_queryset(qs_scoped.filter(centre_id=cid), annee=annee)
-            par_centre.append({
-                "centre_id": cid,
-                "centre_nom": cnom,
-                "stats": stats_c,
-            })
-        return Response({
-            "success": True,
-            "data": stats_global,
-            "extra": {
-                "global_scoped": stats_global_scoped,
-                "par_centre": par_centre,
+            par_centre.append(
+                {
+                    "centre_id": cid,
+                    "centre_nom": cnom,
+                    "stats": stats_c,
+                }
+            )
+        return Response(
+            {
+                "success": True,
+                "data": stats_global,
+                "extra": {
+                    "global_scoped": stats_global_scoped,
+                    "par_centre": par_centre,
+                },
             }
-        })
+        )
 
     @extend_schema(
         summary="Liste simplifiée des formations (sans pagination)",
-        description="Retourne une liste allégée (id, nom, num_offre) de toutes les formations actives, sans pagination."
+        description="Retourne une liste allégée (id, nom, num_offre) de toutes les formations actives, sans pagination.",
     )
     @action(detail=False, methods=["get"], url_path="liste-simple")
     def liste_simple(self, request):
         """GET : liste id/nom/num_offre des formations visibles, non paginée."""
         formations = self._build_base_queryset().only("id", "nom", "num_offre").order_by("nom")
-        data = [
-            {"id": f.id, "nom": f.nom, "num_offre": getattr(f, "num_offre", None)}
-            for f in formations
-        ]
+        data = [{"id": f.id, "nom": f.nom, "num_offre": getattr(f, "num_offre", None)} for f in formations]
         return Response({"success": True, "data": data})
 
     @extend_schema(summary="Archiver une formation")
@@ -625,11 +591,7 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         """GET : liste des formations archivées (scope utilisateur)."""
         qs = self._restrict_to_user_centres(Formation.objects.filter(activite="archivee"))
         serializer = self.get_serializer(qs, many=True)
-        return Response({
-            "success": True,
-            "message": "Liste des formations archivées",
-            "data": serializer.data
-        })
+        return Response({"success": True, "message": "Liste des formations archivées", "data": serializer.data})
 
     @action(detail=False, methods=["get", "post"], url_path="export-xlsx")
     def export_xlsx(self, request):
@@ -645,9 +607,9 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             inclure_archivees = bool(request.data.get("avec_archivees"))
 
         if inclure_archivees:
-            qs = self._restrict_to_user_centres(
-                Formation.objects.all_including_archived()
-            ).select_related("centre", "type_offre", "statut")
+            qs = self._restrict_to_user_centres(Formation.objects.all_including_archived()).select_related(
+                "centre", "type_offre", "statut"
+            )
             logger.info(f"[EXPORT XLSX] {request.user} a demandé l’export avec formations archivées.")
         else:
             qs = self.get_queryset().select_related("centre", "type_offre", "statut")
@@ -696,17 +658,41 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             ws.append([])
 
         headers = [
-            "ID", "Centre", "Formation", "Activité", "Type d’offre", "Statut", "Statut temporel",
-            "Numéro d’offre", "Date début", "Date fin",
+            "ID",
+            "Centre",
+            "Formation",
+            "Activité",
+            "Type d’offre",
+            "Statut",
+            "Statut temporel",
+            "Numéro d’offre",
+            "Date début",
+            "Date fin",
             "Assistante",
-            "Places CRIF", "Places MP", "Places prévues (total)", "Capacité max",
-            "Inscrits CRIF", "Inscrits MP", "Inscrits (total)",
-            "Places dispo", "Places restantes CRIF", "Places restantes MP",
-            "Taux saturation (%)", "Taux transformation (%)",
-            "Nombre de candidats", "Nombre d’entretiens", "Entrées en formation",
-            "Dernier commentaire", "Numéro produit", "Numéro Kairos", "Convocation envoyée",
-            "Intitulé du diplôme / titre visé", "Code diplôme", "Code RNCP",
-            "Durée totale (heures)", "Heures à distance",
+            "Places CRIF",
+            "Places MP",
+            "Places prévues (total)",
+            "Capacité max",
+            "Inscrits CRIF",
+            "Inscrits MP",
+            "Inscrits (total)",
+            "Places dispo",
+            "Places restantes CRIF",
+            "Places restantes MP",
+            "Taux saturation (%)",
+            "Taux transformation (%)",
+            "Nombre de candidats",
+            "Nombre d’entretiens",
+            "Entrées en formation",
+            "Dernier commentaire",
+            "Numéro produit",
+            "Numéro Kairos",
+            "Convocation envoyée",
+            "Intitulé du diplôme / titre visé",
+            "Code diplôme",
+            "Code RNCP",
+            "Durée totale (heures)",
+            "Heures à distance",
             "Est archivée ?",
         ]
         ws.append(headers)

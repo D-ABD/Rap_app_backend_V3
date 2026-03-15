@@ -3,6 +3,7 @@
 Utilitaires partagés pour les tests.
 AuthenticatedTestCase : base pour les tests de ViewSet avec utilisateur authentifié par défaut.
 """
+
 from rest_framework.test import APITestCase
 
 from .factories import UserFactory
@@ -15,6 +16,7 @@ class AuthenticatedTestCase(APITestCase):
     ce qui évite les erreurs du type « updated_by must be a CustomUser instance »
     (AnonymousUser) dans les vues qui enregistrent created_by/updated_by.
     """
+
     def setUp(self):
         super().setUp()
         self.user = UserFactory()

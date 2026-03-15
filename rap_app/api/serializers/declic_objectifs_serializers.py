@@ -1,15 +1,11 @@
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer
+from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.declic import ObjectifDeclic
 
 
-@extend_schema_serializer(
-    examples=[
-        {"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}
-    ]
-)
+@extend_schema_serializer(examples=[{"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}])
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour imbrication dans les objectifs Déclic.
@@ -56,9 +52,7 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
     """
 
     centre = CentreLightSerializer(read_only=True)
-    centre_id = serializers.PrimaryKeyRelatedField(
-        source="centre", queryset=Centre.objects.all(), write_only=True
-    )
+    centre_id = serializers.PrimaryKeyRelatedField(source="centre", queryset=Centre.objects.all(), write_only=True)
 
     data_declic = serializers.SerializerMethodField()
     taux_prescription = serializers.SerializerMethodField()
@@ -77,7 +71,6 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
             "annee",
             "valeur_objectif",
             "commentaire",
-
             "data_declic",
             "taux_prescription",
             "taux_presence",
@@ -97,9 +90,7 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
     def validate_valeur_objectif(self, value):
         """Refuse une valeur nulle ou négative."""
         if value is not None and value <= 0:
-            raise serializers.ValidationError(
-                "La valeur de l'objectif doit être strictement positive."
-            )
+            raise serializers.ValidationError("La valeur de l'objectif doit être strictement positive.")
         return value
 
     def get_data_declic(self, obj):

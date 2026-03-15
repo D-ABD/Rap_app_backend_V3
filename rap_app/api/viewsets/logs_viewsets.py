@@ -1,13 +1,17 @@
-from rest_framework import viewsets, filters, status
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import filters, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiResponse
 from rest_framework.views import APIView
 
-from ...models.logs import LogUtilisateur
-from ...api.serializers.logs_serializers import LogChoicesSerializer, LogUtilisateurSerializer
-from ...api.permissions import IsAdminLikeOnly
 from ...api.paginations import RapAppPagination
+from ...api.permissions import IsAdminLikeOnly
+from ...api.serializers.logs_serializers import (
+    LogChoicesSerializer,
+    LogUtilisateurSerializer,
+)
+from ...models.logs import LogUtilisateur
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -47,27 +51,25 @@ class LogUtilisateurViewSet(viewsets.ReadOnlyModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "success": True,
-            "message": "Liste des logs utilisateur.",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"success": True, "message": "Liste des logs utilisateur.", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     def retrieve(self, request, *args, **kwargs):
         """Détail d'un log par pk ; success/message/data."""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": "Log utilisateur récupéré avec succès.",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"success": True, "message": "Log utilisateur récupéré avec succès.", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
 
 @extend_schema(
     methods=["GET"],
     responses={200: LogChoicesSerializer},
-    description="Retourne la liste des actions possibles enregistrées dans les logs utilisateur."
+    description="Retourne la liste des actions possibles enregistrées dans les logs utilisateur.",
 )
 class LogChoicesView(APIView):
     """GET : liste des actions possibles pour les logs (value/label) ; IsAuthenticated."""
@@ -86,10 +88,5 @@ class LogChoicesView(APIView):
             LogUtilisateur.ACTION_IMPORT: "Import",
         }
 
-        data = {
-            "actions": [
-                {"value": k, "label": v}
-                for k, v in label_map.items()
-            ]
-        }
+        data = {"actions": [{"value": k, "label": v} for k, v in label_map.items()]}
         return Response(data)

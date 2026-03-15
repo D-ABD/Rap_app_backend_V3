@@ -1,10 +1,9 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.utils.timezone import now
 from django.core.cache import cache
+from django.test import TestCase
+from django.utils.timezone import now
 
 from ...models.models_test import DummyModel
-
 
 User = get_user_model()
 
@@ -12,9 +11,7 @@ User = get_user_model()
 class BaseModelTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="testuser@example.com",
-            password="securepassword123"
+            username="testuser", email="testuser@example.com", password="securepassword123"
         )
 
     def test_create_sets_created_fields(self):
@@ -29,16 +26,8 @@ class BaseModelTestCase(TestCase):
         self.assertIsNotNone(obj.updated_at)
 
     def test_update_sets_updated_by_only(self):
-        creator = User.objects.create_user(
-            username="creator",
-            email="creator@example.com",
-            password="pass"
-        )
-        editor = User.objects.create_user(
-            username="editor",
-            email="editor@example.com",
-            password="pass"
-        )
+        creator = User.objects.create_user(username="creator", email="creator@example.com", password="pass")
+        editor = User.objects.create_user(username="editor", email="editor@example.com", password="pass")
         obj = DummyModel.objects.create(name="Initial", created_by=creator, updated_by=creator)
 
         obj.name = "Updated"

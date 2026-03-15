@@ -1,20 +1,20 @@
 import logging
-import unicodedata
 import re
+import unicodedata
 from datetime import date
-from django.core.validators import RegexValidator
 
 from django.conf import settings
-from django.db import models, transaction
-from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.db import models, transaction
+from django.utils.translation import gettext_lazy as _
 
-from .custom_user import CustomUser
-from .formations import Formation
 from .base import BaseModel
+from .custom_user import CustomUser
 from .evenements import Evenement
+from .formations import Formation
+
 # Pour éviter les imports circulaires, le modèle "Appairage" est référencé par une chaîne de caractères.
 
 logger = logging.getLogger("application.candidats")
@@ -48,6 +48,7 @@ class ResultatPlacementChoices(models.TextChoices):
     """
     Etats possibles pour le résultat du placement ou appairage.
     """
+
     ADMIS = "admis", _("Admis")
     NON_ADMIS = "non_admis", _("Non admis")
     SECOND_ENTRETIEN = "second_entretien", _("Second entretien")
@@ -68,6 +69,7 @@ class Candidat(BaseModel):
         """
         Etats de progression d'un candidat dans le parcours.
         """
+
         EN_ATTENTE_ENTRETIEN = "att_entretien", _("En attente d'entretien")
         EN_ATTENTE_RENTREE = "att_rentee", _("En attente de rentrée")
         EN_ATTENTE_COMMISSION = "att_commission", _("En attente de commission")
@@ -81,6 +83,7 @@ class Candidat(BaseModel):
         """
         Types de contrat possibles.
         """
+
         APPRENTISSAGE = "apprentissage", _("Apprentissage")
         PROFESSIONNALISATION = "professionnalisation", _("Professionnalisation")
         SANS_CONTRAT = "sans_contrat", _("Sans contrat")
@@ -92,6 +95,7 @@ class Candidat(BaseModel):
         """
         Disponibilité pour un placement.
         """
+
         IMMEDIATE = "immediate", _("Immédiate")
         DEUX_TROIS_MOIS = "2_3_mois", _("2-3 mois")
         SIX_MOIS = "6_mois", _("6 mois")
@@ -100,6 +104,7 @@ class Candidat(BaseModel):
         """
         Etat de signature du contrat.
         """
+
         EN_COURS = "en_cours", _("En cours")
         OUI = "oui", _("Oui")
         NON = "non", _("Non")
@@ -108,6 +113,7 @@ class Candidat(BaseModel):
         """
         Statut d'avancement du CV.
         """
+
         OUI = "oui", _("Oui")
         EN_COURS = "en_cours", _("En cours")
         A_MODIFIER = "a_modifier", _("À modifier")
@@ -125,13 +131,11 @@ class Candidat(BaseModel):
         max_length=100, blank=True, null=True, verbose_name=_("Pays de naissance"), default="France"
     )
     nationalite = models.CharField(max_length=100, blank=True, null=True, default="Française")
-    nir = models.CharField(
-        max_length=15, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)")
-    )
+    nir = models.CharField(max_length=15, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)"))
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
     phone_regex = RegexValidator(
-        regex=r'^0\d{9}$',
+        regex=r"^0\d{9}$",
         message=_("Le numéro doit comporter 10 chiffres et commencer par 0 (ex : 0612345678)."),
     )
     telephone = models.CharField(
@@ -140,9 +144,7 @@ class Candidat(BaseModel):
     # Adresse
     street_number = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Numéro de voie"))
     street_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Nom de la rue"))
-    street_complement = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name=_("Complément d'adresse")
-    )
+    street_complement = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Complément d'adresse"))
     ville = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Ville"))
     code_postal = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Code postal"))
 
@@ -173,18 +175,24 @@ class Candidat(BaseModel):
         db_index=True,
     )
     formation = models.ForeignKey(
-        Formation, on_delete=models.SET_NULL, null=True, blank=True, related_name="candidats",
+        Formation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="candidats",
         verbose_name=_("Formation"),
     )
     evenement = models.ForeignKey(
-        Evenement, on_delete=models.CASCADE, null=True, blank=True, related_name="candidats",
+        Evenement,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="candidats",
         verbose_name=_("Événement"),
     )
     notes = models.TextField(blank=True, null=True, verbose_name=_("Notes"))
     origine_sourcing = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Origine du sourcing"))
-    date_inscription = models.DateTimeField(
-        auto_now_add=True, verbose_name=_("Date d’inscription"), db_index=True
-    )
+    date_inscription = models.DateTimeField(auto_now_add=True, verbose_name=_("Date d’inscription"), db_index=True)
     rqth = models.BooleanField(default=False, verbose_name=_("RQTH"))
     type_contrat = models.CharField(
         max_length=30, choices=TypeContrat.choices, blank=True, null=True, verbose_name=_("Type de contrat")
@@ -266,9 +274,7 @@ class Candidat(BaseModel):
     representant_prenom = models.CharField(
         max_length=150, blank=True, null=True, verbose_name=_("Prénom du représentant légal")
     )
-    representant_email = models.EmailField(
-        blank=True, null=True, verbose_name=_("Courriel du représentant légal")
-    )
+    representant_email = models.EmailField(blank=True, null=True, verbose_name=_("Courriel du représentant légal"))
     representant_street_name = models.CharField(
         max_length=255, blank=True, null=True, verbose_name=_("Adresse du représentant légal")
     )
@@ -315,9 +321,7 @@ class Candidat(BaseModel):
         max_length=10, choices=ContratSigne.choices, null=True, blank=True, verbose_name=_("Contrat signé")
     )
     inscrit_gespers = models.BooleanField(
-        default=False,
-        verbose_name=_("Inscrit GESPERS"),
-        help_text="Indique si le candidat est inscrit dans GESPERS."
+        default=False, verbose_name=_("Inscrit GESPERS"), help_text="Indique si le candidat est inscrit dans GESPERS."
     )
     courrier_rentree = models.BooleanField(default=False, verbose_name=_("Courrier de rentrée envoyé"))
     date_rentree = models.DateField(null=True, blank=True, verbose_name=_("Date de rentrée"))
@@ -343,6 +347,7 @@ class Candidat(BaseModel):
         """
         Statut d'une demande de création de compte utilisateur associé au candidat.
         """
+
         AUCUNE = "aucune", _("Aucune demande")
         EN_ATTENTE = "en_attente", _("Demande en attente")
         ACCEPTEE = "acceptee", _("Demande acceptée")
@@ -430,8 +435,10 @@ class Candidat(BaseModel):
         """
         if self.date_naissance:
             today = date.today()
-            return today.year - self.date_naissance.year - (
-                (today.month, today.day) < (self.date_naissance.month, self.date_naissance.day)
+            return (
+                today.year
+                - self.date_naissance.year
+                - ((today.month, today.day) < (self.date_naissance.month, self.date_naissance.day))
             )
         return None
 
@@ -512,9 +519,7 @@ class Candidat(BaseModel):
         Modifie le compte utilisateur lié pour passer au rôle 'CANDIDAT_USER'.
         """
         if not self.compte_utilisateur:
-            raise ValidationError(
-                _("Impossible de valider comme candidat : aucun compte utilisateur n'est associé.")
-            )
+            raise ValidationError(_("Impossible de valider comme candidat : aucun compte utilisateur n'est associé."))
         user = self.compte_utilisateur
         user.role = CustomUser.ROLE_CANDIDAT_USER
         user.save()
@@ -592,8 +597,10 @@ class Candidat(BaseModel):
             if original:
                 changed = any(getattr(original, f) != getattr(self, f) for f in champs_placement)
             else:
+
                 def _is_set(v):
                     return v not in (None, "", False)
+
                 changed = any(_is_set(getattr(self, f)) for f in champs_placement)
 
             if changed:
@@ -674,11 +681,11 @@ class Candidat(BaseModel):
             raise ValidationError("Ce candidat a déjà un compte utilisateur associé.")
         if not self.email:
             raise ValidationError("Ce candidat n’a pas d’adresse email définie.")
-        
+
         utilisateur = User.objects.filter(email__iexact=self.email).first()
         if utilisateur:
             # Vérifier si l'utilisateur est déjà lié à un autre candidat
-            if hasattr(utilisateur, 'candidat_associe') and utilisateur.candidat_associe:
+            if hasattr(utilisateur, "candidat_associe") and utilisateur.candidat_associe:
                 associe = utilisateur.candidat_associe
                 if associe.created_by is None:
                     # C'est un candidat auto-créé par signal, on peut le délier
@@ -686,7 +693,11 @@ class Candidat(BaseModel):
                     associe.save()
                 else:
                     raise ValidationError(
-                        {"compte_utilisateur": ["Un objet Candidat (pk={}) est déjà associé à cet utilisateur.".format(associe.pk)]}
+                        {
+                            "compte_utilisateur": [
+                                "Un objet Candidat (pk={}) est déjà associé à cet utilisateur.".format(associe.pk)
+                            ]
+                        }
                     )
             # Réutiliser l'utilisateur existant
             pass
@@ -699,9 +710,9 @@ class Candidat(BaseModel):
                 last_name=self.nom,
                 role=CustomUser.ROLE_CANDIDAT_USER,
             )
-        
+
         self.compte_utilisateur = utilisateur
-        self.save(update_fields=['compte_utilisateur'])
+        self.save(update_fields=["compte_utilisateur"])
         return utilisateur
 
 
@@ -709,6 +720,7 @@ class HistoriquePlacement(BaseModel):
     """
     Historique des modifications de placement d'un candidat.
     """
+
     candidat = models.ForeignKey(
         "Candidat", on_delete=models.CASCADE, related_name="historique_placements", verbose_name=_("Candidat")
     )

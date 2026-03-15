@@ -1,28 +1,24 @@
 from __future__ import annotations
 
+from typing import Iterable, Literal, Optional
+
+from django.db import models
+from django.db.models import Count, F, Q, Sum, Value
+from django.db.models.functions import Coalesce, Greatest, NullIf, Substr
 from django.forms import CharField
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from ....models.centres import Centre
 from ....models.statut import Statut
 from ....models.types_offre import TypeOffre
-from ...serializers.base_serializers import EmptySerializer
-
-from typing import Literal, Iterable, Optional
-
-from django.db import models
-from django.db.models import Count, Sum, F, Q, Value
-from django.db.models.functions import Coalesce, Substr, Greatest, NullIf
-from django.utils import timezone
-from django.utils.dateparse import parse_date
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from django.db.models.functions import Substr
-
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 try:
     from ..permissions import IsOwnerOrStaffOrAbove  # type: ignore
@@ -32,16 +28,20 @@ except Exception:  # pragma: no cover
 try:
     from ..mixins import RestrictToUserOwnedQueryset  # type: ignore
 except Exception:  # pragma: no cover
+
     class RestrictToUserOwnedQueryset:  # stub minimal
         def restrict_queryset_to_user(self, qs):
             return qs
 
+
+from ....models.appairage import Appairage, AppairageStatut  # ← NEW
+from ....models.candidat import Candidat
+
 # ⚠️ Ajustez les imports selon votre arborescence réelle
 from ....models.formations import Formation
-from ....models.candidat import Candidat
-from ....models.appairage import Appairage, AppairageStatut  # ← NEW
 
 GroupKey = Literal["formation", "centre", "departement", "type_offre", "statut"]
+
 
 class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
@@ -139,14 +139,14 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     def _is_admin_like(self, user) -> bool:
         """
         Helper interne : True si l’utilisateur est superuser ou admin.
-        Logique : 
+        Logique :
           - user.is_superuser
           - ou user.is_admin() si la méthode existe sur l’objet user
         """
         return bool(
             getattr(user, "is_superuser", False)
             or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        )   
+        )
 
     def _staff_centre_ids(self, user) -> Optional[list[int]]:
         """
@@ -167,6 +167,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         - Cherche des attributs 'departements_codes' ou 'departements' sur user ou user.profile
         - Retourne toujours liste de strings (codes sur 2 caractères)
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -245,14 +246,20 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         # 🔹 Exclure les formations archivées par défaut
         #    Inclure si ?avec_archivees=true dans l’URL
-        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in ["1", "true", "yes", "on"]
+        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in [
+            "1",
+            "true",
+            "yes",
+            "on",
+        ]
         if not inclure_archivees:
             qs = qs.exclude(activite="archivee")
 
         # 🔐 Restriction éventuelle pour les non-staffs
         user = getattr(self.request, "user", None)
         is_staff_like = bool(
-            user and (
+            user
+            and (
                 getattr(user, "is_superuser", False)
                 or is_staff_or_staffread(user)
                 or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
@@ -266,7 +273,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
     def _apply_common_filters(self, qs):
         """
-        Applique les filtres standards depuis les query params DRF : 
+        Applique les filtres standards depuis les query params DRF :
         - date_from, date_to (YYYY-MM-DD)
         - centre, departement, type_offre, statut
         """
@@ -316,15 +323,12 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             nb_actives=Count("id", filter=Q(start_date__lte=today, end_date__gte=today)),
             nb_a_venir=Count("id", filter=Q(start_date__gt=today)),
             nb_terminees=Count("id", filter=Q(end_date__lt=today)),
-
             total_places_crif=Coalesce(Sum("prevus_crif"), Value(0)),
             total_places_mp=Coalesce(Sum("prevus_mp"), Value(0)),
             total_inscrits_crif=Coalesce(Sum("inscrits_crif"), Value(0)),
             total_inscrits_mp=Coalesce(Sum("inscrits_mp"), Value(0)),
-
             total_places=Coalesce(Sum(F("prevus_crif") + F("prevus_mp")), Value(0)),
             total_inscrits=Coalesce(Sum(F("inscrits_crif") + F("inscrits_mp")), Value(0)),
-
             total_dispo_crif=Coalesce(Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)),
             total_dispo_mp=Coalesce(Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)),
         )
@@ -375,15 +379,15 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     # LIST (overview)
     # ────────────────────────────────────────────────────────────
     @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="avec_archivees",
-            type=bool,
-            required=False,
-            description="Inclure les formations archivées (true/false)"
-        ),
-    ],
-)
+        parameters=[
+            OpenApiParameter(
+                name="avec_archivees",
+                type=bool,
+                required=False,
+                description="Inclure les formations archivées (true/false)",
+            ),
+        ],
+    )
     def list(self, request, *args, **kwargs):
         """
         [ACTION STANDARD DRF]
@@ -456,10 +460,20 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         )
         appairages = {
             "total": int(app_agg["total"] or 0),
-            "par_statut": {k: int(app_agg.get(k) or 0) for k in [
-                "transmis", "en_attente", "accepte", "refuse", "annule",
-                "a_faire", "contrat_a_signer", "contrat_en_attente", "appairage_ok"
-            ]},
+            "par_statut": {
+                k: int(app_agg.get(k) or 0)
+                for k in [
+                    "transmis",
+                    "en_attente",
+                    "accepte",
+                    "refuse",
+                    "annule",
+                    "a_faire",
+                    "contrat_a_signer",
+                    "contrat_en_attente",
+                    "appairage_ok",
+                ]
+            },
         }
 
         payload = {
@@ -489,10 +503,10 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 name="avec_archivees",
                 type=bool,
                 required=False,
-                description="Inclure les formations archivées (true/false)"
+                description="Inclure les formations archivées (true/false)",
             ),
         ],
-)
+    )
     @action(detail=False, methods=["GET"], url_path="grouped")
     def grouped(self, request):
         """
@@ -529,25 +543,21 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         qs = qs.distinct()
 
         rows = list(
-            qs.values(*group_fields).annotate(
+            qs.values(*group_fields)
+            .annotate(
                 nb_formations=Count("id", distinct=True),
                 nb_actives=Count("id", filter=Q(start_date__lte=today, end_date__gte=today), distinct=True),
                 nb_a_venir=Count("id", filter=Q(start_date__gt=today), distinct=True),
                 nb_terminees=Count("id", filter=Q(end_date__lt=today), distinct=True),
-
                 total_places=Coalesce(Sum(F("prevus_crif") + F("prevus_mp")), Value(0)),
                 total_places_crif=Coalesce(Sum("prevus_crif"), Value(0)),
                 total_places_mp=Coalesce(Sum("prevus_mp"), Value(0)),
-
                 total_inscrits=Coalesce(Sum(F("inscrits_crif") + F("inscrits_mp")), Value(0)),
                 total_inscrits_crif=Coalesce(Sum("inscrits_crif"), Value(0)),
                 total_inscrits_mp=Coalesce(Sum("inscrits_mp"), Value(0)),
-
                 total_dispo_crif=Coalesce(Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)),
                 total_dispo_mp=Coalesce(Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)),
-
                 entrees_formation=Coalesce(Sum("entree_formation"), Value(0)),
-
                 # ----- Candidats
                 nb_candidats=Count("candidats", distinct=True),
                 nb_entretien_ok=Count("candidats", filter=Q(candidats__entretien_done=True), distinct=True),
@@ -555,7 +565,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 nb_inscrits_gespers=Count("candidats", filter=Q(candidats__inscrit_gespers=True), distinct=True),
                 nb_entrees_formation=Count(
                     "candidats",
-                    filter=Q(candidats__statut=Candidat.StatutCandidat.EN_FORMATION) | Q(candidats__date_rentree__isnull=False),
+                    filter=Q(candidats__statut=Candidat.StatutCandidat.EN_FORMATION)
+                    | Q(candidats__date_rentree__isnull=False),
                     distinct=True,
                 ),
                 # ── Contrats par type (groupés)
@@ -576,23 +587,33 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 ),
                 nb_contrats_autres=Count(
                     "candidats",
-                    filter=Q(candidats__type_contrat__in=[Candidat.TypeContrat.AUTRE, Candidat.TypeContrat.SANS_CONTRAT]),
+                    filter=Q(
+                        candidats__type_contrat__in=[Candidat.TypeContrat.AUTRE, Candidat.TypeContrat.SANS_CONTRAT]
+                    ),
                     distinct=True,
                 ),
                 nb_admissibles=Count("candidats", filter=Q(candidats__admissible=True), distinct=True),
-
                 # ----- Appairages par statut
                 app_total=Count("appairages", distinct=True),
                 app_transmis=Count("appairages", filter=Q(appairages__statut=AppairageStatut.TRANSMIS), distinct=True),
-                app_en_attente=Count("appairages", filter=Q(appairages__statut=AppairageStatut.EN_ATTENTE), distinct=True),
+                app_en_attente=Count(
+                    "appairages", filter=Q(appairages__statut=AppairageStatut.EN_ATTENTE), distinct=True
+                ),
                 app_accepte=Count("appairages", filter=Q(appairages__statut=AppairageStatut.ACCEPTE), distinct=True),
                 app_refuse=Count("appairages", filter=Q(appairages__statut=AppairageStatut.REFUSE), distinct=True),
                 app_annule=Count("appairages", filter=Q(appairages__statut=AppairageStatut.ANNULE), distinct=True),
                 app_a_faire=Count("appairages", filter=Q(appairages__statut=AppairageStatut.A_FAIRE), distinct=True),
-                app_contrat_a_signer=Count("appairages", filter=Q(appairages__statut=AppairageStatut.CONTRAT_A_SIGNER), distinct=True),
-                app_contrat_en_attente=Count("appairages", filter=Q(appairages__statut=AppairageStatut.CONTRAT_EN_ATTENTE), distinct=True),
-                app_appairage_ok=Count("appairages", filter=Q(appairages__statut=AppairageStatut.APPAIRAGE_OK), distinct=True),
-            ).order_by(*group_fields)
+                app_contrat_a_signer=Count(
+                    "appairages", filter=Q(appairages__statut=AppairageStatut.CONTRAT_A_SIGNER), distinct=True
+                ),
+                app_contrat_en_attente=Count(
+                    "appairages", filter=Q(appairages__statut=AppairageStatut.CONTRAT_EN_ATTENTE), distinct=True
+                ),
+                app_appairage_ok=Count(
+                    "appairages", filter=Q(appairages__statut=AppairageStatut.APPAIRAGE_OK), distinct=True
+                ),
+            )
+            .order_by(*group_fields)
         )
 
         for r in rows:
@@ -613,7 +634,9 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         elif by == "centre":
             for r in rows:
                 r["group_key"] = r.get("centre_id")
-                r["group_label"] = r.get("centre__nom") or (f"Centre #{r.get('centre_id')}" if r.get("centre_id") is not None else "—")
+                r["group_label"] = r.get("centre__nom") or (
+                    f"Centre #{r.get('centre_id')}" if r.get("centre_id") is not None else "—"
+                )
         elif by == "departement":
             for r in rows:
                 r["group_key"] = r.get("departement")
@@ -626,7 +649,9 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             for r in rows:
                 gid = r.get(f"{by}_id")
                 r["group_key"] = gid
-                r["group_label"] = label_map.get(gid, f"{by.replace('_', ' ').title()} #{gid}" if gid is not None else "—")
+                r["group_label"] = label_map.get(
+                    gid, f"{by.replace('_', ' ').title()} #{gid}" if gid is not None else "—"
+                )
 
         return Response({"group_by": by, "results": rows})
 
@@ -640,10 +665,10 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 name="avec_archivees",
                 type=bool,
                 required=False,
-                description="Inclure les formations archivées (true/false)"
+                description="Inclure les formations archivées (true/false)",
             ),
         ],
-)
+    )
     @action(detail=False, methods=["GET"], url_path="tops")
     def tops(self, request):
         """
@@ -673,37 +698,36 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         limit = int(request.query_params.get("limit", 10))
 
         # Taux = 100 * inscrits / places (0 si places = 0)
-        qs_taux = qs.annotate(
-            taux=Coalesce(100.0 * F("total_inscrits") / NullIf(F("total_places"), 0), Value(0.0))
-        )
+        qs_taux = qs.annotate(taux=Coalesce(100.0 * F("total_inscrits") / NullIf(F("total_places"), 0), Value(0.0)))
 
         # 1) À recruter : plus de places restantes d'abord
         a_recruter = list(
             qs.filter(places_disponibles__gt=0)
-              .values("id", "nom", "places_disponibles", "centre__nom", "num_offre")
-              .order_by("-places_disponibles")[:limit]
+            .values("id", "nom", "places_disponibles", "centre__nom", "num_offre")
+            .order_by("-places_disponibles")[:limit]
         )
 
         # 2) Top saturées : ≥ 80%
         top_saturees = list(
             qs_taux.filter(total_places__gt=0, taux__gte=80.0)
-                  .values("id", "nom", "taux", "places_disponibles", "centre__nom", "num_offre")
-                  .order_by("-taux")[:limit]
+            .values("id", "nom", "taux", "places_disponibles", "centre__nom", "num_offre")
+            .order_by("-taux")[:limit]
         )
 
         # 3) En tension : < 50% et encore des places
         en_tension = list(
             qs_taux.filter(total_places__gt=0, places_disponibles__gt=0, taux__lt=50.0)
-                  .values("id", "nom", "taux", "places_disponibles", "centre__nom", "num_offre")
-                  .order_by("taux", "-places_disponibles")[:limit]
+            .values("id", "nom", "taux", "places_disponibles", "centre__nom", "num_offre")
+            .order_by("taux", "-places_disponibles")[:limit]
         )
 
-        return Response({
-            "a_recruter": a_recruter,
-            "top_saturees": top_saturees,
-            "en_tension": en_tension,
-        })
-    
+        return Response(
+            {
+                "a_recruter": a_recruter,
+                "top_saturees": top_saturees,
+                "en_tension": en_tension,
+            }
+        )
 
     # ────────────────────────────────────────────────────────────
     # Metrics (doublon interne — attention ne pas perdre ce code !)
@@ -727,22 +751,15 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             nb_terminees=Count("id", filter=Q(end_date__lt=today)),
             nb_annulees=Count("id", filter=Q(statut__nom__icontains="annul")),
             nb_archivees=Count("id", filter=Q(activite="archivee")),
-
             # --- Agrégats places/inscriptions ---
             total_places_crif=Coalesce(Sum("prevus_crif"), Value(0)),
             total_places_mp=Coalesce(Sum("prevus_mp"), Value(0)),
             total_inscrits_crif=Coalesce(Sum("inscrits_crif"), Value(0)),
             total_inscrits_mp=Coalesce(Sum("inscrits_mp"), Value(0)),
-
             total_places=Coalesce(Sum(F("prevus_crif") + F("prevus_mp")), Value(0)),
             total_inscrits=Coalesce(Sum(F("inscrits_crif") + F("inscrits_mp")), Value(0)),
-
-            total_dispo_crif=Coalesce(
-                Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)
-            ),
-            total_dispo_mp=Coalesce(
-                Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)
-            ),
+            total_dispo_crif=Coalesce(Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)),
+            total_dispo_mp=Coalesce(Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)),
         )
 
         # --- Post-traitements ---
@@ -769,7 +786,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         (centres visibles, types_offre actifs, statuts actifs, départements accessibles)
 
         - Permissions : scope staff/admin conforme au scope général (voir helpers)
-        - Sortie : 
+        - Sortie :
             {
                 "centresById": {id: nom, ...},
                 "typeOffreById": {id: nom, ...},
@@ -829,5 +846,6 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)

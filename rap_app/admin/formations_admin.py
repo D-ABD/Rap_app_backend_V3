@@ -1,10 +1,11 @@
 import logging
+
 from django.contrib import admin, messages
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 
-from ..models.formations import Formation, HistoriqueFormation, Activite
+from ..models.formations import Activite, Formation, HistoriqueFormation
 
 logger = logging.getLogger("application.formation")
 
@@ -12,6 +13,7 @@ logger = logging.getLogger("application.formation")
 # =====================================================
 # 🔹 Filtres personnalisés
 # =====================================================
+
 
 class ActiviteFilter(admin.SimpleListFilter):
     title = _("Activité")
@@ -76,6 +78,7 @@ class SaturationFilter(admin.SimpleListFilter):
 # 🔹 Inline : Historique des modifications
 # =====================================================
 
+
 class HistoriqueFormationInline(admin.TabularInline):
     model = HistoriqueFormation
     extra = 0
@@ -100,6 +103,7 @@ class HistoriqueFormationInline(admin.TabularInline):
 # =====================================================
 # 🔹 Admin principal : Formation
 # =====================================================
+
 
 @admin.register(Formation)
 class FormationAdmin(admin.ModelAdmin):
@@ -153,54 +157,69 @@ class FormationAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (_("Informations générales"), {
-            "fields": (
-                "nom",
-                "centre",
-                "type_offre",
-                "statut",
-                "activite",
-                "assistante",
-            )
-        }),
-        (_("Dates et identifiants"), {
-            "fields": (
-                "start_date",
-                "end_date",
-                "num_kairos",
-                "num_offre",
-                "num_produit",
-            )
-        }),
-        (_("Places et inscriptions"), {
-            "fields": (
-                ("prevus_crif", "inscrits_crif"),
-                ("prevus_mp", "inscrits_mp"),
-                "saturation",
-                "total_places_display",
-                "total_inscrits_display",
-                "places_disponibles_display",
-                "taux_saturation_display",
-            )
-        }),
-        (_("Suivi et activité"), {
-            "fields": (
-                "convocation_envoie",
-                "entree_formation",
-                "nombre_candidats",
-                "nombre_entretiens",
-                "nombre_evenements",
-                "dernier_commentaire",
-                "status_temporel_display",
-            )
-        }),
-        (_("Méta"), {
-            "classes": ("collapse",),
-            "fields": (
-                "created_at",
-                "updated_at",
-            ),
-        }),
+        (
+            _("Informations générales"),
+            {
+                "fields": (
+                    "nom",
+                    "centre",
+                    "type_offre",
+                    "statut",
+                    "activite",
+                    "assistante",
+                )
+            },
+        ),
+        (
+            _("Dates et identifiants"),
+            {
+                "fields": (
+                    "start_date",
+                    "end_date",
+                    "num_kairos",
+                    "num_offre",
+                    "num_produit",
+                )
+            },
+        ),
+        (
+            _("Places et inscriptions"),
+            {
+                "fields": (
+                    ("prevus_crif", "inscrits_crif"),
+                    ("prevus_mp", "inscrits_mp"),
+                    "saturation",
+                    "total_places_display",
+                    "total_inscrits_display",
+                    "places_disponibles_display",
+                    "taux_saturation_display",
+                )
+            },
+        ),
+        (
+            _("Suivi et activité"),
+            {
+                "fields": (
+                    "convocation_envoie",
+                    "entree_formation",
+                    "nombre_candidats",
+                    "nombre_entretiens",
+                    "nombre_evenements",
+                    "dernier_commentaire",
+                    "status_temporel_display",
+                )
+            },
+        ),
+        (
+            _("Méta"),
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
     )
 
     # =================================================
@@ -312,6 +331,7 @@ class FormationAdmin(admin.ModelAdmin):
 # =====================================================
 # 🔹 Admin HistoriqueFormation
 # =====================================================
+
 
 @admin.register(HistoriqueFormation)
 class HistoriqueFormationAdmin(admin.ModelAdmin):

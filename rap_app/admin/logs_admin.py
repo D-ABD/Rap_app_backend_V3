@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.timezone import localtime
+
 from ..models.logs import LogUtilisateur
 
 
@@ -41,32 +42,40 @@ class LogUtilisateurAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        ("📝 Détail du log", {
-            "fields": (
-                "content_type",
-                "object_id",
-                "action",
-                "details",
-            ),
-        }),
-        ("👤 Utilisateur", {
-            "fields": (
-                "created_by",
-                "created_at",
-                "updated_at",
-            ),
-            "classes": ("collapse",),
-        }),
+        (
+            "📝 Détail du log",
+            {
+                "fields": (
+                    "content_type",
+                    "object_id",
+                    "action",
+                    "details",
+                ),
+            },
+        ),
+        (
+            "👤 Utilisateur",
+            {
+                "fields": (
+                    "created_by",
+                    "created_at",
+                    "updated_at",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     # ==== Champs calculés / affichage ====
 
     def created_at_display(self, obj):
         return localtime(obj.created_at).strftime("%Y-%m-%d %H:%M")
+
     created_at_display.short_description = "Date"
 
     def model_display(self, obj):
         return obj.content_type.model_class().__name__ if obj.content_type else "—"
+
     model_display.short_description = "Modèle"
 
     def object_link(self, obj):
@@ -78,12 +87,14 @@ class LogUtilisateurAdmin(admin.ModelAdmin):
                 obj.content_type.model,
             )
         return f"#{obj.object_id}" if obj.object_id else "—"
+
     object_link.short_description = "Objet"
 
     def user_display(self, obj):
         if obj.created_by:
             return f"{obj.created_by.get_full_name()} ({obj.created_by.username})"
         return "Système"
+
     user_display.short_description = "Utilisateur"
 
     def save_model(self, request, obj, form, change):

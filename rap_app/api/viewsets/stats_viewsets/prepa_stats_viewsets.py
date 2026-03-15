@@ -1,31 +1,31 @@
 # rap_app/api/viewsets/prepa_stats_viewset.py
 
-from django.db.models import Sum, F, Value
-from django.db.models.functions import Substr, Coalesce
-from django.utils.timezone import localdate
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from drf_spectacular.utils import (
-    extend_schema,
-    OpenApiParameter,
-    OpenApiResponse,
-    OpenApiExample,
-)
-
-from django.http import HttpResponse
 from io import BytesIO
 from pathlib import Path
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.utils import get_column_letter
+
 from django.conf import settings
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Coalesce, Substr
+from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
+from django.utils.timezone import localdate
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+)
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from ....models.prepa import Prepa
-from ...permissions import IsPrepaStaffOrAbove
 from ...paginations import RapAppPagination
+from ...permissions import IsPrepaStaffOrAbove
 from ...serializers.base_serializers import EmptySerializer
 
 
@@ -57,7 +57,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         • La méthode _filtered_qs() restreint dynamiquement la visibilité des lignes Prépa selon :
             • le rôle utilisateur (admin = tout ; staff = par centre/département autorisé)
             • les filtres explicites passés dans la requête (centre, département, type_prepa, année)
-        • Pas de filter_backends ni search_fields ni ordering_fields ni filterset_class : 
+        • Pas de filter_backends ni search_fields ni ordering_fields ni filterset_class :
           le filtrage est 100% custom dans le code.
 
     ──────────────────────────────────────────────────────────────
@@ -116,19 +116,11 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         }
         """
         # Années (uniques)
-        annees = (
-            Prepa.objects.order_by()
-            .values_list("date_prepa__year", flat=True)
-            .distinct()
-        )
+        annees = Prepa.objects.order_by().values_list("date_prepa__year", flat=True).distinct()
         annees = sorted([a for a in annees if a], reverse=True)
 
         # Centres visibles selon le scope utilisateur
-        centres_qs = self._filtered_qs(request).values(
-            "centre_id",
-            "centre__nom",
-            "centre__code_postal"
-        ).distinct()
+        centres_qs = self._filtered_qs(request).values("centre_id", "centre__nom", "centre__code_postal").distinct()
 
         centres = []
         departements = set()
@@ -139,32 +131,29 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             if dep:
                 departements.add(dep)
 
-            centres.append({
-                "value": c["centre_id"],
-                "label": c["centre__nom"],
-                "code_postal": cp,
-                "departement": dep,
-            })
+            centres.append(
+                {
+                    "value": c["centre_id"],
+                    "label": c["centre__nom"],
+                    "code_postal": cp,
+                    "departement": dep,
+                }
+            )
 
         # Départements
-        departements_list = [
-            {"value": d, "label": f"Département {d}"}
-            for d in sorted(departements)
-        ]
+        departements_list = [{"value": d, "label": f"Département {d}"} for d in sorted(departements)]
 
         # Types Prépa
-        types = [
-            {"value": t[0], "label": t[1]}
-            for t in Prepa.TypePrepa.choices
-        ]
+        types = [{"value": t[0], "label": t[1]} for t in Prepa.TypePrepa.choices]
 
-        return Response({
-            "annees": annees,
-            "centres": centres,
-            "departements": departements_list,
-            "type_prepa": types,
-        })
-
+        return Response(
+            {
+                "annees": annees,
+                "centres": centres,
+                "departements": departements_list,
+                "type_prepa": types,
+            }
+        )
 
     # ==========================================================
     # 🔍 Helper — filtrage contextuel avec scope par rôle
@@ -175,7 +164,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         Retourne un queryset Prépa filtré selon :
             - les droits utilisateur :
                 - admin/superadmin accède à toutes les lignes de l’année demandée
-                - staff ou “prepa_staff” : 
+                - staff ou “prepa_staff” :
                     • accède à ses centres, ou à défaut aux départements associés à ses centres
                     • un filtre explicite “centre” prime sur la logique de scope staff
             - Les filtres GET : centre, type_prepa, année
@@ -350,9 +339,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             group_fields = ["centre_id_ref", "group_key"]
 
         elif by == "departement":
-            qs = qs.annotate(
-                group_key=Substr(Coalesce("centre__code_postal", Value("")), 1, 2)
-            )
+            qs = qs.annotate(group_key=Substr(Coalesce("centre__code_postal", Value("")), 1, 2))
             group_fields = ["group_key"]
 
         elif by == "type_prepa":
@@ -391,24 +378,13 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             p_prepa = d["nb_presents_prepa"] or 0
             a_prepa = d["nb_absents_prepa"] or 0
 
-            taux_presence_info = (
-                round(p_info / (p_info + a_info) * 100, 1)
-                if (p_info + a_info) > 0 else None
-            )
-            taux_adhesion = (
-                round(adh / p_info * 100, 1) if p_info > 0 else None
-            )
-            taux_presence_prepa = (
-                round(p_prepa / (p_prepa + a_prepa) * 100, 1)
-                if (p_prepa + a_prepa) > 0 else None
-            )
+            taux_presence_info = round(p_info / (p_info + a_info) * 100, 1) if (p_info + a_info) > 0 else None
+            taux_adhesion = round(adh / p_info * 100, 1) if p_info > 0 else None
+            taux_presence_prepa = round(p_prepa / (p_prepa + a_prepa) * 100, 1) if (p_prepa + a_prepa) > 0 else None
 
             total = p_prepa
 
-            taux_retention = (
-                round((p_prepa - a_prepa) / p_prepa * 100, 1)
-                if p_prepa > 0 else None
-            )
+            taux_retention = round((p_prepa - a_prepa) / p_prepa * 100, 1) if p_prepa > 0 else None
 
             results.append(
                 {
@@ -521,8 +497,9 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
           maintenir la description.
         """
         from django.db.models import Sum, Value
-        from django.db.models.functions import Substr, Coalesce
+        from django.db.models.functions import Coalesce, Substr
         from django.utils.timezone import localdate
+
         from ....models.prepa import ObjectifPrepa, Prepa
         from ...roles import is_admin_like
 
@@ -570,9 +547,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             if centre_ids:
                 objectifs_qs = objectifs_qs.filter(centre_id__in=centre_ids)
             elif departements:
-                objectifs_qs = objectifs_qs.filter(
-                    centre__code_postal__startswith=tuple(departements)
-                )
+                objectifs_qs = objectifs_qs.filter(centre__code_postal__startswith=tuple(departements))
             else:
                 objectifs_qs = ObjectifPrepa.objects.none()
 
@@ -584,9 +559,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                 objectifs_qs = objectifs_qs.filter(centre__nom__icontains=str(centre_param).strip())
 
         elif departement_param:
-            objectifs_qs = objectifs_qs.filter(
-                centre__code_postal__startswith=str(departement_param).strip()
-            )
+            objectifs_qs = objectifs_qs.filter(centre__code_postal__startswith=str(departement_param).strip())
 
         # ------------------------------------------------------
         # 📊 3) Totaux et Taux Globaux
@@ -595,10 +568,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         realise_total = qs.aggregate(total=Sum("nb_presents_prepa"))["total"] or 0
 
         reste_a_faire_total = objectif_total - realise_total
-        taux_atteinte_total = (
-            round((realise_total / objectif_total) * 100, 1)
-            if objectif_total > 0 else None
-        )
+        taux_atteinte_total = round((realise_total / objectif_total) * 100, 1) if objectif_total > 0 else None
 
         # ----------------------------------------------
         # 🟦  PRESCRIPTIONS (IC)
@@ -606,10 +576,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         nb_prescriptions = qs.aggregate(total=Sum("nombre_prescriptions"))["total"] or 0
         places_ouvertes = qs.aggregate(total=Sum("nombre_places_ouvertes"))["total"] or 0
 
-        taux_prescription = (
-            round(nb_prescriptions / places_ouvertes * 100, 1)
-            if places_ouvertes > 0 else None
-        )
+        taux_prescription = round(nb_prescriptions / places_ouvertes * 100, 1) if places_ouvertes > 0 else None
 
         # ----------------------------------------------
         # 🟩  PRÉSENCE INFORMATION COLLECTIVE
@@ -619,7 +586,8 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
         taux_presence_ic = (
             round(presents_info / (presents_info + absents_info) * 100, 1)
-            if (presents_info + absents_info) > 0 else None
+            if (presents_info + absents_info) > 0
+            else None
         )
 
         # ----------------------------------------------
@@ -630,16 +598,15 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
         taux_presence_ateliers = (
             round(presents_ateliers / (presents_ateliers + absents_ateliers) * 100, 1)
-            if (presents_ateliers + absents_ateliers) > 0 else None
+            if (presents_ateliers + absents_ateliers) > 0
+            else None
         )
 
         # ------------------------------------------------------
         # 📌 4) Détail par centre
         # ------------------------------------------------------
         par_centre_qs = (
-            qs.values("centre__id", "centre__nom")
-            .annotate(total=Sum("nb_presents_prepa"))
-            .order_by("centre__nom")
+            qs.values("centre__id", "centre__nom").annotate(total=Sum("nb_presents_prepa")).order_by("centre__nom")
         )
         par_centre = [
             {
@@ -660,38 +627,35 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             .order_by("departement")
         )
         par_departement = [
-            {"departement": r["departement"] or "—", "total": r["total"] or 0}
-            for r in par_departement_qs
+            {"departement": r["departement"] or "—", "total": r["total"] or 0} for r in par_departement_qs
         ]
 
         # ------------------------------------------------------
         # 🟧 6) RÉPONSE COMPLÈTE
         # ------------------------------------------------------
-        return Response({
-            "annee": annee,
-            "objectif_total": objectif_total,
-            "realise_total": realise_total,
-            "taux_atteinte_total": taux_atteinte_total,
-            "reste_a_faire_total": reste_a_faire_total,
-
-            # ---- PRESCRIPTIONS ----
-            "nb_prescriptions": nb_prescriptions,
-            "taux_prescription": taux_prescription,
-
-            # ---- INFO COLLECTIVE ----
-            "presents_info": presents_info,
-            "absents_info": absents_info,
-            "taux_presence_ic": taux_presence_ic,
-
-            # ---- ATELIERS ----
-            "presents_ateliers": presents_ateliers,
-            "absents_ateliers": absents_ateliers,
-            "taux_presence_ateliers": taux_presence_ateliers,
-
-            # ---- GROUPES ----
-            "par_centre": par_centre,
-            "par_departement": par_departement,
-        })
+        return Response(
+            {
+                "annee": annee,
+                "objectif_total": objectif_total,
+                "realise_total": realise_total,
+                "taux_atteinte_total": taux_atteinte_total,
+                "reste_a_faire_total": reste_a_faire_total,
+                # ---- PRESCRIPTIONS ----
+                "nb_prescriptions": nb_prescriptions,
+                "taux_prescription": taux_prescription,
+                # ---- INFO COLLECTIVE ----
+                "presents_info": presents_info,
+                "absents_info": absents_info,
+                "taux_presence_ic": taux_presence_ic,
+                # ---- ATELIERS ----
+                "presents_ateliers": presents_ateliers,
+                "absents_ateliers": absents_ateliers,
+                "taux_presence_ateliers": taux_presence_ateliers,
+                # ---- GROUPES ----
+                "par_centre": par_centre,
+                "par_departement": par_departement,
+            }
+        )
 
     # ==========================================================
     # 📤 4️⃣ Export Excel unifié
@@ -839,9 +803,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         buffer = BytesIO()
         wb.save(buffer)
         content = buffer.getvalue()
-        filename = (
-            f"prepa_stats_{annee}_{dj_timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        )
+        filename = f"prepa_stats_{annee}_{dj_timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
 
         response = HttpResponse(
             content,

@@ -34,50 +34,66 @@ class EvenementAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (_("Informations générales"), {
-            "fields": (
-                "formation",
-                "type_evenement",
-                "description_autre",
-                "event_date",
-                "lieu",
-                "details",
-            )
-        }),
-        (_("Participants"), {
-            "fields": (
-                "participants_prevus",
-                "participants_reels",
-                "taux_participation_affiche",
-            )
-        }),
-        (_("Statut calculé"), {
-            "fields": ("status_label_colore",),
-        }),
-        (_("Audit"), {
-            "fields": (
-                "created_by",
-                "updated_by",
-                "created_at",
-                "updated_at",
-            )
-        }),
+        (
+            _("Informations générales"),
+            {
+                "fields": (
+                    "formation",
+                    "type_evenement",
+                    "description_autre",
+                    "event_date",
+                    "lieu",
+                    "details",
+                )
+            },
+        ),
+        (
+            _("Participants"),
+            {
+                "fields": (
+                    "participants_prevus",
+                    "participants_reels",
+                    "taux_participation_affiche",
+                )
+            },
+        ),
+        (
+            _("Statut calculé"),
+            {
+                "fields": ("status_label_colore",),
+            },
+        ),
+        (
+            _("Audit"),
+            {
+                "fields": (
+                    "created_by",
+                    "updated_by",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
     )
 
     def formation_nom(self, obj):
         return obj.formation.nom if obj.formation else "-"
+
     formation_nom.short_description = "Formation"
 
     def type_evenement_display(self, obj):
         return obj.get_type_evenement_display()
+
     type_evenement_display.short_description = "Type"
 
     def taux_participation_affiche(self, obj):
         return f"{obj.taux_participation}%" if obj.taux_participation is not None else "N/A"
+
     taux_participation_affiche.short_description = "Taux de participation"
 
     def status_label_colore(self, obj):
         return format_html('<span class="{}">{}</span>', obj.status_color, obj.status_label)
+
     status_label_colore.short_description = "Statut"
 
     def save_model(self, request, obj, form, change):

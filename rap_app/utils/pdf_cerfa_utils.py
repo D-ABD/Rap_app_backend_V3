@@ -1,7 +1,9 @@
 import os
 from datetime import date, datetime
-from pdfrw import PdfReader, PdfWriter, PdfDict, PdfName, PdfObject
+
 from django.conf import settings
+from pdfrw import PdfDict, PdfName, PdfObject, PdfReader, PdfWriter
+
 from .constants_cerfa import CERFA_FIELD_MAP
 
 
@@ -11,9 +13,9 @@ def format_value(value):
         return value.strftime("%d/%m/%Y")
     if isinstance(value, bool):
         return "Oui" if value else "Non"
-    return str(value or "").strip() 
+    return str(value or "").strip()
 
- 
+
 def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
     """
     Remplit le CERFA 10103*14 avec les champs du modèle CerfaContrat.
@@ -55,17 +57,10 @@ def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
                 continue
             if field_name in data:
                 value = data[field_name]
-                annot.update(
-                    PdfDict(
-                        V=PdfObject(f"({value})"),
-                        Ff=1,
-                        AP=None
-                    )
-                )
+                annot.update(PdfDict(V=PdfObject(f"({value})"), Ff=1, AP=None))
 
     # 6️⃣ Sauvegarde du PDF
     PdfWriter().write(output_path, template_pdf)
 
     (f"✅ PDF CERFA généré (visible) : {output_path}")
     return output_path
- 

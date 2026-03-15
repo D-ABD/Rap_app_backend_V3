@@ -1,27 +1,30 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework.pagination import PageNumberPagination
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
-from ..serializers.formations_serializers import FormationListSerializer
-
-from ...models.formations import Formation
-from ...models.commentaires import Commentaire
 from ...models.centres import Centre
+from ...models.commentaires import Commentaire
 from ...models.custom_user import CustomUser
-from ...models.types_offre import TypeOffre
-from ...models.statut import Statut
+from ...models.formations import Formation
 from ...models.partenaires import Partenaire
-
-from ..serializers.commentaires_serializers import CommentaireSerializer
+from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
+from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 from ..serializers.centres_serializers import CentreSerializer
+from ..serializers.commentaires_serializers import CommentaireSerializer
+from ..serializers.formations_serializers import FormationListSerializer
 from ..serializers.login_logout_serializers import UserSerializer
-from ..serializers.types_offre_serializers import TypeOffreSerializer
-from ..serializers.statut_serializers import StatutSerializer
 from ..serializers.partenaires_serializers import PartenaireSerializer
+from ..serializers.statut_serializers import StatutSerializer
+from ..serializers.types_offre_serializers import TypeOffreSerializer
 
 
 class SmallPagination(PageNumberPagination):
@@ -45,7 +48,9 @@ Recherche un mot-clé dans les objets suivants :
     parameters=[
         OpenApiParameter(name="q", required=True, type=str, description="Mot-clé à rechercher"),
         OpenApiParameter(name="page", required=False, type=int, description="Pagination indépendante par ressource"),
-        OpenApiParameter(name="type_offre", required=False, type=int, description="Filtrer les formations par type d'offre"),
+        OpenApiParameter(
+            name="type_offre", required=False, type=int, description="Filtrer les formations par type d'offre"
+        ),
         OpenApiParameter(name="statut", required=False, type=int, description="Filtrer les formations par statut"),
         OpenApiParameter(name="centre", required=False, type=int, description="Filtrer les formations par centre"),
     ],
@@ -64,11 +69,11 @@ Recherche un mot-clé dans les objets suivants :
                         "types_offre": {"count": 1, "results": [{"id": 5, "nom": "initiale", "autre": ""}]},
                         "statuts": {"count": 1, "results": [{"id": 4, "nom": "pleine", "description_autre": ""}]},
                         "partenaires": {"count": 1, "results": [{"id": 9, "nom": "Mission locale"}]},
-                    }
+                    },
                 )
-            ]
+            ],
         )
-    }
+    },
 )
 class SearchView(APIView):
     """
@@ -76,6 +81,7 @@ class SearchView(APIView):
     centres, utilisateurs, statuts, types d'offre, partenaires) pour
     utilisateurs authentifiés, avec filtrage par rôle et centres.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -90,19 +96,35 @@ class SearchView(APIView):
 
         # Filtres secondaires sur les formations (dans l’URL)
         user = getattr(request, "user", None)
-        is_staff_or_admin = user and getattr(user, "is_authenticated", False) and (
-            is_admin_like(user) or is_staff_or_staffread(user)
+        is_staff_or_admin = (
+            user and getattr(user, "is_authenticated", False) and (is_admin_like(user) or is_staff_or_staffread(user))
         )
         if not is_staff_or_admin:
             response = {}
-            for key in ("formations", "commentaires", "centres", "utilisateurs", "types_offre", "statuts", "partenaires"):
+            for key in (
+                "formations",
+                "commentaires",
+                "centres",
+                "utilisateurs",
+                "types_offre",
+                "statuts",
+                "partenaires",
+            ):
                 response[key] = {"count": 0, "next": None, "previous": None, "results": []}
             return Response(response)
 
         centre_ids = get_staff_centre_ids_cached(request)
         if centre_ids is not None and len(centre_ids) == 0:
             response = {}
-            for key in ("formations", "commentaires", "centres", "utilisateurs", "types_offre", "statuts", "partenaires"):
+            for key in (
+                "formations",
+                "commentaires",
+                "centres",
+                "utilisateurs",
+                "types_offre",
+                "statuts",
+                "partenaires",
+            ):
                 response[key] = {"count": 0, "next": None, "previous": None, "results": []}
             return Response(response)
 
@@ -120,9 +142,7 @@ class SearchView(APIView):
             return paginator.get_paginated_response(serializer_class(page, many=True).data).data
 
         # Formations (filtre texte et filtres annexes)
-        formations = Formation.objects.filter(
-            Q(nom__icontains=query) | Q(num_offre__icontains=query)
-        )
+        formations = Formation.objects.filter(Q(nom__icontains=query) | Q(num_offre__icontains=query))
         if centre_ids is not None:
             formations = formations.filter(centre_id__in=centre_ids)
         if filtre_type:
@@ -157,9 +177,7 @@ class SearchView(APIView):
 
         # Utilisateurs (filtre sur prénom, nom ou username), restreints aux centres autorisés
         utilisateurs_qs = CustomUser.objects.filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(username__icontains=query)
+            Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(username__icontains=query)
         )
         if centre_ids is not None:
             utilisateurs_qs = utilisateurs_qs.filter(centres__id__in=centre_ids).distinct()
@@ -167,18 +185,12 @@ class SearchView(APIView):
 
         # Types d’offre (filtre sur le nom ou le champ "autre")
         response["types_offre"] = paginate_and_serialize(
-            TypeOffre.objects.filter(
-                Q(nom__icontains=query) | Q(autre__icontains=query)
-            ),
-            TypeOffreSerializer
+            TypeOffre.objects.filter(Q(nom__icontains=query) | Q(autre__icontains=query)), TypeOffreSerializer
         )
 
         # Statuts (filtre sur nom ou description_autre)
         response["statuts"] = paginate_and_serialize(
-            Statut.objects.filter(
-                Q(nom__icontains=query) | Q(description_autre__icontains=query)
-            ),
-            StatutSerializer
+            Statut.objects.filter(Q(nom__icontains=query) | Q(description_autre__icontains=query)), StatutSerializer
         )
 
         # Partenaires (filtre sur nom), restreints par default_centre pour le staff

@@ -1,11 +1,14 @@
 import logging
+
 from django.db import transaction
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+
 from ..models.commentaires import Commentaire
 from ..models.formations import Formation
 
 logger = logging.getLogger(__name__)
+
 
 def update_formation_stats_on_save(commentaire: Commentaire):
     """
@@ -18,35 +21,33 @@ def update_formation_stats_on_save(commentaire: Commentaire):
                 return
 
             updates = {}
-            
+
             # Met à jour la saturation si elle est renseignée sur le commentaire
             if commentaire.saturation is not None:
-                updates['saturation'] = commentaire.saturation
-                logger.info(
-                    f"Saturation mise à jour sur formation #{formation.id} → {commentaire.saturation}%"
-                )
-            
+                updates["saturation"] = commentaire.saturation
+                logger.info(f"Saturation mise à jour sur formation #{formation.id} → {commentaire.saturation}%")
+
             # Met à jour le champ dernier_commentaire avec le dernier commentaire lié à la formation
-            dernier = Commentaire.objects.filter(formation=formation).order_by('-created_at').first()
+            dernier = Commentaire.objects.filter(formation=formation).order_by("-created_at").first()
             if dernier:
-                updates['dernier_commentaire'] = dernier.contenu
-            
+                updates["dernier_commentaire"] = dernier.contenu
+
             # Calcule la saturation moyenne si le champ existe sur la formation
-            if hasattr(formation, 'saturation_moyenne'):
+            if hasattr(formation, "saturation_moyenne"):
                 from django.db.models import Avg
+
                 saturation_avg = (
-                    Commentaire.objects.filter(
-                        formation=formation, 
-                        saturation__isnull=False
-                    ).aggregate(Avg('saturation')).get('saturation__avg')
+                    Commentaire.objects.filter(formation=formation, saturation__isnull=False)
+                    .aggregate(Avg("saturation"))
+                    .get("saturation__avg")
                 )
-                updates['saturation_moyenne'] = saturation_avg
+                updates["saturation_moyenne"] = saturation_avg
                 logger.info(f"Saturation moyenne calculée: {saturation_avg}%")
-            
+
             # Met à jour le nombre de commentaires si le champ existe sur la formation
-            if hasattr(formation, 'nb_commentaires'):
+            if hasattr(formation, "nb_commentaires"):
                 nb_commentaires = Commentaire.objects.filter(formation=formation).count()
-                updates['nb_commentaires'] = nb_commentaires
+                updates["nb_commentaires"] = nb_commentaires
                 logger.info(f"Nombre de commentaires mis à jour: {nb_commentaires}")
 
             if updates:
@@ -69,30 +70,31 @@ def update_formation_stats_on_delete(commentaire: Commentaire):
             logger.info(f"Commentaire supprimé, mise à jour formation #{formation.id}")
 
             updates = {}
-            dernier = Commentaire.objects.filter(formation=formation).order_by('-created_at').first()
+            dernier = Commentaire.objects.filter(formation=formation).order_by("-created_at").first()
             contenu = dernier.contenu if dernier else ""
-            updates['dernier_commentaire'] = contenu
+            updates["dernier_commentaire"] = contenu
 
-            if hasattr(formation, 'saturation_moyenne'):
+            if hasattr(formation, "saturation_moyenne"):
                 from django.db.models import Avg
+
                 saturation_avg = (
-                    Commentaire.objects.filter(
-                        formation=formation, 
-                        saturation__isnull=False
-                    ).aggregate(Avg('saturation')).get('saturation__avg')
+                    Commentaire.objects.filter(formation=formation, saturation__isnull=False)
+                    .aggregate(Avg("saturation"))
+                    .get("saturation__avg")
                 )
-                updates['saturation_moyenne'] = saturation_avg
+                updates["saturation_moyenne"] = saturation_avg
                 logger.info(f"Saturation moyenne recalculée: {saturation_avg}%")
-            
-            if hasattr(formation, 'nb_commentaires'):
+
+            if hasattr(formation, "nb_commentaires"):
                 nb_commentaires = Commentaire.objects.filter(formation=formation).count()
-                updates['nb_commentaires'] = nb_commentaires
+                updates["nb_commentaires"] = nb_commentaires
                 logger.info(f"Nombre de commentaires mis à jour: {nb_commentaires}")
-            
+
             Formation.objects.filter(id=formation.id).update(**updates)
             logger.debug(f"Statistiques recalculées sur formation #{formation.id}")
     except Exception as e:
         logger.error(f"Erreur post_delete Commentaire : {e}", exc_info=True)
+
 
 @receiver(post_save, sender=Commentaire, dispatch_uid="rap_app.commentaire_signals.commentaire_post_save")
 def commentaire_post_save(sender, instance, created, **kwargs):

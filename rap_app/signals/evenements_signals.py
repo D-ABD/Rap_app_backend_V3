@@ -1,14 +1,17 @@
-import sys
 import logging
-from django.db import transaction
-from django.utils.timezone import now
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from django.apps import apps
+import sys
 
+from django.apps import apps
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+from django.utils.timezone import now
+
+from ..middleware import (
+    get_current_user,  # ThreadLocalMiddleware pour récupérer l'utilisateur
+)
 from ..models.evenements import Evenement
 from ..models.formations import Formation, HistoriqueFormation
-from ..middleware import get_current_user  # ThreadLocalMiddleware pour récupérer l'utilisateur
 
 logger = logging.getLogger("rap_app.evenements")
 
@@ -17,7 +20,7 @@ def skip_during_migrations() -> bool:
     """
     Retourne True si l'application est en cours de migration.
     """
-    return not apps.ready or 'migrate' in sys.argv or 'makemigrations' in sys.argv
+    return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
 def get_user_from_instance(instance):
@@ -37,10 +40,7 @@ def maj_nombre_evenements(formation: Formation, operation: str, user=None):
             ancien_total = Formation.objects.only("nombre_evenements").get(pk=formation.pk).nombre_evenements or 0
 
             if ancien_total != nouveau_total:
-                Formation.objects.filter(pk=formation.pk).update(
-                    nombre_evenements=nouveau_total,
-                    updated_at=now()
-                )
+                Formation.objects.filter(pk=formation.pk).update(nombre_evenements=nouveau_total, updated_at=now())
 
                 logger.info(
                     f"MAJ nombre_evenements pour Formation #{formation.pk} : {ancien_total} → {nouveau_total} ({operation})"
@@ -59,8 +59,7 @@ def maj_nombre_evenements(formation: Formation, operation: str, user=None):
 
     except Exception as e:
         logger.error(
-            f"Erreur lors de la MAJ du nombre_evenements pour Formation #{formation.pk} : {str(e)}",
-            exc_info=True
+            f"Erreur lors de la MAJ du nombre_evenements pour Formation #{formation.pk} : {str(e)}", exc_info=True
         )
 
 

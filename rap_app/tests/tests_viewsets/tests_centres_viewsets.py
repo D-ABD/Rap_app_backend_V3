@@ -1,10 +1,10 @@
-from rest_framework import status
 from django.urls import reverse
+from rest_framework import status
 
 from ...models.centres import Centre
-from ..test_utils import AuthenticatedTestCase
-from ..factories import UserFactory
 from ...models.custom_user import CustomUser
+from ..factories import UserFactory
+from ..test_utils import AuthenticatedTestCase
 
 
 class CentreViewSetTestCase(AuthenticatedTestCase):

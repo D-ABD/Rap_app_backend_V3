@@ -4,6 +4,7 @@ Tests de l'endpoint de santé GET /api/health/.
 Vérifie que l'endpoint renvoie 200 OK sans authentification et que la réponse
 contient les champs attendus (status, database, timestamp).
 """
+
 import pytest
 from django.urls import reverse
 from rest_framework import status

@@ -1,17 +1,18 @@
 # rap_app/admin/declic_admin.py
 import logging
+from io import BytesIO
+
 from django.contrib import admin, messages
+from django.contrib.admin import SimpleListFilter
 from django.http import HttpResponse
 from django.utils.html import format_html
 from django.utils.timezone import localtime
-from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from django.contrib.admin import SimpleListFilter
 
-from ..models.declic import Declic, ObjectifDeclic
 from ..models.centres import Centre
+from ..models.declic import Declic, ObjectifDeclic
 
 logger = logging.getLogger("rap_app.admin.declic")
 
@@ -55,8 +56,13 @@ def export_declic_xlsx(modeladmin, request, queryset):
     ws.append([])
 
     headers = [
-        "ID", "Type atelier", "Date", "Centre",
-        "Inscrits", "Présents", "Absents",
+        "ID",
+        "Type atelier",
+        "Date",
+        "Centre",
+        "Inscrits",
+        "Présents",
+        "Absents",
         "Taux présence (%)",
     ]
     ws.append(headers)
@@ -76,16 +82,18 @@ def export_declic_xlsx(modeladmin, request, queryset):
         cell.border = border
 
     for obj in queryset:
-        ws.append([
-            obj.id,
-            obj.get_type_declic_display(),
-            obj.date_declic.strftime("%d/%m/%Y") if obj.date_declic else "",
-            getattr(obj.centre, "nom", "—"),
-            obj.nb_inscrits_declic,
-            obj.nb_presents_declic,
-            obj.nb_absents_declic,
-            obj.taux_presence_declic,
-        ])
+        ws.append(
+            [
+                obj.id,
+                obj.get_type_declic_display(),
+                obj.date_declic.strftime("%d/%m/%Y") if obj.date_declic else "",
+                getattr(obj.centre, "nom", "—"),
+                obj.nb_inscrits_declic,
+                obj.nb_presents_declic,
+                obj.nb_absents_declic,
+                obj.taux_presence_declic,
+            ]
+        )
         for cell in ws[ws.max_row]:
             cell.border = border
             cell.font = Font(size=10)
@@ -101,8 +109,7 @@ def export_declic_xlsx(modeladmin, request, queryset):
     buf.seek(0)
 
     response = HttpResponse(
-        buf.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     response["Content-Disposition"] = 'attachment; filename="declic_ateliers.xlsx"'
     return response
@@ -115,14 +122,17 @@ class ObjectifDeclicAdmin(admin.ModelAdmin):
     # 👉 Méthodes d’affichage (déclarées AVANT)
     def taux_atteinte_display(self, obj):
         return f"{obj.taux_atteinte:.1f} %" if obj.taux_atteinte else "—"
+
     taux_atteinte_display.short_description = "Taux atteinte"
 
     def reste_a_faire_display(self, obj):
         return obj.reste_a_faire or 0
+
     reste_a_faire_display.short_description = "Reste à faire"
 
     def updated_at_display(self, obj):
         return localtime(obj.updated_at).strftime("%d/%m/%Y %H:%M") if obj.updated_at else "—"
+
     updated_at_display.short_description = "Modifié le"
 
     # 👉 Maintenant on peut les utiliser :
@@ -149,16 +159,21 @@ class ObjectifDeclicAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (None, {
-            "fields": ("centre", "annee", "valeur_objectif", "commentaire")
-        }),
-        ("📊 Données calculées", {
-            "fields": ("taux_atteinte_display", "reste_a_faire_display"),
-        }),
-        ("🕒 Métadonnées", {
-            "fields": ("created_at", "updated_at", "created_by", "updated_by"),
-        }),
+        (None, {"fields": ("centre", "annee", "valeur_objectif", "commentaire")}),
+        (
+            "📊 Données calculées",
+            {
+                "fields": ("taux_atteinte_display", "reste_a_faire_display"),
+            },
+        ),
+        (
+            "🕒 Métadonnées",
+            {
+                "fields": ("created_at", "updated_at", "created_by", "updated_by"),
+            },
+        ),
     )
+
 
 # -------------------------------------------------------------------
 # 📊 ADMIN DÉCLIC (ATELIERS UNIQUEMENT)
@@ -182,15 +197,9 @@ class DeclicAdmin(admin.ModelAdmin):
     actions = [export_declic_xlsx]
 
     fieldsets = (
-        ("📅 Informations générales", {
-            "fields": ("type_declic", "date_declic", "centre", "commentaire")
-        }),
-        ("🧩 Données Ateliers Déclic", {
-            "fields": ("nb_inscrits_declic", "nb_presents_declic", "nb_absents_declic")
-        }),
-        ("🕒 Métadonnées", {
-            "fields": ("created_at", "updated_at", "created_by", "updated_by")
-        }),
+        ("📅 Informations générales", {"fields": ("type_declic", "date_declic", "centre", "commentaire")}),
+        ("🧩 Données Ateliers Déclic", {"fields": ("nb_inscrits_declic", "nb_presents_declic", "nb_absents_declic")}),
+        ("🕒 Métadonnées", {"fields": ("created_at", "updated_at", "created_by", "updated_by")}),
     )
 
     # Affichage
@@ -206,5 +215,5 @@ class DeclicAdmin(admin.ModelAdmin):
     def type_badge(self, obj):
         return format_html(
             f'<span style="color:white; background:#6a1b9a; padding:2px 8px; border-radius:5px;">'
-            f'{obj.get_type_declic_display()}</span>'
+            f"{obj.get_type_declic_display()}</span>"
         )

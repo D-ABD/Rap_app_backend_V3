@@ -1,14 +1,18 @@
-from rest_framework import viewsets, status, permissions, filters
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.exceptions import ValidationError
-from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from ...models.candidat import Candidat
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
+from ...models.logs import LogUtilisateur
 from ...utils.filters import UserFilterSet
 from ..permissions import ReadWriteAdminReadStaff
 from ..serializers.user_profil_serializers import (
@@ -16,10 +20,6 @@ from ..serializers.user_profil_serializers import (
     RegistrationSerializer,
     RoleChoiceSerializer,
 )
-from ...models.custom_user import CustomUser
-from ...models.logs import LogUtilisateur
-from ...models.candidat import Candidat
-from ...models.formations import Formation
 
 
 @extend_schema(
@@ -65,6 +65,7 @@ class RegisterView(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+
 def _ensure_candidate_for_user(user: CustomUser, formation_id: int | None) -> Candidat:
     """
     Garantit l'existence d'un candidat lié à l'utilisateur et associe
@@ -96,6 +97,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
     et vues utilitaires) avec scoping par centres et permissions
     ReadWriteAdminReadStaff.
     """
+
     queryset = CustomUser.objects.select_related("candidat_associe__formation")
     serializer_class = CustomUserSerializer
     # Permissions détaillées ci-dessus. Classe non visible.
@@ -126,8 +128,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
             if not centre_ids:
                 return qs.none()
             return qs.filter(
-                Q(centres__in=centre_ids) |
-                Q(candidat_associe__formation__centre_id__in=centre_ids)
+                Q(centres__in=centre_ids) | Q(candidat_associe__formation__centre_id__in=centre_ids)
             ).distinct()
 
         # Non-staff : accès interdit côté filtre métier (présumé interdit par la permission globale également).
@@ -143,7 +144,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
 
     # -------------------------------------------------------
 
-    @action(detail=False, methods=["delete"], url_path="delete-account", permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=False, methods=["delete"], url_path="delete-account", permission_classes=[permissions.IsAuthenticated]
+    )
     @extend_schema(
         summary="Supprimer mon compte (RGPD)",
         description="Supprime définitivement toutes les données personnelles de l'utilisateur connecté.",
@@ -431,8 +434,10 @@ class CustomUserViewSet(viewsets.ModelViewSet):
 
         formations_qs = Formation.objects.select_related("centre", "type_offre").order_by("nom")
         u = request.user
-        if getattr(u, "is_staff", False) and not getattr(u, "is_superuser", False) and not (
-            hasattr(u, "is_admin") and u.is_admin()
+        if (
+            getattr(u, "is_staff", False)
+            and not getattr(u, "is_superuser", False)
+            and not (hasattr(u, "is_admin") and u.is_admin())
         ):
             centre_ids = u.centres.values_list("id", flat=True)
             formations_qs = formations_qs.filter(centre_id__in=centre_ids)
@@ -471,6 +476,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
                 },
             }
         )
+
 
 class RoleChoicesView(APIView):
     """

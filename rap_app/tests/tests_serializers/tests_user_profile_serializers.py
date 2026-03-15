@@ -1,8 +1,10 @@
 # tests/test_custom_user_serializers.py
 
 from django.test import TestCase
-from ...models.custom_user import CustomUser
+
 from ...api.serializers.user_profil_serializers import CustomUserSerializer
+from ...models.custom_user import CustomUser
+
 
 class CustomUserSerializerTestCase(TestCase):
     def setUp(self):
@@ -61,11 +63,7 @@ class CustomUserSerializerTestCase(TestCase):
         """
         user = CustomUser.objects.create_user(**self.valid_data)
         serializer = CustomUserSerializer(instance=user)
-        output = {
-            "success": True,
-            "message": "Utilisateur sérialisé avec succès.",
-            "data": serializer.data
-        }
+        output = {"success": True, "message": "Utilisateur sérialisé avec succès.", "data": serializer.data}
 
         self.assertIn("success", output)
         self.assertIn("message", output)

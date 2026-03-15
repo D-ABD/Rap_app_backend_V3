@@ -1,9 +1,13 @@
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
-from rest_framework import serializers
-from django.utils.translation import gettext_lazy as _
 from django.utils.html import strip_tags
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.commentaires import Commentaire
 
@@ -222,6 +226,7 @@ class CommentaireMetaSerializer(serializers.Serializer):
     Expose les constantes du module commentaire (saturation_min, saturation_max, preview_default_length, recent_default_days) pour le front.
     Lecture seule ; valeurs issues de la classe Commentaire.
     """
+
     saturation_min = serializers.IntegerField(read_only=True)
     saturation_max = serializers.IntegerField(read_only=True)
     preview_default_length = serializers.IntegerField(read_only=True)

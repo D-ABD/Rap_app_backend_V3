@@ -1,13 +1,15 @@
 # models/logs.py
 from __future__ import annotations
-import re
+
 import logging
+import re
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
 from django.conf import settings
-from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
 from django.utils.translation import gettext_lazy as _
-from typing import Optional, Dict, Any, TYPE_CHECKING
 
 from .base import BaseModel
 
@@ -24,46 +26,31 @@ class LogUtilisateur(BaseModel):
     Enregistre les actions des utilisateurs sur des objets avec ContentType et object_id.
     """
 
-    ACTION_CREATE = 'création'
-    ACTION_UPDATE = 'modification'
-    ACTION_DELETE = 'suppression'
-    ACTION_VIEW = 'consultation'
-    ACTION_LOGIN = 'connexion'
-    ACTION_LOGOUT = 'déconnexion'
-    ACTION_EXPORT = 'export'
-    ACTION_IMPORT = 'import'
+    ACTION_CREATE = "création"
+    ACTION_UPDATE = "modification"
+    ACTION_DELETE = "suppression"
+    ACTION_VIEW = "consultation"
+    ACTION_LOGIN = "connexion"
+    ACTION_LOGOUT = "déconnexion"
+    ACTION_EXPORT = "export"
+    ACTION_IMPORT = "import"
 
     content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
-        related_name="logs_utilisateurs",
-        verbose_name=_("Type d'objet")
+        ContentType, on_delete=models.CASCADE, related_name="logs_utilisateurs", verbose_name=_("Type d'objet")
     )
 
-    object_id = models.PositiveIntegerField(
-        verbose_name=_("ID de l'objet"),
-        null=True,
-        blank=True
-    )
+    object_id = models.PositiveIntegerField(verbose_name=_("ID de l'objet"), null=True, blank=True)
 
-    content_object = GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey("content_type", "object_id")
 
-    action = models.CharField(
-        max_length=255,
-        verbose_name=_("Action"),
-        db_index=True
-    )
+    action = models.CharField(max_length=255, verbose_name=_("Action"), db_index=True)
 
-    details = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name=_("Détails")
-    )
+    details = models.TextField(blank=True, null=True, verbose_name=_("Détails"))
 
     class Meta:
         verbose_name = _("Log utilisateur")
         verbose_name_plural = _("Logs utilisateurs")
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["content_type", "object_id"]),
             models.Index(fields=["created_at"]),
@@ -80,20 +67,20 @@ class LogUtilisateur(BaseModel):
         if not details:
             return details
 
-        sensitive_fields = getattr(settings, 'LOG_SENSITIVE_FIELDS',
-                                ['password', 'token', 'secret', 'api_key'])
+        sensitive_fields = getattr(settings, "LOG_SENSITIVE_FIELDS", ["password", "token", "secret", "api_key"])
 
         pattern = re.compile(
-            r'([\'"]?(' + '|'.join(sensitive_fields) + r')[\'"]?\s*[:=]\s*)[\'"]?([^\'"\s,}]+)[\'"]?',
-            flags=re.IGNORECASE
+            r'([\'"]?(' + "|".join(sensitive_fields) + r')[\'"]?\s*[:=]\s*)[\'"]?([^\'"\s,}]+)[\'"]?',
+            flags=re.IGNORECASE,
         )
 
         sanitized = pattern.sub(r'\1"*****"', details)
         return sanitized
 
     @classmethod
-    def log_action(cls, instance: models.Model, action: str,
-                user: Optional['User'] = None, details: str = "") -> Optional['LogUtilisateur']:
+    def log_action(
+        cls, instance: models.Model, action: str, user: Optional["User"] = None, details: str = ""
+    ) -> Optional["LogUtilisateur"]:
         """
         Crée un log pour une action sur un objet, ou retourne None en cas de doublon.
         Masque les champs sensibles dans details.
@@ -102,10 +89,7 @@ class LogUtilisateur(BaseModel):
             content_type = ContentType.objects.get_for_model(instance)
 
             if cls.objects.filter(
-                content_type=content_type,
-                object_id=instance.pk,
-                action=action,
-                created_by=user
+                content_type=content_type, object_id=instance.pk, action=action, created_by=user
             ).exists():
                 return None
 
@@ -113,11 +97,7 @@ class LogUtilisateur(BaseModel):
                 details = cls.sanitize_details(details)
 
             log = cls.objects.create(
-                content_type=content_type,
-                object_id=instance.pk,
-                action=action,
-                details=details,
-                created_by=user
+                content_type=content_type, object_id=instance.pk, action=action, details=details, created_by=user
             )
             return log
         except Exception as e:
@@ -125,8 +105,9 @@ class LogUtilisateur(BaseModel):
             return None
 
     @classmethod
-    def log_system_action(cls, action: str, user: Optional['User'] = None,
-                        details: str = "") -> Optional['LogUtilisateur']:
+    def log_system_action(
+        cls, action: str, user: Optional["User"] = None, details: str = ""
+    ) -> Optional["LogUtilisateur"]:
         """
         Crée un log système sans objet ciblé.
         Masque les champs sensibles dans details.
@@ -138,11 +119,7 @@ class LogUtilisateur(BaseModel):
             content_type = ContentType.objects.get_for_model(LogUtilisateur)
 
             log = cls.objects.create(
-                content_type=content_type,
-                object_id=None,
-                action=action,
-                details=details,
-                created_by=user
+                content_type=content_type, object_id=None, action=action, details=details, created_by=user
             )
 
             return log

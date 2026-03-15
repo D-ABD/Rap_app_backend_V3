@@ -1,16 +1,18 @@
 # viewsets/typeoffre_viewsets.py
 
-from rest_framework import viewsets, status, filters
-from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+from rest_framework.response import Response
 
-from ...api.serializers.types_offre_serializers import TypeOffreChoiceSerializer, TypeOffreSerializer
-from ...models.types_offre import TypeOffre
-
+from ...api.serializers.types_offre_serializers import (
+    TypeOffreChoiceSerializer,
+    TypeOffreSerializer,
+)
 from ...models.logs import LogUtilisateur
-from ..permissions import ReadWriteAdminReadStaff
+from ...models.types_offre import TypeOffre
 from ..paginations import RapAppPagination
+from ..permissions import ReadWriteAdminReadStaff
 
 
 @extend_schema_view(
@@ -71,14 +73,13 @@ class TypeOffreViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_CREATE,
             user=request.user,
-            details=f"Création du type d'offre : {instance}"
+            details=f"Création du type d'offre : {instance}",
         )
 
-        return Response({
-            "success": True,
-            "message": "Type d'offre créé avec succès.",
-            "data": self.get_serializer(instance).data
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {"success": True, "message": "Type d'offre créé avec succès.", "data": self.get_serializer(instance).data},
+            status=status.HTTP_201_CREATED,
+        )
 
     def update(self, request, *args, **kwargs):
         """
@@ -95,14 +96,16 @@ class TypeOffreViewSet(viewsets.ModelViewSet):
             instance=updated_instance,
             action=LogUtilisateur.ACTION_UPDATE,
             user=request.user,
-            details=f"Mise à jour du type d'offre : {updated_instance}"
+            details=f"Mise à jour du type d'offre : {updated_instance}",
         )
 
-        return Response({
-            "success": True,
-            "message": "Type d'offre mis à jour avec succès.",
-            "data": self.get_serializer(updated_instance).data
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Type d'offre mis à jour avec succès.",
+                "data": self.get_serializer(updated_instance).data,
+            }
+        )
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -115,24 +118,24 @@ class TypeOffreViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
             user=request.user,
-            details=f"Suppression logique du type d'offre : {instance}"
+            details=f"Suppression logique du type d'offre : {instance}",
         )
-        return Response({
-            "success": True,
-            "message": "Type d'offre supprimé avec succès.",
-            "data": None
-        }, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"success": True, "message": "Type d'offre supprimé avec succès.", "data": None},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
-# views/typeoffre_viewsets.py
+    # views/typeoffre_viewsets.py
 
     @extend_schema(
         summary="📋 Liste des choix possibles de types d'offres",
         description="Retourne les valeurs possibles pour `nom`, avec libellé et couleur par défaut.",
         tags=["TypesOffre"],
-        responses={200: OpenApiResponse(
-            response=TypeOffreChoiceSerializer(many=True),
-            description="Liste des types d'offres disponibles"
-        )}
+        responses={
+            200: OpenApiResponse(
+                response=TypeOffreChoiceSerializer(many=True), description="Liste des types d'offres disponibles"
+            )
+        },
     )
     @action(detail=False, methods=["get"], url_path="choices", url_name="choices")
     def get_choices(self, request):
@@ -141,15 +144,7 @@ class TypeOffreViewSet(viewsets.ModelViewSet):
         couleur par défaut) pour alimenter les sélecteurs métier.
         """
         data = [
-            {
-                "value": key,
-                "label": label,
-                "default_color": TypeOffre.COULEURS_PAR_DEFAUT.get(key, "#6c757d")
-            }
+            {"value": key, "label": label, "default_color": TypeOffre.COULEURS_PAR_DEFAUT.get(key, "#6c757d")}
             for key, label in TypeOffre.TYPE_OFFRE_CHOICES
         ]
-        return Response({
-            "success": True,
-            "message": "Liste des types d'offres prédéfinis.",
-            "data": data
-        })
+        return Response({"success": True, "message": "Liste des types d'offres prédéfinis.", "data": data})

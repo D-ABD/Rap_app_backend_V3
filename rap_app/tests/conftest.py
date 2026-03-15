@@ -17,6 +17,7 @@ Configuration pytest partagée pour les tests Rap App.
 - Factories : UserFactory et LogUtilisateurFactory sont disponibles
   (voir rap_app/tests/factories.py). Import : from rap_app.tests.factories import UserFactory, LogUtilisateurFactory
 """
+
 import pytest
 
 
@@ -24,6 +25,7 @@ import pytest
 def user_factory():
     """Expose UserFactory pour les tests qui préfèrent une fixture."""
     from .factories import UserFactory
+
     return UserFactory
 
 
@@ -31,6 +33,7 @@ def user_factory():
 def log_factory():
     """Expose LogUtilisateurFactory pour les tests."""
     from .factories import LogUtilisateurFactory
+
     return LogUtilisateurFactory
 
 

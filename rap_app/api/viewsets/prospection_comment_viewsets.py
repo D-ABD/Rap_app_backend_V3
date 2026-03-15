@@ -1,54 +1,45 @@
 # apps/.../api/viewsets/prospection_comment_viewsets.py
+import datetime
 import logging
-from django.db.models import Q
-from rest_framework import viewsets, filters
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import (
-    extend_schema,
-    extend_schema_view,
-    OpenApiParameter,
-    OpenApiResponse,
-)
-from rest_framework.decorators import action
 from io import BytesIO
 from pathlib import Path
-import datetime
-from django.http import HttpResponse
-from django.utils import timezone as dj_timezone
+
 from django.conf import settings
+from django.db.models import Q
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.drawing.image import Image as XLImage
-from weasyprint import HTML
-from django.template.loader import render_to_string
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from io import BytesIO
-from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
-import datetime
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from weasyprint import HTML
 
-from ..paginations import RapAppPagination
 from ...models.prospection import HistoriqueProspection
 from ...models.prospection_comments import ProspectionComment
-from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
+from ..paginations import RapAppPagination
 from ..permissions import IsOwnerOrStaffOrAbove
 from ..roles import (
+    is_admin_like,
     is_candidate,
     is_staff_like,
-    is_admin_like,
     is_staff_or_staffread,
-    staff_centre_ids,
     role_of,
+    staff_centre_ids,
 )
+from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
 
 logger = logging.getLogger("PROSPECTION_COMMENT")
 
@@ -91,7 +82,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
     )
     serializer_class = ProspectionCommentSerializer
     permission_classes = [IsOwnerOrStaffOrAbove]
-    pagination_class = RapAppPagination  
+    pagination_class = RapAppPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -135,9 +126,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
 
         # 🔹 Filtrage par rôle
         if is_candidate(u):
-            qs = qs.filter(prospection__owner_id=u.id).filter(
-                Q(is_internal=False) | Q(created_by_id=u.id)
-            )
+            qs = qs.filter(prospection__owner_id=u.id).filter(Q(is_internal=False) | Q(created_by_id=u.id))
         elif is_staff_like(u):
             centre_ids = staff_centre_ids(u) or []
             if centre_ids:
@@ -148,11 +137,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                     | Q(created_by=u)
                 ).distinct()
             else:
-                qs = qs.filter(
-                    Q(prospection__owner=u)
-                    | Q(prospection__created_by=u)
-                    | Q(created_by=u)
-                ).distinct()
+                qs = qs.filter(Q(prospection__owner=u) | Q(prospection__created_by=u) | Q(created_by=u)).distinct()
         elif not is_admin_like(u):
             return base.none()
 
@@ -203,7 +188,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(prospection__partenaire_id=partenaire_id)
 
         return qs.order_by("-updated_at", "-created_at", "-id").distinct()
-    
+
     @action(detail=False, methods=["get"], url_path="filter-options")
     def filter_options(self, request):
         """
@@ -237,11 +222,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         ("[DEBUG filter_options] partenaires =", list(partenaires))
 
         # Récup auteurs
-        authors = (
-            base_qs.filter(created_by__isnull=False)
-            .values_list("created_by__username", flat=True)
-            .distinct()
-        )
+        authors = base_qs.filter(created_by__isnull=False).values_list("created_by__username", flat=True).distinct()
         authors_choices = [{"value": a, "label": a} for a in authors if a]
         ("[DEBUG filter_options] authors =", list(authors))
 
@@ -263,9 +244,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         owners_list = list(owners)
         ("[DEBUG filter_options] owners =", owners_list)
 
-        owners_choices = [
-            {"value": oid, "label": uname} for oid, uname in owners_list if oid and uname
-        ]
+        owners_choices = [{"value": oid, "label": uname} for oid, uname in owners_list if oid and uname]
 
         return Response(
             {
@@ -276,7 +255,6 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                 "owners": owners_choices,
             }
         )
-    
 
     def list(self, request, *args, **kwargs):
         """
@@ -315,12 +293,14 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                     item["formation_centre_nom"] = None
                     item["formation_type_offre_nom"] = None
 
-            response = Response({
-                "count": len(data),
-                "next": None,
-                "previous": None,
-                "results": data,
-            })
+            response = Response(
+                {
+                    "count": len(data),
+                    "next": None,
+                    "previous": None,
+                    "results": data,
+                }
+            )
 
         # extra headers si tu veux les garder
         response["X-PC-Role"] = role_of(request.user)
@@ -341,18 +321,13 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         # idem : enrichissement uniquement pour centre + type_offre
         formation = getattr(obj.prospection, "formation", None)
         if formation:
-            data["formation_centre_nom"] = getattr(
-                getattr(formation, "centre", None), "nom", None
-            )
-            data["formation_type_offre_nom"] = getattr(
-                getattr(formation, "type_offre", None), "nom", None
-            )
+            data["formation_centre_nom"] = getattr(getattr(formation, "centre", None), "nom", None)
+            data["formation_type_offre_nom"] = getattr(getattr(formation, "type_offre", None), "nom", None)
         else:
             data["formation_centre_nom"] = None
             data["formation_type_offre_nom"] = None
 
         return Response(data)
-    
 
     def perform_create(self, serializer):
         """
@@ -417,7 +392,6 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("Vous ne pouvez pas supprimer ce commentaire.")
         return super().destroy(request, *args, **kwargs)
 
-
     # ------------------------------------------------------------------
     # 🔒 ARCHIVER / DÉSARCHIVER un commentaire
     # ------------------------------------------------------------------
@@ -434,7 +408,6 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         comment.archiver(save=True)
         logger.info("Commentaire #%s archivé par %s", comment.pk, request.user)
         return Response({"detail": "Commentaire archivé."}, status=status.HTTP_200_OK)
-
 
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
@@ -503,8 +476,14 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         # 📋 En-têtes
         # ==========================================================
         headers = [
-            "ID", "Statut du commentaire", "Prospection", "Partenaire", "Formation",
-            "Auteur", "Commentaire", "Créé le",
+            "ID",
+            "Statut du commentaire",
+            "Prospection",
+            "Partenaire",
+            "Formation",
+            "Auteur",
+            "Commentaire",
+            "Créé le",
         ]
         ws.append(headers)
 
@@ -568,7 +547,6 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         response["Content-Length"] = len(binary)
         return response
 
-
     # ------------------------------------------------------------------
     # 📄 EXPORT PDF — Commentaires de prospection
     # ------------------------------------------------------------------
@@ -604,29 +582,31 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
             partenaire = getattr(prosp, "partenaire", None)
             statut_display = dict(c.STATUT_CHOICES).get(c.statut_commentaire, c.statut_commentaire)
 
-            commentaires_data.append({
-                "id": c.id,
-                "statut_commentaire": statut_display,
-                "body": c.body or "",
-                "created_by": getattr(c.created_by, "username", "—"),
-                "created_at": c.created_at,
-                "activite": getattr(c, "activite", ""),
-                "prospection": {
-                    "id": getattr(prosp, "id", None),
-                    "date_prospection": getattr(prosp, "date_prospection", None),
-                    "statut": getattr(prosp, "statut_display", getattr(prosp, "statut", None)),
-                },
-                "formation": {
-                    "nom": getattr(formation, "nom", None),
-                    "centre_nom": getattr(getattr(formation, "centre", None), "nom", None),
-                    "start_date": getattr(formation, "date_debut", getattr(formation, "start_date", None)),
-                    "end_date": getattr(formation, "date_fin", getattr(formation, "end_date", None)),
-                    "type_offre": getattr(getattr(formation, "type_offre", None), "nom", None),
-                },
-                "partenaire": {
-                    "nom": getattr(partenaire, "nom", None),
-                },
-            })
+            commentaires_data.append(
+                {
+                    "id": c.id,
+                    "statut_commentaire": statut_display,
+                    "body": c.body or "",
+                    "created_by": getattr(c.created_by, "username", "—"),
+                    "created_at": c.created_at,
+                    "activite": getattr(c, "activite", ""),
+                    "prospection": {
+                        "id": getattr(prosp, "id", None),
+                        "date_prospection": getattr(prosp, "date_prospection", None),
+                        "statut": getattr(prosp, "statut_display", getattr(prosp, "statut", None)),
+                    },
+                    "formation": {
+                        "nom": getattr(formation, "nom", None),
+                        "centre_nom": getattr(getattr(formation, "centre", None), "nom", None),
+                        "start_date": getattr(formation, "date_debut", getattr(formation, "start_date", None)),
+                        "end_date": getattr(formation, "date_fin", getattr(formation, "end_date", None)),
+                        "type_offre": getattr(getattr(formation, "type_offre", None), "nom", None),
+                    },
+                    "partenaire": {
+                        "nom": getattr(partenaire, "nom", None),
+                    },
+                }
+            )
 
         # ==========================================================
         # 📦 Contexte du template

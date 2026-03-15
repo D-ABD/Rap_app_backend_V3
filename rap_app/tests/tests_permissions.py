@@ -3,6 +3,7 @@
 Tests des permissions API, notamment IsAdmin (corrigée pour utiliser
 is_admin_like / is_staff_or_staffread au lieu de user.is_staff_or_admin()).
 """
+
 from django.test import TestCase
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
@@ -26,6 +27,7 @@ class IsAdminPermissionTest(TestCase):
 
     def test_anonymous_denied(self):
         from django.contrib.auth.models import AnonymousUser
+
         request = self._request(AnonymousUser())
         self.assertFalse(self.permission.has_permission(request, None))
 

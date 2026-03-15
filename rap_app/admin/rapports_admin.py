@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+
 from ..models.rapports import Rapport
 
 
@@ -53,42 +54,47 @@ class RapportAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (None, {
-            "fields": (
-                "nom",
-                "type_rapport",
-                "periode",
-                "format",
-                "centre",
-                "formation",
-                "type_offre",
-                "statut",
-                "date_debut",
-                "date_fin",
-            )
-        }),
-        (_("Performance"), {
-            "fields": ("temps_generation", "affichage_duree"),
-        }),
-        (_("🧾 Suivi & Métadonnées"), {
-            "fields": ("created_at", "updated_at"),
-            "classes": ("collapse",),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    "nom",
+                    "type_rapport",
+                    "periode",
+                    "format",
+                    "centre",
+                    "formation",
+                    "type_offre",
+                    "statut",
+                    "date_debut",
+                    "date_fin",
+                )
+            },
+        ),
+        (
+            _("Performance"),
+            {
+                "fields": ("temps_generation", "affichage_duree"),
+            },
+        ),
+        (
+            _("🧾 Suivi & Métadonnées"),
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     def affichage_duree(self, obj):
         if obj.temps_generation:
-            return format_html(
-                "<span style='color: #2d862d;'>⏱ {:.2f} sec</span>",
-                obj.temps_generation
-            )
+            return format_html("<span style='color: #2d862d;'>⏱ {:.2f} sec</span>", obj.temps_generation)
         return "—"
+
     affichage_duree.short_description = _("Durée de génération")
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "centre", "formation", "type_offre", "statut"
-        )
+        return super().get_queryset(request).select_related("centre", "formation", "type_offre", "statut")
 
     def save_model(self, request, obj, form, change):
         if not obj.pk and not obj.created_by:

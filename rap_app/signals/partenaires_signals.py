@@ -1,15 +1,16 @@
 import logging
 import sys
-from django.db.models.signals import post_save, post_delete, pre_save
-from django.dispatch import receiver
-from django.db import transaction
-from django.core.mail import send_mail
-from django.conf import settings
-from django.apps import apps
 
+from django.apps import apps
+from django.conf import settings
+from django.core.mail import send_mail
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
+
+from ..models.formations import HistoriqueFormation
 from ..models.logs import LogUtilisateur
 from ..models.partenaires import Partenaire
-from ..models.formations import HistoriqueFormation
 
 logger = logging.getLogger("application.partenaires")
 
@@ -18,7 +19,7 @@ def skip_during_migrations():
     """
     Retourne True si l'application est en migration.
     """
-    return not apps.ready or 'migrate' in sys.argv or 'makemigrations' in sys.argv
+    return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
 @receiver(pre_save, sender=Partenaire, dispatch_uid="rap_app.partenaires_signals.partenaire_pre_save")
@@ -46,10 +47,10 @@ def partenaire_pre_save(sender, instance, **kwargs):
     except AttributeError:
         pass
 
-    for field in ['website', 'social_network_url']:
+    for field in ["website", "social_network_url"]:
         try:
             value = getattr(instance, field, None)
-            if value and isinstance(value, str) and not value.startswith(('http://', 'https://')):
+            if value and isinstance(value, str) and not value.startswith(("http://", "https://")):
                 setattr(instance, field, f"https://{value}")
                 logger.debug(f"URL corrigée pour {field} : {getattr(instance, field)}")
         except (AttributeError, TypeError) as e:
@@ -66,7 +67,7 @@ def partenaire_post_save(sender, instance, created, **kwargs):
     if skip_during_migrations():
         return
 
-    user = getattr(instance, '_user', None)
+    user = getattr(instance, "_user", None)
     action = LogUtilisateur.ACTION_CREATE if created else LogUtilisateur.ACTION_UPDATE
 
     try:
@@ -74,7 +75,7 @@ def partenaire_post_save(sender, instance, created, **kwargs):
             instance=instance,
             action=action,
             user=user,
-            details=f"{action.capitalize()} du partenaire {instance.nom} (type: {instance.get_type_display()})"
+            details=f"{action.capitalize()} du partenaire {instance.nom} (type: {instance.get_type_display()})",
         )
         logger.info(f"[Signal] Log enregistré pour {action} du partenaire {instance.nom} (ID: {instance.pk})")
     except Exception as e:
@@ -92,17 +93,17 @@ def partenaire_post_save(sender, instance, created, **kwargs):
                             ancienne_valeur="",
                             nouvelle_valeur=instance.nom,
                             commentaire=f"Partenaire {instance.nom} modifié",
-                            created_by=user
+                            created_by=user,
                         )
                         logger.debug(f"[Signal] Historique mis à jour pour formation {formation.pk}")
         except Exception as e:
             logger.error(f"[Signal] Erreur lors de la mise à jour des formations liées : {e}", exc_info=True)
 
-    if created and hasattr(instance, 'type') and instance.type == Partenaire.TYPE_ENTREPRISE:
+    if created and hasattr(instance, "type") and instance.type == Partenaire.TYPE_ENTREPRISE:
         try:
-            admin_email = getattr(settings, 'ADMIN_EMAIL', None)
-            url = instance.get_absolute_url() if hasattr(instance, 'get_absolute_url') else ''
-            full_url = f"{settings.BASE_URL}{url}" if hasattr(settings, 'BASE_URL') else url
+            admin_email = getattr(settings, "ADMIN_EMAIL", None)
+            url = instance.get_absolute_url() if hasattr(instance, "get_absolute_url") else ""
+            full_url = f"{settings.BASE_URL}{url}" if hasattr(settings, "BASE_URL") else url
 
             if admin_email:
                 send_mail(
@@ -132,12 +133,14 @@ def partenaire_post_delete(sender, instance, **kwargs):
         return
 
     try:
-        partenaire_id = getattr(instance, 'pk', 'Unknown')
-        partenaire_nom = getattr(instance, 'nom', 'Unknown')
-        partenaire_type = getattr(instance, 'get_type_display', lambda: 'Unknown')()
-        user = getattr(instance, '_user', None)
+        partenaire_id = getattr(instance, "pk", "Unknown")
+        partenaire_nom = getattr(instance, "nom", "Unknown")
+        partenaire_type = getattr(instance, "get_type_display", lambda: "Unknown")()
+        user = getattr(instance, "_user", None)
     except Exception as e:
-        logger.error(f"[Signal] Erreur lors de la récupération des informations du partenaire supprimé : {e}", exc_info=True)
+        logger.error(
+            f"[Signal] Erreur lors de la récupération des informations du partenaire supprimé : {e}", exc_info=True
+        )
         partenaire_id = "Unknown"
         partenaire_nom = "Unknown"
         partenaire_type = "Unknown"
@@ -148,7 +151,7 @@ def partenaire_post_delete(sender, instance, **kwargs):
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
             user=user,
-            details=f"Suppression du partenaire {partenaire_nom} (type: {partenaire_type})"
+            details=f"Suppression du partenaire {partenaire_nom} (type: {partenaire_type})",
         )
         logger.warning(f"[Signal] Partenaire supprimé : {partenaire_nom} (ID: {partenaire_id})")
     except Exception as e:

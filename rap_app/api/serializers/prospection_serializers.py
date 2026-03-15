@@ -1,13 +1,17 @@
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.candidat import Candidat
-from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
 from ...models.formations import Formation
-from ...models.prospection import Prospection, ProspectionChoices, HistoriqueProspection
+from ...models.prospection import HistoriqueProspection, Prospection, ProspectionChoices
+from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
 
 
 class BaseProspectionSerializer(serializers.ModelSerializer):
@@ -130,6 +134,7 @@ class ProspectionSerializer(BaseProspectionSerializer):
     """
     Sérialiseur principal pour création/mise à jour des prospections. Hérite de BaseProspectionSerializer ; ajoute formation (FK) et relance_prevue. validate_activite : valeur dans ACTIVITE_CHOICES. validate : si statut refusée/annulée, commentaire obligatoire. validate_date_prospection : pas de date future. validate_relance_prevue : si renseignée, date future. create/update : si owner lié à un Candidat avec formation, force formation et centre à ceux du Candidat.
     """
+
     formation = serializers.PrimaryKeyRelatedField(
         queryset=Formation.objects.all(),
         required=False,
@@ -223,10 +228,10 @@ class ProspectionSerializer(BaseProspectionSerializer):
 
     def validate(self, data):
         """Si statut refusée ou annulée, commentaire obligatoire."""
-        if (
-            data.get("statut") in [ProspectionChoices.STATUT_REFUSEE, ProspectionChoices.STATUT_ANNULEE]
-            and not data.get("commentaire")
-        ):
+        if data.get("statut") in [
+            ProspectionChoices.STATUT_REFUSEE,
+            ProspectionChoices.STATUT_ANNULEE,
+        ] and not data.get("commentaire"):
             raise serializers.ValidationError(
                 {"commentaire": _("Un commentaire est requis pour les statuts refusé ou annulé.")}
             )
@@ -249,9 +254,11 @@ class ProspectionSerializer(BaseProspectionSerializer):
         owner = validated_data.get("owner")
         if owner:
             try:
-                candidat = Candidat.objects.select_related("formation", "formation__centre").filter(
-                    compte_utilisateur=owner
-                ).first()
+                candidat = (
+                    Candidat.objects.select_related("formation", "formation__centre")
+                    .filter(compte_utilisateur=owner)
+                    .first()
+                )
                 if candidat and candidat.formation:
                     validated_data["formation"] = candidat.formation
                     validated_data["centre"] = candidat.formation.centre
@@ -265,9 +272,11 @@ class ProspectionSerializer(BaseProspectionSerializer):
         owner = validated_data.get("owner") or instance.owner
         if owner:
             try:
-                candidat = Candidat.objects.select_related("formation", "formation__centre").filter(
-                    compte_utilisateur=owner
-                ).first()
+                candidat = (
+                    Candidat.objects.select_related("formation", "formation__centre")
+                    .filter(compte_utilisateur=owner)
+                    .first()
+                )
                 if candidat and candidat.formation:
                     validated_data["formation"] = candidat.formation
                     validated_data["centre"] = candidat.formation.centre
@@ -281,6 +290,7 @@ class ProspectionListSerializer(BaseProspectionSerializer):
     """
     Liste de prospections : mêmes champs que ProspectionSerializer (hérités de la base), lecture seule.
     """
+
     class Meta:
         model = Prospection
         fields = ProspectionSerializer.Meta.fields
@@ -290,6 +300,7 @@ class ProspectionDetailSerializer(ProspectionSerializer):
     """
     Détail d'une prospection : hérite de ProspectionSerializer et ajoute commentaires (liste ProspectionCommentSerializer, source=comments).
     """
+
     commentaires = ProspectionCommentSerializer(many=True, read_only=True, source="comments")
 
     class Meta(ProspectionSerializer.Meta):
@@ -300,6 +311,7 @@ class ChangerStatutSerializer(serializers.Serializer):
     """
     Payload pour changement de statut : statut (choix), commentaire, moyen_contact, relance_prevue, prochain_contact. validate : si prochain_contact fourni et relance_prevue absent, copie prochain_contact dans relance_prevue.
     """
+
     statut = serializers.ChoiceField(choices=ProspectionChoices.PROSPECTION_STATUS_CHOICES)
     commentaire = serializers.CharField(required=False, allow_blank=True)
     moyen_contact = serializers.ChoiceField(choices=ProspectionChoices.MOYEN_CONTACT_CHOICES, required=False)
@@ -317,6 +329,7 @@ class EnumChoiceSerializer(serializers.Serializer):
     """
     Option (value, label) pour un choix enum. Pas de validation personnalisée.
     """
+
     value = serializers.CharField(help_text="Valeur brute utilisée en base")
     label = serializers.CharField(help_text="Libellé affiché (traduction)")
 
@@ -325,6 +338,7 @@ class ProspectionChoiceListSerializer(serializers.Serializer):
     """
     Structure de sortie des choix prospection : statut, objectif, type_prospection, motif, moyen_contact, owners, partenaires (listes).
     """
+
     statut = EnumChoiceSerializer(many=True)
     objectif = EnumChoiceSerializer(many=True)
     type_prospection = EnumChoiceSerializer(many=True)

@@ -1,26 +1,20 @@
 from django.test import TestCase
-from ...models.custom_user import CustomUser
-from ...models.centres import Centre
-from ...models.logs import LogUtilisateur
+
 from ...api.serializers.logs_serializers import LogUtilisateurSerializer
+from ...models.centres import Centre
+from ...models.custom_user import CustomUser
+from ...models.logs import LogUtilisateur
 
 
 class LogUtilisateurSerializerTestCase(TestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(
-            email="log@test.com",
-            username="loguser",
-            password="testpass",
-            role=CustomUser.ROLE_ADMIN,
-            is_staff=True
+            email="log@test.com", username="loguser", password="testpass", role=CustomUser.ROLE_ADMIN, is_staff=True
         )
         self.centre = Centre.objects.create(nom="Centre Log Test", created_by=self.user)
 
         self.log = LogUtilisateur.log_action(
-            instance=self.centre,
-            action=LogUtilisateur.ACTION_UPDATE,
-            user=self.user,
-            details="Mise à jour testée"
+            instance=self.centre, action=LogUtilisateur.ACTION_UPDATE, user=self.user, details="Mise à jour testée"
         )
 
     def test_log_serializer_output(self):
@@ -59,10 +53,7 @@ class LogUtilisateurSerializerTestCase(TestCase):
         ✅ Vérifie que l'absence de détails ne cause pas d'erreur
         """
         log = LogUtilisateur.log_action(
-            instance=self.centre,
-            action=LogUtilisateur.ACTION_VIEW,
-            user=self.user,
-            details=""
+            instance=self.centre, action=LogUtilisateur.ACTION_VIEW, user=self.user, details=""
         )
         serializer = LogUtilisateurSerializer(instance=log)
         self.assertEqual(serializer.data["details"], "")
@@ -71,11 +62,7 @@ class LogUtilisateurSerializerTestCase(TestCase):
         """
         ✅ Test pour un log système sans utilisateur (user = "Système")
         """
-        log = LogUtilisateur.log_system_action(
-            action=LogUtilisateur.ACTION_EXPORT,
-            user=None,
-            details="Export global"
-        )
+        log = LogUtilisateur.log_system_action(action=LogUtilisateur.ACTION_EXPORT, user=None, details="Export global")
         serializer = LogUtilisateurSerializer(instance=log)
         self.assertEqual(serializer.data["user"], "Système")
 
@@ -84,9 +71,7 @@ class LogUtilisateurSerializerTestCase(TestCase):
         ✅ Test pour un log système (content_object = LogUtilisateur lui-même)
         """
         log = LogUtilisateur.log_system_action(
-            action=LogUtilisateur.ACTION_IMPORT,
-            user=self.user,
-            details="Import automatique"
+            action=LogUtilisateur.ACTION_IMPORT, user=self.user, details="Import automatique"
         )
         serializer = LogUtilisateurSerializer(instance=log)
         self.assertEqual(serializer.data["model"], "logutilisateur")  # ← Correction ici

@@ -1,18 +1,19 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
+from rest_framework import serializers
 
 from ...models.appairage import Appairage, AppairageActivite, AppairageStatut
-from ...models.formations import Formation
 from ...models.candidat import Candidat
-from ...models.partenaires import Partenaire
-from ...models.custom_user import CustomUser
 from ...models.centres import Centre
 from ...models.commentaires_appairage import CommentaireAppairage
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
+from ...models.partenaires import Partenaire
 
 
 class CommentaireAppairageSerializer(serializers.ModelSerializer):
     """Sérialiseur en lecture seule pour les commentaires d’appairage (id, body, auteur_nom, dates)."""
+
     auteur_nom = serializers.SerializerMethodField()
 
     @extend_schema_field(str)
@@ -60,7 +61,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
     statut_display = serializers.CharField(source="get_statut_display", read_only=True)
     peut_modifier = serializers.SerializerMethodField()
     est_dernier_appairage = serializers.SerializerMethodField()
-    
+
     @extend_schema_field(str)
     def get_est_dernier_appairage(self, obj):
         cand = getattr(obj, "candidat", None)
@@ -76,7 +77,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
             .first()
         )
         return last_id == obj.id
-   
+
     @extend_schema_field(str)
     def get_candidat_nom(self, obj):
         c = getattr(obj, "candidat", None)
@@ -92,7 +93,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
                 pass
         v = attr if isinstance(attr, str) else None
         return v or str(c)
-    
+
     @extend_schema_field(str)
     def get_peut_modifier(self, instance):
         request = self.context.get("request")
@@ -114,7 +115,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
     def get_formation_detail(self, obj):
         f = self._get_formation(obj)
         return f.get_formation_identite_complete() if f else None
-    
+
     @extend_schema_field(str)
     def get_formation_bref(self, obj):
         f = self._get_formation(obj)
@@ -168,6 +169,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
 @extend_schema_serializer()
 class AppairageSerializer(AppairageBaseSerializer):
     """Sérialiseur détaillé pour un appairage (endpoint detail) : ajoute created_by_nom, updated_by_nom, last_commentaire, commentaires nested."""
+
     created_by_nom = serializers.SerializerMethodField()
     updated_by_nom = serializers.SerializerMethodField()
     last_commentaire = serializers.SerializerMethodField()
@@ -261,6 +263,7 @@ class AppairageSerializer(AppairageBaseSerializer):
 @extend_schema_serializer()
 class AppairageListSerializer(AppairageBaseSerializer):
     """Sérialiseur liste d'appairages : created_by_nom, updated_by_nom, last_commentaire, partenaire_contact_nom."""
+
     created_by_nom = serializers.SerializerMethodField()
     updated_by_nom = serializers.SerializerMethodField()
     last_commentaire = serializers.SerializerMethodField()
@@ -445,8 +448,7 @@ class AppairageMetaSerializer(serializers.Serializer):
     @extend_schema_field(str)
     def _serialize_queryset(self, queryset, value_field="id", label_field="__str__"):
         return [
-            {"value": getattr(obj, value_field), "label": self._resolve_label(obj, label_field)}
-            for obj in queryset
+            {"value": getattr(obj, value_field), "label": self._resolve_label(obj, label_field)} for obj in queryset
         ]
 
     @extend_schema_field(str)
@@ -468,11 +470,7 @@ class AppairageMetaSerializer(serializers.Serializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_user_choices(self, _):
-        ids = (
-            Appairage.objects.exclude(created_by__isnull=True)
-            .values_list("created_by", flat=True)
-            .distinct()
-        )
+        ids = Appairage.objects.exclude(created_by__isnull=True).values_list("created_by", flat=True).distinct()
         qs = CustomUser.objects.filter(id__in=ids).order_by("last_name", "first_name")
         return self._serialize_queryset(qs, "id", "get_full_name")
 

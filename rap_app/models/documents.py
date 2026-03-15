@@ -1,18 +1,19 @@
-import os
-import magic
 import logging
-from django.db import models, transaction
-from django.core.exceptions import ValidationError
-from django.utils.html import escape
+import os
+
+import magic
 from django.conf import settings
-from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
-from django.utils.translation import gettext_lazy as _
+from django.db import models, transaction
+from django.urls import reverse
 from django.utils.functional import cached_property
+from django.utils.html import escape
+from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
-from .formations import Formation
 from .formations import HistoriqueFormation  # utilisé pour l'historique
+from .formations import Formation
 
 logger = logging.getLogger("application.documents")
 
@@ -49,9 +50,9 @@ def validate_file_extension(value, type_doc=None):
     """Valide l'extension du fichier selon le type de document."""
     ext = os.path.splitext(value.name)[1].lower()
     valides = {
-        Document.PDF: ['.pdf'],
-        Document.IMAGE: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-        Document.CONTRAT: ['.pdf', '.doc', '.docx'],
+        Document.PDF: [".pdf"],
+        Document.IMAGE: [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+        Document.CONTRAT: [".pdf", ".doc", ".docx"],
         Document.AUTRE: [],
     }
 
@@ -72,25 +73,25 @@ def validate_file_extension(value, type_doc=None):
 def filepath_for_document(instance, filename):
     """Construit le chemin d'upload du fichier document."""
     base_name, ext = os.path.splitext(filename)
-    safe_name = "".join([c for c in base_name if c.isalnum() or c in ' ._-']).strip()
-    safe_name = safe_name.replace(' ', '_')
-    formation_id = getattr(instance.formation, 'id', 'unknown')
-    return f'formations/documents/{instance.type_document}/{formation_id}/{safe_name}{ext}'
+    safe_name = "".join([c for c in base_name if c.isalnum() or c in " ._-"]).strip()
+    safe_name = safe_name.replace(" ", "_")
+    formation_id = getattr(instance.formation, "id", "unknown")
+    return f"formations/documents/{instance.type_document}/{formation_id}/{safe_name}{ext}"
 
 
 class Document(BaseModel):
     """Modèle de document associé à une formation."""
 
-    PDF = 'pdf'
-    IMAGE = 'image'
-    CONTRAT = 'contrat'
-    AUTRE = 'autre'
+    PDF = "pdf"
+    IMAGE = "image"
+    CONTRAT = "contrat"
+    AUTRE = "autre"
 
     TYPE_DOCUMENT_CHOICES = [
-        (PDF, 'PDF'),
-        (IMAGE, 'Image'),
-        (CONTRAT, 'Contrat signé'),
-        (AUTRE, 'Autre'),
+        (PDF, "PDF"),
+        (IMAGE, "Image"),
+        (CONTRAT, "Contrat signé"),
+        (AUTRE, "Autre"),
     ]
 
     MAX_FILENAME_LENGTH = 255
@@ -102,20 +103,20 @@ class Document(BaseModel):
         on_delete=models.CASCADE,
         related_name="documents",
         verbose_name=_("Formation associée"),
-        help_text=_("Formation à laquelle ce document est rattaché")
+        help_text=_("Formation à laquelle ce document est rattaché"),
     )
 
     nom_fichier = models.CharField(
         max_length=MAX_FILENAME_LENGTH,
         db_index=True,
         verbose_name=_("Nom du fichier"),
-        help_text=_("Nom lisible du fichier (sera nettoyé automatiquement)")
+        help_text=_("Nom lisible du fichier (sera nettoyé automatiquement)"),
     )
 
     fichier = models.FileField(
         upload_to=filepath_for_document,
         verbose_name=_("Fichier"),
-        help_text=_(f"Fichier à téléverser (PDF, image, etc.). Max : {MAX_FILE_SIZE_KB // 1024} Mo")
+        help_text=_(f"Fichier à téléverser (PDF, image, etc.). Max : {MAX_FILE_SIZE_KB // 1024} Mo"),
     )
 
     type_document = models.CharField(
@@ -124,21 +125,21 @@ class Document(BaseModel):
         default=AUTRE,
         db_index=True,
         verbose_name=_("Type de document"),
-        help_text=_("Catégorie du document selon son usage ou son format")
+        help_text=_("Catégorie du document selon son usage ou son format"),
     )
 
     source = models.TextField(
         blank=True,
         null=True,
         verbose_name=_("Source"),
-        help_text=_("Texte optionnel indiquant la provenance du document")
+        help_text=_("Texte optionnel indiquant la provenance du document"),
     )
 
     taille_fichier = models.PositiveIntegerField(
         blank=True,
         null=True,
         verbose_name=_("Taille (Ko)"),
-        help_text=_("Taille du fichier en kilo-octets (calculée automatiquement)")
+        help_text=_("Taille du fichier en kilo-octets (calculée automatiquement)"),
     )
 
     mime_type = models.CharField(
@@ -146,7 +147,7 @@ class Document(BaseModel):
         blank=True,
         null=True,
         verbose_name=_("Type MIME"),
-        help_text=_("Type MIME détecté automatiquement (ex : application/pdf)")
+        help_text=_("Type MIME détecté automatiquement (ex : application/pdf)"),
     )
 
     objects = models.Manager()
@@ -155,17 +156,16 @@ class Document(BaseModel):
     class Meta:
         verbose_name = _("Document")
         verbose_name_plural = _("Documents")
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['nom_fichier'], name='doc_filename_idx'),
-            models.Index(fields=['formation'], name='doc_formation_idx'),
-            models.Index(fields=['type_document'], name='doc_type_idx'),
-            models.Index(fields=['created_at'], name='doc_created_idx'),
+            models.Index(fields=["nom_fichier"], name="doc_filename_idx"),
+            models.Index(fields=["formation"], name="doc_formation_idx"),
+            models.Index(fields=["type_document"], name="doc_type_idx"),
+            models.Index(fields=["created_at"], name="doc_created_idx"),
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(nom_fichier__isnull=False) & ~models.Q(nom_fichier=''),
-                name='doc_filename_not_empty'
+                check=models.Q(nom_fichier__isnull=False) & ~models.Q(nom_fichier=""), name="doc_filename_not_empty"
             )
         ]
 
@@ -204,7 +204,7 @@ class Document(BaseModel):
     @property
     def extension(self):
         """Extension du fichier sans point."""
-        return self.get_file_extension().replace('.', '')
+        return self.get_file_extension().replace(".", "")
 
     @property
     def human_size(self):
@@ -219,12 +219,8 @@ class Document(BaseModel):
     @cached_property
     def is_viewable_in_browser(self):
         """Indique si le document est affichable dans le navigateur (PDF ou image)."""
-        return (
-            self.type_document in [self.PDF, self.IMAGE] or
-            (self.mime_type and (
-                self.mime_type.startswith('image/') or
-                self.mime_type == 'application/pdf'
-            ))
+        return self.type_document in [self.PDF, self.IMAGE] or (
+            self.mime_type and (self.mime_type.startswith("image/") or self.mime_type == "application/pdf")
         )
 
     def to_serializable_dict(self):
@@ -263,9 +259,9 @@ class Document(BaseModel):
             try:
                 taille_ko = self.fichier.size // 1024
                 if taille_ko > self.MAX_FILE_SIZE_KB:
-                    raise ValidationError({
-                        "fichier": f"Le fichier est trop volumineux (max. {self.MAX_FILE_SIZE_KB // 1024} Mo)."
-                    })
+                    raise ValidationError(
+                        {"fichier": f"Le fichier est trop volumineux (max. {self.MAX_FILE_SIZE_KB // 1024} Mo)."}
+                    )
                 self.taille_fichier = max(1, taille_ko)
             except AttributeError:
                 pass
@@ -283,12 +279,12 @@ class Document(BaseModel):
     @transaction.atomic
     def save(self, *args, **kwargs):
         """Valide, sauvegarde et historise l'ajout si applicable."""
-        skip_history = kwargs.pop('skip_history', False)
+        skip_history = kwargs.pop("skip_history", False)
         is_new = self.pk is None
 
         self.full_clean()
 
-        if not self.taille_fichier and self.fichier and hasattr(self.fichier, 'size'):
+        if not self.taille_fichier and self.fichier and hasattr(self.fichier, "size"):
             self.taille_fichier = max(1, self.fichier.size // 1024)
 
         super().save(*args, **kwargs)
@@ -301,7 +297,7 @@ class Document(BaseModel):
                     ancienne_valeur="—",
                     nouvelle_valeur=self.nom_fichier,
                     commentaire=f"Ajout du document « {self.nom_fichier} »",
-                    created_by=self.created_by
+                    created_by=self.created_by,
                 )
                 logger.info(f"[Document] Document ajouté : {self.nom_fichier} (formation #{self.formation_id})")
             except Exception as e:
@@ -309,8 +305,8 @@ class Document(BaseModel):
 
     def delete(self, *args, **kwargs):
         """Supprime le document et historise la suppression si applicable."""
-        skip_history = kwargs.pop('skip_history', False)
-        user = kwargs.pop('user', None) or getattr(self, 'created_by', None)
+        skip_history = kwargs.pop("skip_history", False)
+        user = kwargs.pop("user", None) or getattr(self, "created_by", None)
         formation_id = self.formation_id
         nom_fichier = self.nom_fichier
 
@@ -324,7 +320,7 @@ class Document(BaseModel):
                     ancienne_valeur=nom_fichier,
                     nouvelle_valeur="—",
                     commentaire=f"Suppression du document « {nom_fichier} »",
-                    created_by=user
+                    created_by=user,
                 )
                 logger.info(f"[Document] Document supprimé : {nom_fichier} (formation #{formation_id})")
             except Exception as e:
@@ -335,10 +331,10 @@ class Document(BaseModel):
     def get_extensions_by_type(cls, type_doc=None):
         """Retourne les extensions de fichier attendues par type_document."""
         extensions = {
-            cls.PDF: ['.pdf'],
-            cls.IMAGE: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-            cls.CONTRAT: ['.pdf', '.doc', '.docx'],
-            cls.AUTRE: []
+            cls.PDF: [".pdf"],
+            cls.IMAGE: [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+            cls.CONTRAT: [".pdf", ".doc", ".docx"],
+            cls.AUTRE: [],
         }
         if type_doc:
             return {type_doc: extensions.get(type_doc, [])}
@@ -348,11 +344,14 @@ class Document(BaseModel):
     def get_mime_types_by_type(cls, type_doc=None):
         """Retourne les MIME types attendus par type_document."""
         mime_types = {
-            cls.PDF: ['application/pdf'],
-            cls.IMAGE: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-            cls.CONTRAT: ['application/pdf', 'application/msword',
-                          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-            cls.AUTRE: []
+            cls.PDF: ["application/pdf"],
+            cls.IMAGE: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+            cls.CONTRAT: [
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ],
+            cls.AUTRE: [],
         }
         if type_doc:
             return {type_doc: mime_types.get(type_doc, [])}
@@ -364,4 +363,6 @@ class Document(BaseModel):
         queryset = cls.objects.filter(formation_id=formation_id)
         if type_doc:
             queryset = queryset.filter(type_document=type_doc)
-        return queryset.only('id', 'nom_fichier', 'type_document', 'taille_fichier', 'mime_type', 'created_at').order_by('-created_at')
+        return queryset.only(
+            "id", "nom_fichier", "type_document", "taille_fichier", "mime_type", "created_at"
+        ).order_by("-created_at")

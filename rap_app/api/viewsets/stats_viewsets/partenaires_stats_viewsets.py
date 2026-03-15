@@ -1,21 +1,20 @@
 # rap_app/api/viewsets/stats_viewsets/partenaires_stats_viewsets.py
 from __future__ import annotations
-from ...serializers.base_serializers import EmptySerializer
 
 from collections import OrderedDict
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
-from django.db.models import Q, Count, IntegerField, Value, F, QuerySet
+from django.db.models import Count, F, IntegerField, Q, QuerySet, Value
 from django.db.models.functions import Substr
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from ...permissions import is_staff_or_staffread, IsStaffOrAbove
 
 from ....models.appairage import AppairageStatut
 from ....models.partenaires import Partenaire
 from ....models.prospection_choices import ProspectionChoices
+from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 
 class PartenaireStatsViewSet(viewsets.ViewSet):
@@ -87,6 +86,7 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
         Récupère les codes département autorisés pour le staff à partir de propriétés connues sur l'utilisateur ou son profil.
         Supporte différents formats de valeurs (str, collection, M2M...).
         """
+
         def _norm(val):
             if val is None:
                 return []
@@ -106,7 +106,7 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
                     if codes:
                         return codes
         return []
-    
+
     def _base_qs(self, request) -> QuerySet:
         """
         Produit le queryset de base, restricté selon l'utilisateur authentifié.
@@ -276,9 +276,9 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
                 "id",
                 distinct=True,
                 filter=(
-                    (Q(contact_nom__isnull=False) & ~Q(contact_nom="")) |
-                    (Q(contact_email__isnull=False) & ~Q(contact_email="")) |
-                    (Q(contact_telephone__isnull=False) & ~Q(contact_telephone=""))
+                    (Q(contact_nom__isnull=False) & ~Q(contact_nom=""))
+                    | (Q(contact_email__isnull=False) & ~Q(contact_email=""))
+                    | (Q(contact_telephone__isnull=False) & ~Q(contact_telephone=""))
                 ),
             ),
             nb_avec_web=Count(
@@ -309,34 +309,42 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
         nb_formations_liees = (agg.get("nb_formations_app") or 0) + (agg.get("nb_formations_pros") or 0)
 
         # Détails par statut (prospections)
-        pros_status_map = OrderedDict([
-            ("a_faire", ProspectionChoices.STATUT_A_FAIRE),
-            ("en_cours", ProspectionChoices.STATUT_EN_COURS),
-            ("a_relancer", ProspectionChoices.STATUT_A_RELANCER),
-            ("acceptee", ProspectionChoices.STATUT_ACCEPTEE),
-            ("refusee", ProspectionChoices.STATUT_REFUSEE),
-            ("annulee", ProspectionChoices.STATUT_ANNULEE),
-            ("non_renseigne", ProspectionChoices.STATUT_NON_RENSEIGNE),
-        ])
+        pros_status_map = OrderedDict(
+            [
+                ("a_faire", ProspectionChoices.STATUT_A_FAIRE),
+                ("en_cours", ProspectionChoices.STATUT_EN_COURS),
+                ("a_relancer", ProspectionChoices.STATUT_A_RELANCER),
+                ("acceptee", ProspectionChoices.STATUT_ACCEPTEE),
+                ("refusee", ProspectionChoices.STATUT_REFUSEE),
+                ("annulee", ProspectionChoices.STATUT_ANNULEE),
+                ("non_renseigne", ProspectionChoices.STATUT_NON_RENSEIGNE),
+            ]
+        )
         pros_counts: Dict[str, int] = {}
         for key, val in pros_status_map.items():
-            pros_counts[key] = base_qs.filter(pros_q & Q(prospections__statut=val)).values("prospections__id").distinct().count()
+            pros_counts[key] = (
+                base_qs.filter(pros_q & Q(prospections__statut=val)).values("prospections__id").distinct().count()
+            )
 
         # Détails par statut (appairages)
-        app_status_map = OrderedDict([
-            ("transmis", AppairageStatut.TRANSMIS),
-            ("en_attente", AppairageStatut.EN_ATTENTE),
-            ("accepte", AppairageStatut.ACCEPTE),
-            ("refuse", AppairageStatut.REFUSE),
-            ("annule", AppairageStatut.ANNULE),
-            ("a_faire", AppairageStatut.A_FAIRE),
-            ("contrat_a_signer", AppairageStatut.CONTRAT_A_SIGNER),
-            ("contrat_en_attente", AppairageStatut.CONTRAT_EN_ATTENTE),
-            ("appairage_ok", AppairageStatut.APPAIRAGE_OK),
-        ])
+        app_status_map = OrderedDict(
+            [
+                ("transmis", AppairageStatut.TRANSMIS),
+                ("en_attente", AppairageStatut.EN_ATTENTE),
+                ("accepte", AppairageStatut.ACCEPTE),
+                ("refuse", AppairageStatut.REFUSE),
+                ("annule", AppairageStatut.ANNULE),
+                ("a_faire", AppairageStatut.A_FAIRE),
+                ("contrat_a_signer", AppairageStatut.CONTRAT_A_SIGNER),
+                ("contrat_en_attente", AppairageStatut.CONTRAT_EN_ATTENTE),
+                ("appairage_ok", AppairageStatut.APPAIRAGE_OK),
+            ]
+        )
         app_counts: Dict[str, int] = {}
         for key, val in app_status_map.items():
-            app_counts[key] = base_qs.filter(app_q & Q(appairages__statut=val)).values("appairages__id").distinct().count()
+            app_counts[key] = (
+                base_qs.filter(app_q & Q(appairages__statut=val)).values("appairages__id").distinct().count()
+            )
 
         data = {
             "kpis": {
@@ -468,9 +476,9 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
                     "id",
                     distinct=True,
                     filter=(
-                        (Q(contact_nom__isnull=False) & ~Q(contact_nom="")) |
-                        (Q(contact_email__isnull=False) & ~Q(contact_email="")) |
-                        (Q(contact_telephone__isnull=False) & ~Q(contact_telephone=""))
+                        (Q(contact_nom__isnull=False) & ~Q(contact_nom=""))
+                        | (Q(contact_email__isnull=False) & ~Q(contact_email=""))
+                        | (Q(contact_telephone__isnull=False) & ~Q(contact_telephone=""))
                     ),
                 ),
                 nb_avec_web=Count(
@@ -490,10 +498,12 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
             .order_by(*group_fields)
         )
 
-        return Response({
-            "by": by,
-            "results": list(results),
-        })
+        return Response(
+            {
+                "by": by,
+                "results": list(results),
+            }
+        )
 
     # ------------------------------
     # GET /api/partenaire-stats/tops/
@@ -532,20 +542,16 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
 
         # TOP par appairages
         top_appairages = (
-            base_qs
-            .annotate(appairages_count=Count("appairages", distinct=True, filter=app_q))
+            base_qs.annotate(appairages_count=Count("appairages", distinct=True, filter=app_q))
             .filter(appairages_count__gt=0)
             .values("id", "nom", "appairages_count")
             .order_by("-appairages_count", "nom")[:10]
         )
-        top_appairages = [
-            {"id": r["id"], "nom": r["nom"], "count": r["appairages_count"]} for r in top_appairages
-        ]
+        top_appairages = [{"id": r["id"], "nom": r["nom"], "count": r["appairages_count"]} for r in top_appairages]
 
         # TOP par prospections
         top_prospections = (
-            base_qs
-            .annotate(prospections_count=Count("prospections", distinct=True, filter=pros_q))
+            base_qs.annotate(prospections_count=Count("prospections", distinct=True, filter=pros_q))
             .filter(prospections_count__gt=0)
             .values("id", "nom", "prospections_count")
             .order_by("-prospections_count", "nom")[:10]
@@ -554,7 +560,9 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
             {"id": r["id"], "nom": r["nom"], "count": r["prospections_count"]} for r in top_prospections
         ]
 
-        return Response({
-            "top_appairages": top_appairages,
-            "top_prospections": top_prospections,
-        })
+        return Response(
+            {
+                "top_appairages": top_appairages,
+                "top_prospections": top_prospections,
+            }
+        )

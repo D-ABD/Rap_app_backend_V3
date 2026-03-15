@@ -1,24 +1,22 @@
+from datetime import timedelta
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
-from datetime import timedelta
-from django.core.files.uploadedfile import SimpleUploadedFile
 
-from ...models.custom_user import CustomUser
+from ...api.serializers.documents_serializers import DocumentSerializer
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
+from ...models.documents import Document
+from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ...models.formations import Formation
-from ...models.documents import Document
-from ...api.serializers.documents_serializers import DocumentSerializer
 
 
 class DocumentSerializerTestCase(TestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(
-            email="test@example.com",
-            username="testuser",
-            password="testpass",
-            is_staff=True
+            email="test@example.com", username="testuser", password="testpass", is_staff=True
         )
         self.centre = Centre.objects.create(nom="Test Centre", code_postal="75000", created_by=self.user)
         self.statut = Statut.objects.create(nom="non_defini", couleur="#000000", created_by=self.user)
@@ -30,12 +28,13 @@ class DocumentSerializerTestCase(TestCase):
             type_offre=self.type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=10),
-            created_by=self.user
+            created_by=self.user,
         )
 
     def _mock_request(self):
         class MockRequest:
             user = self.user
+
         return MockRequest()
 
     def test_serializer_valid(self):
@@ -79,7 +78,7 @@ class DocumentSerializerTestCase(TestCase):
             nom_fichier="test.pdf",
             fichier=file,
             type_document=Document.PDF,
-            created_by=self.user
+            created_by=self.user,
         )
         serializer = DocumentSerializer(instance=doc)
         data = serializer.data

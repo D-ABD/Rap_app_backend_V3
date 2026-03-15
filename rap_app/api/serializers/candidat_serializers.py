@@ -1,22 +1,25 @@
-from rest_framework import serializers, exceptions
-from drf_spectacular.utils import OpenApiExample
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field
-from drf_spectacular.types import OpenApiTypes
 from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import exceptions, serializers
 
-from ..serializers.commentaires_appairage_serializers import CommentaireAppairageSerializer
-
+from ...models.appairage import Appairage
 from ...models.atelier_tre import AtelierTRE
-from ...models.centres import Centre
-from ...models.formations import Formation
 from ...models.candidat import (
+    NIVEAU_CHOICES,
     Candidat,
     HistoriquePlacement,
     ResultatPlacementChoices,
-    NIVEAU_CHOICES,
 )
-from ...models.appairage import Appairage
-
+from ...models.centres import Centre
+from ...models.formations import Formation
+from ..serializers.commentaires_appairage_serializers import (
+    CommentaireAppairageSerializer,
+)
 
 
 def _normalize_nom_prenom(instance):
@@ -67,6 +70,7 @@ def _ateliers_counts_for(obj) -> dict[str, int]:
 
 class FormationLiteSerializer(serializers.ModelSerializer):
     """Formation compacte : centre, type_offre, date_debut/date_fin (read_only)."""
+
     centre = serializers.SerializerMethodField()
     type_offre = serializers.SerializerMethodField()
     date_debut = serializers.SerializerMethodField()
@@ -112,6 +116,7 @@ class FormationLiteSerializer(serializers.ModelSerializer):
 
 class AppairageLiteSerializer(serializers.ModelSerializer):
     """Appairage compact pour last_appairage : partenaire_nom, statut_display, commentaire, last_commentaire, commentaires."""
+
     partenaire_nom = serializers.CharField(source="partenaire.nom", read_only=True)
     created_by_nom = serializers.SerializerMethodField()
     statut_display = serializers.CharField(source="get_statut_display", read_only=True)
@@ -153,6 +158,7 @@ class AppairageLiteSerializer(serializers.ModelSerializer):
     @extend_schema_field(str)
     def get_created_by_nom(self, obj: "Appairage") -> str | None:
         return _user_display(getattr(obj, "created_by", None))
+
 
 @extend_schema_serializer(
     examples=[
@@ -211,57 +217,134 @@ class CandidatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Candidat
         fields = [
-            "id", "sexe", "nom_naissance", "nom", "prenom",
-            "date_naissance", "departement_naissance", "commune_naissance",
-            "pays_naissance", "nationalite", "nir",
-            "email", "telephone",
-            "street_number", "street_name", "street_complement", "ville", "code_postal",
-
-            "compte_utilisateur", "role_utilisateur",
-
-            "entretien_done", "test_is_ok", "cv_statut", "cv_statut_display", "statut",
-            "formation", "formation_info", "formation_nom", "formation_centre_nom",
-            "formation_type_offre_nom", "formation_type_offre_libelle",
-            "formation_num_offre", "formation_date_debut", "formation_date_fin",
-
-            "evenement", "notes", "origine_sourcing",
-            "date_inscription", "rqth", "type_contrat", "disponibilite", "permis_b",
-            "communication", "experience", "csp", "vu_par", "vu_par_nom",
-
-            "regime_social", "sportif_haut_niveau", "equivalence_jeunes", "extension_boe",
-            "situation_actuelle", "dernier_diplome_prepare", "diplome_plus_eleve_obtenu",
-            "derniere_classe", "intitule_diplome_prepare", "situation_avant_contrat",
+            "id",
+            "sexe",
+            "nom_naissance",
+            "nom",
+            "prenom",
+            "date_naissance",
+            "departement_naissance",
+            "commune_naissance",
+            "pays_naissance",
+            "nationalite",
+            "nir",
+            "email",
+            "telephone",
+            "street_number",
+            "street_name",
+            "street_complement",
+            "ville",
+            "code_postal",
+            "compte_utilisateur",
+            "role_utilisateur",
+            "entretien_done",
+            "test_is_ok",
+            "cv_statut",
+            "cv_statut_display",
+            "statut",
+            "formation",
+            "formation_info",
+            "formation_nom",
+            "formation_centre_nom",
+            "formation_type_offre_nom",
+            "formation_type_offre_libelle",
+            "formation_num_offre",
+            "formation_date_debut",
+            "formation_date_fin",
+            "evenement",
+            "notes",
+            "origine_sourcing",
+            "date_inscription",
+            "rqth",
+            "type_contrat",
+            "disponibilite",
+            "permis_b",
+            "communication",
+            "experience",
+            "csp",
+            "vu_par",
+            "vu_par_nom",
+            "regime_social",
+            "sportif_haut_niveau",
+            "equivalence_jeunes",
+            "extension_boe",
+            "situation_actuelle",
+            "dernier_diplome_prepare",
+            "diplome_plus_eleve_obtenu",
+            "derniere_classe",
+            "intitule_diplome_prepare",
+            "situation_avant_contrat",
             "projet_creation_entreprise",
-
-            "representant_lien", "representant_nom_naissance", "representant_prenom",
-            "representant_email", "representant_street_name", "representant_zip_code",
+            "representant_lien",
+            "representant_nom_naissance",
+            "representant_prenom",
+            "representant_email",
+            "representant_street_name",
+            "representant_zip_code",
             "representant_city",
-
-            "responsable_placement", "responsable_placement_nom", "date_placement",
-            "entreprise_placement", "entreprise_placement_nom", "resultat_placement",
-            "resultat_placement_display", "entreprise_validee", "entreprise_validee_nom",
-            "contrat_signe", "inscrit_gespers", "courrier_rentree", "date_rentree",
-            "admissible", "numero_osia", "placement_appairage",
-
-            "age", "nom_complet", "nb_appairages", "nb_prospections",
-            "ateliers_resume", "ateliers_counts", "peut_modifier",
-            "centre_id", "centre_nom", "last_appairage",
-
-            "created_at", "updated_at", "created_by", "updated_by", "is_active",
+            "responsable_placement",
+            "responsable_placement_nom",
+            "date_placement",
+            "entreprise_placement",
+            "entreprise_placement_nom",
+            "resultat_placement",
+            "resultat_placement_display",
+            "entreprise_validee",
+            "entreprise_validee_nom",
+            "contrat_signe",
+            "inscrit_gespers",
+            "courrier_rentree",
+            "date_rentree",
+            "admissible",
+            "numero_osia",
+            "placement_appairage",
+            "age",
+            "nom_complet",
+            "nb_appairages",
+            "nb_prospections",
+            "ateliers_resume",
+            "ateliers_counts",
+            "peut_modifier",
+            "centre_id",
+            "centre_nom",
+            "last_appairage",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "is_active",
         ]
 
         read_only_fields = [
-            "id", "date_inscription", "created_at", "updated_at",
-            "age", "nom_complet", "nb_appairages", "nb_prospections",
-            "role_utilisateur", "ateliers_resume", "peut_modifier",
-            "cv_statut_display", "formation_info", "centre_nom",
-            "centre_id", "last_appairage",
-            "responsable_placement_nom", "entreprise_placement_nom",
-            "entreprise_validee_nom", "vu_par_nom",
-            "resultat_placement_display", "ateliers_counts",
-            "formation_nom", "formation_centre_nom",
-            "formation_type_offre_nom", "formation_type_offre_libelle",
-            "formation_num_offre", "formation_date_debut", "formation_date_fin",
+            "id",
+            "date_inscription",
+            "created_at",
+            "updated_at",
+            "age",
+            "nom_complet",
+            "nb_appairages",
+            "nb_prospections",
+            "role_utilisateur",
+            "ateliers_resume",
+            "peut_modifier",
+            "cv_statut_display",
+            "formation_info",
+            "centre_nom",
+            "centre_id",
+            "last_appairage",
+            "responsable_placement_nom",
+            "entreprise_placement_nom",
+            "entreprise_validee_nom",
+            "vu_par_nom",
+            "resultat_placement_display",
+            "ateliers_counts",
+            "formation_nom",
+            "formation_centre_nom",
+            "formation_type_offre_nom",
+            "formation_type_offre_libelle",
+            "formation_num_offre",
+            "formation_date_debut",
+            "formation_date_fin",
         ]
 
     @extend_schema_field(OpenApiTypes.OBJECT)
@@ -296,21 +379,21 @@ class CandidatSerializer(serializers.ModelSerializer):
         if prefetched is not None:
             last = None
             try:
-                last = max(
-                    prefetched,
-                    key=lambda a: (
-                        getattr(a, "date_appairage", None),
-                        getattr(a, "pk", None),
-                    ),
-                ) if prefetched else None
+                last = (
+                    max(
+                        prefetched,
+                        key=lambda a: (
+                            getattr(a, "date_appairage", None),
+                            getattr(a, "pk", None),
+                        ),
+                    )
+                    if prefetched
+                    else None
+                )
             except Exception:
                 last = None
         else:
-            last = (
-                obj.appairages.order_by("-date_appairage", "-pk")
-                .select_related("partenaire", "created_by")
-                .first()
-            )
+            last = obj.appairages.order_by("-date_appairage", "-pk").select_related("partenaire", "created_by").first()
 
         return AppairageLiteSerializer(last, context=self.context).data if last else None
 
@@ -357,12 +440,23 @@ class CandidatSerializer(serializers.ModelSerializer):
         is_staff_or_admin = user and user.role in ["staff", "admin", "superadmin"]
 
         reserved = [
-            "notes", "resultat_placement", "responsable_placement",
-            "date_placement", "entreprise_placement", "contrat_signe",
-            "entreprise_validee", "courrier_rentree", "vu_par",
-            "admissible", "entretien_done", "test_is_ok",
-            "communication", "experience", "csp",
-            "nb_appairages", "nb_prospections",
+            "notes",
+            "resultat_placement",
+            "responsable_placement",
+            "date_placement",
+            "entreprise_placement",
+            "contrat_signe",
+            "entreprise_validee",
+            "courrier_rentree",
+            "vu_par",
+            "admissible",
+            "entretien_done",
+            "test_is_ok",
+            "communication",
+            "experience",
+            "csp",
+            "nb_appairages",
+            "nb_prospections",
         ]
 
         if not is_staff_or_admin:
@@ -406,52 +500,94 @@ class CandidatListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Candidat
         fields = [
-            "id", "sexe", "nom_naissance", "nom", "prenom", "nom_complet",
-            "date_naissance", "departement_naissance", "commune_naissance",
-            "pays_naissance", "nationalite", "nir",
-            "email", "telephone",
-            "street_number", "street_name", "street_complement",
-            "ville", "code_postal",
-
-            "compte_utilisateur", "role_utilisateur",
-
-            "statut", "cv_statut", "cv_statut_display",
-            "entretien_done", "test_is_ok",
-            "formation", "formation_info",
-            "centre_id", "centre_nom",
-            "evenement", "notes",
-            "origine_sourcing", "date_inscription",
-            "rqth", "type_contrat", "disponibilite", "permis_b",
-            "communication", "experience", "csp",
-            "vu_par", "vu_par_nom",
-
-            "regime_social", "sportif_haut_niveau", "equivalence_jeunes",
-            "extension_boe", "situation_actuelle",
-            "dernier_diplome_prepare", "diplome_plus_eleve_obtenu",
-            "derniere_classe", "intitule_diplome_prepare",
+            "id",
+            "sexe",
+            "nom_naissance",
+            "nom",
+            "prenom",
+            "nom_complet",
+            "date_naissance",
+            "departement_naissance",
+            "commune_naissance",
+            "pays_naissance",
+            "nationalite",
+            "nir",
+            "email",
+            "telephone",
+            "street_number",
+            "street_name",
+            "street_complement",
+            "ville",
+            "code_postal",
+            "compte_utilisateur",
+            "role_utilisateur",
+            "statut",
+            "cv_statut",
+            "cv_statut_display",
+            "entretien_done",
+            "test_is_ok",
+            "formation",
+            "formation_info",
+            "centre_id",
+            "centre_nom",
+            "evenement",
+            "notes",
+            "origine_sourcing",
+            "date_inscription",
+            "rqth",
+            "type_contrat",
+            "disponibilite",
+            "permis_b",
+            "communication",
+            "experience",
+            "csp",
+            "vu_par",
+            "vu_par_nom",
+            "regime_social",
+            "sportif_haut_niveau",
+            "equivalence_jeunes",
+            "extension_boe",
+            "situation_actuelle",
+            "dernier_diplome_prepare",
+            "diplome_plus_eleve_obtenu",
+            "derniere_classe",
+            "intitule_diplome_prepare",
             "situation_avant_contrat",
-
             "projet_creation_entreprise",
-
-            "representant_lien", "representant_nom_naissance",
-            "representant_prenom", "representant_email",
-            "representant_street_name", "representant_zip_code",
+            "representant_lien",
+            "representant_nom_naissance",
+            "representant_prenom",
+            "representant_email",
+            "representant_street_name",
+            "representant_zip_code",
             "representant_city",
-
-            "responsable_placement", "responsable_placement_nom",
-            "date_placement", "entreprise_placement",
-            "entreprise_placement_nom", "resultat_placement",
-            "resultat_placement_display", "entreprise_validee",
-            "entreprise_validee_nom", "contrat_signe",
-            "inscrit_gespers", "courrier_rentree", "date_rentree",
-            "admissible", "numero_osia", "placement_appairage",
-
-            "age", "nb_appairages", "nb_prospections",
-            "ateliers_resume", "ateliers_counts",
-            "peut_modifier", "last_appairage",
-
-            "created_at", "updated_at",
-            "created_by", "updated_by",
+            "responsable_placement",
+            "responsable_placement_nom",
+            "date_placement",
+            "entreprise_placement",
+            "entreprise_placement_nom",
+            "resultat_placement",
+            "resultat_placement_display",
+            "entreprise_validee",
+            "entreprise_validee_nom",
+            "contrat_signe",
+            "inscrit_gespers",
+            "courrier_rentree",
+            "date_rentree",
+            "admissible",
+            "numero_osia",
+            "placement_appairage",
+            "age",
+            "nb_appairages",
+            "nb_prospections",
+            "ateliers_resume",
+            "ateliers_counts",
+            "peut_modifier",
+            "last_appairage",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
             "is_active",
         ]
         read_only_fields = tuple(fields)
@@ -478,12 +614,7 @@ class CandidatListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(str)
     def get_last_appairage(self, obj):
-        last = (
-            obj.appairages
-            .order_by("-date_appairage", "-pk")
-            .select_related("partenaire", "created_by")
-            .first()
-        )
+        last = obj.appairages.order_by("-date_appairage", "-pk").select_related("partenaire", "created_by").first()
         return AppairageLiteSerializer(last, context=self.context).data if last else None
 
     @extend_schema_field(str)
@@ -511,12 +642,23 @@ class CandidatListSerializer(serializers.ModelSerializer):
 
         if not is_staff_or_admin:
             RESERVED = [
-                "notes", "resultat_placement", "responsable_placement",
-                "date_placement", "entreprise_placement", "contrat_signe",
-                "entreprise_validee", "courrier_rentree", "vu_par",
-                "admissible", "entretien_done", "test_is_ok",
-                "communication", "experience", "csp",
-                "nb_appairages", "nb_prospections",
+                "notes",
+                "resultat_placement",
+                "responsable_placement",
+                "date_placement",
+                "entreprise_placement",
+                "contrat_signe",
+                "entreprise_validee",
+                "courrier_rentree",
+                "vu_par",
+                "admissible",
+                "entretien_done",
+                "test_is_ok",
+                "communication",
+                "experience",
+                "csp",
+                "nb_appairages",
+                "nb_prospections",
             ]
             for f in RESERVED:
                 data.pop(f, None)
@@ -541,12 +683,10 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         cleaned = {k: v for k, v in data.items() if k in allowed}
         return super().run_validation(cleaned)
 
-    class Meta: 
+    class Meta:
         model = Candidat
 
-        fields = [f.name for f in Candidat._meta.concrete_fields] + [
-            "compte_utilisateur"
-        ]
+        fields = [f.name for f in Candidat._meta.concrete_fields] + ["compte_utilisateur"]
 
         read_only_fields = [
             "id",
@@ -592,11 +732,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             if user.role not in ["admin", "superadmin", "staff"]:
                 raise serializers.ValidationError({"numero_osia": "Non autorisé."})
 
-            if (
-                self.instance
-                and self.instance.numero_osia
-                and data["numero_osia"] != self.instance.numero_osia
-            ):
+            if self.instance and self.instance.numero_osia and data["numero_osia"] != self.instance.numero_osia:
                 raise serializers.ValidationError({"numero_osia": "Déjà attribué et non modifiable."})
 
         # Cohérence obligatoire entre contrat signé et OSIA
@@ -605,23 +741,17 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
 
         SIGNED_VALUES = {"oui", "signed", "valide"}
 
-        if (
-            isinstance(contrat_signe_val, str)
-            and contrat_signe_val.lower() in SIGNED_VALUES
-            and not numero_osia_val
-        ):
+        if isinstance(contrat_signe_val, str) and contrat_signe_val.lower() in SIGNED_VALUES and not numero_osia_val:
             raise serializers.ValidationError({"numero_osia": "Requis quand le contrat est signé."})
 
         cu = getattr(self.instance, "compte_utilisateur", None)
         email = data.get("email") or getattr(self.instance, "email", None)
 
         if cu and not email:
-            raise serializers.ValidationError(
-                {"email": "Un compte utilisateur nécessite une adresse email."}
-            )
+            raise serializers.ValidationError({"email": "Un compte utilisateur nécessite une adresse email."})
 
         return data
-    
+
     def update(self, instance, validated_data):
         validated_data.pop("compte_utilisateur", None)
         return super().update(instance, validated_data)
@@ -660,9 +790,7 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
     type_contrat = LabelOrValueChoiceField(choices=dict(Candidat.TypeContrat.choices), required=False)
     cv_statut = LabelOrValueChoiceField(choices=dict(Candidat.CVStatut.choices), required=False)
 
-    contrat_signe = LabelOrValueChoiceField(
-    choices=dict(Candidat.ContratSigne.choices), required=False
-    )
+    contrat_signe = LabelOrValueChoiceField(choices=dict(Candidat.ContratSigne.choices), required=False)
 
     contrat_signe__in = serializers.CharField(required=False)
     contratSigne = serializers.CharField(required=False)
@@ -702,6 +830,7 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
                 attrs[key] = self._labels_to_values(raw, choices)
 
         return attrs
+
 
 class CandidatLiteSerializer(serializers.ModelSerializer):
     """Candidat compact pour modale/sélection : id, nom, prenom, formation, centre, compte_utilisateur (read_only)."""

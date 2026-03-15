@@ -20,11 +20,12 @@ Utilisation :
 import os
 import re
 import sys
-import django
 from difflib import SequenceMatcher
-from pdfrw import PdfReader
-from django.conf import settings
+
+import django
 from django.apps import apps
+from django.conf import settings
+from pdfrw import PdfReader
 
 # ============================================================
 # ⚙️ Initialisation Django
@@ -35,6 +36,7 @@ sys.path.insert(0, PROJECT_ROOT)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rap_app_project.settings")
 django.setup()
 
+
 # ============================================================
 # 🔧 Fonctions utilitaires
 # ============================================================
@@ -43,17 +45,26 @@ def normalize_field_name(name: str) -> str:
     if not name:
         return ""
     replacements = {
-        "#C3#A0": "à", "#C3#A9": "é", "#C3#A8": "è", "#C3#A7": "ç",
-        "#C3#AA": "ê", "#C3#AB": "ë", "#C3#B4": "ô", "#C3#BB": "û", "#C3#B9": "ù",
+        "#C3#A0": "à",
+        "#C3#A9": "é",
+        "#C3#A8": "è",
+        "#C3#A7": "ç",
+        "#C3#AA": "ê",
+        "#C3#AB": "ë",
+        "#C3#B4": "ô",
+        "#C3#BB": "û",
+        "#C3#B9": "ù",
     }
     for k, v in replacements.items():
         name = name.replace(k, v)
     return re.sub(r"[^a-zA-Z0-9_àéèùçÀÉÈÇÔÛÙ ]", "", name).strip()
 
+
 def similarity(a: str, b: str) -> float:
     """Renvoie un score de similarité entre 0 et 1 entre deux chaînes."""
     a, b = a.lower().replace("_", " "), b.lower().replace("_", " ")
     return SequenceMatcher(None, a, b).ratio()
+
 
 # ============================================================
 # 📄 Extraction des champs PDF
@@ -80,6 +91,7 @@ def extract_pdf_fields() -> list[str]:
     (f"✅ {len(fields)} champs détectés dans le PDF (nettoyés)\n")
     return sorted(fields)
 
+
 # ============================================================
 # 🧩 Extraction des champs du modèle Django
 # ============================================================
@@ -93,6 +105,7 @@ def extract_model_fields() -> list[str]:
     model_fields = [f.name for f in CerfaContrat._meta.get_fields()]
     (f"✅ {len(model_fields)} champs trouvés dans le modèle CerfaContrat\n")
     return model_fields
+
 
 # ============================================================
 # 🧠 Génération automatique du mapping
@@ -139,6 +152,7 @@ def generate_field_map(dry_run=False):
     (f"\n✅ CERFA_FIELD_MAP sauvegardé dans : {output_path}")
     ("⚠️ Vérifie et corrige manuellement les champs vides ou incohérents.")
 
+
 # ============================================================
 # ▶️ Exécution directe
 # ============================================================
@@ -154,4 +168,3 @@ if __name__ == "__main__":
         generate_field_map(dry_run=True)
     else:
         generate_field_map(dry_run=False)
-   

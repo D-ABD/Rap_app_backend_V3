@@ -1,10 +1,11 @@
-import logging
 import csv
+import logging
 from io import StringIO
+
 from django.contrib import admin, messages
+from django.http import HttpResponse
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
-from django.http import HttpResponse
 
 from ..models.commentaires import Commentaire
 
@@ -58,13 +59,19 @@ class CommentaireAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        ("💬 Commentaire", {
-            "fields": ("formation", "contenu", "saturation", "statut_commentaire"),
-        }),
-        ("🧾 Suivi", {
-            "fields": ("created_by", "created_at", "updated_by", "updated_at"),
-            "classes": ("collapse",),
-        }),
+        (
+            "💬 Commentaire",
+            {
+                "fields": ("formation", "contenu", "saturation", "statut_commentaire"),
+            },
+        ),
+        (
+            "🧾 Suivi",
+            {
+                "fields": ("created_by", "created_at", "updated_by", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     # ───────────────────────────────
@@ -72,22 +79,27 @@ class CommentaireAdmin(admin.ModelAdmin):
     # ───────────────────────────────
     def auteur_nom(self, obj):
         return obj.auteur_nom
+
     auteur_nom.short_description = _("Auteur")
 
     def formation_nom(self, obj):
         return obj.formation_nom
+
     formation_nom.short_description = _("Formation")
 
     def short_contenu(self, obj):
         return obj.get_content_preview(50)
+
     short_contenu.short_description = _("Aperçu")
 
     def created_at_display(self, obj):
         return localtime(obj.created_at).strftime("%d/%m/%Y %H:%M") if obj.created_at else "-"
+
     created_at_display.short_description = _("Créé le")
 
     def updated_at_display(self, obj):
         return localtime(obj.updated_at).strftime("%d/%m/%Y %H:%M") if obj.updated_at else "-"
+
     updated_at_display.short_description = _("Modifié le")
 
     # ───────────────────────────────
@@ -132,20 +144,20 @@ class CommentaireAdmin(admin.ModelAdmin):
         """Export CSV simple et lisible directement depuis l’admin."""
         buffer = StringIO()
         writer = csv.writer(buffer)
-        writer.writerow([
-            "ID", "Formation", "Auteur", "Contenu", "Saturation", "Statut", "Créé le", "Modifié le"
-        ])
+        writer.writerow(["ID", "Formation", "Auteur", "Contenu", "Saturation", "Statut", "Créé le", "Modifié le"])
         for c in queryset:
-            writer.writerow([
-                c.pk,
-                c.formation_nom,
-                c.auteur_nom,
-                c.contenu_sans_html.replace("\n", " ")[:200],
-                c.saturation or "",
-                c.statut_commentaire,
-                c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
-                c.updated_at.strftime("%Y-%m-%d %H:%M") if c.updated_at else "",
-            ])
+            writer.writerow(
+                [
+                    c.pk,
+                    c.formation_nom,
+                    c.auteur_nom,
+                    c.contenu_sans_html.replace("\n", " ")[:200],
+                    c.saturation or "",
+                    c.statut_commentaire,
+                    c.created_at.strftime("%Y-%m-%d %H:%M") if c.created_at else "",
+                    c.updated_at.strftime("%Y-%m-%d %H:%M") if c.updated_at else "",
+                ]
+            )
         buffer.seek(0)
         response = HttpResponse(buffer, content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=commentaires_export.csv"

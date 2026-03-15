@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-from ...serializers.base_serializers import EmptySerializer
-
 from datetime import timedelta
 from typing import Dict, List, Optional
 
 from django.db import models
-from django.db.models import Q, Count, Avg, Value, F
-from django.db.models.functions import Substr, Coalesce
+from django.db.models import Avg, Count, F, Q, Value
+from django.db.models.functions import Coalesce, Substr
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 try:
     from ..permissions import IsOwnerOrStaffOrAbove  # type: ignore
@@ -50,7 +48,7 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
             - Si aucun centre/département associé → accès vide.
         3. Pour les autres, accès vide.
 
-    - Pas d’attribut natif `get_queryset()` à la ViewSet, mais logique équivalente dans `_base_qs()`. 
+    - Pas d’attribut natif `get_queryset()` à la ViewSet, mais logique équivalente dans `_base_qs()`.
     - Pas d’attributs natifs DRF : `search_fields`, `ordering_fields`, `filter_backends` ou `filterset_class`.
 
     - FILTRES autorisés par les query params :
@@ -118,18 +116,17 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         # Trie par `updated_at` (pour montrer les récents modifiés aussi)
         rows = qs.order_by("-updated_at").all()[:limit]
 
-        results = [
-            obj.to_serializable_dict(include_full_content=include_full)
-            for obj in rows
-        ]
+        results = [obj.to_serializable_dict(include_full_content=include_full) for obj in rows]
 
-        return Response({
-            "results": results,
-            "count": len(results),
-            "limit": limit,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
-    
+        return Response(
+            {
+                "results": results,
+                "count": len(results),
+                "limit": limit,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )
+
     def _is_admin_like(self, user) -> bool:
         """
         Helper privé.
@@ -159,6 +156,7 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         Détecte les codes départements liés à un user (ou son profile), pour restreindre la visibilité.
         Sert pour le filtrage dans _base_qs pour les profils staff à périmètre limité.
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -168,6 +166,7 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
                 return list({str(x)[:2] for x in val if x})
             s = str(val).strip()
             return [s[:2]] if s else []
+
         for owner in (user, getattr(user, "profile", None)):
             if not owner:
                 continue
@@ -259,9 +258,7 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         if p.get("search"):
             s = p.get("search")
             qs = qs.filter(
-                Q(contenu__icontains=s)
-                | Q(created_by__username__icontains=s)
-                | Q(formation__nom__icontains=s)
+                Q(contenu__icontains=s) | Q(created_by__username__icontains=s) | Q(formation__nom__icontains=s)
             )
 
         def _as_int(v):
@@ -332,7 +329,9 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
             "kpis": {
                 "total": int(agg.get("total") or 0),
                 "avec_saturation": int(agg.get("avec_saturation") or 0),
-                "avg_saturation": round(float(agg["avg_saturation"]), 2) if agg.get("avg_saturation") is not None else None,
+                "avg_saturation": (
+                    round(float(agg["avg_saturation"]), 2) if agg.get("avg_saturation") is not None else None
+                ),
                 "min_saturation": int(agg["min_saturation"]) if agg.get("min_saturation") is not None else None,
                 "max_saturation": int(agg["max_saturation"]) if agg.get("max_saturation") is not None else None,
                 "nb_formations": int(agg.get("nb_formations") or 0),
@@ -398,9 +397,7 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         seven_days_ago = timezone.now() - timedelta(days=7)
 
         # departement annotate
-        qs = base.annotate(
-            departement=Coalesce(Substr("formation__centre__code_postal", 1, 2), Value("NA"))
-        )
+        qs = base.annotate(departement=Coalesce(Substr("formation__centre__code_postal", 1, 2), Value("NA")))
 
         group_fields: List[str] = []
         if by == "centre":
@@ -425,14 +422,16 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
             ]
 
         rows = list(
-            qs.values(*group_fields).annotate(
+            qs.values(*group_fields)
+            .annotate(
                 total=Count("id"),
                 avec_saturation=Count("id", filter=Q(saturation__isnull=False)),
                 avg_saturation=Avg("saturation"),
                 min_saturation=models.Min("saturation"),
                 max_saturation=models.Max("saturation"),
                 recent_7d=Count("id", filter=Q(created_at__gte=seven_days_ago)),
-            ).order_by(*group_fields)
+            )
+            .order_by(*group_fields)
         )
 
         # group_key / group_label
@@ -455,8 +454,8 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
                 )
                 # Infos complémentaires
                 out["num_offre"] = r.get("formation__num_offre")
-                out["type_offre_id"] = r.get("formation__type_offre")       # ID brut
-                out["type_offre_nom"] = r.get("formation__type_offre__nom") # Nom lisible
+                out["type_offre_id"] = r.get("formation__type_offre")  # ID brut
+                out["type_offre_nom"] = r.get("formation__type_offre__nom")  # Nom lisible
             elif by == "auteur":
                 rid = r.get("created_by_id")
                 fn = (r.get("created_by__first_name") or "").strip()
@@ -475,12 +474,13 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
 
             results.append(out)
 
-        return Response({
-            "group_by": by,
-            "results": results,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
-
+        return Response(
+            {
+                "group_by": by,
+                "results": results,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )
 
     # ────────────────────────────────────────────────────────────
     # Tops
@@ -524,7 +524,8 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         top_formations = [
             {
                 "id": r["formation_id"],
-                "nom": r["formation__nom"] or (f"Formation #{r['formation_id']}" if r["formation_id"] is not None else "—"),
+                "nom": r["formation__nom"]
+                or (f"Formation #{r['formation_id']}" if r["formation_id"] is not None else "—"),
                 "count": r["cnt"],
             }
             for r in top_formations
@@ -532,21 +533,32 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
 
         # Auteurs les plus actifs
         top_auteurs = list(
-            qs.values("created_by_id", "created_by__first_name", "created_by__last_name", "created_by__email", "created_by__username")
+            qs.values(
+                "created_by_id",
+                "created_by__first_name",
+                "created_by__last_name",
+                "created_by__email",
+                "created_by__username",
+            )
             .annotate(cnt=Count("id"))
             .order_by("-cnt")[:10]
         )
+
         def _label(u):
             full = f"{(u.get('created_by__first_name') or '').strip()} {(u.get('created_by__last_name') or '').strip()}".strip()
-            return full or u.get("created_by__email") or u.get("created_by__username") or (f"User #{u['created_by_id']}" if u["created_by_id"] is not None else "—")
+            return (
+                full
+                or u.get("created_by__email")
+                or u.get("created_by__username")
+                or (f"User #{u['created_by_id']}" if u["created_by_id"] is not None else "—")
+            )
 
-        top_auteurs = [
-            {"id": r["created_by_id"], "nom": _label(r), "count": r["cnt"]}
-            for r in top_auteurs
-        ]
+        top_auteurs = [{"id": r["created_by_id"], "nom": _label(r), "count": r["cnt"]} for r in top_auteurs]
 
-        return Response({
-            "top_formations": top_formations,
-            "top_auteurs": top_auteurs,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "top_formations": top_formations,
+                "top_auteurs": top_auteurs,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )

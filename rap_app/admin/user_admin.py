@@ -1,12 +1,13 @@
 import csv
 import logging
 from io import StringIO
+
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.db.models import Q
+from django.http import HttpResponse
 from django.utils.html import format_html
 from django.utils.timezone import localtime
-from django.http import HttpResponse
-from django.db.models import Q
 
 from ..models.custom_user import CustomUser
 
@@ -38,16 +39,18 @@ def export_csv(modeladmin, request, queryset):
     writer = csv.writer(buffer)
     writer.writerow(CustomUser.get_csv_headers())
     for u in queryset:
-        writer.writerow([
-            u.pk,
-            u.email,
-            u.username,
-            u.first_name,
-            u.last_name,
-            u.get_role_display(),
-            u.date_joined.strftime("%Y-%m-%d %H:%M") if u.date_joined else "",
-            "Oui" if u.is_active else "Non",
-        ])
+        writer.writerow(
+            [
+                u.pk,
+                u.email,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.get_role_display(),
+                u.date_joined.strftime("%Y-%m-%d %H:%M") if u.date_joined else "",
+                "Oui" if u.is_active else "Non",
+            ]
+        )
     buffer.seek(0)
     response = HttpResponse(buffer, content_type="text/csv")
     response["Content-Disposition"] = "attachment; filename=utilisateurs_export.csv"
@@ -96,32 +99,57 @@ class CustomUserAdmin(DjangoUserAdmin):
     filter_horizontal = ("groups", "user_permissions", "centres")
 
     fieldsets = (
-        ("🧾 Informations de connexion", {
-            "fields": ("email", "username", "password"),
-        }),
-        ("👤 Informations personnelles", {
-            "fields": ("first_name", "last_name", "phone", "avatar", "avatar_preview", "bio"),
-        }),
-        ("🏢 Portée par centres", {
-            "fields": ("centres",),
-            "description": "Les administrateurs peuvent attribuer des centres au staff.",
-        }),
-        ("🔐 Permissions", {
-            "fields": ("role", "is_active", "is_staff", "is_superuser", "groups", "user_permissions"),
-        }),
-        ("🕒 Dates importantes", {
-            "fields": ("last_login", "date_joined"),
-        }),
+        (
+            "🧾 Informations de connexion",
+            {
+                "fields": ("email", "username", "password"),
+            },
+        ),
+        (
+            "👤 Informations personnelles",
+            {
+                "fields": ("first_name", "last_name", "phone", "avatar", "avatar_preview", "bio"),
+            },
+        ),
+        (
+            "🏢 Portée par centres",
+            {
+                "fields": ("centres",),
+                "description": "Les administrateurs peuvent attribuer des centres au staff.",
+            },
+        ),
+        (
+            "🔐 Permissions",
+            {
+                "fields": ("role", "is_active", "is_staff", "is_superuser", "groups", "user_permissions"),
+            },
+        ),
+        (
+            "🕒 Dates importantes",
+            {
+                "fields": ("last_login", "date_joined"),
+            },
+        ),
     )
 
     add_fieldsets = (
-        (None, {
-            "classes": ("wide",),
-            "fields": (
-                "email", "username", "password1", "password2",
-                "role", "is_active", "is_staff", "is_superuser", "centres",
-            ),
-        }),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "email",
+                    "username",
+                    "password1",
+                    "password2",
+                    "role",
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                    "centres",
+                ),
+            },
+        ),
     )
 
     actions = [passer_en_stagiaire, export_csv]
@@ -149,6 +177,7 @@ class CustomUserAdmin(DjangoUserAdmin):
     # ───────────────────────────────
     def full_name_display(self, obj):
         return obj.full_name or "—"
+
     full_name_display.short_description = "Nom complet"
 
     def role_badge(self, obj):
@@ -167,8 +196,9 @@ class CustomUserAdmin(DjangoUserAdmin):
         }.get(obj.role, "#444")
         return format_html(
             f'<span style="color:white; background:{color}; padding:2px 8px; border-radius:8px;">'
-            f'{obj.get_role_display()}</span>'
+            f"{obj.get_role_display()}</span>"
         )
+
     role_badge.short_description = "Rôle"
 
     def centres_display(self, obj):
@@ -179,20 +209,24 @@ class CustomUserAdmin(DjangoUserAdmin):
         if len(noms) > 3:
             text += f" +{len(noms) - 3}"
         return text
+
     centres_display.short_description = "Centres"
 
     def last_login_display(self, obj):
         return localtime(obj.last_login).strftime("%Y-%m-%d %H:%M") if obj.last_login else "—"
+
     last_login_display.short_description = "Dernière connexion"
 
     def date_joined_display(self, obj):
         return localtime(obj.date_joined).strftime("%Y-%m-%d %H:%M") if obj.date_joined else "—"
+
     date_joined_display.short_description = "Inscrit le"
 
     def avatar_preview(self, obj):
         if obj.avatar:
             return format_html('<img src="{}" style="max-height:80px; border-radius:5px;" />', obj.avatar.url)
         return "—"
+
     avatar_preview.short_description = "Aperçu de l’avatar"
 
     # ───────────────────────────────
@@ -203,9 +237,7 @@ class CustomUserAdmin(DjangoUserAdmin):
         Désactive temporairement la synchronisation User↔Candidat
         quand un admin/superadmin modifie un utilisateur.
         """
-        is_admin_like = (
-            hasattr(request.user, "is_superadmin") and request.user.is_superadmin()
-        ) or (
+        is_admin_like = (hasattr(request.user, "is_superadmin") and request.user.is_superadmin()) or (
             hasattr(request.user, "is_admin") and request.user.is_admin()
         )
 

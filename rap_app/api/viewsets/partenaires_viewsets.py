@@ -1,30 +1,38 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-from django_filters.rest_framework import DjangoFilterBackend, FilterSet, filters as dj_filters
+import datetime
+from io import BytesIO
+from pathlib import Path
+
+from django.conf import settings
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
-from django.conf import settings
-from pathlib import Path
-from io import BytesIO
-import datetime
-
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+from django_filters.rest_framework import filters as dj_filters
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS, BasePermission
+from rest_framework.response import Response
 
-from ...api.permissions import IsOwnerOrStaffOrAbove, UserVisibilityScopeMixin, is_staff_or_staffread
-from ...models.partenaires import Partenaire
+from ...api.permissions import (
+    IsOwnerOrStaffOrAbove,
+    UserVisibilityScopeMixin,
+    is_staff_or_staffread,
+)
 from ...models.logs import LogUtilisateur
-from ..serializers.partenaires_serializers import PartenaireChoicesResponseSerializer, PartenaireSerializer
-
+from ...models.partenaires import Partenaire
+from ..serializers.partenaires_serializers import (
+    PartenaireChoicesResponseSerializer,
+    PartenaireSerializer,
+)
 
 # -------------------- permission locale --------------------
+
 
 class PartenaireAccessPermission(BasePermission):
     """
@@ -32,6 +40,7 @@ class PartenaireAccessPermission(BasePermission):
     l'authentification, du rôle (admin/staff) et de la relation avec
     le partenaire ou ses prospections liées.
     """
+
     message = "Accès restreint."
 
     def has_permission(self, request, view):
@@ -41,8 +50,10 @@ class PartenaireAccessPermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         # Accès total si superuser, staff, ou admin-like
-        if getattr(user, "is_superuser", False) or is_staff_or_staffread(user) or (
-            hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin()
+        if (
+            getattr(user, "is_superuser", False)
+            or is_staff_or_staffread(user)
+            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
         ):
             return True
 
@@ -67,6 +78,7 @@ class InlinePartenaireFilter(FilterSet):
     booléens sur l'existence de relations (appairages, prospections,
     formations, candidats).
     """
+
     type = dj_filters.CharFilter(lookup_expr="exact")
     is_active = dj_filters.BooleanFilter()
     city = dj_filters.CharFilter(lookup_expr="icontains")
@@ -132,27 +144,27 @@ class InlinePartenaireFilter(FilterSet):
     list=extend_schema(
         summary="Lister les partenaires",
         tags=["Partenaires"],
-        responses={200: OpenApiResponse(response=PartenaireSerializer)}
+        responses={200: OpenApiResponse(response=PartenaireSerializer)},
     ),
     retrieve=extend_schema(
         summary="Détail d’un partenaire",
         tags=["Partenaires"],
-        responses={200: OpenApiResponse(response=PartenaireSerializer)}
+        responses={200: OpenApiResponse(response=PartenaireSerializer)},
     ),
     create=extend_schema(
         summary="Créer un partenaire",
         tags=["Partenaires"],
-        responses={201: OpenApiResponse(description="Création réussie")}
+        responses={201: OpenApiResponse(description="Création réussie")},
     ),
     update=extend_schema(
         summary="Modifier un partenaire",
         tags=["Partenaires"],
-        responses={200: OpenApiResponse(description="Mise à jour réussie")}
+        responses={200: OpenApiResponse(description="Mise à jour réussie")},
     ),
     destroy=extend_schema(
         summary="Supprimer un partenaire",
         tags=["Partenaires"],
-        responses={204: OpenApiResponse(description="Suppression réussie")}
+        responses={204: OpenApiResponse(description="Suppression réussie")},
     ),
 )
 class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
@@ -161,6 +173,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
     permissions de périmètre et actions utilitaires (métadonnées,
     statistiques de relations et export XLSX).
     """
+
     serializer_class = PartenaireSerializer
     # ✅ utilise la permission locale pour autoriser la lecture des partenaires attribués via prospection
     permission_classes = [PartenaireAccessPermission]
@@ -237,10 +250,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         # 🧩 Option de debug pour connaître la part d'orphelins
         if getattr(settings, "DEBUG", False):
             orphaned = scoped.filter(default_centre__isnull=True)
-            (
-                f"[DEBUG] User={user} voit {scoped.count()} partenaires, "
-                f"dont {orphaned.count()} sans centre."
-            )
+            (f"[DEBUG] User={user} voit {scoped.count()} partenaires, " f"dont {orphaned.count()} sans centre.")
 
         # 🔒 Exclut explicitement les partenaires sans centre,
         # sauf s’ils ont été créés par le staff lui-même
@@ -250,7 +260,6 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             & ~Q(appairages__formation__centre_id__in=centre_ids)
             & ~Q(prospections__formation__centre_id__in=centre_ids)
         ).distinct()
-
 
     def _user_can_access_partenaire(self, partenaire, user) -> bool:
         """
@@ -272,7 +281,6 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         )
         return linked or (partenaire.created_by_id == user.id)
 
-
     # -------------------- queryset --------------------
 
     def get_queryset(self):
@@ -288,8 +296,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         user = self.request.user
 
         qs = (
-            Partenaire.objects
-            .filter(is_active=True)
+            Partenaire.objects.filter(is_active=True)
             .select_related("created_by", "default_centre")  # ✅ pas de N+1 sur centre
             .annotate(
                 prospections_count=Count("prospections", distinct=True),
@@ -346,43 +353,42 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
 
         villes = (
             qs.exclude(city__isnull=True)
-              .exclude(city="")  # ✅ évite l’avertissement Pylance
-              .values_list("city", flat=True)
-              .distinct()
+            .exclude(city="")  # ✅ évite l’avertissement Pylance
+            .values_list("city", flat=True)
+            .distinct()
         )
         secteurs = (
             qs.exclude(secteur_activite__isnull=True)
-              .exclude(secteur_activite="")  # ✅ évite l’avertissement Pylance
-              .values_list("secteur_activite", flat=True)
-              .distinct()
+            .exclude(secteur_activite="")  # ✅ évite l’avertissement Pylance
+            .values_list("secteur_activite", flat=True)
+            .distinct()
         )
         users = (
             qs.exclude(created_by__isnull=True)
-              .values("created_by").distinct()
-              .values("created_by", "created_by__first_name", "created_by__last_name")
+            .values("created_by")
+            .distinct()
+            .values("created_by", "created_by__first_name", "created_by__last_name")
         )
         # ✅ centres par défaut disponibles
-        centres = (
-            qs.filter(default_centre__isnull=False)
-              .values("default_centre_id", "default_centre__nom")
-              .distinct()
-        )
+        centres = qs.filter(default_centre__isnull=False).values("default_centre_id", "default_centre__nom").distinct()
 
-        return Response({
-            "cities": [{"value": v, "label": v} for v in villes],
-            "secteurs": [{"value": s, "label": s} for s in secteurs],
-            "users": [
-                {
-                    "id": u["created_by"],
-                    "full_name": " ".join(filter(None, [u.get("created_by__first_name"), u.get("created_by__last_name")])).strip()
-                }
-                for u in users if u["created_by"]
-            ],
-            "centres": [
-                {"id": c["default_centre_id"], "nom": c["default_centre__nom"]}
-                for c in centres
-            ],
-        })
+        return Response(
+            {
+                "cities": [{"value": v, "label": v} for v in villes],
+                "secteurs": [{"value": s, "label": s} for s in secteurs],
+                "users": [
+                    {
+                        "id": u["created_by"],
+                        "full_name": " ".join(
+                            filter(None, [u.get("created_by__first_name"), u.get("created_by__last_name")])
+                        ).strip(),
+                    }
+                    for u in users
+                    if u["created_by"]
+                ],
+                "centres": [{"id": c["default_centre_id"], "nom": c["default_centre__nom"]} for c in centres],
+            }
+        )
 
     # -------------------- CRUD --------------------
 
@@ -411,10 +417,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
 
         # 🔎 Cas 3 — Candidat / Stagiaire : centre = celui de sa formation
         else:
-            default_centre = (
-                serializer.validated_data.get("default_centre")
-                or getattr(user, "centre", None)
-            )
+            default_centre = serializer.validated_data.get("default_centre") or getattr(user, "centre", None)
             if not default_centre:
                 raise PermissionDenied("❌ Impossible de créer un partenaire sans centre associé.")
 
@@ -499,8 +502,10 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         instance.is_active = False
         instance.save()
         LogUtilisateur.log_action(
-            instance=instance, action=LogUtilisateur.ACTION_DELETE,
-            user=request.user, details="Suppression logique d'un partenaire"
+            instance=instance,
+            action=LogUtilisateur.ACTION_DELETE,
+            user=request.user,
+            details="Suppression logique d'un partenaire",
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -510,7 +515,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         summary="Détail d’un partenaire avec relations",
         description="Statistiques sur prospections, formations (via appairages/prospections), appairages et candidats.",
         tags=["Partenaires"],
-        responses={200: PartenaireSerializer}
+        responses={200: PartenaireSerializer},
     )
     @action(detail=True, methods=["get"], url_path="with-relations")
     def retrieve_with_relations(self, request, pk=None):
@@ -527,19 +532,15 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         data["appairages"] = {"count": partenaire.appairages.count()}
 
         # Formations distinctes via appairages + prospections
-        app_ids = set(
-            partenaire.appairages.filter(formation__isnull=False).values_list("formation_id", flat=True)
-        )
-        pros_ids = set(
-            partenaire.prospections.filter(formation__isnull=False).values_list("formation_id", flat=True)
-        )
+        app_ids = set(partenaire.appairages.filter(formation__isnull=False).values_list("formation_id", flat=True))
+        pros_ids = set(partenaire.prospections.filter(formation__isnull=False).values_list("formation_id", flat=True))
         data["formations"] = {"count": len(app_ids.union(pros_ids))}
 
         # Candidats distincts
         data["candidats"] = {"count": partenaire.appairages.values("candidat_id").distinct().count()}
         return Response(data)
 
-# -------------------- Export Excel --------------------
+    # -------------------- Export Excel --------------------
 
     @extend_schema(summary="Exporter les partenaires au format XLSX")
     @action(detail=False, methods=["get"], url_path="export-xlsx")
@@ -549,9 +550,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         classeur Excel formaté, en respectant les mêmes règles de
         périmètre et de permissions que la liste.
         """
-        qs = self.filter_queryset(
-            self.get_queryset().select_related("default_centre", "created_by")
-        )
+        qs = self.filter_queryset(self.get_queryset().select_related("default_centre", "created_by"))
 
         # ==========================================================
         # 📘 Création du classeur
@@ -593,30 +592,64 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         # ==========================================================
         headers = [
             # Identité
-            "ID", "Nom", "Type", "Secteur d’activité",
+            "ID",
+            "Nom",
+            "Type",
+            "Secteur d’activité",
             # Adresse
-            "Numéro de rue", "Adresse", "Complément", "Code postal", "Ville", "Pays",
+            "Numéro de rue",
+            "Adresse",
+            "Complément",
+            "Code postal",
+            "Ville",
+            "Pays",
             # Coordonnées
-            "Téléphone général", "Email général",
+            "Téléphone général",
+            "Email général",
             # Contact principal
-            "Contact nom", "Contact poste", "Contact email", "Contact téléphone",
+            "Contact nom",
+            "Contact poste",
+            "Contact email",
+            "Contact téléphone",
             # Employeur
-            "SIRET", "Type employeur", "Employeur spécifique", "Code APE",
-            "Effectif total", "IDCC", "Assurance chômage spéciale",
+            "SIRET",
+            "Type employeur",
+            "Employeur spécifique",
+            "Code APE",
+            "Effectif total",
+            "IDCC",
+            "Assurance chômage spéciale",
             # Maître 1
-            "Maître 1 - Nom de naissance", "Maître 1 - Prénom", "Maître 1 - Date de naissance",
-            "Maître 1 - Courriel", "Maître 1 - Emploi occupé",
-            "Maître 1 - Diplôme/titre le plus élevé", "Maître 1 - Niveau diplôme/titre",
+            "Maître 1 - Nom de naissance",
+            "Maître 1 - Prénom",
+            "Maître 1 - Date de naissance",
+            "Maître 1 - Courriel",
+            "Maître 1 - Emploi occupé",
+            "Maître 1 - Diplôme/titre le plus élevé",
+            "Maître 1 - Niveau diplôme/titre",
             # Maître 2
-            "Maître 2 - Nom de naissance", "Maître 2 - Prénom", "Maître 2 - Date de naissance",
-            "Maître 2 - Courriel", "Maître 2 - Emploi occupé",
-            "Maître 2 - Diplôme/titre le plus élevé", "Maître 2 - Niveau diplôme/titre",
+            "Maître 2 - Nom de naissance",
+            "Maître 2 - Prénom",
+            "Maître 2 - Date de naissance",
+            "Maître 2 - Courriel",
+            "Maître 2 - Emploi occupé",
+            "Maître 2 - Diplôme/titre le plus élevé",
+            "Maître 2 - Niveau diplôme/titre",
             # Web & Actions
-            "Site web", "Réseau social", "Type d’action", "Description action", "Description générale",
+            "Site web",
+            "Réseau social",
+            "Type d’action",
+            "Description action",
+            "Description générale",
             # Métadonnées
-            "Slug", "Centre par défaut", "Créé par", "Date création",
+            "Slug",
+            "Centre par défaut",
+            "Créé par",
+            "Date création",
             # Statistiques
-            "Nb prospections", "Nb formations", "Nb appairages",
+            "Nb prospections",
+            "Nb formations",
+            "Nb appairages",
         ]
         ws.append(headers)
 
@@ -638,54 +671,69 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             return str(val)
 
         for p in qs:
-            ws.append([
-                # Identité
-                p.id, p.nom, p.get_type_display(), p.secteur_activite or "",
-                # Adresse
-                p.street_number or "", p.street_name or "", p.street_complement or "",
-                p.zip_code or "", p.city or "", p.country or "",
-                # Coordonnées générales
-                p.telephone or "", p.email or "",
-                # Contact
-                p.contact_nom or "", p.contact_poste or "", p.contact_email or "", p.contact_telephone or "",
-                # Employeur
-                p.siret or "",
-                p.get_type_employeur_display() if p.type_employeur else "",
-                p.employeur_specifique or "",
-                p.code_ape or "",
-                p.effectif_total or "",
-                p.idcc or "",
-                "Oui" if p.assurance_chomage_speciale else "Non",
-                # Maître 1
-                p.maitre1_nom_naissance or "",
-                p.maitre1_prenom or "",
-                _fmt(p.maitre1_date_naissance),
-                p.maitre1_courriel or "",
-                p.maitre1_emploi_occupe or "",
-                p.maitre1_diplome_titre or "",
-                p.maitre1_niveau_diplome or "",
-                # Maître 2
-                p.maitre2_nom_naissance or "",
-                p.maitre2_prenom or "",
-                _fmt(p.maitre2_date_naissance),
-                p.maitre2_courriel or "",
-                p.maitre2_emploi_occupe or "",
-                p.maitre2_diplome_titre or "",
-                p.maitre2_niveau_diplome or "",
-                # Web & Actions
-                p.website or "",
-                p.social_network_url or "",
-                p.get_actions_display() if p.actions else "",
-                p.action_description or "",
-                p.description or "",
-                # Métadonnées
-                p.slug or "",
-                getattr(p.default_centre, "nom", ""),
-                getattr(p.created_by, "username", ""),
-                _fmt(p.created_at),
-                # Stats
-                p.nb_prospections, p.nb_formations, p.nb_appairages,
-            ])
+            ws.append(
+                [
+                    # Identité
+                    p.id,
+                    p.nom,
+                    p.get_type_display(),
+                    p.secteur_activite or "",
+                    # Adresse
+                    p.street_number or "",
+                    p.street_name or "",
+                    p.street_complement or "",
+                    p.zip_code or "",
+                    p.city or "",
+                    p.country or "",
+                    # Coordonnées générales
+                    p.telephone or "",
+                    p.email or "",
+                    # Contact
+                    p.contact_nom or "",
+                    p.contact_poste or "",
+                    p.contact_email or "",
+                    p.contact_telephone or "",
+                    # Employeur
+                    p.siret or "",
+                    p.get_type_employeur_display() if p.type_employeur else "",
+                    p.employeur_specifique or "",
+                    p.code_ape or "",
+                    p.effectif_total or "",
+                    p.idcc or "",
+                    "Oui" if p.assurance_chomage_speciale else "Non",
+                    # Maître 1
+                    p.maitre1_nom_naissance or "",
+                    p.maitre1_prenom or "",
+                    _fmt(p.maitre1_date_naissance),
+                    p.maitre1_courriel or "",
+                    p.maitre1_emploi_occupe or "",
+                    p.maitre1_diplome_titre or "",
+                    p.maitre1_niveau_diplome or "",
+                    # Maître 2
+                    p.maitre2_nom_naissance or "",
+                    p.maitre2_prenom or "",
+                    _fmt(p.maitre2_date_naissance),
+                    p.maitre2_courriel or "",
+                    p.maitre2_emploi_occupe or "",
+                    p.maitre2_diplome_titre or "",
+                    p.maitre2_niveau_diplome or "",
+                    # Web & Actions
+                    p.website or "",
+                    p.social_network_url or "",
+                    p.get_actions_display() if p.actions else "",
+                    p.action_description or "",
+                    p.description or "",
+                    # Métadonnées
+                    p.slug or "",
+                    getattr(p.default_centre, "nom", ""),
+                    getattr(p.created_by, "username", ""),
+                    _fmt(p.created_at),
+                    # Stats
+                    p.nb_prospections,
+                    p.nb_formations,
+                    p.nb_appairages,
+                ]
+            )
 
         # ==========================================================
         # 📏 Largeurs colonnes + wrap sur texte long

@@ -1,12 +1,13 @@
 # models/atelier_tre.py
 
 from django.db import models, transaction
+from django.db.models import Count, Exists, OuterRef, Q, QuerySet
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Exists, OuterRef, Count, Q, QuerySet
 
 from .base import BaseModel
-from .centres import Centre
 from .candidat import Candidat
+from .centres import Centre
+
 
 class AtelierTRE(BaseModel):
     """
@@ -21,7 +22,7 @@ class AtelierTRE(BaseModel):
         ATELIER_5 = "atelier_5", _("Atelier 5 - Réseaux sociaux pro")
         ATELIER_6 = "atelier_6", _("Atelier 6 - Posture professionnelle")
         ATELIER_7 = "atelier_7", _("Atelier 7 - Bilan et plan d’action")
-        AUTRE     = "autre",     _("Autre")
+        AUTRE = "autre", _("Autre")
 
     type_atelier = models.CharField(
         max_length=30,
@@ -33,7 +34,8 @@ class AtelierTRE(BaseModel):
 
     date_atelier = models.DateTimeField(
         _("Date de l'atelier"),
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text=_("Date/heure de l’atelier"),
     )
     # Date prévue de l’atelier
@@ -41,7 +43,8 @@ class AtelierTRE(BaseModel):
     centre = models.ForeignKey(
         Centre,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         related_name="ateliers_tre",
         verbose_name=_("Centre de formation"),
         help_text=_("Centre où se déroule la formation"),
@@ -82,8 +85,8 @@ class AtelierTRE(BaseModel):
         """
         Retourne le nombre de candidats inscrits via la relation m2m.
         """
-        if hasattr(self, '_prefetched_objects_cache') and 'candidats' in self._prefetched_objects_cache:
-            return len(self._prefetched_objects_cache['candidats'])
+        if hasattr(self, "_prefetched_objects_cache") and "candidats" in self._prefetched_objects_cache:
+            return len(self._prefetched_objects_cache["candidats"])
         return self.candidats.count()
 
     @staticmethod
@@ -93,9 +96,7 @@ class AtelierTRE(BaseModel):
         """
         annotations = {}
         for key, _label in AtelierTRE.TypeAtelier.choices:
-            annotations[f"has_{key}"] = Exists(
-                AtelierTRE.objects.filter(type_atelier=key, candidats=OuterRef("pk"))
-            )
+            annotations[f"has_{key}"] = Exists(AtelierTRE.objects.filter(type_atelier=key, candidats=OuterRef("pk")))
             annotations[f"count_{key}"] = Count(
                 "ateliers_tre",
                 filter=Q(ateliers_tre__type_atelier=key),
@@ -104,7 +105,7 @@ class AtelierTRE(BaseModel):
         if "count_autre" in annotations:
             annotations["count_atelier_autre"] = annotations["count_autre"]
         return qs.annotate(**annotations)
-    
+
     def set_presence(self, candidat: Candidat, statut: str, commentaire: str | None = None, user=None):
         """
         Crée ou met à jour l’état de présence d’un candidat à cet atelier.
@@ -112,16 +113,17 @@ class AtelierTRE(BaseModel):
         """
         with transaction.atomic():
             obj, created = AtelierTREPresence.objects.get_or_create(
-                atelier=self, candidat=candidat,
+                atelier=self,
+                candidat=candidat,
                 defaults={"statut": statut, "commentaire": commentaire},
             )
             update_fields = []
             if obj.statut != statut:
                 obj.statut = statut
-                update_fields.append('statut')
+                update_fields.append("statut")
             if commentaire is not None and obj.commentaire != commentaire:
                 obj.commentaire = commentaire
-                update_fields.append('commentaire')
+                update_fields.append("commentaire")
             if update_fields:
                 try:
                     obj.save(update_fields=update_fields, user=user)
@@ -129,14 +131,17 @@ class AtelierTRE(BaseModel):
                     obj.save(update_fields=update_fields)
             return obj
 
+
 class PresenceStatut(models.TextChoices):
     """
     Statuts possibles de présence à un atelier TRE.
     """
+
     PRESENT = "present", "Présent"
     ABSENT = "absent", "Absent"
     EXCUSE = "excuse", "Excusé"
     INCONNU = "inconnu", "Non renseigné"
+
 
 class AtelierTREPresence(BaseModel):
     """
@@ -144,20 +149,20 @@ class AtelierTREPresence(BaseModel):
     """
 
     atelier = models.ForeignKey(
-        "AtelierTRE", on_delete=models.CASCADE,
-        related_name="presences", verbose_name=_("Atelier")
+        "AtelierTRE", on_delete=models.CASCADE, related_name="presences", verbose_name=_("Atelier")
     )
     # Lien vers l’atelier
 
     candidat = models.ForeignKey(
-        Candidat, on_delete=models.CASCADE,
-        related_name="presences_ateliers", verbose_name=_("Candidat")
+        Candidat, on_delete=models.CASCADE, related_name="presences_ateliers", verbose_name=_("Candidat")
     )
     # Lien vers le candidat
 
     statut = models.CharField(
-        max_length=15, choices=PresenceStatut.choices,
-        default=PresenceStatut.INCONNU, verbose_name=_("Statut de présence")
+        max_length=15,
+        choices=PresenceStatut.choices,
+        default=PresenceStatut.INCONNU,
+        verbose_name=_("Statut de présence"),
     )
     # Statut de présence
 
@@ -179,6 +184,7 @@ class AtelierTREPresence(BaseModel):
         Retourne une synthèse textuelle de la présence pour l’admin.
         """
         return f"{self.atelier_id} / {self.candidat_id} → {self.get_statut_display()}"
+
 
 # Compatibilité backward: monkey patch pour interface legacy (pas recommandé en usage moderne)
 AtelierTRE.set_presence = AtelierTRE.set_presence

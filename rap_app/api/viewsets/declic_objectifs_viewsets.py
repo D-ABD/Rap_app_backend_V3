@@ -1,32 +1,34 @@
 # rap_app/api/viewsets/declic_objectifs_viewset.py
 
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
+from collections import OrderedDict
+from io import BytesIO
+
+from django.http import HttpResponse
 from drf_spectacular.utils import (
+    OpenApiParameter,
     extend_schema,
     extend_schema_view,
-    OpenApiParameter,
 )
-from django.http import HttpResponse
-from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from collections import OrderedDict
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from ...models.centres import Centre
-from ...models.declic import ObjectifDeclic, Declic  # 🔁 on importe aussi Declic
-from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
-from ..permissions import IsDeclicStaffOrAbove
 from ...api.roles import (
     is_admin_like,
-    is_staff_or_staffread,
-    is_declic_staff,
     is_candidate,
+    is_declic_staff,
+    is_staff_or_staffread,
 )
+from ...models.centres import Centre
+from ...models.declic import Declic, ObjectifDeclic  # 🔁 on importe aussi Declic
+from ..permissions import IsDeclicStaffOrAbove
+from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -187,9 +189,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         if is_admin_like(user):
             return None
         if is_declic_staff(user):
-            centres = getattr(user, "centres_acces", None) or getattr(
-                user, "centres", None
-            )
+            centres = getattr(user, "centres_acces", None) or getattr(user, "centres", None)
             return list(centres.values_list("id", flat=True)) if centres else []
         if is_staff_or_staffread(user):
             try:
@@ -300,9 +300,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         Réponse conforme au serializer.
         """
         current = serializer.instance
-        new_centre = serializer.validated_data.get(
-            "centre", getattr(current, "centre", None)
-        )
+        new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
         self._assert_user_can_use_centre(new_centre)
         instance = serializer.save()
         try:
@@ -326,21 +324,11 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
               "departement": [{"value": ..., "label": ...}, ...]
           }
         """
-        qs = self._scope_qs_to_user_centres(
-            ObjectifDeclic.objects.select_related("centre")
-        )
+        qs = self._scope_qs_to_user_centres(ObjectifDeclic.objects.select_related("centre"))
 
         annees = qs.order_by("-annee").values_list("annee", flat=True).distinct()
-        centres = qs.values(
-            "centre__id", "centre__nom", "centre__code_postal"
-        ).distinct()
-        departements = sorted(
-            {
-                (c["centre__code_postal"] or "")[:2]
-                for c in centres
-                if c.get("centre__code_postal")
-            }
-        )
+        centres = qs.values("centre__id", "centre__nom", "centre__code_postal").distinct()
+        departements = sorted({(c["centre__code_postal"] or "")[:2] for c in centres if c.get("centre__code_postal")})
 
         data = OrderedDict(
             annee=[{"value": a, "label": str(a)} for a in annees],
@@ -351,9 +339,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
                 }
                 for c in centres
             ],
-            departement=[
-                {"value": d, "label": f"Département {d}"} for d in departements
-            ],
+            departement=[{"value": d, "label": f"Département {d}"} for d in departements],
         )
         return Response(data)
 
@@ -397,9 +383,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         """
         qs = self.get_queryset()
         if not qs.exists():
-            return Response(
-                {"detail": "Aucun objectif à exporter."}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Aucun objectif à exporter."}, status=status.HTTP_404_NOT_FOUND)
 
         wb = Workbook()
         ws = wb.active
@@ -439,11 +423,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         for obj in qs:
             data = obj.synthese_globale()
             # 🔢 Rétention A1 → A6 calculée côté modèle Déclic
-            taux_retention = (
-                Declic.taux_retention(obj.centre, obj.annee)
-                if obj.centre and obj.annee
-                else 0
-            )
+            taux_retention = Declic.taux_retention(obj.centre, obj.annee) if obj.centre and obj.annee else 0
 
             ws.append(
                 [
@@ -471,11 +451,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
 
         response = HttpResponse(
             buf.getvalue(),
-            content_type=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
+            content_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         )
-        response["Content-Disposition"] = (
-            'attachment; filename="objectifs_declic.xlsx"'
-        )
+        response["Content-Disposition"] = 'attachment; filename="objectifs_declic.xlsx"'
         return response

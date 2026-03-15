@@ -1,4 +1,5 @@
 import logging
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
@@ -196,9 +197,7 @@ class ProspectionComment(BaseModel):
             return True
         if hasattr(user, "is_candidat_or_stagiaire") and getattr(user, "is_candidat_or_stagiaire")():
             return (
-                not self.is_internal
-                and not self.est_archive
-                and getattr(self.prospection, 'owner_id', None) == user.id
+                not self.is_internal and not self.est_archive and getattr(self.prospection, "owner_id", None) == user.id
             )
         return False
 

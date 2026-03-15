@@ -2,27 +2,35 @@ import csv
 import logging
 import mimetypes
 import urllib.parse
-from django.http import HttpResponse, FileResponse
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from drf_spectacular.utils import (
-    OpenApiTypes, extend_schema, OpenApiParameter, OpenApiResponse
-)
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.exceptions import PermissionDenied
-import django_filters
 
-from ...models.documents import Document
-from ...models.logs import LogUtilisateur
+import django_filters
+from django.http import FileResponse, HttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+)
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+
+from ...api.paginations import RapAppPagination
+from ...api.permissions import (  # ✅ staff/admin/superadmin only
+    IsStaffOrAbove,
+    is_staff_or_staffread,
+)
 from ...api.serializers.documents_serializers import (
     DocumentSerializer,
     TypeDocumentChoiceSerializer,
 )
-from ...api.paginations import RapAppPagination
-from ...api.permissions import IsStaffOrAbove, is_staff_or_staffread  # ✅ staff/admin/superadmin only
+from ...models.documents import Document
+from ...models.logs import LogUtilisateur
 
 logger = logging.getLogger("application.api")
+
 
 class DocumentFilter(django_filters.FilterSet):
     """
@@ -33,13 +41,15 @@ class DocumentFilter(django_filters.FilterSet):
 
     À utiliser côté client via query params.
     """
-    centre_id = django_filters.NumberFilter(field_name='formation__centre_id')
-    statut_id = django_filters.NumberFilter(field_name='formation__statut_id')
-    type_offre_id = django_filters.NumberFilter(field_name='formation__type_offre_id')
+
+    centre_id = django_filters.NumberFilter(field_name="formation__centre_id")
+    statut_id = django_filters.NumberFilter(field_name="formation__statut_id")
+    type_offre_id = django_filters.NumberFilter(field_name="formation__type_offre_id")
 
     class Meta:
         model = Document
-        fields = ['centre_id', 'statut_id', 'type_offre_id']
+        fields = ["centre_id", "statut_id", "type_offre_id"]
+
 
 @extend_schema(tags=["Documents"])
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -59,11 +69,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
     - `filter_backends`: utilise DjangoFilterBackend pour le filtrage dynamique.
     - `filterset_class`: DocumentFilter (voir ci-dessus pour ses champs).
     - Aucune recherche textuelle à ce niveau (pas de `search_fields` ou `ordering_fields` définis ici).
-    - `get_queryset()`: 
+    - `get_queryset()`:
         - Récupère tous les documents avec optimisation via `select_related`.
         - Scopé dynamiquement selon le rôle de l'utilisateur :
           - Admin/Superadmin voient toute la base.
-          - Staff limité aux centres auxquels il a accès. 
+          - Staff limité aux centres auxquels il a accès.
           - Utilisateur non staff/admin/superadmin : queryset vide.
 
     ----
@@ -155,18 +165,15 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         Usages : toutes actions list/retrieve personnalisées ou génériques.
         """
-        base = (
-            Document.objects
-            .select_related("formation", "formation__centre", "formation__statut", "formation__type_offre", "created_by")
-            .all()
-        )
+        base = Document.objects.select_related(
+            "formation", "formation__centre", "formation__statut", "formation__type_offre", "created_by"
+        ).all()
         return self._scope_qs_to_user_centres(base)
 
     # ------------------------------ list/retrieve -------------------------
 
     @extend_schema(
-        summary="📄 Lister tous les documents",
-        responses={200: OpenApiResponse(response=DocumentSerializer(many=True))}
+        summary="📄 Lister tous les documents", responses={200: OpenApiResponse(response=DocumentSerializer(many=True))}
     )
     def list(self, request, *args, **kwargs):
         """
@@ -190,10 +197,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         return super().list(request, *args, **kwargs)
 
-    @extend_schema(
-        summary="📂 Détail d’un document",
-        responses={200: OpenApiResponse(response=DocumentSerializer)}
-    )
+    @extend_schema(summary="📂 Détail d’un document", responses={200: OpenApiResponse(response=DocumentSerializer)})
     def retrieve(self, request, *args, **kwargs):
         """
         Retourne le détail d'un document accessible à l'utilisateur courant.
@@ -210,18 +214,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         doc = self.get_object()  # get_object() utilise get_queryset() -> scopé
         serializer = self.get_serializer(doc)
-        return Response({
-            "success": True,
-            "message": "Document récupéré avec succès.",
-            "data": serializer.data
-        })
+        return Response({"success": True, "message": "Document récupéré avec succès.", "data": serializer.data})
 
     # ------------------------------ create/update/destroy -----------------
 
     @extend_schema(
         summary="➕ Ajouter un document",
         request=DocumentSerializer,
-        responses={201: OpenApiResponse(response=DocumentSerializer)}
+        responses={201: OpenApiResponse(response=DocumentSerializer)},
     )
     def create(self, request, *args, **kwargs):
         """
@@ -249,25 +249,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 instance=document,
                 user=request.user,
                 action=LogUtilisateur.ACTION_CREATE,
-                details=f"Ajout du document « {document.nom_fichier} »"
+                details=f"Ajout du document « {document.nom_fichier} »",
             )
-            return Response({
-                "success": True,
-                "message": "Document créé avec succès.",
-                "data": document.to_serializable_dict()
-            }, status=status.HTTP_201_CREATED)
+            return Response(
+                {"success": True, "message": "Document créé avec succès.", "data": document.to_serializable_dict()},
+                status=status.HTTP_201_CREATED,
+            )
 
         logger.warning(f"[API] Erreur création document : {serializer.errors}")
-        return Response({
-            "success": False,
-            "message": "Échec de la création du document.",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "message": "Échec de la création du document.", "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     @extend_schema(
         summary="✏️ Modifier un document",
         request=DocumentSerializer,
-        responses={200: OpenApiResponse(response=DocumentSerializer)}
+        responses={200: OpenApiResponse(response=DocumentSerializer)},
     )
     def update(self, request, *args, **kwargs):
         """
@@ -289,8 +287,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
 
         # Ne pas supprimer le fichier s’il n’est pas envoyé
-        if 'fichier' not in data or data.get('fichier') in [None, '', 'null']:
-            data.pop('fichier', None)
+        if "fichier" not in data or data.get("fichier") in [None, "", "null"]:
+            data.pop("fichier", None)
 
         serializer = self.get_serializer(instance, data=data, partial=True)
         if serializer.is_valid():
@@ -303,23 +301,25 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 instance=document,
                 user=request.user,
                 action=LogUtilisateur.ACTION_UPDATE,
-                details=f"Mise à jour du document « {document.nom_fichier} »"
+                details=f"Mise à jour du document « {document.nom_fichier} »",
             )
-            return Response({
-                "success": True,
-                "message": "Document mis à jour avec succès.",
-                "data": document.to_serializable_dict()
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "success": True,
+                    "message": "Document mis à jour avec succès.",
+                    "data": document.to_serializable_dict(),
+                },
+                status=status.HTTP_200_OK,
+            )
 
-        return Response({
-            "success": False,
-            "message": "Erreur de validation.",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "message": "Erreur de validation.", "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     @extend_schema(
         summary="🗑️ Supprimer un document",
-        responses={204: OpenApiResponse(description="Document supprimé avec succès.")}
+        responses={204: OpenApiResponse(description="Document supprimé avec succès.")},
     )
     def destroy(self, request, *args, **kwargs):
         """
@@ -344,22 +344,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
             instance=document,
             user=request.user,
             action=LogUtilisateur.ACTION_DELETE,
-            details=f"Suppression du document « {document.nom_fichier} »"
+            details=f"Suppression du document « {document.nom_fichier} »",
         )
-        return Response({
-            "success": True,
-            "message": "Document supprimé avec succès.",
-            "data": None
-        }, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"success": True, "message": "Document supprimé avec succès.", "data": None},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
     # ------------------------------ actions custom ------------------------
 
     @extend_schema(
         summary="📚 Lister les documents d’une formation",
         parameters=[
-            OpenApiParameter(name="formation", type=int, required=True, location="query", description="ID de la formation")
+            OpenApiParameter(
+                name="formation", type=int, required=True, location="query", description="ID de la formation"
+            )
         ],
-        responses={200: OpenApiResponse(response=DocumentSerializer(many=True))}
+        responses={200: OpenApiResponse(response=DocumentSerializer(many=True))},
     )
     @action(detail=False, methods=["get"], url_path="par-formation")
     def par_formation(self, request):
@@ -393,19 +394,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
         queryset = self.get_queryset().filter(formation_id=formation_id)
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page or queryset, many=True)
-        return self.get_paginated_response(serializer.data) if page else Response({
-            "success": True,
-            "data": serializer.data
-        })
+        return (
+            self.get_paginated_response(serializer.data)
+            if page
+            else Response({"success": True, "data": serializer.data})
+        )
 
     @extend_schema(
         summary="🧾 Exporter tous les documents au format CSV (scopé + filtré)",
         responses={
             200: OpenApiResponse(
-                description="Fichier CSV contenant la liste des documents",
-                response=OpenApiTypes.BINARY
+                description="Fichier CSV contenant la liste des documents", response=OpenApiTypes.BINARY
             )
-        }
+        },
     )
     @action(detail=False, methods=["get"], url_path="export-csv")
     def export_csv(self, request):
@@ -428,22 +429,24 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         qs = self.filter_queryset(self.get_queryset())
 
-        response = HttpResponse(content_type='text/csv')
+        response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = "attachment; filename=documents.csv"
 
         writer = csv.writer(response)
         writer.writerow(["ID", "Nom", "Type", "Formation", "Auteur", "Taille (Ko)", "MIME"])
 
         for doc in qs:
-            writer.writerow([
-                doc.id,
-                doc.nom_fichier,
-                doc.get_type_document_display(),
-                doc.formation.nom if doc.formation else "",
-                str(doc.created_by) if doc.created_by else "",
-                doc.taille_fichier or "",
-                doc.mime_type or ""
-            ])
+            writer.writerow(
+                [
+                    doc.id,
+                    doc.nom_fichier,
+                    doc.get_type_document_display(),
+                    doc.formation.nom if doc.formation else "",
+                    str(doc.created_by) if doc.created_by else "",
+                    doc.taille_fichier or "",
+                    doc.mime_type or "",
+                ]
+            )
 
         return response
 
@@ -451,7 +454,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         summary="Liste des types de documents",
         description="Retourne les types de documents valides avec leurs libellés lisibles.",
         tags=["Documents"],
-        responses={200: OpenApiResponse(response=TypeDocumentChoiceSerializer(many=True))}
+        responses={200: OpenApiResponse(response=TypeDocumentChoiceSerializer(many=True))},
     )
     @action(detail=False, methods=["get"], url_path="types", url_name="types")
     def get_types(self, request):
@@ -469,20 +472,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
         #### Format de réponse :
         - {"success": True, "message": "...", "data": [ {"value":..., "label":...}, ... ] }
         """
-        data = [
-            {"value": value, "label": label}
-            for value, label in Document.TYPE_DOCUMENT_CHOICES
-        ]
+        data = [{"value": value, "label": label} for value, label in Document.TYPE_DOCUMENT_CHOICES]
         serializer = TypeDocumentChoiceSerializer(data, many=True)
-        return Response({
-            "success": True,
-            "message": "Types de documents disponibles.",
-            "data": serializer.data
-        })
+        return Response({"success": True, "message": "Types de documents disponibles.", "data": serializer.data})
 
     @extend_schema(
         summary="Récupérer les filtres disponibles pour les documents (scopé)",
-        responses={200: OpenApiResponse(description="Filtres disponibles")}
+        responses={200: OpenApiResponse(description="Filtres disponibles")},
     )
     @action(detail=False, methods=["get"], url_path="filtres")
     def get_filtres(self, request):
@@ -507,54 +503,59 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         scoped = self.get_queryset()
 
-        centres = scoped \
-            .filter(formation__centre__isnull=False) \
-            .values_list("formation__centre_id", "formation__centre__nom") \
+        centres = (
+            scoped.filter(formation__centre__isnull=False)
+            .values_list("formation__centre_id", "formation__centre__nom")
             .distinct()
+        )
 
-        statuts = scoped \
-            .filter(formation__statut__isnull=False) \
-            .values_list("formation__statut_id", "formation__statut__nom") \
+        statuts = (
+            scoped.filter(formation__statut__isnull=False)
+            .values_list("formation__statut_id", "formation__statut__nom")
             .distinct()
+        )
 
-        type_offres = scoped \
-            .filter(formation__type_offre__isnull=False) \
-            .values_list("formation__type_offre_id", "formation__type_offre__nom") \
+        type_offres = (
+            scoped.filter(formation__type_offre__isnull=False)
+            .values_list("formation__type_offre_id", "formation__type_offre__nom")
             .distinct()
+        )
 
         # ✅ Liste des formations liées à des documents
-        formations = scoped \
-            .filter(formation__isnull=False) \
+        formations = (
+            scoped.filter(formation__isnull=False)
             .values_list(
                 "formation__id",
                 "formation__nom",
                 "formation__num_offre",
                 "formation__type_offre__nom",
-            ) \
-            .distinct() \
+            )
+            .distinct()
             .order_by("formation__nom")
+        )
 
-        return Response({
-            "success": True,
-            "message": "Filtres documents récupérés avec succès",
-            "data": {
-                "centres": [{"id": c[0], "nom": c[1]} for c in centres],
-                "statuts": [{"id": s[0], "nom": s[1]} for s in statuts],
-                "type_offres": [{"id": t[0], "nom": t[1]} for t in type_offres],
-                # ✅ Ajout du filtre formation (compatibilité front)
-                "formations": [
-                    {
-                        "id": f[0],
-                        "nom": f[1],
-                        "num_offre": f[2],
-                        "type_offre_nom": f[3],
-                        "type_offre_libelle": f[3],  # même valeur pour compat front
-                    }
-                    for f in formations
-                ],
+        return Response(
+            {
+                "success": True,
+                "message": "Filtres documents récupérés avec succès",
+                "data": {
+                    "centres": [{"id": c[0], "nom": c[1]} for c in centres],
+                    "statuts": [{"id": s[0], "nom": s[1]} for s in statuts],
+                    "type_offres": [{"id": t[0], "nom": t[1]} for t in type_offres],
+                    # ✅ Ajout du filtre formation (compatibilité front)
+                    "formations": [
+                        {
+                            "id": f[0],
+                            "nom": f[1],
+                            "num_offre": f[2],
+                            "type_offre_nom": f[3],
+                            "type_offre_libelle": f[3],  # même valeur pour compat front
+                        }
+                        for f in formations
+                    ],
+                },
             }
-        })
-
+        )
 
     @extend_schema(
         summary="⬇️ Télécharger un document",

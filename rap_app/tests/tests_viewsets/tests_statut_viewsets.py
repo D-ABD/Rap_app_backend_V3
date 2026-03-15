@@ -1,10 +1,10 @@
-from rest_framework import status
 from django.urls import reverse
+from rest_framework import status
 
-from ...models.statut import Statut
-from ..test_utils import AuthenticatedTestCase
-from ..factories import UserFactory
 from ...models.custom_user import CustomUser
+from ...models.statut import Statut
+from ..factories import UserFactory
+from ..test_utils import AuthenticatedTestCase
 
 
 class StatutViewSetTestCase(AuthenticatedTestCase):
@@ -76,7 +76,7 @@ class StatutViewSetTestCase(AuthenticatedTestCase):
     def test_badge_html_display(self):
         statut = Statut.objects.create(nom=Statut.PLEINE, couleur="#000000")
         badge = statut.get_badge_html()
-        self.assertIn('<span', badge)
+        self.assertIn("<span", badge)
         self.assertIn('style="background-color:#000000;', badge)
 
     def test_csv_row_and_headers(self):

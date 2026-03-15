@@ -4,6 +4,7 @@ from django.utils.timezone import now
 from ...models import Centre
 from .setup_base_tests import BaseModelTestSetupMixin
 
+
 class CentreModelTest(BaseModelTestSetupMixin):
     """🧪 Tests complets du modèle Centre."""
 
@@ -11,7 +12,6 @@ class CentreModelTest(BaseModelTestSetupMixin):
         centre = self.create_instance(Centre, nom="Centre A", code_postal="75000")
         self.assertEqual(str(centre), "Centre A")
         self.assertIn("Centre", repr(centre))
-
 
     def test_full_address(self):
         centre = self.create_instance(Centre, nom="Centre Test", code_postal="75001")
@@ -28,10 +28,8 @@ class CentreModelTest(BaseModelTestSetupMixin):
     def test_cache_invalidation(self):
         centre = self.create_instance(Centre, nom="Centre Cache", code_postal="75000")
 
-
         # Recharge le centre depuis la base pour éviter les incohérences
         centre = Centre.objects.get(pk=centre.pk)
-
 
     def test_to_serializable_dict(self):
         centre = self.create_instance(Centre, nom="Centre JSON", code_postal="12345")
@@ -74,7 +72,6 @@ class CentreModelTest(BaseModelTestSetupMixin):
         self.create_instance(Centre, nom="Centre Beta", code_postal="54321")
         results = Centre.custom.search("Alpha")
         self.assertEqual(results.count(), 1)
-
 
     def test_delete_centre(self):
         centre = self.create_instance(Centre, nom="Centre Suppr", code_postal="75000")

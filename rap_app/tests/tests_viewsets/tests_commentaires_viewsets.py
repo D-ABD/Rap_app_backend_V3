@@ -1,16 +1,17 @@
-from rest_framework import status
-from django.urls import reverse
-from django.utils import timezone
 from datetime import timedelta
 
-from ...models.commentaires import Commentaire
-from ...models.formations import Formation
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+
 from ...models.centres import Centre
+from ...models.commentaires import Commentaire
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ..test_utils import AuthenticatedTestCase
 from ..factories import UserFactory
-from ...models.custom_user import CustomUser
+from ..test_utils import AuthenticatedTestCase
 
 
 class CommentaireViewSetTestCase(AuthenticatedTestCase):
@@ -29,14 +30,11 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
             type_offre=self.type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=5),
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.commentaire = Commentaire.objects.create(
-            formation=self.formation,
-            contenu="Contenu de test",
-            saturation=85,
-            created_by=self.user
+            formation=self.formation, contenu="Contenu de test", saturation=85, created_by=self.user
         )
 
     def get_data(self, response):
@@ -56,11 +54,7 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
 
     def test_create_commentaire_valide(self):
         url = reverse("commentaire-list")
-        payload = {
-            "formation": self.formation.id,
-            "contenu": "Nouveau commentaire",
-            "saturation": 70
-        }
+        payload = {"formation": self.formation.id, "contenu": "Nouveau commentaire", "saturation": 70}
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("data", response.data)
@@ -68,11 +62,7 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
 
     def test_create_commentaire_invalide_contenu(self):
         url = reverse("commentaire-list")
-        payload = {
-            "formation": self.formation.id,
-            "contenu": "   ",
-            "saturation": 50
-        }
+        payload = {"formation": self.formation.id, "contenu": "   ", "saturation": 50}
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("contenu", response.data)
@@ -92,11 +82,7 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
 
     def test_update_commentaire(self):
         url = reverse("commentaire-detail", args=[self.commentaire.id])
-        payload = {
-            "formation": self.formation.id,
-            "contenu": "Contenu modifié",
-            "saturation": 60
-        }
+        payload = {"formation": self.formation.id, "contenu": "Contenu modifié", "saturation": 60}
         response = self.client.put(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.get_data(response)["contenu"], "Contenu modifié")
@@ -119,7 +105,6 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
             item = c.get("data", c)
             formation_id = item.get("formation_id") or item.get("formation")
             self.assertEqual(formation_id, self.formation.id)
-
 
     def test_filtrage_par_recherche(self):
         url = reverse("commentaire-list") + "?search=test"

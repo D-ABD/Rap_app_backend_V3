@@ -3,13 +3,14 @@ Signal post_delete pour le modèle Document.
 Log l'action utilisateur et supprime le fichier associé après validation de la transaction.
 """
 
-import sys
 import logging
+import sys
+
 from django.apps import apps
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from django.core.files.storage import default_storage
 
 from ..models.documents import Document
 from ..models.logs import LogUtilisateur
@@ -27,11 +28,7 @@ def log_and_cleanup_document(sender, instance, **kwargs):
     if not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv:
         return
 
-    user = (
-        kwargs.get("user")
-        or getattr(instance, "modified_by", None)
-        or getattr(instance, "created_by", None)
-    )
+    user = kwargs.get("user") or getattr(instance, "modified_by", None) or getattr(instance, "created_by", None)
 
     nom_fichier = getattr(instance, "nom_fichier", "Document inconnu")
     document_id = getattr(instance, "pk", "?")
@@ -44,13 +41,9 @@ def log_and_cleanup_document(sender, instance, **kwargs):
             user=user,
             details=f"Suppression du document : {nom_fichier} (formation #{formation_id})",
         )
-        logger.info(
-            f"[Signal] Log utilisateur enregistré pour la suppression du document #{document_id}"
-        )
+        logger.info(f"[Signal] Log utilisateur enregistré pour la suppression du document #{document_id}")
     except Exception as e:
-        logger.warning(
-            f"Erreur lors du log de suppression du document #{document_id} : {e}"
-        )
+        logger.warning(f"Erreur lors du log de suppression du document #{document_id} : {e}")
 
     if instance.fichier and instance.fichier.name:
         file_path = instance.fichier.name
@@ -64,9 +57,7 @@ def log_and_cleanup_document(sender, instance, **kwargs):
                     default_storage.delete(file_path)
                     logger.info(f"[Signal] Fichier supprimé physiquement : {file_path}")
                 else:
-                    logger.warning(
-                        f"[Signal] Fichier introuvable, pas de suppression : {file_path}"
-                    )
+                    logger.warning(f"[Signal] Fichier introuvable, pas de suppression : {file_path}")
             except Exception as e:
                 logger.error(
                     f"Erreur lors de la suppression physique du fichier {file_path} : {e}",

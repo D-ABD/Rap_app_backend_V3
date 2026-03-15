@@ -1,12 +1,14 @@
-from django.test import TestCase
 from datetime import date, timedelta
-from ...models.custom_user import CustomUser
-from ...models.centres import Centre
-from ...models.formations import Formation
-from ...models.types_offre import TypeOffre
-from ...models.statut import Statut
-from ...models.rapports import Rapport
+
+from django.test import TestCase
+
 from ...api.serializers.rapports_serializers import RapportSerializer
+from ...models.centres import Centre
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
+from ...models.rapports import Rapport
+from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
 
 
 class RapportSerializerTestCase(TestCase):
@@ -16,17 +18,13 @@ class RapportSerializerTestCase(TestCase):
             username="rapporteur",
             password="password",
             role=CustomUser.ROLE_ADMIN,
-            is_staff=True
+            is_staff=True,
         )
         self.centre = Centre.objects.create(nom="Centre Test", created_by=self.user)
         self.type_offre = TypeOffre.objects.create(nom="non_defini", created_by=self.user)
         self.statut = Statut.objects.create(nom="non_defini", created_by=self.user)
         self.formation = Formation.objects.create(
-            nom="Formation X",
-            centre=self.centre,
-            type_offre=self.type_offre,
-            statut=self.statut,
-            created_by=self.user
+            nom="Formation X", centre=self.centre, type_offre=self.type_offre, statut=self.statut, created_by=self.user
         )
         self.rapport = Rapport.objects.create(
             nom="Rapport test",
@@ -41,7 +39,7 @@ class RapportSerializerTestCase(TestCase):
             formation=self.formation,
             donnees={"total": 42},
             temps_generation=3.21,
-            created_by=self.user
+            created_by=self.user,
         )
 
     def test_serializer_output_structure(self):
@@ -53,7 +51,6 @@ class RapportSerializerTestCase(TestCase):
         self.assertTrue(output["success"])
         self.assertEqual(output["message"], "Rapport récupéré avec succès.")
         self.assertIn("data", output)
-
 
     def test_serializer_validation_dates_inverses(self):
         """

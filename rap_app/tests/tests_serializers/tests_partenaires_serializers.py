@@ -1,8 +1,10 @@
 # tests/test_partenaire_serializers.py
 
 from django.test import TestCase
-from ...models.partenaires import Partenaire
+
 from ...api.serializers.partenaires_serializers import PartenaireSerializer
+from ...models.partenaires import Partenaire
+
 
 class PartenaireSerializerTestCase(TestCase):
     def setUp(self):

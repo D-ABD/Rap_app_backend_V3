@@ -4,12 +4,13 @@ Signaux permettant de journaliser la création ou modification d'une instance de
 
 import logging
 import sys
+
+from django.apps import apps
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.apps import apps
 
-from ..models.rapports import Rapport
 from ..models.logs import LogUtilisateur
+from ..models.rapports import Rapport
 
 logger = logging.getLogger("rap_app.rapports")
 
@@ -18,7 +19,7 @@ def skip_during_migrations() -> bool:
     """
     Retourne True si l'application est en cours de migration.
     """
-    return not apps.ready or 'migrate' in sys.argv or 'makemigrations' in sys.argv
+    return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
 @receiver(post_save, sender=Rapport, dispatch_uid="rap_app.rapports_signals.log_rapport_creation")
@@ -37,15 +38,14 @@ def log_rapport_creation(sender, instance: Rapport, created: bool, **kwargs):
             user = None
 
         type_display = (
-            instance.get_type_rapport_display()
-            if hasattr(instance, "get_type_rapport_display") else "Type inconnu"
+            instance.get_type_rapport_display() if hasattr(instance, "get_type_rapport_display") else "Type inconnu"
         )
 
         LogUtilisateur.log_action(
             instance=instance,
             action=action,
             user=user,
-            details=f"{action.capitalize()} du rapport : {instance.nom} ({type_display})"
+            details=f"{action.capitalize()} du rapport : {instance.nom} ({type_display})",
         )
 
         logger.info(f"[Signal] {action.capitalize()} du rapport #{instance.pk} : {instance.nom}")

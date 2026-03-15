@@ -1,13 +1,14 @@
 # rap_app/models/declic.py
 from datetime import date
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from django.db import models, transaction
-from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import localdate
+from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
 from .centres import Centre
+
 
 class Declic(BaseModel):
     """
@@ -54,9 +55,7 @@ class Declic(BaseModel):
         """
         Met à jour nb_absents_declic à chaque sauvegarde. Ajoute éventuellement l'utilisateur aux champs d'audit.
         """
-        self.nb_absents_declic = max(
-            0, self.nb_inscrits_declic - self.nb_presents_declic
-        )
+        self.nb_absents_declic = max(0, self.nb_inscrits_declic - self.nb_presents_declic)
         if user and not self.pk:
             self.created_by = user
         if user:
@@ -70,11 +69,7 @@ class Declic(BaseModel):
         """
         Pourcentage de présence à la session. Retourne 0 si nb_inscrits_declic est nul.
         """
-        return (
-            round((self.nb_presents_declic / self.nb_inscrits_declic) * 100, 1)
-            if self.nb_inscrits_declic
-            else 0
-        )
+        return round((self.nb_presents_declic / self.nb_inscrits_declic) * 100, 1) if self.nb_inscrits_declic else 0
 
     @property
     def objectif_annuel(self):
@@ -96,9 +91,9 @@ class Declic(BaseModel):
         objectif_annuel = self.objectif_annuel
 
         realise = (
-            Declic.objects
-            .filter(centre=centre, date_declic__year=year)
-            .aggregate(total=models.Sum("nb_presents_declic"))["total"]
+            Declic.objects.filter(centre=centre, date_declic__year=year).aggregate(
+                total=models.Sum("nb_presents_declic")
+            )["total"]
             or 0
         )
         return round((realise / objectif_annuel) * 100, 1) if objectif_annuel else 0
@@ -116,9 +111,9 @@ class Declic(BaseModel):
         objectif_annuel = self.objectif_annuel
 
         realise = (
-            Declic.objects
-            .filter(centre=centre, date_declic__year=year)
-            .aggregate(total=models.Sum("nb_presents_declic"))["total"]
+            Declic.objects.filter(centre=centre, date_declic__year=year).aggregate(
+                total=models.Sum("nb_presents_declic")
+            )["total"]
             or 0
         )
         return max(objectif_annuel - realise, 0)
@@ -138,9 +133,7 @@ class Declic(BaseModel):
         if departement:
             qs = qs.select_related("centre")
             return sum(
-                d.nb_presents_declic
-                for d in qs
-                if d.centre and getattr(d.centre, "departement", None) == departement
+                d.nb_presents_declic for d in qs if d.centre and getattr(d.centre, "departement", None) == departement
             )
 
         return qs.aggregate(total=models.Sum("nb_presents_declic"))["total"] or 0
@@ -164,9 +157,7 @@ class ObjectifDeclic(BaseModel):
         verbose_name=_("Département"),
     )
     annee = models.PositiveIntegerField(verbose_name=_("Année"))
-    valeur_objectif = models.PositiveIntegerField(
-        verbose_name=_("Objectif annuel (personnes)")
-    )
+    valeur_objectif = models.PositiveIntegerField(verbose_name=_("Objectif annuel (personnes)"))
     commentaire = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -273,12 +264,7 @@ class ObjectifDeclic(BaseModel):
         """
         if not centre or not date:
             return 0
-        return (
-            cls.objects.filter(centre=centre, annee=date.year)
-            .values_list("valeur_objectif", flat=True)
-            .first()
-            or 0
-        )
+        return cls.objects.filter(centre=centre, annee=date.year).values_list("valeur_objectif", flat=True).first() or 0
 
     def save(self, *args, user=None, **kwargs):
         """

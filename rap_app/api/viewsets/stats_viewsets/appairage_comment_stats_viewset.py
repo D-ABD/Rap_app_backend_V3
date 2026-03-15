@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-from rap_app.api.serializers.base_serializers import EmptySerializer
-
 from typing import Literal, Optional
 
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Coalesce, Substr
-from django.utils.dateparse import parse_date
 from django.utils import timezone
-
-from rest_framework.viewsets import GenericViewSet
+from django.utils.dateparse import parse_date
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
-from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from rap_app.api.serializers.base_serializers import EmptySerializer
 
 from ....models.commentaires_appairage import CommentaireAppairage
-
+from ...permissions import IsStaffOrAbove, is_staff_or_staffread
 
 try:
     from ..permissions import IsOwnerOrStaffOrAbove  # type: ignore
@@ -27,8 +24,10 @@ except Exception:  # pragma: no cover
 try:
     from ..mixins import RestrictToUserOwnedQueryset  # type: ignore
 except Exception:  # pragma: no cover
+
     class RestrictToUserOwnedQueryset:
-        def restrict_queryset_to_user(self, qs): return qs
+        def restrict_queryset_to_user(self, qs):
+            return qs
 
 
 GroupKey = Literal[
@@ -74,7 +73,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
     Serializers
     ─────────────────────────────────────────────
     - EmptySerializer (aucune validation d’input, utilisé ici car endpoints readonly).
-    
+
     ─────────────────────────────────────────────
     Actions exposées
     ─────────────────────────────────────────────
@@ -86,7 +85,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
     - latest (GET /latest)
         - Action personnalisée : derniers commentaires (sliced via param “limit”).
         - Voir docstring dans la méthode.
- 
+
     - grouped (GET /grouped)
         - Action personnalisée : statistiques agrégées par dimension.
         - Paramétrable via query ?by=…
@@ -139,6 +138,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
         Plusieurs conventions sont cherchées ('departements_codes', 'departements').
         Applicable principalement pour certains profils utilisateurs métier.
         """
+
         def _norm(val):
             if not val:
                 return []
@@ -147,6 +147,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
             if isinstance(val, (list, tuple, set)):
                 return list({str(x)[:2] for x in val if x})
             return [str(val)[:2]]
+
         for owner in (user, getattr(user, "profile", None)):
             if not owner:
                 continue
@@ -200,7 +201,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
             - centre de la formation
             - partenaire de l’appairage
             - created_by
-        - Appelle restrict_queryset_to_user si le mixin le permet (portée dépendante du projet. 
+        - Appelle restrict_queryset_to_user si le mixin le permet (portée dépendante du projet.
         - Filtrage business : appelle _scope_queryset_for_user selon l’utilisateur courant (= self.request.user).
         - La visibilité effective dépend donc (a) du périmètre staff / admin, (b) des éventuels mixins.
         """
@@ -258,7 +259,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
         ─────────────────────────────────────────────
         Permissions (héritées : voir ViewSet)
         ─────────────────────────────────────────────
-        Intention métier : 
+        Intention métier :
         - Aider au pilotage et à la compréhension de l’activité “commentaire” (nombre de commentaires, nombre distincts d’appairages concernés, nombre d’auteurs différents participant à la discussion, etc.).
         ─────────────────────────────────────────────
         Filtres : tous les query params gérés dans _apply_common_filters (cf. ci-dessus).
@@ -355,24 +356,26 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
         now = timezone.now()
         results = []
         for c in qs:
-            results.append({
-                "id": c.id,
-                "appairage_id": c.appairage_id,
-                "centre_nom": getattr(c.appairage.formation.centre, "nom", None),
-                "formation_nom": getattr(c.appairage.formation, "nom", None),
-                "num_offre": getattr(c.appairage.formation, "num_offre", None),  # ✅ ajouté
-                "type_offre_nom": getattr(getattr(c.appairage.formation, "type_offre", None), "nom", None), 
-                "partenaire_nom": getattr(c.appairage.partenaire, "nom", None),
-                "statut_snapshot": c.statut_snapshot,
-                "body": c.body[:280],
-                "auteur": c.auteur_nom(),
-                "date": c.created_at.strftime("%d/%m/%Y") if c.created_at else None,
-                "heure": c.created_at.strftime("%H:%M") if c.created_at else None,
-                "created_at": c.created_at.isoformat() if c.created_at else None,
-                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-                "is_recent": c.created_at and c.created_at.date() == now.date(),
-                "is_edited": bool(c.updated_at and c.updated_at > c.created_at),
-            })
+            results.append(
+                {
+                    "id": c.id,
+                    "appairage_id": c.appairage_id,
+                    "centre_nom": getattr(c.appairage.formation.centre, "nom", None),
+                    "formation_nom": getattr(c.appairage.formation, "nom", None),
+                    "num_offre": getattr(c.appairage.formation, "num_offre", None),  # ✅ ajouté
+                    "type_offre_nom": getattr(getattr(c.appairage.formation, "type_offre", None), "nom", None),
+                    "partenaire_nom": getattr(c.appairage.partenaire, "nom", None),
+                    "statut_snapshot": c.statut_snapshot,
+                    "body": c.body[:280],
+                    "auteur": c.auteur_nom(),
+                    "date": c.created_at.strftime("%d/%m/%Y") if c.created_at else None,
+                    "heure": c.created_at.strftime("%H:%M") if c.created_at else None,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                    "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                    "is_recent": c.created_at and c.created_at.date() == now.date(),
+                    "is_edited": bool(c.updated_at and c.updated_at > c.created_at),
+                }
+            )
 
         payload = {
             "count": self.get_queryset().count(),
@@ -424,28 +427,30 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
             return Response({"detail": "Paramètre 'by' invalide."}, status=400)
 
         qs = self._apply_common_filters(self.get_queryset())
-        qs = qs.annotate(
-            departement=Coalesce(Substr("appairage__formation__centre__code_postal", 1, 2), Value("NA"))
-        )
+        qs = qs.annotate(departement=Coalesce(Substr("appairage__formation__centre__code_postal", 1, 2), Value("NA")))
 
         group_fields_map = {
             "centre": ["appairage__formation__centre_id", "appairage__formation__centre__nom"],
             "departement": ["departement"],
-            "formation": ["appairage__formation_id", "appairage__formation__nom", 
-            "appairage__formation__type_offre__nom", "appairage__formation__num_offre"
+            "formation": [
+                "appairage__formation_id",
+                "appairage__formation__nom",
+                "appairage__formation__type_offre__nom",
+                "appairage__formation__num_offre",
             ],
-            
             "partenaire": ["appairage__partenaire_id", "appairage__partenaire__nom"],
             "statut_snapshot": ["statut_snapshot"],
             "appairage": ["appairage_id"],
         }
 
         rows = list(
-            qs.values(*group_fields_map[by]).annotate(
+            qs.values(*group_fields_map[by])
+            .annotate(
                 total=Count("id"),
                 distinct_appairages=Count("appairage", distinct=True),
                 distinct_auteurs=Count("created_by", distinct=True),
-            ).order_by(*group_fields_map[by])
+            )
+            .order_by(*group_fields_map[by])
         )
 
         for r in rows:

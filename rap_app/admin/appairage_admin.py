@@ -3,10 +3,12 @@ from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 
 from ..models import Appairage, HistoriqueAppairage
-from ..models.appairage import AppairageStatut, AppairageActivite
+from ..models.appairage import AppairageActivite, AppairageStatut
+
 
 class HistoriqueAppairageInline(admin.TabularInline):
     """Affiche l'historique d'un appairage en ligne dans l'admin."""
+
     model = HistoriqueAppairage
     extra = 0
     can_delete = False
@@ -16,9 +18,11 @@ class HistoriqueAppairageInline(admin.TabularInline):
     verbose_name = _("Historique")
     verbose_name_plural = _("Historiques d’appairages")
 
+
 @admin.register(Appairage)
 class AppairageAdmin(admin.ModelAdmin):
     """Administration des objets Appairage."""
+
     date_hierarchy = "date_appairage"
     ordering = ("-date_appairage", "-id")
 
@@ -198,9 +202,11 @@ class AppairageAdmin(admin.ModelAdmin):
         "act_desarchiver",
     )
 
+
 @admin.register(HistoriqueAppairage)
 class HistoriqueAppairageAdmin(admin.ModelAdmin):
     """Administration des historiques d'appairage."""
+
     date_hierarchy = "date"
     ordering = ("-date", "-id")
 
@@ -217,6 +223,4 @@ class HistoriqueAppairageAdmin(admin.ModelAdmin):
     raw_id_fields = ("appairage", "auteur")
     readonly_fields = ("date", "statut", "auteur", "commentaire")
 
-    fieldsets = (
-        (None, {"fields": ("appairage", "statut", "commentaire", "auteur", "date")}),
-    )
+    fieldsets = ((None, {"fields": ("appairage", "statut", "commentaire", "auteur", "date")}),)

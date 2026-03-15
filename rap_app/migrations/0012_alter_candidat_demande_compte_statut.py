@@ -6,13 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rap_app', '0011_candidat_account_request_fields'),
+        ("rap_app", "0011_candidat_account_request_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='candidat',
-            name='demande_compte_statut',
-            field=models.CharField(choices=[('aucune', 'Aucune demande'), ('en_attente', 'Demande en attente'), ('acceptee', 'Demande acceptée'), ('refusee', 'Demande refusée')], default='aucune', help_text='Suivi minimal de la demande de création de compte associée au candidat.', max_length=20, verbose_name='Statut de demande de compte'),
+            model_name="candidat",
+            name="demande_compte_statut",
+            field=models.CharField(
+                choices=[
+                    ("aucune", "Aucune demande"),
+                    ("en_attente", "Demande en attente"),
+                    ("acceptee", "Demande acceptée"),
+                    ("refusee", "Demande refusée"),
+                ],
+                default="aucune",
+                help_text="Suivi minimal de la demande de création de compte associée au candidat.",
+                max_length=20,
+                verbose_name="Statut de demande de compte",
+            ),
         ),
     ]

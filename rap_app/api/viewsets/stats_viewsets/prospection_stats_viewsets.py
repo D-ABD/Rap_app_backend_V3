@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from rap_app.api.serializers.base_serializers import EmptySerializer
+
 """
 ViewSet DRF — Statistiques Prospection (scope staff centres + départements)
 ---------------------------------------------------------------------------
@@ -44,15 +46,14 @@ from typing import Literal, Optional
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Count, Q, Value, F
+from django.db.models import Count, F, Q, Value
 from django.db.models.functions import Coalesce, Substr
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from ...permissions import is_staff_or_staffread
 
@@ -65,9 +66,11 @@ except Exception:  # pragma: no cover
 try:
     from ..mixins import RestrictToUserOwnedQueryset  # type: ignore
 except Exception:  # pragma: no cover
+
     class RestrictToUserOwnedQueryset:  # stub minimal
         def restrict_queryset_to_user(self, qs):
             return qs
+
 
 # ⚠️ Ajustez les imports selon votre arborescence
 from ....models.prospection import Prospection, ProspectionChoices
@@ -145,6 +148,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         Le code département récupéré correspond aux 2 premiers caractères.
         Retourne une liste de préfixes département (`str`).
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -180,7 +184,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             * Si aucun centre/dpt, aucun accès (QS vide).
         - Candidats/stagiaires : accès uniquement à leurs propres prospections.
         - Default : QS vide.
-        
+
         Les règles de visibilité fines sont implémentées ici ; toute modification du périmètre métier doit être vérifiée dans ce helper.
         """
         if not (user and user.is_authenticated):
@@ -238,9 +242,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         NB :
         - filter_backends, search_fields, ordering_fields, filterset_class : NON utilisés dans ce ViewSet.
         """
-        qs = Prospection.objects.select_related(
-            "centre", "formation", "formation__centre", "partenaire", "owner"
-        )
+        qs = Prospection.objects.select_related("centre", "formation", "formation__centre", "partenaire", "owner")
 
         # éventuel scope "owned" générique
         if hasattr(self, "restrict_queryset_to_user"):
@@ -251,13 +253,15 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         # 🔹 Gestion du filtre archivées (cf doc ci-dessus)
         inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in [
-            "1", "true", "yes", "on"
+            "1",
+            "true",
+            "yes",
+            "on",
         ]
         if not inclure_archivees:
             qs = qs.filter(activite=Prospection.ACTIVITE_ACTIVE)
 
         return qs
-
 
     def _apply_common_filters(self, qs):
         """
@@ -305,10 +309,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         relance_due = p.get("relance_due")
         if str(relance_due).lower() in {"true", "1", "yes", "oui"}:
             today = timezone.now().date()
-            qs = qs.filter(
-                relance_prevue__isnull=False,
-                relance_prevue__lte=today
-            ).exclude(
+            qs = qs.filter(relance_prevue__isnull=False, relance_prevue__lte=today).exclude(
                 statut__in=[
                     ProspectionChoices.STATUT_REFUSEE,
                     ProspectionChoices.STATUT_ANNULEE,
@@ -482,7 +483,8 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         # Structure de comptage par clé de groupement
         rows = list(
-            qs.values(*group_fields).annotate(
+            qs.values(*group_fields)
+            .annotate(
                 total=Count("id"),
                 actives=Count("id", filter=~Q(statut__in=TERMINAUX)),
                 a_relancer=Count(
@@ -496,16 +498,16 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 a_faire=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_FAIRE)),
                 a_relancer_statut=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_RELANCER)),
                 non_renseigne=Count("id", filter=Q(statut=ProspectionChoices.STATUT_NON_RENSEIGNE)),
-            ).order_by(*group_fields)
+            )
+            .order_by(*group_fields)
         )
 
         # Ajout dynamique du group_key/group_label et du taux_acceptation sur chaque entrée groupée
         for r in rows:
             if by == "centre":
                 r["group_key"] = r.get("centre_id")
-                r["group_label"] = (
-                    r.get("centre__nom")
-                    or (f"Centre #{r.get('centre_id')}" if r.get("centre_id") is not None else "—")
+                r["group_label"] = r.get("centre__nom") or (
+                    f"Centre #{r.get('centre_id')}" if r.get("centre_id") is not None else "—"
                 )
             elif by == "departement":
                 r["group_key"] = r.get("departement")
@@ -520,16 +522,14 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 r["group_label"] = fullname or fallback or (f"Utilisateur #{rid}" if rid is not None else "—")
             elif by == "formation":
                 r["group_key"] = r.get("formation_id")
-                r["group_label"] = (
-                    r.get("formation__nom")
-                    or (f"Formation #{r.get('formation_id')}" if r.get("formation_id") is not None else "—")
+                r["group_label"] = r.get("formation__nom") or (
+                    f"Formation #{r.get('formation_id')}" if r.get("formation_id") is not None else "—"
                 )
                 # champs formation__num_offre et formation__centre__nom présents dans chaque élément via .values(...)
             elif by == "partenaire":
                 r["group_key"] = r.get("partenaire_id")
-                r["group_label"] = (
-                    r.get("partenaire__nom")
-                    or (f"Partenaire #{r.get('partenaire_id')}" if r.get("partenaire_id") is not None else "—")
+                r["group_label"] = r.get("partenaire__nom") or (
+                    f"Partenaire #{r.get('partenaire_id')}" if r.get("partenaire_id") is not None else "—"
                 )
             elif by == "statut":
                 code = r.get("statut")

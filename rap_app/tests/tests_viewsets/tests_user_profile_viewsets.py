@@ -1,11 +1,11 @@
-from rest_framework import status
-from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from rest_framework import status
 
-from ...models.logs import LogUtilisateur
-from ..test_utils import AuthenticatedTestCase
-from ..factories import UserFactory
 from ...models.custom_user import CustomUser
+from ...models.logs import LogUtilisateur
+from ..factories import UserFactory
+from ..test_utils import AuthenticatedTestCase
 
 
 class CustomUserViewSetTestCase(AuthenticatedTestCase):
@@ -30,7 +30,7 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
             "first_name": "New",
             "last_name": "User",
             "role": "stagiaire",
-            "phone": "0606060606"
+            "phone": "0606060606",
         }
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -43,7 +43,7 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(CustomUser),
             object_id=created_user_id,
             action__icontains="création",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de création non détecté.")
 
@@ -64,7 +64,7 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(CustomUser),
             object_id=self.user.pk,
             action__icontains="modification",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de modification non détecté.")
 
@@ -80,7 +80,7 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(CustomUser),
             object_id=self.user.pk,
             action__icontains="suppression",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de suppression non détecté.")
 

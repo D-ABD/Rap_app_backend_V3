@@ -1,10 +1,13 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.evenements import Evenement
 
-from drf_spectacular.utils import extend_schema_field
 
 @extend_schema_serializer(
     examples=[
@@ -28,9 +31,9 @@ from drf_spectacular.utils import extend_schema_field
                 "status_label": "Bientôt",
                 "status_color": "text-warning",
                 "created_at": "2025-05-11T10:00:00",
-                "updated_at": "2025-05-12T15:00:00"
+                "updated_at": "2025-05-12T15:00:00",
             },
-            response_only=True
+            response_only=True,
         )
     ]
 )
@@ -51,24 +54,42 @@ class EvenementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Evenement
         fields = [
-            "id", "formation_id", "formation_nom",
-            "type_evenement", "type_evenement_display", "description_autre",
-            "details", "event_date", "event_date_formatted", "lieu",
-            "participants_prevus", "participants_reels", "taux_participation",
-            "status", "status_label", "status_color",
-            "created_at", "updated_at"
+            "id",
+            "formation_id",
+            "formation_nom",
+            "type_evenement",
+            "type_evenement_display",
+            "description_autre",
+            "details",
+            "event_date",
+            "event_date_formatted",
+            "lieu",
+            "participants_prevus",
+            "participants_reels",
+            "taux_participation",
+            "status",
+            "status_label",
+            "status_color",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "formation_nom", "type_evenement_display",
-            "event_date_formatted", "taux_participation",
-            "status", "status_label", "status_color",
-            "created_at", "updated_at"
+            "id",
+            "formation_nom",
+            "type_evenement_display",
+            "event_date_formatted",
+            "taux_participation",
+            "status",
+            "status_label",
+            "status_color",
+            "created_at",
+            "updated_at",
         ]
 
     @extend_schema_field(serializers.IntegerField())
     def get_event_date_formatted(self, obj):
         """Retourne event_date au format dd/mm/YYYY, ou None si absent."""
-        return obj.event_date.strftime('%d/%m/%Y') if obj.event_date else None
+        return obj.event_date.strftime("%d/%m/%Y") if obj.event_date else None
 
     def validate(self, data):
         """Si type_evenement == 'autre', description_autre est requis."""
@@ -76,28 +97,18 @@ class EvenementSerializer(serializers.ModelSerializer):
         description_autre = data.get("description_autre")
 
         if type_evenement == Evenement.TypeEvenement.AUTRE and not description_autre:
-            raise serializers.ValidationError({
-                "description_autre": _("Une description est requise pour le type 'autre'.")
-            })
+            raise serializers.ValidationError(
+                {"description_autre": _("Une description est requise pour le type 'autre'.")}
+            )
 
         return data
 
 
-@extend_schema_serializer(
-    examples=[
-        {
-            "value": "job_dating",
-            "label": "Job dating"
-        }
-    ]
-)
+@extend_schema_serializer(examples=[{"value": "job_dating", "label": "Job dating"}])
 class EvenementChoiceSerializer(serializers.Serializer):
     """
     Expose value et label pour les types d'événements (liste d'options pour le front).
     """
-    value = serializers.CharField(
-        help_text="Clé technique du type d'événement (ex: 'forum', 'job_dating')"
-    )
-    label = serializers.CharField(
-        help_text="Nom lisible affiché pour le type d'événement"
-    )
+
+    value = serializers.CharField(help_text="Clé technique du type d'événement (ex: 'forum', 'job_dating')")
+    label = serializers.CharField(help_text="Nom lisible affiché pour le type d'événement")

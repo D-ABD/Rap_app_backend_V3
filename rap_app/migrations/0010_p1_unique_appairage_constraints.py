@@ -6,20 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rap_app', '0009_delete_cerfaremuneration_alter_cerfacontrat_options_and_more'),
+        ("rap_app", "0009_delete_cerfaremuneration_alter_cerfacontrat_options_and_more"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='appairage',
-            name='unique_appairage',
+            model_name="appairage",
+            name="unique_appairage",
         ),
         migrations.AddConstraint(
-            model_name='appairage',
-            constraint=models.UniqueConstraint(condition=models.Q(('formation__isnull', False)), fields=('candidat', 'partenaire', 'formation'), name='unique_appairage_avec_formation'),
+            model_name="appairage",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("formation__isnull", False)),
+                fields=("candidat", "partenaire", "formation"),
+                name="unique_appairage_avec_formation",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='appairage',
-            constraint=models.UniqueConstraint(condition=models.Q(('formation__isnull', True)), fields=('candidat', 'partenaire'), name='unique_appairage_sans_formation'),
+            model_name="appairage",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("formation__isnull", True)),
+                fields=("candidat", "partenaire"),
+                name="unique_appairage_sans_formation",
+            ),
         ),
     ]

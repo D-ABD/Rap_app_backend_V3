@@ -1,6 +1,11 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, OpenApiExample, extend_schema_field
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
+
 from ...models.types_offre import TypeOffre
 
 
@@ -23,7 +28,7 @@ from ...models.types_offre import TypeOffre
                 "couleur": "#20c997",
             },
             response_only=False,
-        )
+        ),
     ],
 )
 class TypeOffreSerializer(serializers.ModelSerializer):
@@ -32,21 +37,19 @@ class TypeOffreSerializer(serializers.ModelSerializer):
     """
 
     nom_display = serializers.CharField(
-        source='get_nom_display',
+        source="get_nom_display",
         read_only=True,
-        help_text="Libellé affiché (lecture seule, calculé dynamiquement côté modèle via 'get_nom_display')."
+        help_text="Libellé affiché (lecture seule, calculé dynamiquement côté modèle via 'get_nom_display').",
     )
 
     formations_count = serializers.IntegerField(
-        source='get_formations_count',
-        read_only=True,
-        help_text="Nombre de formations associées, lecture seule."
+        source="get_formations_count", read_only=True, help_text="Nombre de formations associées, lecture seule."
     )
 
     badge_html = serializers.CharField(
-        source='get_badge_html',
+        source="get_badge_html",
         read_only=True,
-        help_text="Badge HTML stylisé pour UI (lecture seule, méthode du modèle)."
+        help_text="Badge HTML stylisé pour UI (lecture seule, méthode du modèle).",
     )
 
     @extend_schema_field(serializers.BooleanField())
@@ -61,13 +64,31 @@ class TypeOffreSerializer(serializers.ModelSerializer):
     class Meta:
         model = TypeOffre
         fields = [
-            "id", "nom", "nom_display", "autre", "couleur", "badge_html",
-            "is_personnalise", "formations_count",
-            "created_at", "updated_at", "created_by", "updated_by", "is_active"
+            "id",
+            "nom",
+            "nom_display",
+            "autre",
+            "couleur",
+            "badge_html",
+            "is_personnalise",
+            "formations_count",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "is_active",
         ]
         read_only_fields = [
-            "id", "nom_display", "badge_html", "is_personnalise",
-            "formations_count", "created_at", "updated_at", "created_by", "updated_by", "is_active"
+            "id",
+            "nom_display",
+            "badge_html",
+            "is_personnalise",
+            "formations_count",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "is_active",
         ]
         extra_kwargs = {
             "nom": {
@@ -75,14 +96,14 @@ class TypeOffreSerializer(serializers.ModelSerializer):
                 "error_messages": {
                     "required": _("Le champ 'nom' est requis."),
                     "blank": _("Le champ 'nom' ne peut pas être vide."),
-                }
+                },
             },
             "autre": {
                 "help_text": "Texte personnalisé pour les types d'offre marqués comme 'autre'. Editable.",
             },
             "couleur": {
                 "help_text": "Couleur affichée pour ce type (code hexadécimal, ex: #FF5733). Optionnelle, modifiable.",
-            }
+            },
         }
 
     def create(self, validated_data):
@@ -100,16 +121,12 @@ class TypeOffreSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class TypeOffreChoiceSerializer(serializers.Serializer):
     """
     Option (value, label, default_color) pour un choix de type d'offre en liste déroulante. Pas de validation personnalisée.
     """
-    value = serializers.CharField(
-        help_text="Identifiant du type (ex: 'crif', 'autre')."
-    )
-    label = serializers.CharField(
-        help_text="Libellé lisible (ex: 'CRIF', 'Autre')."
-    )
-    default_color = serializers.CharField(
-        help_text="Couleur hexadécimale par défaut (ex: '#4e73df')."
-    )
+
+    value = serializers.CharField(help_text="Identifiant du type (ex: 'crif', 'autre').")
+    label = serializers.CharField(help_text="Libellé lisible (ex: 'CRIF', 'Autre').")
+    default_color = serializers.CharField(help_text="Couleur hexadécimale par défaut (ex: '#4e73df').")

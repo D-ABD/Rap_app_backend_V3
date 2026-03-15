@@ -1,17 +1,18 @@
 import datetime
-from rest_framework import status
-from django.urls import reverse
-from django.utils import timezone
 from datetime import timedelta
 
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
+from ...models.evenements import Evenement
+from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ...models.formations import Formation
-from ...models.evenements import Evenement
-from ..test_utils import AuthenticatedTestCase
 from ..factories import UserFactory
-from ...models.custom_user import CustomUser
+from ..test_utils import AuthenticatedTestCase
 
 
 class EvenementViewSetTest(AuthenticatedTestCase):
@@ -34,7 +35,7 @@ class EvenementViewSetTest(AuthenticatedTestCase):
             prevus_mp=5,
             inscrits_crif=3,
             inscrits_mp=2,
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.evenement = Evenement.objects.create(
@@ -44,7 +45,7 @@ class EvenementViewSetTest(AuthenticatedTestCase):
             lieu="Test City",
             participants_prevus=20,
             participants_reels=15,
-            created_by=self.user
+            created_by=self.user,
         )
 
     def test_lister_evenements(self):
@@ -66,7 +67,7 @@ class EvenementViewSetTest(AuthenticatedTestCase):
             "formation_id": self.formation.id,
             "type_evenement": "autre",
             "event_date": timezone.now().date().isoformat(),
-            "lieu": "Paris"
+            "lieu": "Paris",
         }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -1,27 +1,25 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from django.utils import timezone
-from datetime import timedelta
 from rest_framework import serializers
-from django.utils import timezone
 
+from ...api.serializers.prospection_serializers import (
+    ChangerStatutSerializer,
+    ProspectionSerializer,
+)
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.partenaires import Partenaire
+from ...models.prospection import Prospection, ProspectionChoices
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-
-from ...models.prospection import Prospection, ProspectionChoices
-from ...api.serializers.prospection_serializers import ChangerStatutSerializer, ProspectionSerializer
 
 
 class ProspectionSerializerTestCase(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(
-            email="test@example.com",
-            username="testuser",
-            password="testpass"
-        )
+        self.user = CustomUser.objects.create_user(email="test@example.com", username="testuser", password="testpass")
 
         centre = Centre.objects.create(nom="Centre Test", code_postal="75000")
         statut = Statut.objects.create(nom="non_defini", couleur="#000000")
@@ -34,7 +32,7 @@ class ProspectionSerializerTestCase(TestCase):
             type_offre=type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=5),
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.partenaire = Partenaire.objects.create(nom="Entreprise Y", type="entreprise")
@@ -47,7 +45,7 @@ class ProspectionSerializerTestCase(TestCase):
             "motif": ProspectionChoices.MOTIF_PARTENARIAT,
             "statut": ProspectionChoices.STATUT_EN_COURS,
             "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
-            "commentaire": "Test"
+            "commentaire": "Test",
         }
 
     def test_serializer_valid(self):
@@ -56,11 +54,13 @@ class ProspectionSerializerTestCase(TestCase):
 
     def test_accepted_with_objective_valid(self):
         data = self.valid_data.copy()
-        data.update({
-            "statut": ProspectionChoices.STATUT_ACCEPTEE,
-            "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
-            "commentaire": "Contrat signé",
-        })
+        data.update(
+            {
+                "statut": ProspectionChoices.STATUT_ACCEPTEE,
+                "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
+                "commentaire": "Contrat signé",
+            }
+        )
         serializer = ProspectionSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
@@ -81,7 +81,7 @@ class ProspectionSerializerTestCase(TestCase):
             statut=ProspectionChoices.STATUT_EN_COURS,
             objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
             commentaire="Test",
-            created_by=self.user
+            created_by=self.user,
         )
         serializer = ProspectionSerializer(instance=prospection)
         data = serializer.data
@@ -105,30 +105,22 @@ class ProspectionSerializerTestCase(TestCase):
             statut=ProspectionChoices.STATUT_EN_COURS,
             objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
             commentaire="Initial",
-            created_by=self.user
+            created_by=self.user,
         )
-        serializer = ProspectionSerializer(
-            instance=prospection,
-            data={"statut": "invalid_status"},
-            partial=True
-        )
+        serializer = ProspectionSerializer(instance=prospection, data={"statut": "invalid_status"}, partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn("statut", serializer.errors)
 
 
 class ChangerStatutSerializerTestCase(TestCase):
     def setUp(self):
-        self.user = CustomUser.objects.create_user(
-            email="test@example.com",
-            username="testuser",
-            password="testpass"
-        )
-        
+        self.user = CustomUser.objects.create_user(email="test@example.com", username="testuser", password="testpass")
+
     def test_valid_status_change(self):
         data = {
             "statut": ProspectionChoices.STATUT_ACCEPTEE,
             "commentaire": "Contrat signé",
-            "moyen_contact": ProspectionChoices.MOYEN_EMAIL
+            "moyen_contact": ProspectionChoices.MOYEN_EMAIL,
         }
         serializer = ChangerStatutSerializer(data=data)
         self.assertTrue(serializer.is_valid())
@@ -146,9 +138,7 @@ class ChangerStatutSerializerTestCase(TestCase):
         )
 
     def test_invalid_status(self):
-        data = {
-            "statut": "invalid_status"
-        }
+        data = {"statut": "invalid_status"}
         serializer = ChangerStatutSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("statut", serializer.errors)

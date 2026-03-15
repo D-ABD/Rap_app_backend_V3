@@ -1,8 +1,9 @@
 import logging
-from django.db import transaction, IntegrityError
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
+
 from django.contrib.auth.hashers import make_password
+from django.db import IntegrityError, transaction
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
 from django.utils.crypto import get_random_string
 
 from ..models.candidat import Candidat
@@ -18,13 +19,16 @@ CANDIDATE_ROLES = {
     getattr(CustomUser, "ROLE_CANDIDAT_USER", "candidatuser"),
 }
 
+
 # Helpers internes pour gestion des champs texte et de la génération d'identifiants uniques
 def _nn(val: str | None) -> str:
     return (val or "").strip()
 
+
 def _email_local(email: str | None) -> str:
     e = _nn(email).lower()
     return e.split("@", 1)[0] if "@" in e else e
+
 
 def _safe_non_blank(primary: str | None, *fallbacks: str, default: str = "Inconnu") -> str:
     for v in (primary, *fallbacks):
@@ -32,6 +36,7 @@ def _safe_non_blank(primary: str | None, *fallbacks: str, default: str = "Inconn
         if v:
             return v
     return default
+
 
 def _build_unique_username(base: str) -> str:
     base = _nn(base).lower().replace(" ", "").strip(".") or "user"
@@ -87,8 +92,7 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
             try:
                 with transaction.atomic():
                     cand = (
-                        Candidat.objects
-                        .select_for_update(skip_locked=True)
+                        Candidat.objects.select_for_update(skip_locked=True)
                         .filter(compte_utilisateur__isnull=True, email__iexact=email)
                         .order_by("id")
                         .first()

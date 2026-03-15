@@ -1,36 +1,37 @@
-from django.utils import timezone as dj_timezone
-from django.db.models import Q, OuterRef, Subquery
-from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.exceptions import ValidationError, PermissionDenied
-from django.http import HttpResponse
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.styles import PatternFill, Font, Alignment
-from pathlib import Path
-from django.conf import settings
 from io import BytesIO
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-import django_filters
-from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-from PIL import Image as PILImage
+from pathlib import Path
 
-from ...utils.filters import AppairageFilterSet
+import django_filters
+from django.conf import settings
+from django.db.models import OuterRef, Q, Subquery
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone as dj_timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, OpenApiTypes, extend_schema
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from PIL import Image as PILImage
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
+
 from ...models.appairage import Appairage, AppairageActivite, AppairageStatut
 from ...models.commentaires_appairage import CommentaireAppairage
+from ...utils.filters import AppairageFilterSet
+from ..paginations import RapAppPagination
+from ..permissions import IsStaffOrAbove, is_staff_or_staffread
 from ..serializers.appairage_serializers import (
-    AppairageSerializer,
-    AppairageListSerializer,
     AppairageCreateUpdateSerializer,
+    AppairageListSerializer,
     AppairageMetaSerializer,
+    AppairageSerializer,
     CommentaireAppairageSerializer,
 )
-from ..permissions import IsStaffOrAbove, is_staff_or_staffread
-from ..paginations import RapAppPagination
+
 
 class AppairageViewSet(viewsets.ModelViewSet):
     """
@@ -68,7 +69,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         "candidat__nom",
         "candidat__prenom",
         "partenaire__nom",
-        "partenaire_contact_nom", 
+        "partenaire_contact_nom",
         "formation__nom",
         "candidat__formation__nom",
         "formation__centre__nom",
@@ -90,9 +91,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
     ]
 
     def _is_admin_like(self, user) -> bool:
-        return getattr(user, "is_superuser", False) or (
-            hasattr(user, "is_admin") and user.is_admin()
-        )
+        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
 
     def _staff_centre_ids(self, user):
         # Renvoie [id centre1, id centre2 ...] pour staff, None pour admin, vide sinon
@@ -115,8 +114,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
 
         if centre_ids:
             return qs.filter(
-                Q(formation__centre_id__in=centre_ids)
-                | Q(candidat__formation__centre_id__in=centre_ids)
+                Q(formation__centre_id__in=centre_ids) | Q(candidat__formation__centre_id__in=centre_ids)
             ).distinct()
 
         return qs.none()
@@ -151,7 +149,9 @@ class AppairageViewSet(viewsets.ModelViewSet):
         return getattr(a.formation, "nom", "") or ""
 
     def _formation_type_offre(self, a):
-        return getattr(getattr(a.formation, "type_offre", None), "libelle", "") or getattr(a, "formation_type_offre", "")
+        return getattr(getattr(a.formation, "type_offre", None), "libelle", "") or getattr(
+            a, "formation_type_offre", ""
+        )
 
     def _formation_num_offre(self, a):
         return getattr(a.formation, "num_offre", "") or getattr(a, "formation_numero_offre", "")
@@ -169,7 +169,6 @@ class AppairageViewSet(viewsets.ModelViewSet):
             return AppairageCreateUpdateSerializer
         return AppairageSerializer
 
-
     def perform_create(self, serializer):
         """
         Handler création métier : interdit aux candidats/stagiaires ; staff/admin scope centre formation
@@ -185,10 +184,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         candidat_payload = serializer.validated_data.get("candidat")
         formation = (
             formation_payload
-            or (
-                getattr(getattr(candidat_payload, "formation", None), "pk", None)
-                and candidat_payload.formation
-            )
+            or (getattr(getattr(candidat_payload, "formation", None), "pk", None) and candidat_payload.formation)
             or None
         )
 
@@ -203,9 +199,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
                 {"detail": "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."}
             )
 
-        instance = serializer.save(
-            created_by=user, formation=formation or serializer.validated_data.get("formation")
-        )
+        instance = serializer.save(created_by=user, formation=formation or serializer.validated_data.get("formation"))
         if hasattr(instance, "set_user"):
             instance.set_user(user)
         try:
@@ -262,7 +256,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
                 serializer.save(created_by=request.user, appairage=appairage)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
     def get_queryset(self):
         """
         Calcule le queryset tenant compte des permissions :
@@ -278,9 +272,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         qs = self.base_queryset
 
         last_comment_qs = (
-            CommentaireAppairage.objects.filter(appairage=OuterRef("pk"))
-            .order_by("-created_at")
-            .values("body")[:1]
+            CommentaireAppairage.objects.filter(appairage=OuterRef("pk")).order_by("-created_at").values("body")[:1]
         )
         qs = qs.annotate(last_commentaire=Subquery(last_comment_qs))
 
@@ -300,7 +292,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
 
         if date_max:
             qs = qs.filter(date_appairage__date__lte=date_max)
-            
+
         activite = self.request.query_params.get("activite")
         if activite in [AppairageActivite.ACTIF, AppairageActivite.ARCHIVE]:
             qs = qs.filter(activite=activite)
@@ -339,7 +331,6 @@ class AppairageViewSet(viewsets.ModelViewSet):
 
         return Response({"status": "archived"}, status=status.HTTP_200_OK)
 
-
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """
@@ -362,7 +353,6 @@ class AppairageViewSet(viewsets.ModelViewSet):
 
         return Response({"status": "unarchived"}, status=status.HTTP_200_OK)
 
-
     def _get_object_including_archived_scoped(self, pk):
         """
         Retourne un appairage visible par l'utilisateur courant, y compris s'il est archivé.
@@ -371,9 +361,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         qs = self.base_queryset
 
         last_comment_qs = (
-            CommentaireAppairage.objects.filter(appairage=OuterRef("pk"))
-            .order_by("-created_at")
-            .values("body")[:1]
+            CommentaireAppairage.objects.filter(appairage=OuterRef("pk")).order_by("-created_at").values("body")[:1]
         )
         qs = qs.annotate(last_commentaire=Subquery(last_comment_qs))
 
@@ -409,21 +397,18 @@ class AppairageViewSet(viewsets.ModelViewSet):
                 ids = [int(x) for x in ids if str(x).isdigit()]
             qs = qs.filter(id__in=ids)
 
-        return (
-            qs.select_related(
-                "candidat",
-                "candidat__formation",
-                "candidat__formation__centre",
-                "formation",
-                "formation__centre",
-                "partenaire",
-                "created_by",
-                "updated_by",
-            )
-            .prefetch_related(
-                "commentaires",
-                "commentaires__created_by",
-            )
+        return qs.select_related(
+            "candidat",
+            "candidat__formation",
+            "candidat__formation__centre",
+            "formation",
+            "formation__centre",
+            "partenaire",
+            "created_by",
+            "updated_by",
+        ).prefetch_related(
+            "commentaires",
+            "commentaires__created_by",
         )
 
     @extend_schema(
@@ -489,17 +474,31 @@ class AppairageViewSet(viewsets.ModelViewSet):
         ws.append([])
 
         headers = [
-            "Activité (code)", "Date appairage", "Statut (code)",
+            "Activité (code)",
+            "Date appairage",
+            "Statut (code)",
             "Candidat",
-            "Partenaire", "Contact", "Email", "Téléphone",
-            "Formation", "Centre",
-            "Type d’offre", "N° Offre", "Statut formation",
-            "Places totales", "Places disponibles",
-            "Date début", "Date fin",
-            "Retour partenaire", "Date retour",
-            "Créé par (nom)", "Créé le",
-            "Maj par (nom)", "Maj le",
-            "Dernier commentaire", "Commentaires",
+            "Partenaire",
+            "Contact",
+            "Email",
+            "Téléphone",
+            "Formation",
+            "Centre",
+            "Type d’offre",
+            "N° Offre",
+            "Statut formation",
+            "Places totales",
+            "Places disponibles",
+            "Date début",
+            "Date fin",
+            "Retour partenaire",
+            "Date retour",
+            "Créé par (nom)",
+            "Créé le",
+            "Maj par (nom)",
+            "Maj le",
+            "Dernier commentaire",
+            "Commentaires",
         ]
         ws.append(headers)
 

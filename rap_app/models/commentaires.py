@@ -1,28 +1,30 @@
-import logging
-from datetime import timedelta
-import bleach  # utilisé éventuellement ailleurs
-from django.db import models
-from django.db.models import Q, F, Avg, Count
-from django.urls import reverse
-from django.utils.html import strip_tags
-from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
-from django.template.loader import render_to_string
-from .base import BaseModel
-from weasyprint import HTML, CSS  # utilisé éventuellement ailleurs
-
-from .formations import Formation
 import csv
 import io
-from docx import Document
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
+import logging
+from datetime import timedelta
+
+import bleach  # utilisé éventuellement ailleurs
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import Avg, Count, F, Q
 from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.html import strip_tags
+from docx import Document
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from weasyprint import CSS, HTML  # utilisé éventuellement ailleurs
+
+from .base import BaseModel
+from .formations import Formation
 
 logger = logging.getLogger(__name__)
 
 # Les signaux liés à ce modèle sont définis dans signals/commentaires.py
+
 
 class CommentaireQuerySet(models.QuerySet):
     """
@@ -40,6 +42,7 @@ class CommentaireQuerySet(models.QuerySet):
         Retourne les commentaires archivés.
         """
         return self.filter(statut_commentaire="archive")
+
 
 class CommentaireManager(models.Manager.from_queryset(CommentaireQuerySet)):
     """
@@ -72,10 +75,9 @@ class CommentaireManager(models.Manager.from_queryset(CommentaireQuerySet)):
         if not query:
             return self.all()
         return self.filter(
-            Q(contenu__icontains=query)
-            | Q(created_by__username__icontains=query)
-            | Q(formation__nom__icontains=query)
+            Q(contenu__icontains=query) | Q(created_by__username__icontains=query) | Q(formation__nom__icontains=query)
         )
+
 
 class Commentaire(BaseModel):
     """
@@ -92,12 +94,11 @@ class Commentaire(BaseModel):
         on_delete=models.CASCADE,
         related_name="commentaires",
         verbose_name="Formation",
-        help_text="Formation à laquelle ce commentaire est associé"
+        help_text="Formation à laquelle ce commentaire est associé",
     )
 
     contenu = models.TextField(
-        verbose_name="Contenu du commentaire",
-        help_text="Texte du commentaire (le HTML est automatiquement nettoyé)"
+        verbose_name="Contenu du commentaire", help_text="Texte du commentaire (le HTML est automatiquement nettoyé)"
     )
 
     saturation = models.PositiveIntegerField(
@@ -107,15 +108,15 @@ class Commentaire(BaseModel):
         help_text="Pourcentage de saturation perçue dans la formation (entre 0 et 100)",
         validators=[
             MinValueValidator(SATURATION_MIN, message="La saturation ne peut pas être négative"),
-            MaxValueValidator(SATURATION_MAX, message="La saturation ne peut pas dépasser 100%")
-        ]
+            MaxValueValidator(SATURATION_MAX, message="La saturation ne peut pas dépasser 100%"),
+        ],
     )
-    
+
     saturation_formation = models.PositiveIntegerField(
         null=True,
         blank=True,
         verbose_name="Saturation de la formation (copiée)",
-        help_text="Valeur de la saturation de la formation au moment du commentaire"
+        help_text="Valeur de la saturation de la formation au moment du commentaire",
     )
 
     objects = CommentaireManager()
@@ -148,11 +149,11 @@ class Commentaire(BaseModel):
             if hasattr(self, "archived_at"):
                 self.archived_at = timezone.now()
             if save:
-                super().save(update_fields=["statut_commentaire"] + (
-                    ["archived_by"] if hasattr(self, "archived_by") else []
-                ) + (
-                    ["archived_at"] if hasattr(self, "archived_at") else []
-                ))
+                super().save(
+                    update_fields=["statut_commentaire"]
+                    + (["archived_by"] if hasattr(self, "archived_by") else [])
+                    + (["archived_at"] if hasattr(self, "archived_at") else [])
+                )
             logger.info(f"Commentaire #{self.pk} archivé (formation #{self.formation_id})")
 
     def desarchiver(self, save: bool = True):
@@ -166,11 +167,11 @@ class Commentaire(BaseModel):
             if hasattr(self, "archived_by"):
                 self.archived_by = None
             if save:
-                super().save(update_fields=["statut_commentaire"] + (
-                    ["archived_by"] if hasattr(self, "archived_by") else []
-                ) + (
-                    ["archived_at"] if hasattr(self, "archived_at") else []
-                ))
+                super().save(
+                    update_fields=["statut_commentaire"]
+                    + (["archived_by"] if hasattr(self, "archived_by") else [])
+                    + (["archived_at"] if hasattr(self, "archived_at") else [])
+                )
             logger.info(f"Commentaire #{self.pk} désarchivé (formation #{self.formation_id})")
 
     def archive(self):
@@ -203,19 +204,20 @@ class Commentaire(BaseModel):
         """
         Options de configuration du modèle Commentaire.
         """
+
         verbose_name = "Commentaire"
         verbose_name_plural = "Commentaires"
-        ordering = ['formation', '-created_at']
+        ordering = ["formation", "-created_at"]
         indexes = [
-            models.Index(fields=['created_at'], name='comment_created_idx'),
-            models.Index(fields=['formation', 'created_at'], name='comment_form_date_idx'),
-            models.Index(fields=['created_by'], name='comment_author_idx'),
-            models.Index(fields=['saturation'], name='comment_satur_idx'),
+            models.Index(fields=["created_at"], name="comment_created_idx"),
+            models.Index(fields=["formation", "created_at"], name="comment_form_date_idx"),
+            models.Index(fields=["created_by"], name="comment_author_idx"),
+            models.Index(fields=["saturation"], name="comment_satur_idx"),
         ]
         constraints = [
             models.CheckConstraint(
                 check=Q(saturation__isnull=True) | (Q(saturation__gte=0) & Q(saturation__lte=100)),
-                name='commentaire_saturation_range'
+                name="commentaire_saturation_range",
             )
         ]
 
@@ -225,7 +227,7 @@ class Commentaire(BaseModel):
         """
         auteur = self.created_by.username if self.created_by else "Anonyme"
         return f"Commentaire de {auteur} sur {self.formation.nom} ({self.created_at.strftime('%d/%m/%Y')})"
-        
+
     def __repr__(self):
         """
         Affichage technique en shell/debug.
@@ -239,9 +241,11 @@ class Commentaire(BaseModel):
         super().clean()
         if self.saturation is not None:
             if not (self.SATURATION_MIN <= self.saturation <= self.SATURATION_MAX):
-                raise ValidationError({
-                    "saturation": f"La saturation doit être comprise entre {self.SATURATION_MIN} et {self.SATURATION_MAX}%"
-                })
+                raise ValidationError(
+                    {
+                        "saturation": f"La saturation doit être comprise entre {self.SATURATION_MIN} et {self.SATURATION_MAX}%"
+                    }
+                )
         if not self.contenu or not self.contenu.strip():
             raise ValidationError({"contenu": "Le contenu ne peut pas être vide."})
 
@@ -255,11 +259,7 @@ class Commentaire(BaseModel):
         is_new = self.pk is None
 
         if is_new and self.formation_id:
-            saturation_db = (
-                Formation.objects.filter(pk=self.formation_id)
-                .values_list("saturation", flat=True)
-                .first()
-            )
+            saturation_db = Formation.objects.filter(pk=self.formation_id).values_list("saturation", flat=True).first()
             if saturation_db is not None:
                 self.saturation_formation = int(saturation_db) if isinstance(saturation_db, float) else saturation_db
             else:
@@ -272,12 +272,12 @@ class Commentaire(BaseModel):
             f"Commentaire #{self.pk} {'créé' if is_new else 'mis à jour'} "
             f"pour la formation #{self.formation_id} — sat_form={self.saturation_formation}"
         )
-        
+
     def delete(self, *args, **kwargs):
         """
         Supprime le commentaire et met à jour la formation liée si nécessaire.
         """
-        update_formation = kwargs.pop('update_formation', True)
+        update_formation = kwargs.pop("update_formation", True)
         formation = self.formation if update_formation else None
         result = super().delete(*args, **kwargs)
         if update_formation and formation:
@@ -290,36 +290,32 @@ class Commentaire(BaseModel):
         Met à jour les champs statistiques de la formation liée.
         """
         formation = self.formation
-        if hasattr(formation, 'update_from_commentaires'):
+        if hasattr(formation, "update_from_commentaires"):
             formation.update_from_commentaires()
         else:
             last_comment = (
                 Commentaire.objects.filter(formation_id=formation.pk)
                 .only("pk", "created_at")
-                .order_by('-created_at')
+                .order_by("-created_at")
                 .first()
             )
-            avg_dict = (
-                Commentaire.objects.filter(formation_id=formation.pk, saturation__isnull=False)
-                .aggregate(saturation_moyenne=Avg('saturation'))
+            avg_dict = Commentaire.objects.filter(formation_id=formation.pk, saturation__isnull=False).aggregate(
+                saturation_moyenne=Avg("saturation")
             )
-            nb_comments = (
-                Commentaire.objects.filter(formation_id=formation.pk)
-                .count()
-            )
-            if hasattr(formation, 'dernier_commentaire'):
+            nb_comments = Commentaire.objects.filter(formation_id=formation.pk).count()
+            if hasattr(formation, "dernier_commentaire"):
                 formation.dernier_commentaire = last_comment
-            if hasattr(formation, 'saturation_moyenne'):
-                formation.saturation_moyenne = avg_dict.get('saturation_moyenne')
-            if hasattr(formation, 'nb_commentaires'):
+            if hasattr(formation, "saturation_moyenne"):
+                formation.saturation_moyenne = avg_dict.get("saturation_moyenne")
+            if hasattr(formation, "nb_commentaires"):
                 formation.nb_commentaires = nb_comments
             update_fields = []
-            if hasattr(formation, 'dernier_commentaire'):
-                update_fields.append('dernier_commentaire')
-            if hasattr(formation, 'saturation_moyenne'):
-                update_fields.append('saturation_moyenne')
-            if hasattr(formation, 'nb_commentaires'):
-                update_fields.append('nb_commentaires')
+            if hasattr(formation, "dernier_commentaire"):
+                update_fields.append("dernier_commentaire")
+            if hasattr(formation, "saturation_moyenne"):
+                update_fields.append("saturation_moyenne")
+            if hasattr(formation, "nb_commentaires"):
+                update_fields.append("nb_commentaires")
             if update_fields:
                 formation.save(update_fields=update_fields)
 
@@ -328,36 +324,32 @@ class Commentaire(BaseModel):
         """
         Met à jour les champs statistiques de la formation (méthode statique).
         """
-        if hasattr(formation, 'update_from_commentaires'):
+        if hasattr(formation, "update_from_commentaires"):
             formation.update_from_commentaires()
         else:
             last_comment = (
                 Commentaire.objects.filter(formation_id=formation.pk)
                 .only("pk", "created_at")
-                .order_by('-created_at')
+                .order_by("-created_at")
                 .first()
             )
-            avg_dict = (
-                Commentaire.objects.filter(formation_id=formation.pk, saturation__isnull=False)
-                .aggregate(saturation_moyenne=Avg('saturation'))
+            avg_dict = Commentaire.objects.filter(formation_id=formation.pk, saturation__isnull=False).aggregate(
+                saturation_moyenne=Avg("saturation")
             )
-            nb_comments = (
-                Commentaire.objects.filter(formation_id=formation.pk)
-                .count()
-            )
-            if hasattr(formation, 'dernier_commentaire'):
+            nb_comments = Commentaire.objects.filter(formation_id=formation.pk).count()
+            if hasattr(formation, "dernier_commentaire"):
                 formation.dernier_commentaire = last_comment
-            if hasattr(formation, 'saturation_moyenne'):
-                formation.saturation_moyenne = avg_dict.get('saturation_moyenne')
-            if hasattr(formation, 'nb_commentaires'):
+            if hasattr(formation, "saturation_moyenne"):
+                formation.saturation_moyenne = avg_dict.get("saturation_moyenne")
+            if hasattr(formation, "nb_commentaires"):
                 formation.nb_commentaires = nb_comments
             update_fields = []
-            if hasattr(formation, 'dernier_commentaire'):
-                update_fields.append('dernier_commentaire')
-            if hasattr(formation, 'saturation_moyenne'):
-                update_fields.append('saturation_moyenne')
-            if hasattr(formation, 'nb_commentaires'):
-                update_fields.append('nb_commentaires')
+            if hasattr(formation, "dernier_commentaire"):
+                update_fields.append("dernier_commentaire")
+            if hasattr(formation, "saturation_moyenne"):
+                update_fields.append("saturation_moyenne")
+            if hasattr(formation, "nb_commentaires"):
+                update_fields.append("nb_commentaires")
             if update_fields:
                 formation.save(update_fields=update_fields)
 
@@ -376,16 +368,16 @@ class Commentaire(BaseModel):
         """
         Retourne la date de création au format jj/mm/aaaa.
         """
-        return self.created_at.strftime('%d/%m/%Y') if self.created_at else ""
+        return self.created_at.strftime("%d/%m/%Y") if self.created_at else ""
 
     @property
     def heure_formatee(self) -> str:
         """
         Retourne l'heure de création au format hh:mm.
         """
-        return self.created_at.strftime('%H:%M') if self.created_at else ""
+        return self.created_at.strftime("%H:%M") if self.created_at else ""
 
-    @property 
+    @property
     def contenu_sans_html(self) -> str:
         """
         Retourne le contenu sans balises HTML.
@@ -416,7 +408,7 @@ class Commentaire(BaseModel):
             return self.created_at and self.created_at >= cutoff
         except Exception:
             return False
-        
+
     def is_edited(self) -> bool:
         """
         Retourne True si le commentaire a été modifié plus d'une minute après sa création.
@@ -427,13 +419,11 @@ class Commentaire(BaseModel):
         return False
 
     @classmethod
-    def get_all_commentaires(
-        cls, formation_id=None, auteur_id=None, search_query=None, order_by="-created_at"
-    ):
+    def get_all_commentaires(cls, formation_id=None, auteur_id=None, search_query=None, order_by="-created_at"):
         """
         Retourne un QuerySet de commentaires filtré par formation, auteur ou recherche sur contenu.
         """
-        queryset = cls.objects.select_related('formation', 'created_by').order_by(order_by)
+        queryset = cls.objects.select_related("formation", "created_by").order_by(order_by)
         filters = Q()
         if formation_id:
             filters &= Q(formation_id=formation_id)
@@ -453,9 +443,9 @@ class Commentaire(BaseModel):
         days = days or cls.RECENT_DEFAULT_DAYS
         date_limite = timezone.now() - timedelta(days=days)
         return (
-            cls.objects.select_related('formation', 'created_by')
+            cls.objects.select_related("formation", "created_by")
             .filter(created_at__gte=date_limite)
-            .order_by('-created_at')[:limit]
+            .order_by("-created_at")[:limit]
         )
 
     @classmethod
@@ -467,10 +457,7 @@ class Commentaire(BaseModel):
         if formation_id:
             queryset = queryset.filter(formation_id=formation_id)
         stats = queryset.aggregate(
-            avg=Avg('saturation'),
-            min=models.Min('saturation'),
-            max=models.Max('saturation'),
-            count=Count('id')
+            avg=Avg("saturation"), min=models.Min("saturation"), max=models.Max("saturation"), count=Count("id")
         )
         return stats
 
@@ -500,16 +487,15 @@ class Commentaire(BaseModel):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-        
+
     def get_edit_url(self):
         """
         Retourne l’URL d’édition du commentaire.
         """
         return reverse("commentaire-edit", kwargs={"pk": self.pk})
-        
+
     def get_delete_url(self):
         """
         Retourne l’URL de suppression du commentaire.
         """
         return reverse("commentaire-delete", kwargs={"pk": self.pk})
-

@@ -8,26 +8,22 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils import timezone as dj_timezone
-
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
-from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 from weasyprint import HTML
-
 
 from ...api.paginations import RapAppPagination
 from ...api.permissions import IsStaffOrAbove
 from ...api.serializers.commentaires_serializers import (
-    CommentaireSerializer,
     CommentaireMetaSerializer,
+    CommentaireSerializer,
 )
 from ...models.commentaires import Commentaire
 from ...models.logs import LogUtilisateur
@@ -74,8 +70,9 @@ class CommentaireViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="filter-options")
     def filter_options(self, request):
         """GET : options de filtres (centres, type_offres, formations, formation_etats, auteurs, statuts) selon get_queryset()."""
-        from ...models.formations import Formation, Centre, TypeOffre
         from django.contrib.auth import get_user_model
+
+        from ...models.formations import Centre, Formation, TypeOffre
 
         User = get_user_model()
         user = request.user
@@ -99,22 +96,14 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
         formation_etats = []
         if hasattr(Formation, "etat"):
-            etats = (
-                formations.exclude(etat__isnull=True)
-                .exclude(etat="")
-                .values_list("etat", flat=True)
-                .distinct()
-            )
+            etats = formations.exclude(etat__isnull=True).exclude(etat="").values_list("etat", flat=True).distinct()
             formation_etats = [{"value": e, "label": str(e).capitalize()} for e in etats]
 
         auteur_ids = qs.values_list("created_by_id", flat=True).distinct()
         auteurs = User.objects.filter(id__in=auteur_ids)
         auteurs_data = [{"id": a.id, "nom": a.get_full_name() or a.username} for a in auteurs]
 
-        formations_data = [
-            {"id": f.id, "nom": f.nom, "num_offre": getattr(f, "num_offre", "")}
-            for f in formations
-        ]
+        formations_data = [{"id": f.id, "nom": f.nom, "num_offre": getattr(f, "num_offre", "")} for f in formations]
 
         commentaire_statuts = [
             {"id": Commentaire.STATUT_ACTIF, "nom": "Actif"},
@@ -130,11 +119,13 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             "statuts": commentaire_statuts,
         }
 
-        return Response({
-            "success": True,
-            "message": "Options de filtres récupérées avec succès.",
-            "data": data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Options de filtres récupérées avec succès.",
+                "data": data,
+            }
+        )
 
     def get_queryset(self):
         """Admin : tout ; staff : formation__centre_id in staff_centre_ids ; filtres qp centre_id, type_offre_id, formation_etat, auteur_id, formation_nom, formation, statut_id/statut."""
@@ -217,11 +208,13 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         """Retourne success, message, data (commentaire sérialisé)."""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": "Commentaire récupéré avec succès.",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Commentaire récupéré avec succès.",
+                "data": serializer.data,
+            }
+        )
 
     @extend_schema(summary="Créer un commentaire")
     def create(self, request, *args, **kwargs):
@@ -305,22 +298,26 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         """GET : formation_id en qp ; Commentaire.get_saturation_stats(formation_id), retourne success/message/data."""
         formation_id = request.query_params.get("formation_id")
         stats = Commentaire.get_saturation_stats(formation_id=formation_id)
-        return Response({
-            "success": True,
-            "message": "Statistiques de saturation récupérées avec succès.",
-            "data": stats,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Statistiques de saturation récupérées avec succès.",
+                "data": stats,
+            }
+        )
 
     @extend_schema(summary="Récupérer les métadonnées des commentaires")
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
         """GET : métadonnées via CommentaireMetaSerializer, success/message/data."""
         serializer = CommentaireMetaSerializer()
-        return Response({
-            "success": True,
-            "message": "Métadonnées récupérées avec succès.",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Métadonnées récupérées avec succès.",
+                "data": serializer.data,
+            }
+        )
 
     @extend_schema(summary="Archiver un commentaire")
     @action(detail=True, methods=["post"], url_path="archiver")
@@ -335,11 +332,13 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             details=f"Archivage du commentaire #{instance.pk}",
         )
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": f"Commentaire #{instance.pk} archivé avec succès.",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": f"Commentaire #{instance.pk} archivé avec succès.",
+                "data": serializer.data,
+            }
+        )
 
     @extend_schema(summary="Désarchiver un commentaire")
     @action(detail=True, methods=["post"], url_path="desarchiver")
@@ -354,12 +353,13 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             details=f"Désarchivage du commentaire #{instance.pk}",
         )
         serializer = self.get_serializer(instance)
-        return Response({
-            "success": True,
-            "message": f"Commentaire #{instance.pk} restauré avec succès.",
-            "data": serializer.data,
-        })
-
+        return Response(
+            {
+                "success": True,
+                "message": f"Commentaire #{instance.pk} restauré avec succès.",
+                "data": serializer.data,
+            }
+        )
 
     @action(detail=False, methods=["get", "post"], url_path="export")
     def export(self, request):
@@ -374,8 +374,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             export_all = request.query_params.get("all", "false").lower() == "true"
 
         include_archived = str(
-            request.data.get("include_archived")
-            or request.query_params.get("include_archived", "")
+            request.data.get("include_archived") or request.query_params.get("include_archived", "")
         ).lower() in {"1", "true", "yes", "on"}
 
         qs = self.get_queryset()
@@ -411,26 +410,25 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         data = []
         for c in qs:
             f = getattr(c, "formation", None)
-            data.append({
-                "id": c.id,
-                "contenu": getattr(c, "contenu", "") or "",
-                "auteur": getattr(c.created_by, "username", ""),
-                "activite": getattr(c, "activite", "") or "",
-                "created_at": c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "",
-                "saturation_formation": c.saturation_formation or c.saturation,
-                "taux_saturation": getattr(f, "taux_saturation", ""),
-                "formation": {
-                    "nom": getattr(f, "nom", "") if f else "",
-                    "num_offre": getattr(f, "num_offre", "") if f else "",
-                    "centre_nom": getattr(f.centre, "nom", "") if f and f.centre else "",
-                    "type_offre_nom": getattr(f.type_offre, "nom", "") if f and f.type_offre else "",
-                    "statut_nom": getattr(f.statut, "nom", "") if f and f.statut else "",
-                    "saturation_commentaires": (
-                        f.get_saturation_moyenne_commentaires() if f else ""
-                    ),
-
-                },
-            })
+            data.append(
+                {
+                    "id": c.id,
+                    "contenu": getattr(c, "contenu", "") or "",
+                    "auteur": getattr(c.created_by, "username", ""),
+                    "activite": getattr(c, "activite", "") or "",
+                    "created_at": c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "",
+                    "saturation_formation": c.saturation_formation or c.saturation,
+                    "taux_saturation": getattr(f, "taux_saturation", ""),
+                    "formation": {
+                        "nom": getattr(f, "nom", "") if f else "",
+                        "num_offre": getattr(f, "num_offre", "") if f else "",
+                        "centre_nom": getattr(f.centre, "nom", "") if f and f.centre else "",
+                        "type_offre_nom": getattr(f.type_offre, "nom", "") if f and f.type_offre else "",
+                        "statut_nom": getattr(f.statut, "nom", "") if f and f.statut else "",
+                        "saturation_commentaires": (f.get_saturation_moyenne_commentaires() if f else ""),
+                    },
+                }
+            )
 
         request = self.request
         try:
@@ -451,10 +449,9 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
         filename = f'commentaires_{dj_timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf'
         response = HttpResponse(pdf, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response["Content-Length"] = len(pdf)
         return response
-
 
     def _export_xlsx(self, qs):
         """Génère XLSX avec en-têtes et lignes selon le code."""
@@ -485,8 +482,16 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         ws.append([])
 
         headers = [
-            "ID", "Contenu", "Activité", "Auteur", "Créé le",
-            "Formation", "N° Offre", "Centre", "Type d’offre", "Statut",
+            "ID",
+            "Contenu",
+            "Activité",
+            "Auteur",
+            "Créé le",
+            "Formation",
+            "N° Offre",
+            "Centre",
+            "Type d’offre",
+            "Statut",
             "Saturation au moment du commentaire (%)",
             "Saturation actuelle (%)",
             "Moy. des commentaires (%)",
@@ -507,21 +512,23 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
         for c in qs:
             f = getattr(c, "formation", None)
-            ws.append([
-                c.id,
-                c.contenu or "",
-                getattr(c, "activite", "") or "",
-                getattr(c.created_by, "username", ""),
-                _fmt(c.created_at),
-                getattr(f, "nom", "") if f else "",
-                getattr(f, "num_offre", "") if f else "",
-                getattr(f.centre, "nom", "") if f and f.centre else "",
-                getattr(f.type_offre, "nom", "") if f and f.type_offre else "",
-                getattr(f.statut, "nom", "") if f and f.statut else "",
-                c.saturation_formation or c.saturation,
-                getattr(f, "taux_saturation", ""),
-                f.get_saturation_moyenne_commentaires() if f else "",
-            ])
+            ws.append(
+                [
+                    c.id,
+                    c.contenu or "",
+                    getattr(c, "activite", "") or "",
+                    getattr(c.created_by, "username", ""),
+                    _fmt(c.created_at),
+                    getattr(f, "nom", "") if f else "",
+                    getattr(f, "num_offre", "") if f else "",
+                    getattr(f.centre, "nom", "") if f and f.centre else "",
+                    getattr(f.type_offre, "nom", "") if f and f.type_offre else "",
+                    getattr(f.statut, "nom", "") if f and f.statut else "",
+                    c.saturation_formation or c.saturation,
+                    getattr(f, "taux_saturation", ""),
+                    f.get_saturation_moyenne_commentaires() if f else "",
+                ]
+            )
 
         for col in ws.columns:
             col_letter = get_column_letter(col[0].column)
@@ -543,6 +550,6 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             binary,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response["Content-Length"] = len(binary)
         return response

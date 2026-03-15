@@ -1,17 +1,18 @@
-from django.urls import reverse
-from rest_framework import status
-from django.contrib.contenttypes.models import ContentType
 from datetime import date, timedelta
 
+from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
+from rest_framework import status
+
 from ...models.centres import Centre
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
-from ...models.rapports import Rapport
 from ...models.logs import LogUtilisateur
+from ...models.rapports import Rapport
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ..test_utils import AuthenticatedTestCase
 from ..factories import UserFactory
-from ...models.custom_user import CustomUser
+from ..test_utils import AuthenticatedTestCase
 
 
 class RapportViewSetTestCase(AuthenticatedTestCase):
@@ -23,11 +24,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         self.type_offre = TypeOffre.objects.create(nom="non_defini", created_by=self.user)
         self.statut = Statut.objects.create(nom="non_defini", created_by=self.user)
         self.formation = Formation.objects.create(
-            nom="Formation A",
-            centre=self.centre,
-            type_offre=self.type_offre,
-            statut=self.statut,
-            created_by=self.user
+            nom="Formation A", centre=self.centre, type_offre=self.type_offre, statut=self.statut, created_by=self.user
         )
 
         self.rapport = Rapport.objects.create(
@@ -43,7 +40,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             formation=self.formation,
             donnees={"initial": True},
             temps_generation=2.5,
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.list_url = reverse("rapport-list")
@@ -74,7 +71,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             "statut": self.statut.id,
             "formation": self.formation.id,
             "donnees": {"nb": 5},
-            "temps_generation": 1.2
+            "temps_generation": 1.2,
         }
         response = self.client.post(self.list_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -85,7 +82,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Rapport),
             object_id=rapport_id,
             action="création",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de création manquant")
 
@@ -100,7 +97,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Rapport),
             object_id=self.rapport.pk,
             action="modification",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de modification manquant")
 
@@ -116,7 +113,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             content_type=ContentType.objects.get_for_model(Rapport),
             object_id=self.rapport.pk,
             action="suppression",
-            created_by=self.user
+            created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de suppression manquant")
 
@@ -127,7 +124,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
             "periode": Rapport.PERIODE_MENSUEL,
             "date_debut": date.today(),
             "date_fin": date.today() - timedelta(days=10),
-            "format": Rapport.FORMAT_PDF
+            "format": Rapport.FORMAT_PDF,
         }
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -5,15 +5,17 @@ Les dates de test sont dynamiques pour respecter la validation full_clean() du m
 HistoriqueStatutVAE : date_changement_effectif ne peut être ni dans le futur ni
 antérieure à la date de création de la VAE liée.
 """
-from django.test import TestCase
-from django.utils import timezone
+
 from datetime import date, timedelta
 from decimal import Decimal
+
 from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
 
 from ...models.centres import Centre
-from ...models.vae import VAE, HistoriqueStatutVAE
 from ...models.jury import SuiviJury
+from ...models.vae import VAE, HistoriqueStatutVAE
 from .setup_base_tests import BaseModelTestSetupMixin
 
 
@@ -22,12 +24,7 @@ class SuiviJuryModelTest(BaseModelTestSetupMixin, TestCase):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")
         self.suivi = SuiviJury.objects.create(
-            centre=self.centre,
-            annee=2025,
-            mois=5,
-            objectif_jury=10,
-            jurys_realises=7,
-            created_by=self.user
+            centre=self.centre, annee=2025, mois=5, objectif_jury=10, jurys_realises=7, created_by=self.user
         )
 
     def test_str_and_repr(self):
@@ -52,12 +49,7 @@ class VAEModelTest(BaseModelTestSetupMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")
-        self.vae = VAE.objects.create(
-            centre=self.centre,
-            statut="jury",
-            commentaire="Test",
-            created_by=self.user
-        )
+        self.vae = VAE.objects.create(centre=self.centre, statut="jury", commentaire="Test", created_by=self.user)
 
     def test_reference_auto_generee(self):
         self.assertTrue(self.vae.reference.startswith("VAE-"))
@@ -78,9 +70,9 @@ class VAEModelTest(BaseModelTestSetupMixin, TestCase):
         """
         if nouveau_statut not in dict(self.STATUT_CHOICES):
             raise ValidationError(f"Statut invalide: {nouveau_statut}")
-        
+
         date_effet = date_effet or timezone.now().date()
-        
+
         # ✅ Désactiver le signal (via attribut temporaire)
         self._skip_historique_signal = True
         self.statut = nouveau_statut
@@ -89,10 +81,7 @@ class VAEModelTest(BaseModelTestSetupMixin, TestCase):
 
         # ✅ Création manuelle unique de l'historique
         HistoriqueStatutVAE.objects.create(
-            vae=self,
-            statut=nouveau_statut,
-            date_changement_effectif=date_effet,
-            commentaire=commentaire
+            vae=self, statut=nouveau_statut, date_changement_effectif=date_effet, commentaire=commentaire
         )
 
     def test_changer_statut_invalide(self):
@@ -121,11 +110,7 @@ class HistoriqueStatutVAEModelTest(BaseModelTestSetupMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")
-        self.vae = VAE.objects.create(
-            centre=self.centre,
-            statut="dossier",
-            created_by=self.user
-        )
+        self.vae = VAE.objects.create(centre=self.centre, statut="dossier", created_by=self.user)
         # Date valide : >= date de création de la VAE et <= aujourd'hui (contraintes du modèle)
         date_effet = self.vae.created_at.date()
         self.hist = HistoriqueStatutVAE.objects.create(
@@ -133,7 +118,7 @@ class HistoriqueStatutVAEModelTest(BaseModelTestSetupMixin, TestCase):
             statut="dossier",
             date_changement_effectif=date_effet,
             commentaire="Initialisation",
-            created_by=self.user
+            created_by=self.user,
         )
 
     def test_str_and_repr(self):
@@ -158,4 +143,3 @@ class HistoriqueStatutVAEModelTest(BaseModelTestSetupMixin, TestCase):
         data = self.hist.to_serializable_dict()
         self.assertEqual(data["statut"], "dossier")
         self.assertEqual(data["vae_id"], self.vae.id)
-

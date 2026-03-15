@@ -17,9 +17,8 @@ class PartenaireModelTest(BaseModelTestSetupMixin):
             city="Paris",
             contact_nom="Jean Dupont",
             contact_telephone="0123456789",
-            contact_email="contact@exemple.com"
+            contact_email="contact@exemple.com",
         )
-
 
     def test_clean_empty_nom_raises(self):
         with self.assertRaises(ValidationError):
@@ -38,11 +37,7 @@ class PartenaireModelTest(BaseModelTestSetupMixin):
 
     def test_clean_valid_social_network_url(self):
         p = self.create_instance(
-            Partenaire,
-            nom="Y",
-            social_network_url="https://linkedin.com/in/xyz",
-            city="Lyon",
-            zip_code="69000"
+            Partenaire, nom="Y", social_network_url="https://linkedin.com/in/xyz", city="Lyon", zip_code="69000"
         )
         try:
             p.full_clean()  # Ne doit pas lever d'erreur
@@ -81,7 +76,6 @@ class PartenaireModelTest(BaseModelTestSetupMixin):
     def test_get_formations_info(self):
         infos = self.partenaire.get_formations_info()
         self.assertIn("count", infos)
-
 
     def test_get_secteurs_list(self):
         secteurs = Partenaire.get_secteurs_list()

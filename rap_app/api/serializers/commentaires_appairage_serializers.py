@@ -1,6 +1,10 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
 from ...models.commentaires_appairage import CommentaireAppairage
 
@@ -64,9 +68,7 @@ class CommentaireAppairageSerializer(serializers.ModelSerializer):
 
     appairage_statut_display = serializers.CharField(source="appairage.get_statut_display", read_only=True)
 
-    statut_commentaire_display = serializers.CharField(
-        source="get_statut_commentaire_display", read_only=True
-    )
+    statut_commentaire_display = serializers.CharField(source="get_statut_commentaire_display", read_only=True)
 
     @extend_schema_field(str)
     def get_auteur_nom(self, obj):

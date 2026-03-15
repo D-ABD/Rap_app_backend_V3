@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+
 from ..models.statut import Statut
 
 
@@ -41,13 +42,19 @@ class StatutAdmin(admin.ModelAdmin):
     actions = ["reinitialiser_couleurs"]
 
     fieldsets = (
-        (_("🏷️ Informations générales"), {
-            "fields": ("nom", "description_autre", "couleur", "badge_preview"),
-        }),
-        (_("🧾 Métadonnées"), {
-            "fields": ("created_by", "created_at", "updated_at"),
-            "classes": ("collapse",),
-        }),
+        (
+            _("🏷️ Informations générales"),
+            {
+                "fields": ("nom", "description_autre", "couleur", "badge_preview"),
+            },
+        ),
+        (
+            _("🧾 Métadonnées"),
+            {
+                "fields": ("created_by", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     # ==== AFFICHAGE ====
@@ -58,11 +65,13 @@ class StatutAdmin(admin.ModelAdmin):
     def nom_display(self, obj):
         """Affiche le libellé user-friendly."""
         return obj.get_nom_display()
+
     nom_display.short_description = _("Libellé")
 
     def badge_color(self, obj):
         """Affiche le badge HTML de couleur."""
         return format_html(obj.get_badge_html())
+
     badge_color.short_description = _("Aperçu")
 
     def badge_preview(self, obj):
@@ -70,6 +79,7 @@ class StatutAdmin(admin.ModelAdmin):
         if obj.pk:
             return format_html(obj.get_badge_html())
         return _("Le badge s’affichera après enregistrement.")
+
     badge_preview.short_description = _("Aperçu du badge")
 
     def couleur_display(self, obj):
@@ -79,8 +89,9 @@ class StatutAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="background-color:{}; color:white; padding:2px 6px; border-radius:3px;">{}</span>',
             obj.couleur,
-            obj.couleur
+            obj.couleur,
         )
+
     couleur_display.short_description = _("Couleur")
 
     def utilisation_display(self, obj):
@@ -88,11 +99,13 @@ class StatutAdmin(admin.ModelAdmin):
         count = obj.formations.count()
         color = "#999" if count == 0 else "#007bff"
         return format_html('<span style="color:{};">{} formation(s)</span>', color, count)
+
     utilisation_display.short_description = _("Utilisation")
 
     def created_by_display(self, obj):
         """Affiche le créateur si connu."""
         return str(obj.created_by) if obj.created_by else "—"
+
     created_by_display.short_description = _("Créé par")
 
     # ==== ACTIONS ====
@@ -104,6 +117,7 @@ class StatutAdmin(admin.ModelAdmin):
         pour ceux qui n’en ont pas (ou qui ont un format invalide).
         """
         from ..models.statut import get_default_color
+
         updated = 0
         for statut in queryset:
             if not statut.couleur or not statut.couleur.startswith("#") or len(statut.couleur) != 7:
@@ -114,7 +128,7 @@ class StatutAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f"{updated} couleur(s) réinitialisée(s) selon les valeurs par défaut.",
-            messages.SUCCESS if updated else messages.INFO
+            messages.SUCCESS if updated else messages.INFO,
         )
 
     # ==== LOGIQUE DE SAUVEGARDE ====

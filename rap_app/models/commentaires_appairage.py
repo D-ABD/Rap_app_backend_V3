@@ -1,12 +1,13 @@
 import logging
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .base import BaseModel
 from .appairage import Appairage
+from .base import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 🔍 QuerySet & Manager personnalisés
 # ============================================================
+
 
 class CommentaireAppairageQuerySet(models.QuerySet):
     """
@@ -32,11 +34,11 @@ class CommentaireAppairageQuerySet(models.QuerySet):
         """
         Rôle :
             Récupère l'ensemble des commentaires d'appairage considérés comme actifs (non archivés).
-        
+
         Logique métier :
             - Filtre selon CommentaireAppairage.STATUT_ACTIF.
             - Utile pour afficher uniquement les discussions ouvertes ou non archivées.
-        
+
         Effets de bord :
             - Aucun. Strictement en lecture.
         """
@@ -68,12 +70,14 @@ class CommentaireAppairageManager(models.Manager.from_queryset(CommentaireAppair
     Effets de bord :
         - Strictement en lecture ; n'altère aucune donnée.
     """
+
     pass
 
 
 # ============================================================
 # 💬 Modèle principal
 # ============================================================
+
 
 class CommentaireAppairage(BaseModel):
     """
@@ -160,10 +164,10 @@ class CommentaireAppairage(BaseModel):
         verbose_name_plural = _("Commentaires d’appairages")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["appairage"]),               # Accélère les requêtes par appairage
-            models.Index(fields=["created_by"]),              # Accès analytique par auteur/ditribution des utilisateurs
-            models.Index(fields=["statut_commentaire"]),      # Filtrage rapide status logique
-            models.Index(fields=["created_at"]),              # Accès chronologique performant
+            models.Index(fields=["appairage"]),  # Accélère les requêtes par appairage
+            models.Index(fields=["created_by"]),  # Accès analytique par auteur/ditribution des utilisateurs
+            models.Index(fields=["statut_commentaire"]),  # Filtrage rapide status logique
+            models.Index(fields=["created_at"]),  # Accès chronologique performant
         ]
 
     def __str__(self):
@@ -221,7 +225,9 @@ class CommentaireAppairage(BaseModel):
         self.full_clean()
 
         if not self.pk and self.appairage:
-            self.statut_snapshot = self.appairage.statut  # Snapshot figé à la création, ne sera jamais synchronisé rétroactivement.
+            self.statut_snapshot = (
+                self.appairage.statut
+            )  # Snapshot figé à la création, ne sera jamais synchronisé rétroactivement.
 
         if user and hasattr(user, "pk"):
             if not self.pk and not self.created_by:

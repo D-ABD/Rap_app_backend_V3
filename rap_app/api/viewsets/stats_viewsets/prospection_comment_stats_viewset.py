@@ -1,23 +1,20 @@
 # rap_app/api/viewsets/stats_viewsets/prospection_comment_stats_viewset.py
 from __future__ import annotations
 
-from ...serializers.base_serializers import EmptySerializer
-
 from typing import Optional
 
-from django.db.models import Q, Value, Count
+from django.db.models import Count, Q, Value
 from django.db.models.functions import Coalesce, Substr
-from django.utils.dateparse import parse_date
 from django.utils import timezone
-
-from rest_framework.viewsets import GenericViewSet
+from django.utils.dateparse import parse_date
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from ...permissions import is_staff_or_staffread
+from rest_framework.viewsets import GenericViewSet
 
 from ....models.prospection_comments import ProspectionComment
+from ...permissions import is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
 
 try:
     from ...permissions import IsOwnerOrStaffOrAbove  # type: ignore
@@ -27,6 +24,7 @@ except Exception:  # pragma: no cover
 try:
     from ...mixins import RestrictToUserOwnedQueryset  # type: ignore
 except Exception:  # pragma: no cover
+
     class RestrictToUserOwnedQueryset:  # stub minimal
         def restrict_queryset_to_user(self, qs):
             return qs
@@ -36,14 +34,14 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
     """
     ViewSet dédié à l’analyse et au reporting sur les commentaires de prospection.
 
-    ⚠️ Ce ViewSet n’est pas CRUD sur les commentaires eux-mêmes, mais expose deux endpoints "stats" :  
+    ⚠️ Ce ViewSet n’est pas CRUD sur les commentaires eux-mêmes, mais expose deux endpoints "stats" :
     - /prospection-comment-stats/latest/   : derniers commentaires pertinents (analyse)
     - /prospection-comment-stats/grouped/  : options groupées pour alimenter des filtres UI (<select>).
 
     ───────────────
     1. Permissions
     ───────────────
-    - `permission_classes = [IsOwnerOrStaffOrAbove]`  
+    - `permission_classes = [IsOwnerOrStaffOrAbove]`
       → La permission dépend d'un composant externe non visible ici (is_owner, staff ou plus).
       → Si `IsOwnerOrStaffOrAbove` indisponible, repli sur `IsAuthenticated`.
       → Logique métier (voir _scope_for_user):
@@ -71,7 +69,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
     ──────────────────────────
     3. Actions standard (list, retrieve…)
     ──────────────────────────
-    - Ce ViewSet ne définit PAS d’actions list/create/retrieve/update/destroy.  
+    - Ce ViewSet ne définit PAS d’actions list/create/retrieve/update/destroy.
       → Seules des actions personnalisées readonly sont exposées.
 
     ──────────────────────────
@@ -83,7 +81,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
       - Objectif : Récupérer les derniers commentaires pertinents pour l’utilisateur courant, avec preview et infos enrichies.
       - Permissions : logique restreinte décrite ci-dessus.
       - Query params : tous ceux de _apply_filters + limit (défaut 5, max 200).
-      - Structure de réponse JSON : (clairement visible dans le code)  
+      - Structure de réponse JSON : (clairement visible dans le code)
         ```
         {
             "count": int,         # nombre de résultats
@@ -144,6 +142,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
     - Les droits sont strictement filtrés en amont (voir _scope_for_user et permissions).
     - Si un paramètre (permission, mixin, ou champs user) dépend d’un composant ailleurs dans le code ou de la configuration projet, la documentation ne peut en donner le détail exhaustif.
     """
+
     serializer_class = EmptySerializer
 
     permission_classes = [IsOwnerOrStaffOrAbove]
@@ -186,6 +185,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
                 return list({str(x)[:2] for x in val if x is not None and str(x).strip()})
             s = str(val).strip()
             return [s[:2]] if s else []
+
         for owner in (user, getattr(user, "profile", None)):
             if not owner:
                 continue
@@ -237,7 +237,6 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
 
         # Tous les autres → aucun accès
         return qs.none()
-
 
     # ────────────────────────────────────────────────────────────
     # Data (filtrages principaux)
@@ -340,7 +339,9 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
             # Génère un nom affichable pour l'auteur du commentaire.
             if not u:
                 return "Anonyme"
-            full = f"{(getattr(u, 'first_name', '') or '').strip()} {(getattr(u, 'last_name', '') or '').strip()}".strip()
+            full = (
+                f"{(getattr(u, 'first_name', '') or '').strip()} {(getattr(u, 'last_name', '') or '').strip()}".strip()
+            )
             return full or getattr(u, "email", None) or getattr(u, "username", None) or "Anonyme"
 
         results = []
@@ -352,7 +353,6 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
             statut = getattr(p, "statut", None)
             type_prospection = getattr(p, "type_prospection", None)
             objectif = getattr(p, "objectif", None)
-            
 
             body = c.body or ""
             preview_len = 180
@@ -361,36 +361,40 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
             is_edited = bool(c.updated_at and (c.updated_at - c.created_at).total_seconds() > 60)
             is_recent = (now - c.created_at).days <= 7
 
-            results.append({
-                "id": c.pk,
-                "prospection_id": p.id if p else None,
-                "prospection_text": getattr(c, "prospection_text", f"#{getattr(p, 'id', None)}"),
-                "centre_nom": centre_nom,
-                "formation_nom": formation_nom,
-                "partenaire_nom": partenaire_nom,
-                "num_offre": getattr(getattr(p, "formation", None), "num_offre", None),
-                "type_offre_nom": getattr(getattr(getattr(p, "formation", None), "type_offre", None), "nom", None),
-                "start_date": getattr(getattr(p, "formation", None), "date_debut", None),
-                "end_date": getattr(getattr(p, "formation", None), "date_fin", None),
-                "statut": statut,
-                "type_prospection": type_prospection,
-                "objectif": objectif,
-                "body": body_preview,
-                "is_internal": bool(c.is_internal),
-                "auteur": _full_name(c.created_by),
-                "date": c.created_at.strftime("%d/%m/%Y"),
-                "heure": c.created_at.strftime("%H:%M"),
-                "created_at": c.created_at.isoformat(),
-                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-                "is_recent": is_recent,
-                "is_edited": is_edited,
-            })
+            results.append(
+                {
+                    "id": c.pk,
+                    "prospection_id": p.id if p else None,
+                    "prospection_text": getattr(c, "prospection_text", f"#{getattr(p, 'id', None)}"),
+                    "centre_nom": centre_nom,
+                    "formation_nom": formation_nom,
+                    "partenaire_nom": partenaire_nom,
+                    "num_offre": getattr(getattr(p, "formation", None), "num_offre", None),
+                    "type_offre_nom": getattr(getattr(getattr(p, "formation", None), "type_offre", None), "nom", None),
+                    "start_date": getattr(getattr(p, "formation", None), "date_debut", None),
+                    "end_date": getattr(getattr(p, "formation", None), "date_fin", None),
+                    "statut": statut,
+                    "type_prospection": type_prospection,
+                    "objectif": objectif,
+                    "body": body_preview,
+                    "is_internal": bool(c.is_internal),
+                    "auteur": _full_name(c.created_by),
+                    "date": c.created_at.strftime("%d/%m/%Y"),
+                    "heure": c.created_at.strftime("%H:%M"),
+                    "created_at": c.created_at.isoformat(),
+                    "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                    "is_recent": is_recent,
+                    "is_edited": is_edited,
+                }
+            )
 
-        return Response({
-            "count": len(results),
-            "results": results,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "count": len(results),
+                "results": results,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )
 
     # ────────────────────────────────────────────────────────────
     # Grouped (centre / departement) — pour alimenter les selects
@@ -415,9 +419,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
         params.pop(by, None)  # on supprime le filtre correspondant
 
         qs = self._apply_filters(self.get_queryset(), params)
-        qs = qs.annotate(
-            departement=Coalesce(Substr("prospection__centre__code_postal", 1, 2), Value("NA"))
-        )
+        qs = qs.annotate(departement=Coalesce(Substr("prospection__centre__code_postal", 1, 2), Value("NA")))
 
         if by == "centre":
             group_fields = ["prospection__centre_id", "prospection__centre__nom"]
@@ -431,11 +433,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
         else:  # departement
             group_fields = ["departement"]
 
-        rows = list(
-            qs.values(*group_fields)
-              .annotate(total=Count("id"))
-              .order_by(*group_fields)
-        )
+        rows = list(qs.values(*group_fields).annotate(total=Count("id")).order_by(*group_fields))
 
         results = []
         for r in rows:
@@ -453,15 +451,19 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
                 key = r.get("departement")
                 label = key or "—"
 
-            results.append({
-                **r,
-                "group_key": key,
-                "group_label": label,
-                "total": int(r.get("total") or 0),
-            })
+            results.append(
+                {
+                    **r,
+                    "group_key": key,
+                    "group_label": label,
+                    "total": int(r.get("total") or 0),
+                }
+            )
 
-        return Response({
-            "group_by": by,
-            "results": results,
-            "filters_echo": {k: v for k, v in request.query_params.items()},
-        })
+        return Response(
+            {
+                "group_by": by,
+                "results": results,
+                "filters_echo": {k: v for k, v in request.query_params.items()},
+            }
+        )

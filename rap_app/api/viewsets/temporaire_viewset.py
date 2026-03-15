@@ -1,7 +1,7 @@
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from ..permissions import IsStaffOrAbove
 
@@ -35,12 +35,12 @@ from ..permissions import IsStaffOrAbove
                     "role": {"type": "string", "example": "admin"},
                     "is_staff": {"type": "boolean", "example": True},
                     "is_superuser": {"type": "boolean", "example": False},
-                }
-            }
+                },
+            },
         )
-    }
+    },
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated, IsStaffOrAbove])
 def test_token_view(request):
     """
@@ -49,15 +49,17 @@ def test_token_view(request):
     profil (id, email, rôle, indicateurs staff/superuser).
     """
     user = request.user
-    role = getattr(user, 'role', 'inconnu')  # ✅ accès direct au champ `role`
+    role = getattr(user, "role", "inconnu")  # ✅ accès direct au champ `role`
 
-    return Response({
-        'success': True,
-        'message': 'Token valide ✅',
-        'user_id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'role': role,
-        'is_staff': user.is_staff,
-        'is_superuser': user.is_superuser,
-    })
+    return Response(
+        {
+            "success": True,
+            "message": "Token valide ✅",
+            "user_id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": role,
+            "is_staff": user.is_staff,
+            "is_superuser": user.is_superuser,
+        }
+    )

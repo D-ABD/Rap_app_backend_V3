@@ -1,9 +1,11 @@
 import logging
+
 from django.contrib import admin, messages
 from django.contrib.admin.sites import NotRegistered
 from django.utils.translation import gettext_lazy as _
 
-from ..models.candidat import Candidat as CandidatModel, HistoriquePlacement
+from ..models.candidat import Candidat as CandidatModel
+from ..models.candidat import HistoriquePlacement
 
 logger = logging.getLogger("application.candidats")
 
@@ -124,60 +126,72 @@ class CandidatAdmin(admin.ModelAdmin):
     )
 
     fieldsets = (
-        (_("Identité & contact"), {
-            "fields": (
-                "nom",
-                "prenom",
-                "email",
-                "telephone",
-                "ville",
-                "code_postal",
-                "compte_utilisateur",
-            )
-        }),
-        (_("Parcours & profil"), {
-            "fields": (
-                "statut",
-                "formation",
-                "evenement",
-                "cv_statut",
-                "entretien_done",
-                "test_is_ok",
-                "rqth",
-                "admissible",
-                "date_naissance",
-                "type_contrat",
-                "disponibilite",
-                "permis_b",
-                "communication",
-                "experience",
-                "csp",
-                "origine_sourcing",
-                "notes",
-            )
-        }),
-        (_("Placement (snapshot)"), {
-            "fields": (
-                "responsable_placement",
-                "date_placement",
-                "entreprise_placement",
-                "resultat_placement",
-                "entreprise_validee",
-                "contrat_signe",
-                "numero_osia",
-                "placement_appairage",
-            )
-        }),
-        (_("Métadonnées"), {
-            "fields": (
-                "vu_par",
-                "date_inscription",
-                "created_by",
-                "created_at",
-                "updated_by",
-                "updated_at",
-            )
-        }),
+        (
+            _("Identité & contact"),
+            {
+                "fields": (
+                    "nom",
+                    "prenom",
+                    "email",
+                    "telephone",
+                    "ville",
+                    "code_postal",
+                    "compte_utilisateur",
+                )
+            },
+        ),
+        (
+            _("Parcours & profil"),
+            {
+                "fields": (
+                    "statut",
+                    "formation",
+                    "evenement",
+                    "cv_statut",
+                    "entretien_done",
+                    "test_is_ok",
+                    "rqth",
+                    "admissible",
+                    "date_naissance",
+                    "type_contrat",
+                    "disponibilite",
+                    "permis_b",
+                    "communication",
+                    "experience",
+                    "csp",
+                    "origine_sourcing",
+                    "notes",
+                )
+            },
+        ),
+        (
+            _("Placement (snapshot)"),
+            {
+                "fields": (
+                    "responsable_placement",
+                    "date_placement",
+                    "entreprise_placement",
+                    "resultat_placement",
+                    "entreprise_validee",
+                    "contrat_signe",
+                    "numero_osia",
+                    "placement_appairage",
+                )
+            },
+        ),
+        (
+            _("Métadonnées"),
+            {
+                "fields": (
+                    "vu_par",
+                    "date_inscription",
+                    "created_by",
+                    "created_at",
+                    "updated_by",
+                    "updated_at",
+                )
+            },
+        ),
     )
 
     inlines = [HistoriquePlacementInline]

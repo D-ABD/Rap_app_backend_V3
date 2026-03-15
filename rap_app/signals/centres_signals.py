@@ -4,9 +4,10 @@ Signaux liés au modèle Centre.
 
 import logging
 import sys
-from django.db.models.signals import post_save, pre_delete, post_delete
-from django.dispatch import receiver
+
 from django.apps import apps
+from django.db.models.signals import post_delete, post_save, pre_delete
+from django.dispatch import receiver
 
 from ..models.centres import Centre
 from ..models.logs import LogUtilisateur

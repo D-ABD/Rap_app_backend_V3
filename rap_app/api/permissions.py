@@ -1,5 +1,5 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
 from django.db.models import Q
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from .roles import (
     get_staff_centre_ids_cached,
@@ -18,6 +18,7 @@ class CanAccessProspectionComment(BasePermission):
     """
     Gère l'accès objet aux commentaires de prospection selon le rôle et la méthode.
     """
+
     message = "Accès refusé."
 
     def has_object_permission(self, request, view, obj):
@@ -57,6 +58,7 @@ class IsSuperAdminOnly(BasePermission):
     """
     Autorise uniquement les superadmins.
     """
+
     message = "Accès réservé aux superadmins uniquement."
 
     def has_permission(self, request, view):
@@ -68,6 +70,7 @@ class IsAdminLikeOnly(BasePermission):
     """
     Autorise uniquement les utilisateurs admin ou superadmin selon is_admin_like.
     """
+
     message = "Accès réservé aux administrateurs et superadministrateurs."
 
     def has_permission(self, request, view):
@@ -79,20 +82,19 @@ class IsAdmin(BasePermission):
     """
     Autorise admin, superadmin, staff et staff_read.
     """
+
     message = "Accès réservé au staff, admin ou superadmin."
 
     def has_permission(self, request, view):
         user = request.user
-        return (
-            getattr(user, "is_authenticated", False)
-            and (is_admin_like(user) or is_staff_or_staffread(user))
-        )
+        return getattr(user, "is_authenticated", False) and (is_admin_like(user) or is_staff_or_staffread(user))
 
 
 class ReadWriteAdminReadStaff(BasePermission):
     """
     Accès lecture aux staff, staff_read, admin ; écriture réservée aux admins.
     """
+
     message = "Lecture réservée au staff/staff_read. Écriture réservée aux admins."
 
     def has_permission(self, request, view):
@@ -104,11 +106,7 @@ class ReadWriteAdminReadStaff(BasePermission):
         role = str(getattr(user, "role", "")).lower()
 
         if request.method in SAFE_METHODS:
-            return (
-                is_staff_or_staffread(user)
-                or is_admin_like(user)
-                or role == "staff_read"
-            )
+            return is_staff_or_staffread(user) or is_admin_like(user) or role == "staff_read"
         return is_admin_like(user) or getattr(user, "is_superuser", False)
 
 
@@ -116,6 +114,7 @@ class IsStaffOrAbove(BasePermission):
     """
     Autorise staff, staff_read, admin ou superadmin. Refuse les candidats et autres.
     """
+
     message = "Accès réservé au staff, staff_read, admin ou superadmin."
 
     def has_permission(self, request, view):
@@ -141,6 +140,7 @@ class ReadOnlyOrAdmin(BasePermission):
     """
     Lecture ouverte à tous ; modification réservée à admin ou superadmin.
     """
+
     message = "Lecture publique. Modifications réservées aux admins ou superadmins."
 
     def has_permission(self, request, view):
@@ -154,6 +154,7 @@ class IsOwnerOrSuperAdmin(BasePermission):
     """
     Autorise le créateur de l'objet ou le superadmin.
     """
+
     message = "Accès refusé : vous n'êtes pas le créateur ni superadmin."
 
     def has_object_permission(self, request, view, obj):
@@ -168,6 +169,7 @@ class IsOwnerOrStaffOrAbove(BasePermission):
     """
     Gère l'accès objet selon le rôle ou lien explicite (owner, created_by).
     """
+
     message = "Accès restreint."
 
     def has_permission(self, request, view):
@@ -209,6 +211,7 @@ class UserVisibilityScopeMixin:
     """
     Applique un filtre d'accès utilisateurs dans les queryset selon le rôle.
     """
+
     user_field = "created_by"
 
     def user_visibility_q(self, user):
@@ -228,10 +231,12 @@ class UserVisibilityScopeMixin:
         qs = super().get_queryset()
         return self.apply_user_scope(qs)
 
+
 class IsStaffReadOnly(BasePermission):
     """
     Autorise staff_read en lecture seule ; pas de restriction pour les autres.
     """
+
     message = "Accès en lecture seule uniquement pour le rôle staff_read."
 
     def has_permission(self, request, view):
@@ -255,6 +260,7 @@ class IsDeclicStaffOrAbove(BasePermission):
     """
     Autorise admin, superadmin, staff, declic_staff ; staff_read en lecture seule. Refuse les candidats et autres.
     """
+
     message = "Accès réservé au staff Déclic ou supérieur."
 
     def has_permission(self, request, view):
@@ -280,6 +286,7 @@ class IsPrepaStaffOrAbove(BasePermission):
     """
     Autorise admin, superadmin, staff standard, prepa_staff. Staff_read uniquement en lecture. Refuse les autres.
     """
+
     message = "Accès réservé au staff PrépaComp ou supérieur."
 
     def has_permission(self, request, view):
@@ -301,6 +308,7 @@ class CanAccessCVTheque(BasePermission):
     """
     Gère l'accès à la CVThèque selon le rôle, le centre, l'auteur ou le type d'accès.
     """
+
     message = "Accès refusé."
 
     def has_permission(self, request, view):
@@ -330,12 +338,7 @@ class CanAccessCVTheque(BasePermission):
 
         if is_staff_read(user):
             centres = get_staff_centre_ids_cached(request)
-            return (
-                is_readonly
-                and form is not None
-                and centres is not None
-                and form.centre_id in centres
-            )
+            return is_readonly and form is not None and centres is not None and form.centre_id in centres
 
         if is_staff_like(user):
             centres = get_staff_centre_ids_cached(request)
@@ -347,9 +350,8 @@ class CanAccessCVTheque(BasePermission):
             return cand is not None and getattr(cand, "compte_utilisateur_id", None) == user.id
 
         if is_readonly:
-            return (
-                getattr(obj, "created_by_id", None) == user.id or
-                (cand and getattr(cand, "compte_utilisateur_id", None) == user.id)
+            return getattr(obj, "created_by_id", None) == user.id or (
+                cand and getattr(cand, "compte_utilisateur_id", None) == user.id
             )
 
         return False

@@ -4,12 +4,22 @@ Tests du modèle Formation et de ses relations.
 Les dates de test sont dynamiques et alignées sur timezone.localdate() pour être
 cohérentes avec les propriétés is_future, is_past et is_active du modèle.
 """
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from django.utils import timezone
+
 from datetime import timedelta
 
-from ...models import Formation, Centre, TypeOffre, Statut, HistoriqueFormation, Partenaire, Evenement
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
+
+from ...models import (
+    Centre,
+    Evenement,
+    Formation,
+    HistoriqueFormation,
+    Partenaire,
+    Statut,
+    TypeOffre,
+)
 from .setup_base_tests import BaseModelTestSetupMixin
 
 
@@ -77,6 +87,7 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
 
     def test_add_document(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
+
         file = SimpleUploadedFile("test.pdf", b"content")
         doc = self.formation.add_document(user=self.user, fichier=file, titre="Doc test")
         self.assertEqual(doc.formation, self.formation)
@@ -92,7 +103,7 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
             type_evenement=Evenement.TypeEvenement.AUTRE,
             description_autre="Présentation de fin d'année",
             event_date=date,
-            user=self.user
+            user=self.user,
         )
 
         self.formation.refresh_from_db()
@@ -188,4 +199,3 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
         partenaires = self.formation.get_partenaires()
         self.assertIn(partenaire1, partenaires)
         self.assertIn(partenaire2, partenaires)
-

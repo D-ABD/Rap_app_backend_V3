@@ -1,16 +1,12 @@
 # rap_app/api/serializers/prepa_objectifs_serializers.py
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer
+from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
 
 
-@extend_schema_serializer(
-    examples=[
-        {"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}
-    ]
-)
+@extend_schema_serializer(examples=[{"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}])
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les objectifs Prépa. Lecture seule.
@@ -55,9 +51,7 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
     """
 
     centre = CentreLightSerializer(read_only=True)
-    centre_id = serializers.PrimaryKeyRelatedField(
-        source="centre", queryset=Centre.objects.all(), write_only=True
-    )
+    centre_id = serializers.PrimaryKeyRelatedField(source="centre", queryset=Centre.objects.all(), write_only=True)
 
     data_prepa = serializers.SerializerMethodField()
     taux_prescription = serializers.SerializerMethodField()
@@ -77,7 +71,6 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
             "annee",
             "valeur_objectif",
             "commentaire",
-
             "data_prepa",
             "taux_prescription",
             "taux_presence",

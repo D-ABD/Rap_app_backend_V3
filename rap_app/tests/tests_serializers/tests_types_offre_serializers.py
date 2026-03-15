@@ -1,7 +1,7 @@
 # tests/test_typeoffre_serializers.py
 
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 
 from ...api.serializers.types_offre_serializers import TypeOffreSerializer
 from ...models.types_offre import TypeOffre
@@ -30,11 +30,7 @@ class TypeOffreSerializerTestCase(TestCase):
         serializer = TypeOffreSerializer(instance=type_offre)
 
         # Simuler l'enveloppe attendue dans une réponse d'API
-        output = {
-            "success": True,
-            "message": "Type d'offre sérialisé avec succès.",
-            "data": serializer.data
-        }
+        output = {"success": True, "message": "Type d'offre sérialisé avec succès.", "data": serializer.data}
 
         self.assertIn("success", output)
         self.assertIn("message", output)
@@ -45,18 +41,13 @@ class TypeOffreSerializerTestCase(TestCase):
         """
         ❌ Vérifie que le champ `autre` est requis si `nom` == "autre"
         """
-        data = {
-            "nom": TypeOffre.AUTRE,
-            "autre": "",  # manquant
-            "couleur": "#20c997"
-        }
+        data = {"nom": TypeOffre.AUTRE, "autre": "", "couleur": "#20c997"}  # manquant
         serializer = TypeOffreSerializer(data=data)
         self.assertTrue(serializer.is_valid())  # ✅ valide syntaxiquement
         with self.assertRaises(ValidationError) as context:
             serializer.save()  # ❌ déclenche la validation métier du modèle
 
         self.assertIn("autre", context.exception.message_dict)
-
 
     def test_serializer_invalid_color_format(self):
         """
@@ -72,11 +63,7 @@ class TypeOffreSerializerTestCase(TestCase):
         self.assertIn("couleur", context.exception.message_dict)
 
     def test_serializer_autre_valide(self):
-        data = {
-            "nom": TypeOffre.AUTRE,
-            "autre": "Test personnalisé",
-            "couleur": "#20c997"
-        }
+        data = {"nom": TypeOffre.AUTRE, "autre": "Test personnalisé", "couleur": "#20c997"}
         serializer = TypeOffreSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         instance = serializer.save()
@@ -85,11 +72,7 @@ class TypeOffreSerializerTestCase(TestCase):
 
     def test_serializer_autre_unique_constraint(self):
         TypeOffre.objects.create(nom=TypeOffre.AUTRE, autre="Doublon", couleur="#123456")
-        data = {
-            "nom": TypeOffre.AUTRE,
-            "autre": "Doublon",  # même nom personnalisé
-            "couleur": "#123456"
-        }
+        data = {"nom": TypeOffre.AUTRE, "autre": "Doublon", "couleur": "#123456"}  # même nom personnalisé
         serializer = TypeOffreSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         with self.assertRaises(ValidationError):

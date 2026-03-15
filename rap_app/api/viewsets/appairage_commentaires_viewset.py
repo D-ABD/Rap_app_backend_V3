@@ -1,32 +1,33 @@
 import logging
+from io import BytesIO
+from pathlib import Path
+
+from django.conf import settings
 from django.db.models import Q
-from rest_framework import viewsets, status, filters
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
-from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.drawing.image import Image as XLImage
-from io import BytesIO
 from django.utils import timezone as dj_timezone
-from django.conf import settings
-from weasyprint import HTML, CSS
-from pathlib import Path
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from weasyprint import CSS, HTML
 
+from ...models.commentaires_appairage import CommentaireAppairage
+from ...models.logs import LogUtilisateur
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove
-from ..roles import is_admin_like, is_staff_like, is_candidate, staff_centre_ids
-from ...models.commentaires_appairage import CommentaireAppairage
+from ..roles import is_admin_like, is_candidate, is_staff_like, staff_centre_ids
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
     CommentaireAppairageWriteSerializer,
 )
-from ...models.logs import LogUtilisateur
 
 logger = logging.getLogger("APPARIAGE_COMMENT")
 
@@ -210,17 +211,19 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
             statut_display = dict(c.STATUT_CHOICES).get(c.statut_commentaire, c.statut_commentaire)
             statut_color = "C8E6C9" if c.statut_commentaire == "actif" else "E0E0E0"
 
-            ws.append([
-                c.id,
-                statut_display,
-                getattr(c.appairage, "id", "—"),
-                getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—"),
-                getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
-                getattr(getattr(c.appairage, "formation", None), "nom", "—"),
-                getattr(c.created_by, "username", "—"),
-                c.body or "",
-                c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "—",
-            ])
+            ws.append(
+                [
+                    c.id,
+                    statut_display,
+                    getattr(c.appairage, "id", "—"),
+                    getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—"),
+                    getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
+                    getattr(getattr(c.appairage, "formation", None), "nom", "—"),
+                    getattr(c.created_by, "username", "—"),
+                    c.body or "",
+                    c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "—",
+                ]
+            )
             statut_cell = ws[f"B{ws.max_row}"]
             statut_cell.fill = PatternFill("solid", fgColor=statut_color)
             statut_cell.font = Font(bold=True)
@@ -262,42 +265,40 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
 
         commentaires_data = []
         for c in qs:
-            commentaires_data.append({
-                "id": c.id,
-                "statut_commentaire": c.statut_commentaire,
-                "body": c.body or "",
-                "created_by": getattr(c.created_by, "username", "—"),
-                "created_at": c.created_at,
-                "activite": getattr(c, "activite", ""),
-                "appairage": {
-                    "id": getattr(c.appairage, "id", None),
-                    "statut": getattr(c.appairage, "statut", ""),
-                    "get_statut_display": getattr(c.appairage, "get_statut_display", lambda: "")(),
-                    "candidat": {
-                        "nom_complet": getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—"),
-                    },
-                    "partenaire": {
-                        "nom": getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
-                    },
-                    "formation": {
-                        "nom": getattr(getattr(c.appairage, "formation", None), "nom", "—"),
-                        "num_offre": getattr(getattr(c.appairage, "formation", None), "num_offre", ""),
-                        "type_offre": {
-                            "nom": getattr(
-                                getattr(getattr(c.appairage, "formation", None), "type_offre", None),
-                                "nom",
-                                "—",
-                            ),
+            commentaires_data.append(
+                {
+                    "id": c.id,
+                    "statut_commentaire": c.statut_commentaire,
+                    "body": c.body or "",
+                    "created_by": getattr(c.created_by, "username", "—"),
+                    "created_at": c.created_at,
+                    "activite": getattr(c, "activite", ""),
+                    "appairage": {
+                        "id": getattr(c.appairage, "id", None),
+                        "statut": getattr(c.appairage, "statut", ""),
+                        "get_statut_display": getattr(c.appairage, "get_statut_display", lambda: "")(),
+                        "candidat": {
+                            "nom_complet": getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—"),
                         },
-                        "start_date": getattr(
-                            getattr(c.appairage, "formation", None), "start_date", None
-                        ),
-                        "end_date": getattr(
-                            getattr(c.appairage, "formation", None), "end_date", None
-                        ),
+                        "partenaire": {
+                            "nom": getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
+                        },
+                        "formation": {
+                            "nom": getattr(getattr(c.appairage, "formation", None), "nom", "—"),
+                            "num_offre": getattr(getattr(c.appairage, "formation", None), "num_offre", ""),
+                            "type_offre": {
+                                "nom": getattr(
+                                    getattr(getattr(c.appairage, "formation", None), "type_offre", None),
+                                    "nom",
+                                    "—",
+                                ),
+                            },
+                            "start_date": getattr(getattr(c.appairage, "formation", None), "start_date", None),
+                            "end_date": getattr(getattr(c.appairage, "formation", None), "end_date", None),
+                        },
                     },
-                },
-            })
+                }
+            )
 
         context = {
             "commentaires": commentaires_data,

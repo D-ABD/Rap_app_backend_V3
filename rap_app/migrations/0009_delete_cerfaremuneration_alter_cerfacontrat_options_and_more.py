@@ -7,613 +7,814 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rap_app', '0008_cvtheque_created_at_cvtheque_created_by_and_more'),
+        ("rap_app", "0008_cvtheque_created_at_cvtheque_created_by_and_more"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='CerfaRemuneration',
+            name="CerfaRemuneration",
         ),
         migrations.AlterModelOptions(
-            name='cerfacontrat',
-            options={'ordering': ['-created_at'], 'verbose_name': 'CERFA Contrat complet', 'verbose_name_plural': 'CERFAs Contrat complets'},
+            name="cerfacontrat",
+            options={
+                "ordering": ["-created_at"],
+                "verbose_name": "CERFA Contrat complet",
+                "verbose_name_plural": "CERFAs Contrat complets",
+            },
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='avantage_autre',
+            model_name="cerfacontrat",
+            name="avantage_autre",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='avantage_logement',
+            model_name="cerfacontrat",
+            name="avantage_logement",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='avantage_nourriture',
+            model_name="cerfacontrat",
+            name="avantage_nourriture",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='date_signature_apprenti',
+            model_name="cerfacontrat",
+            name="date_signature_apprenti",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='date_signature_employeur',
+            model_name="cerfacontrat",
+            name="date_signature_employeur",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='signature_apprenti',
+            model_name="cerfacontrat",
+            name="signature_apprenti",
         ),
         migrations.RemoveField(
-            model_name='cerfacontrat',
-            name='signature_employeur',
+            model_name="cerfacontrat",
+            name="signature_employeur",
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_adresse_complement',
-            field=models.CharField(blank=True, help_text='Complément d’adresse du CFA responsable.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="cfa_adresse_complement",
+            field=models.CharField(
+                blank=True, help_text="Complément d’adresse du CFA responsable.", max_length=255, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_adresse_numero',
-            field=models.CharField(blank=True, help_text='Numéro dans la voie de l’adresse du CFA responsable.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="cfa_adresse_numero",
+            field=models.CharField(
+                blank=True, help_text="Numéro dans la voie de l’adresse du CFA responsable.", max_length=20, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_adresse_voie',
-            field=models.CharField(blank=True, help_text='Voie de l’adresse du CFA responsable.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="cfa_adresse_voie",
+            field=models.CharField(
+                blank=True, help_text="Voie de l’adresse du CFA responsable.", max_length=255, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_code_postal',
-            field=models.CharField(blank=True, help_text='Code postal du CFA responsable.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="cfa_code_postal",
+            field=models.CharField(blank=True, help_text="Code postal du CFA responsable.", max_length=10, null=True),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_entreprise',
-            field=models.BooleanField(default=False, help_text='Case indiquant si le CFA est un CFA d’entreprise.'),
+            model_name="cerfacontrat",
+            name="cfa_entreprise",
+            field=models.BooleanField(default=False, help_text="Case indiquant si le CFA est un CFA d’entreprise."),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='cfa_est_lieu_formation_principal',
-            field=models.BooleanField(default=False, help_text='Case indiquant si le CFA responsable est aussi le lieu de formation principal.'),
+            model_name="cerfacontrat",
+            name="cfa_est_lieu_formation_principal",
+            field=models.BooleanField(
+                default=False,
+                help_text="Case indiquant si le CFA responsable est aussi le lieu de formation principal.",
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='date_debut_formation_pratique_employeur',
-            field=models.DateField(blank=True, help_text='Date de début de la formation pratique chez l’employeur.', null=True),
+            model_name="cerfacontrat",
+            name="date_debut_formation_pratique_employeur",
+            field=models.DateField(
+                blank=True, help_text="Date de début de la formation pratique chez l’employeur.", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='date_effet_avenant',
-            field=models.DateField(blank=True, help_text='Date d’effet de l’avenant, si applicable.', null=True),
+            model_name="cerfacontrat",
+            name="date_effet_avenant",
+            field=models.DateField(blank=True, help_text="Date d’effet de l’avenant, si applicable.", null=True),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='duree_hebdo_minutes',
-            field=models.PositiveIntegerField(blank=True, help_text='Complément en minutes de la durée hebdomadaire moyenne.', null=True),
+            model_name="cerfacontrat",
+            name="duree_hebdo_minutes",
+            field=models.PositiveIntegerField(
+                blank=True, help_text="Complément en minutes de la durée hebdomadaire moyenne.", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='numero_contrat_precedent',
-            field=models.CharField(blank=True, help_text='Numéro du contrat précédent ou du contrat sur lequel porte l’avenant.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="numero_contrat_precedent",
+            field=models.CharField(
+                blank=True,
+                help_text="Numéro du contrat précédent ou du contrat sur lequel porte l’avenant.",
+                max_length=100,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='representant_adresse_complement',
-            field=models.CharField(blank=True, help_text='Complément d’adresse du représentant légal.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="representant_adresse_complement",
+            field=models.CharField(
+                blank=True, help_text="Complément d’adresse du représentant légal.", max_length=255, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='representant_adresse_numero',
-            field=models.CharField(blank=True, help_text='Numéro dans la voie de l’adresse du représentant légal.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="representant_adresse_numero",
+            field=models.CharField(
+                blank=True,
+                help_text="Numéro dans la voie de l’adresse du représentant légal.",
+                max_length=20,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='representant_prenom',
-            field=models.CharField(blank=True, help_text='Prénom du représentant légal.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="representant_prenom",
+            field=models.CharField(blank=True, help_text="Prénom du représentant légal.", max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='travail_machines_dangereuses',
-            field=models.BooleanField(default=False, help_text='Indique si l’apprenti est affecté à des travaux sur machines dangereuses ou exposé à des risques particuliers.'),
+            model_name="cerfacontrat",
+            name="travail_machines_dangereuses",
+            field=models.BooleanField(
+                default=False,
+                help_text="Indique si l’apprenti est affecté à des travaux sur machines dangereuses ou exposé à des risques particuliers.",
+            ),
         ),
         migrations.AddField(
-            model_name='cerfacontrat',
-            name='type_derogation',
-            field=models.CharField(blank=True, help_text='Type de dérogation applicable, si concerné.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="type_derogation",
+            field=models.CharField(
+                blank=True, help_text="Type de dérogation applicable, si concerné.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_code_postal',
-            field=models.CharField(blank=True, help_text='Code postal de l’apprenti.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_code_postal",
+            field=models.CharField(blank=True, help_text="Code postal de l’apprenti.", max_length=10, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_commune',
-            field=models.CharField(blank=True, help_text='Commune de résidence de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_commune",
+            field=models.CharField(
+                blank=True, help_text="Commune de résidence de l’apprenti.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_commune_naissance',
-            field=models.CharField(blank=True, help_text='Commune de naissance de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_commune_naissance",
+            field=models.CharField(
+                blank=True, help_text="Commune de naissance de l’apprenti.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_complement',
-            field=models.CharField(blank=True, help_text='Complément d’adresse de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_complement",
+            field=models.CharField(
+                blank=True, help_text="Complément d’adresse de l’apprenti.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_date_naissance',
-            field=models.DateField(blank=True, help_text='Date de naissance de l’apprenti.', null=True),
+            model_name="cerfacontrat",
+            name="apprenti_date_naissance",
+            field=models.DateField(blank=True, help_text="Date de naissance de l’apprenti.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_departement_naissance',
-            field=models.CharField(blank=True, help_text='Département de naissance de l’apprenti.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_departement_naissance",
+            field=models.CharField(
+                blank=True, help_text="Département de naissance de l’apprenti.", max_length=50, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_dernier_diplome_prepare',
-            field=models.CharField(blank=True, help_text='Dernier diplôme ou titre préparé par l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_dernier_diplome_prepare",
+            field=models.CharField(
+                blank=True, help_text="Dernier diplôme ou titre préparé par l’apprenti.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_derniere_annee_suivie',
-            field=models.CharField(blank=True, help_text='Dernière classe / année suivie.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_derniere_annee_suivie",
+            field=models.CharField(blank=True, help_text="Dernière classe / année suivie.", max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_droits_rqth',
-            field=models.BooleanField(default=False, help_text='Indique si les droits liés à la RQTH sont ouverts.'),
+            model_name="cerfacontrat",
+            name="apprenti_droits_rqth",
+            field=models.BooleanField(default=False, help_text="Indique si les droits liés à la RQTH sont ouverts."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_email',
-            field=models.EmailField(blank=True, help_text='Adresse e-mail de l’apprenti.', max_length=254, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_email",
+            field=models.EmailField(blank=True, help_text="Adresse e-mail de l’apprenti.", max_length=254, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_equivalence_jeunes',
-            field=models.BooleanField(default=False, help_text='Case relative à l’équivalence jeunes / situation assimilée.'),
+            model_name="cerfacontrat",
+            name="apprenti_equivalence_jeunes",
+            field=models.BooleanField(
+                default=False, help_text="Case relative à l’équivalence jeunes / situation assimilée."
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_extension_boe',
-            field=models.BooleanField(default=False, help_text='Case relative à l’extension BOE.'),
+            model_name="cerfacontrat",
+            name="apprenti_extension_boe",
+            field=models.BooleanField(default=False, help_text="Case relative à l’extension BOE."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_intitule_dernier_diplome',
-            field=models.CharField(blank=True, help_text='Intitulé du dernier diplôme obtenu ou préparé.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_intitule_dernier_diplome",
+            field=models.CharField(
+                blank=True, help_text="Intitulé du dernier diplôme obtenu ou préparé.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_nationalite',
-            field=models.CharField(blank=True, help_text='Nationalité de l’apprenti.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_nationalite",
+            field=models.CharField(blank=True, help_text="Nationalité de l’apprenti.", max_length=100, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_nir',
-            field=models.CharField(blank=True, help_text='NIR / numéro de sécurité sociale de l’apprenti.', max_length=15, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_nir",
+            field=models.CharField(
+                blank=True, help_text="NIR / numéro de sécurité sociale de l’apprenti.", max_length=15, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_nom_naissance',
-            field=models.CharField(blank=True, help_text='Nom de naissance de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_nom_naissance",
+            field=models.CharField(blank=True, help_text="Nom de naissance de l’apprenti.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_nom_usage',
-            field=models.CharField(blank=True, help_text='Nom d’usage de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_nom_usage",
+            field=models.CharField(blank=True, help_text="Nom d’usage de l’apprenti.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_numero',
-            field=models.CharField(blank=True, help_text='Numéro dans la voie de l’adresse de l’apprenti.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_numero",
+            field=models.CharField(
+                blank=True, help_text="Numéro dans la voie de l’adresse de l’apprenti.", max_length=20, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_plus_haut_diplome',
-            field=models.CharField(blank=True, help_text='Plus haut diplôme ou titre obtenu.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_plus_haut_diplome",
+            field=models.CharField(
+                blank=True, help_text="Plus haut diplôme ou titre obtenu.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_prenom',
-            field=models.CharField(blank=True, help_text='Prénom de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_prenom",
+            field=models.CharField(blank=True, help_text="Prénom de l’apprenti.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_projet_entreprise',
-            field=models.BooleanField(default=False, help_text='Indique si l’apprentissage s’inscrit dans un projet de création ou reprise d’entreprise.'),
+            model_name="cerfacontrat",
+            name="apprenti_projet_entreprise",
+            field=models.BooleanField(
+                default=False,
+                help_text="Indique si l’apprentissage s’inscrit dans un projet de création ou reprise d’entreprise.",
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_regime_social',
-            field=models.CharField(blank=True, help_text='Régime social applicable à l’apprenti.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_regime_social",
+            field=models.CharField(
+                blank=True, help_text="Régime social applicable à l’apprenti.", max_length=100, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_rqth',
-            field=models.BooleanField(default=False, help_text='Indique si l’apprenti bénéficie d’une RQTH.'),
+            model_name="cerfacontrat",
+            name="apprenti_rqth",
+            field=models.BooleanField(default=False, help_text="Indique si l’apprenti bénéficie d’une RQTH."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_sexe',
-            field=models.CharField(blank=True, choices=[('M', 'Masculin'), ('F', 'Féminin')], help_text='Sexe de l’apprenti.', max_length=1, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_sexe",
+            field=models.CharField(
+                blank=True,
+                choices=[("M", "Masculin"), ("F", "Féminin")],
+                help_text="Sexe de l’apprenti.",
+                max_length=1,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_situation_avant',
-            field=models.CharField(blank=True, help_text='Situation de l’apprenti avant le contrat.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_situation_avant",
+            field=models.CharField(
+                blank=True, help_text="Situation de l’apprenti avant le contrat.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_sportif_haut_niveau',
-            field=models.BooleanField(default=False, help_text='Indique si l’apprenti est sportif de haut niveau.'),
+            model_name="cerfacontrat",
+            name="apprenti_sportif_haut_niveau",
+            field=models.BooleanField(default=False, help_text="Indique si l’apprenti est sportif de haut niveau."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_telephone',
-            field=models.CharField(blank=True, help_text='Téléphone de l’apprenti.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_telephone",
+            field=models.CharField(blank=True, help_text="Téléphone de l’apprenti.", max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='apprenti_voie',
-            field=models.CharField(blank=True, help_text='Voie de l’adresse de l’apprenti.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="apprenti_voie",
+            field=models.CharField(blank=True, help_text="Voie de l’adresse de l’apprenti.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='auto_generated',
-            field=models.BooleanField(default=False, help_text='Indique si le CERFA a été pré-rempli automatiquement à partir des données métier.'),
+            model_name="cerfacontrat",
+            name="auto_generated",
+            field=models.BooleanField(
+                default=False,
+                help_text="Indique si le CERFA a été pré-rempli automatiquement à partir des données métier.",
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='caisse_retraite',
-            field=models.CharField(blank=True, help_text='Nom de la caisse de retraite complémentaire.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="caisse_retraite",
+            field=models.CharField(
+                blank=True, help_text="Nom de la caisse de retraite complémentaire.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='cfa_commune',
-            field=models.CharField(blank=True, help_text='Commune du CFA responsable.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="cfa_commune",
+            field=models.CharField(blank=True, help_text="Commune du CFA responsable.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='cfa_denomination',
-            field=models.CharField(blank=True, help_text='Dénomination du CFA responsable.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="cfa_denomination",
+            field=models.CharField(blank=True, help_text="Dénomination du CFA responsable.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='cfa_siret',
-            field=models.CharField(blank=True, help_text='SIRET du CFA responsable.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="cfa_siret",
+            field=models.CharField(blank=True, help_text="SIRET du CFA responsable.", max_length=20, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='cfa_uai',
-            field=models.CharField(blank=True, help_text='Code UAI du CFA responsable.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="cfa_uai",
+            field=models.CharField(blank=True, help_text="Code UAI du CFA responsable.", max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='code_diplome',
-            field=models.CharField(blank=True, help_text='Code diplôme.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="code_diplome",
+            field=models.CharField(blank=True, help_text="Code diplôme.", max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='code_rncp',
-            field=models.CharField(blank=True, help_text='Code RNCP de la certification visée.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="code_rncp",
+            field=models.CharField(
+                blank=True, help_text="Code RNCP de la certification visée.", max_length=50, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='created_at',
-            field=models.DateTimeField(auto_now_add=True, help_text='Date de création de l’enregistrement.'),
+            model_name="cerfacontrat",
+            name="created_at",
+            field=models.DateTimeField(auto_now_add=True, help_text="Date de création de l’enregistrement."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='date_conclusion',
-            field=models.DateField(blank=True, help_text='Date de conclusion du contrat.', null=True),
+            model_name="cerfacontrat",
+            name="date_conclusion",
+            field=models.DateField(blank=True, help_text="Date de conclusion du contrat.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='date_debut_execution',
-            field=models.DateField(blank=True, help_text='Date de début d’exécution du contrat.', null=True),
+            model_name="cerfacontrat",
+            name="date_debut_execution",
+            field=models.DateField(blank=True, help_text="Date de début d’exécution du contrat.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='date_fin_contrat',
-            field=models.DateField(blank=True, help_text='Date de fin du contrat.', null=True),
+            model_name="cerfacontrat",
+            name="date_fin_contrat",
+            field=models.DateField(blank=True, help_text="Date de fin du contrat.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='diplome_intitule',
-            field=models.CharField(blank=True, help_text='Intitulé exact du diplôme ou titre préparé.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="diplome_intitule",
+            field=models.CharField(
+                blank=True, help_text="Intitulé exact du diplôme ou titre préparé.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='diplome_vise',
-            field=models.CharField(blank=True, help_text='Diplôme ou titre visé.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="diplome_vise",
+            field=models.CharField(blank=True, help_text="Diplôme ou titre visé.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='duree_hebdo_heures',
-            field=models.PositiveIntegerField(blank=True, help_text='Durée hebdomadaire moyenne de travail en heures.', null=True),
+            model_name="cerfacontrat",
+            name="duree_hebdo_heures",
+            field=models.PositiveIntegerField(
+                blank=True, help_text="Durée hebdomadaire moyenne de travail en heures.", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_adresse_complement',
-            field=models.CharField(blank=True, help_text='Complément d’adresse de l’employeur.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="employeur_adresse_complement",
+            field=models.CharField(
+                blank=True, help_text="Complément d’adresse de l’employeur.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_adresse_numero',
-            field=models.CharField(blank=True, help_text='Numéro dans la voie de l’adresse de l’employeur.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="employeur_adresse_numero",
+            field=models.CharField(
+                blank=True, help_text="Numéro dans la voie de l’adresse de l’employeur.", max_length=20, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_adresse_voie',
-            field=models.CharField(blank=True, help_text='Libellé de voie de l’employeur.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="employeur_adresse_voie",
+            field=models.CharField(blank=True, help_text="Libellé de voie de l’employeur.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_code_ape',
-            field=models.CharField(blank=True, help_text='Code APE / NAF de l’employeur.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="employeur_code_ape",
+            field=models.CharField(blank=True, help_text="Code APE / NAF de l’employeur.", max_length=10, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_code_idcc',
-            field=models.CharField(blank=True, help_text='Code IDCC de la convention collective applicable.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="employeur_code_idcc",
+            field=models.CharField(
+                blank=True, help_text="Code IDCC de la convention collective applicable.", max_length=20, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_code_postal',
-            field=models.CharField(blank=True, help_text='Code postal de l’employeur.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="employeur_code_postal",
+            field=models.CharField(blank=True, help_text="Code postal de l’employeur.", max_length=10, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_commune',
-            field=models.CharField(blank=True, help_text='Commune de l’employeur.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="employeur_commune",
+            field=models.CharField(blank=True, help_text="Commune de l’employeur.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_effectif',
-            field=models.PositiveIntegerField(blank=True, help_text='Effectif salarié de l’entreprise.', null=True),
+            model_name="cerfacontrat",
+            name="employeur_effectif",
+            field=models.PositiveIntegerField(blank=True, help_text="Effectif salarié de l’entreprise.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_email',
-            field=models.EmailField(blank=True, help_text='Adresse e-mail de l’employeur.', max_length=254, null=True),
+            model_name="cerfacontrat",
+            name="employeur_email",
+            field=models.EmailField(blank=True, help_text="Adresse e-mail de l’employeur.", max_length=254, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_nom',
-            field=models.CharField(blank=True, help_text='Nom ou raison sociale de l’employeur.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="employeur_nom",
+            field=models.CharField(
+                blank=True, help_text="Nom ou raison sociale de l’employeur.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_prive',
-            field=models.BooleanField(default=True, help_text='Case employeur privé.'),
+            model_name="cerfacontrat",
+            name="employeur_prive",
+            field=models.BooleanField(default=True, help_text="Case employeur privé."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_public',
-            field=models.BooleanField(default=False, help_text='Case employeur public.'),
+            model_name="cerfacontrat",
+            name="employeur_public",
+            field=models.BooleanField(default=False, help_text="Case employeur public."),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_regime_assurance_chomage',
-            field=models.BooleanField(default=False, help_text='Indique si l’employeur relève d’un régime spécifique d’assurance chômage.'),
+            model_name="cerfacontrat",
+            name="employeur_regime_assurance_chomage",
+            field=models.BooleanField(
+                default=False, help_text="Indique si l’employeur relève d’un régime spécifique d’assurance chômage."
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_siret',
-            field=models.CharField(blank=True, help_text='SIRET de l’employeur.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="employeur_siret",
+            field=models.CharField(blank=True, help_text="SIRET de l’employeur.", max_length=20, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_specifique',
-            field=models.CharField(blank=True, help_text='Précision complémentaire sur la nature de l’employeur si nécessaire.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="employeur_specifique",
+            field=models.CharField(
+                blank=True,
+                help_text="Précision complémentaire sur la nature de l’employeur si nécessaire.",
+                max_length=100,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_telephone',
-            field=models.CharField(blank=True, help_text='Téléphone de l’employeur.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="employeur_telephone",
+            field=models.CharField(blank=True, help_text="Téléphone de l’employeur.", max_length=50, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='employeur_type',
-            field=models.CharField(blank=True, help_text='Type d’employeur ou catégorie administrative utile au CERFA.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="employeur_type",
+            field=models.CharField(
+                blank=True,
+                help_text="Type d’employeur ou catégorie administrative utile au CERFA.",
+                max_length=100,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_debut',
-            field=models.DateField(blank=True, help_text='Date de début de formation en CFA.', null=True),
+            model_name="cerfacontrat",
+            name="formation_debut",
+            field=models.DateField(blank=True, help_text="Date de début de formation en CFA.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_distance_heures',
-            field=models.PositiveIntegerField(blank=True, help_text='Nombre d’heures à distance prévues dans la formation.', null=True),
+            model_name="cerfacontrat",
+            name="formation_distance_heures",
+            field=models.PositiveIntegerField(
+                blank=True, help_text="Nombre d’heures à distance prévues dans la formation.", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_duree_heures',
-            field=models.PositiveIntegerField(blank=True, help_text='Durée totale de formation en heures.', null=True),
+            model_name="cerfacontrat",
+            name="formation_duree_heures",
+            field=models.PositiveIntegerField(blank=True, help_text="Durée totale de formation en heures.", null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_fin',
-            field=models.DateField(blank=True, help_text='Date de fin de formation ou date prévue de fin des épreuves/examens selon les données disponibles.', null=True),
+            model_name="cerfacontrat",
+            name="formation_fin",
+            field=models.DateField(
+                blank=True,
+                help_text="Date de fin de formation ou date prévue de fin des épreuves/examens selon les données disponibles.",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_code_postal',
-            field=models.CharField(blank=True, help_text='Code postal du lieu principal de formation.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_code_postal",
+            field=models.CharField(
+                blank=True, help_text="Code postal du lieu principal de formation.", max_length=10, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_commune',
-            field=models.CharField(blank=True, help_text='Commune du lieu principal de formation.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_commune",
+            field=models.CharField(
+                blank=True, help_text="Commune du lieu principal de formation.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_denomination',
-            field=models.CharField(blank=True, help_text='Dénomination du lieu principal de formation, si différent du CFA responsable.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_denomination",
+            field=models.CharField(
+                blank=True,
+                help_text="Dénomination du lieu principal de formation, si différent du CFA responsable.",
+                max_length=255,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_siret',
-            field=models.CharField(blank=True, help_text='SIRET du lieu principal de formation.', max_length=20, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_siret",
+            field=models.CharField(
+                blank=True, help_text="SIRET du lieu principal de formation.", max_length=20, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_uai',
-            field=models.CharField(blank=True, help_text='Code UAI du lieu principal de formation.', max_length=50, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_uai",
+            field=models.CharField(
+                blank=True, help_text="Code UAI du lieu principal de formation.", max_length=50, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='formation_lieu_voie',
-            field=models.CharField(blank=True, help_text='Voie du lieu principal de formation.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="formation_lieu_voie",
+            field=models.CharField(
+                blank=True, help_text="Voie du lieu principal de formation.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='lieu_signature',
-            field=models.CharField(blank=True, help_text='Lieu de signature du contrat.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="lieu_signature",
+            field=models.CharField(blank=True, help_text="Lieu de signature du contrat.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_date_naissance',
-            field=models.DateField(blank=True, help_text='Date de naissance du premier maître d’apprentissage.', null=True),
+            model_name="cerfacontrat",
+            name="maitre1_date_naissance",
+            field=models.DateField(
+                blank=True, help_text="Date de naissance du premier maître d’apprentissage.", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_diplome',
-            field=models.CharField(blank=True, help_text='Diplôme du premier maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_diplome",
+            field=models.CharField(
+                blank=True, help_text="Diplôme du premier maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_email',
-            field=models.EmailField(blank=True, help_text='Adresse e-mail du premier maître d’apprentissage.', max_length=254, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_email",
+            field=models.EmailField(
+                blank=True, help_text="Adresse e-mail du premier maître d’apprentissage.", max_length=254, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_emploi',
-            field=models.CharField(blank=True, help_text='Emploi occupé par le premier maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_emploi",
+            field=models.CharField(
+                blank=True, help_text="Emploi occupé par le premier maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_niveau_diplome',
-            field=models.CharField(blank=True, help_text='Niveau de diplôme du premier maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_niveau_diplome",
+            field=models.CharField(
+                blank=True, help_text="Niveau de diplôme du premier maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_nom',
-            field=models.CharField(blank=True, help_text='Nom du premier maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_nom",
+            field=models.CharField(
+                blank=True, help_text="Nom du premier maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre1_prenom',
-            field=models.CharField(blank=True, help_text='Prénom du premier maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre1_prenom",
+            field=models.CharField(
+                blank=True, help_text="Prénom du premier maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_date_naissance',
-            field=models.DateField(blank=True, help_text='Date de naissance du second maître d’apprentissage.', null=True),
+            model_name="cerfacontrat",
+            name="maitre2_date_naissance",
+            field=models.DateField(
+                blank=True, help_text="Date de naissance du second maître d’apprentissage.", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_diplome',
-            field=models.CharField(blank=True, help_text='Diplôme du second maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_diplome",
+            field=models.CharField(
+                blank=True, help_text="Diplôme du second maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_email',
-            field=models.EmailField(blank=True, help_text='Adresse e-mail du second maître d’apprentissage.', max_length=254, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_email",
+            field=models.EmailField(
+                blank=True, help_text="Adresse e-mail du second maître d’apprentissage.", max_length=254, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_emploi',
-            field=models.CharField(blank=True, help_text='Emploi occupé par le second maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_emploi",
+            field=models.CharField(
+                blank=True, help_text="Emploi occupé par le second maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_niveau_diplome',
-            field=models.CharField(blank=True, help_text='Niveau de diplôme du second maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_niveau_diplome",
+            field=models.CharField(
+                blank=True, help_text="Niveau de diplôme du second maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_nom',
-            field=models.CharField(blank=True, help_text='Nom du second maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_nom",
+            field=models.CharField(
+                blank=True, help_text="Nom du second maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre2_prenom',
-            field=models.CharField(blank=True, help_text='Prénom du second maître d’apprentissage.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="maitre2_prenom",
+            field=models.CharField(
+                blank=True, help_text="Prénom du second maître d’apprentissage.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='maitre_eligible',
-            field=models.BooleanField(default=True, help_text='Indique si le ou les maîtres d’apprentissage sont considérés éligibles.'),
+            model_name="cerfacontrat",
+            name="maitre_eligible",
+            field=models.BooleanField(
+                default=True, help_text="Indique si le ou les maîtres d’apprentissage sont considérés éligibles."
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='pdf_fichier',
-            field=models.FileField(blank=True, help_text='PDF CERFA généré à partir des données du contrat.', null=True, upload_to='cerfas/', verbose_name='Fichier PDF généré'),
+            model_name="cerfacontrat",
+            name="pdf_fichier",
+            field=models.FileField(
+                blank=True,
+                help_text="PDF CERFA généré à partir des données du contrat.",
+                null=True,
+                upload_to="cerfas/",
+                verbose_name="Fichier PDF généré",
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_adresse_voie',
-            field=models.CharField(blank=True, help_text='Voie de l’adresse du représentant légal.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="representant_adresse_voie",
+            field=models.CharField(
+                blank=True, help_text="Voie de l’adresse du représentant légal.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_code_postal',
-            field=models.CharField(blank=True, help_text='Code postal du représentant légal.', max_length=10, null=True),
+            model_name="cerfacontrat",
+            name="representant_code_postal",
+            field=models.CharField(
+                blank=True, help_text="Code postal du représentant légal.", max_length=10, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_commune',
-            field=models.CharField(blank=True, help_text='Commune du représentant légal.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="representant_commune",
+            field=models.CharField(blank=True, help_text="Commune du représentant légal.", max_length=255, null=True),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_email',
-            field=models.EmailField(blank=True, help_text='Adresse e-mail du représentant légal.', max_length=254, null=True),
+            model_name="cerfacontrat",
+            name="representant_email",
+            field=models.EmailField(
+                blank=True, help_text="Adresse e-mail du représentant légal.", max_length=254, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_lien',
-            field=models.CharField(blank=True, help_text='Lien avec l’apprenti. Champ utile métier, non strictement requis par le CERFA.', max_length=100, null=True),
+            model_name="cerfacontrat",
+            name="representant_lien",
+            field=models.CharField(
+                blank=True,
+                help_text="Lien avec l’apprenti. Champ utile métier, non strictement requis par le CERFA.",
+                max_length=100,
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='representant_nom',
-            field=models.CharField(blank=True, help_text='Nom de naissance du représentant légal.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="representant_nom",
+            field=models.CharField(
+                blank=True, help_text="Nom de naissance du représentant légal.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='salaire_brut_mensuel',
-            field=models.DecimalField(blank=True, decimal_places=2, help_text='Salaire brut mensuel prévu.', max_digits=8, null=True),
+            model_name="cerfacontrat",
+            name="salaire_brut_mensuel",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, help_text="Salaire brut mensuel prévu.", max_digits=8, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='type_contrat',
-            field=models.CharField(blank=True, help_text='Type de contrat ou type d’avenant selon le CERFA.', max_length=255, null=True),
+            model_name="cerfacontrat",
+            name="type_contrat",
+            field=models.CharField(
+                blank=True, help_text="Type de contrat ou type d’avenant selon le CERFA.", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='cerfacontrat',
-            name='updated_at',
-            field=models.DateTimeField(auto_now=True, help_text='Date de dernière mise à jour de l’enregistrement.'),
+            model_name="cerfacontrat",
+            name="updated_at",
+            field=models.DateTimeField(auto_now=True, help_text="Date de dernière mise à jour de l’enregistrement."),
         ),
         migrations.AlterField(
-            model_name='statut',
-            name='description_autre',
-            field=models.CharField(blank=True, help_text="Description requise quand le statut est 'Autre'", max_length=255, null=True, verbose_name='Description personnalisée'),
+            model_name="statut",
+            name="description_autre",
+            field=models.CharField(
+                blank=True,
+                help_text="Description requise quand le statut est 'Autre'",
+                max_length=255,
+                null=True,
+                verbose_name="Description personnalisée",
+            ),
         ),
         migrations.AlterField(
-            model_name='suivijury',
-            name='annee',
-            field=models.PositiveIntegerField(default=2026, help_text='Année au format YYYY (ex: 2024)', validators=[django.core.validators.MinValueValidator(2000)], verbose_name='Année'),
+            model_name="suivijury",
+            name="annee",
+            field=models.PositiveIntegerField(
+                default=2026,
+                help_text="Année au format YYYY (ex: 2024)",
+                validators=[django.core.validators.MinValueValidator(2000)],
+                verbose_name="Année",
+            ),
         ),
         migrations.AlterField(
-            model_name='suivijury',
-            name='mois',
-            field=models.PositiveSmallIntegerField(choices=[(1, 'Janvier'), (2, 'Février'), (3, 'Mars'), (4, 'Avril'), (5, 'Mai'), (6, 'Juin'), (7, 'Juillet'), (8, 'Août'), (9, 'Septembre'), (10, 'Octobre'), (11, 'Novembre'), (12, 'Décembre')], default=3, help_text="Mois de l'année (1-12)", verbose_name='Mois'),
+            model_name="suivijury",
+            name="mois",
+            field=models.PositiveSmallIntegerField(
+                choices=[
+                    (1, "Janvier"),
+                    (2, "Février"),
+                    (3, "Mars"),
+                    (4, "Avril"),
+                    (5, "Mai"),
+                    (6, "Juin"),
+                    (7, "Juillet"),
+                    (8, "Août"),
+                    (9, "Septembre"),
+                    (10, "Octobre"),
+                    (11, "Novembre"),
+                    (12, "Décembre"),
+                ],
+                default=3,
+                help_text="Mois de l'année (1-12)",
+                verbose_name="Mois",
+            ),
         ),
     ]

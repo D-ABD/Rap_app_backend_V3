@@ -1,18 +1,19 @@
 # tests/tests_models/test_rapport.py
 
-from django.test import TestCase
-from django.utils import timezone
-from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from datetime import timedelta
 
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.utils import timezone
+
+from ...models.centres import Centre
+from ...models.formations import Formation
 from ...models.partenaires import Partenaire
 from ...models.prospection import Prospection, ProspectionChoices
 from ...models.rapports import Rapport
-from ...models.centres import Centre
-from ...models.formations import Formation
-from ...models.types_offre import TypeOffre
 from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
 from .setup_base_tests import BaseModelTestSetupMixin
 
 

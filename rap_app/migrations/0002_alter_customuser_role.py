@@ -6,13 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rap_app', '0001_initial'),
+        ("rap_app", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='customuser',
-            name='role',
-            field=models.CharField(choices=[('superadmin', 'Super administrateur'), ('admin', 'Administrateur'), ('stagiaire', 'Stagiaire'), ('staff', 'Membre du staff'), ('staff_read', 'Staff lecture seule'), ('prepa_staff', 'Staff PrépaComp'), ('declic_staff', 'Staff Déclic'), ('test', 'Test'), ('candidat', 'Candidat'), ('candidatuser', 'Candidat validé')], db_index=True, default='stagiaire', help_text="Rôle ou niveau d'accès de l'utilisateur", max_length=20, verbose_name='Rôle'),
+            model_name="customuser",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("superadmin", "Super administrateur"),
+                    ("admin", "Administrateur"),
+                    ("stagiaire", "Stagiaire"),
+                    ("staff", "Membre du staff"),
+                    ("staff_read", "Staff lecture seule"),
+                    ("prepa_staff", "Staff PrépaComp"),
+                    ("declic_staff", "Staff Déclic"),
+                    ("test", "Test"),
+                    ("candidat", "Candidat"),
+                    ("candidatuser", "Candidat validé"),
+                ],
+                db_index=True,
+                default="stagiaire",
+                help_text="Rôle ou niveau d'accès de l'utilisateur",
+                max_length=20,
+                verbose_name="Rôle",
+            ),
         ),
     ]

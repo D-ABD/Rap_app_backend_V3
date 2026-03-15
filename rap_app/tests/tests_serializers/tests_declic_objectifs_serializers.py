@@ -3,14 +3,15 @@
 Tests du serializer ObjectifDeclicSerializer, notamment la validation métier
 sur valeur_objectif (strictement positive) ajoutée suite à la levée de doute.
 """
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
+from ...api.serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
 from ...models.centres import Centre
 from ...models.declic import ObjectifDeclic
-from ...api.serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
 
 User = get_user_model()
 

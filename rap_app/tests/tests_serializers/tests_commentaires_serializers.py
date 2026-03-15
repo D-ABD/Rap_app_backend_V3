@@ -1,23 +1,21 @@
-from django.test import TestCase
-from django.utils import timezone
 from datetime import timedelta
 
-from ...models.custom_user import CustomUser
+from django.test import TestCase
+from django.utils import timezone
+
+from ...api.serializers.commentaires_serializers import CommentaireSerializer
 from ...models.centres import Centre
+from ...models.commentaires import Commentaire
+from ...models.custom_user import CustomUser
+from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from ...models.formations import Formation
-from ...models.commentaires import Commentaire
-from ...api.serializers.commentaires_serializers import CommentaireSerializer
 
 
 class CommentaireSerializerTestCase(TestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(
-            email="test@example.com",
-            username="testuser",
-            password="testpass",
-            is_staff=True
+            email="test@example.com", username="testuser", password="testpass", is_staff=True
         )
 
         self.centre = Centre.objects.create(nom="Test Centre", code_postal="75000")
@@ -31,21 +29,14 @@ class CommentaireSerializerTestCase(TestCase):
             type_offre=self.type_offre,
             start_date=timezone.now().date(),
             end_date=timezone.now().date() + timedelta(days=10),
-            created_by=self.user
+            created_by=self.user,
         )
 
         self.commentaire = Commentaire.objects.create(
-            formation=self.formation,
-            contenu="Très bon formateur",
-            saturation=80,
-            created_by=self.user
+            formation=self.formation, contenu="Très bon formateur", saturation=80, created_by=self.user
         )
 
-        self.valid_data = {
-            "formation": self.formation.id,
-            "contenu": "Contenu testé avec succès",
-            "saturation": 60
-        }
+        self.valid_data = {"formation": self.formation.id, "contenu": "Contenu testé avec succès", "saturation": 60}
 
     def test_serializer_valide(self):
         serializer = CommentaireSerializer(data=self.valid_data, context={"request": self._mock_request()})
@@ -78,10 +69,7 @@ class CommentaireSerializerTestCase(TestCase):
         class MockView:
             action = "retrieve"
 
-        serializer = CommentaireSerializer(
-            instance=self.commentaire,
-            context={"view": MockView()}
-        )
+        serializer = CommentaireSerializer(instance=self.commentaire, context={"view": MockView()})
         data = serializer.data
         self.assertIn("formation_nom", data)
         self.assertEqual(data["formation_nom"], self.formation.nom)
@@ -90,4 +78,5 @@ class CommentaireSerializerTestCase(TestCase):
     def _mock_request(self):
         class MockRequest:
             user = self.user
+
         return MockRequest()

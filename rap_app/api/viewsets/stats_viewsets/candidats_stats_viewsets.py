@@ -1,21 +1,4 @@
 from __future__ import annotations
-# rap_app/api/viewsets/stats_viewsets/candidats_stats_viewsets.py
-
-# ViewSet DRF — Statistiques des candidats (scope centre + département + appairages)
-# =============================================================================
-# DOCUMENTATION API
-#
-# Ce fichier expose des endpoints de statistiques agrégées sur les objets "Candidat".
-# 
-# ▶️ Endpoints principaux :
-#   - GET /candidat-stats/                  → KPIs globaux candidats (action "list")
-#   - GET /candidat-stats/grouped/?by=...  → KPIs groupés (action @action "grouped")
-#
-# Permissions & filtrage d’accès, structure de réponse, intention métier : cf. docstrings plus bas.
-# =============================================================================
-
-from ...serializers.base_serializers import EmptySerializer
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 import logging
 from typing import Iterable, Literal, Optional
@@ -24,13 +7,34 @@ from django.db import models
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Coalesce, Substr
 from django.utils.dateparse import parse_date
-
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...serializers.base_serializers import EmptySerializer
+
+# rap_app/api/viewsets/stats_viewsets/candidats_stats_viewsets.py
+
+# ViewSet DRF — Statistiques des candidats (scope centre + département + appairages)
+# =============================================================================
+# DOCUMENTATION API
+#
+# Ce fichier expose des endpoints de statistiques agrégées sur les objets "Candidat".
+#
+# ▶️ Endpoints principaux :
+#   - GET /candidat-stats/                  → KPIs globaux candidats (action "list")
+#   - GET /candidat-stats/grouped/?by=...  → KPIs groupés (action @action "grouped")
+#
+# Permissions & filtrage d’accès, structure de réponse, intention métier : cf. docstrings plus bas.
+# =============================================================================
+
+
+
+
+
 
 logger = logging.getLogger("application.candidat_stats")
 
@@ -42,13 +46,14 @@ except Exception:  # pragma: no cover
 try:
     from ..mixins import RestrictToUserOwnedQueryset  # type: ignore
 except Exception:  # pragma: no cover
+
     class RestrictToUserOwnedQueryset:  # stub minimal
         def restrict_queryset_to_user(self, qs):
             return qs
 
+
 # ⚠️ adaptez l'import à votre arborescence
 from ....models.candidat import Candidat
-
 
 GroupKey = Literal[
     "centre",
@@ -69,10 +74,13 @@ def _poei_poec_values() -> list[str]:
     Support des valeurs historiques et de la nouvelle valeur unique.
     """
     return [
-        "poei", "poe_i",
-        "poec", "poe_c",
+        "poei",
+        "poe_i",
+        "poec",
+        "poe_c",
         getattr(Candidat.TypeContrat, "POEI_POEC", "poei_poec"),
     ]
+
 
 # =============================================================================
 class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
@@ -119,6 +127,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     Ce ViewSet ne permet aucune modification, suppression ou création côté API REST.
     L'unique traitement concerne la visualisation de statistiques agrégées et groupées.
     """
+
     serializer_class = EmptySerializer
 
     # Permissions : voir docstring de la classe.
@@ -153,6 +162,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         Retourne la liste des codes départementaux (2 chiffres) auxquels l'utilisateur a accès
         (récupérés depuis "departements_codes" ou "departements" sur user ou user.profile).
         """
+
         def _norm_codes(val):
             if val is None:
                 return []
@@ -222,7 +232,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 name="avec_archivees",
                 type=bool,
                 required=False,
-                description="Inclure les candidats liés à des formations archivées (true/false)"
+                description="Inclure les candidats liés à des formations archivées (true/false)",
             ),
         ],
     )
@@ -236,27 +246,30 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         WARNING : Pas de filter_backends/search_fields déclarés ici.
         """
-        qs = (
-            Candidat.objects
-            .select_related(
-                "formation",
-                "formation__centre",
-                "entreprise_placement",
-                "responsable_placement",
-            )
+        qs = Candidat.objects.select_related(
+            "formation",
+            "formation__centre",
+            "entreprise_placement",
+            "responsable_placement",
         )
         # 1️⃣ Scope utilisateur
         qs = self._scope_candidats_for_user(qs, getattr(self.request, "user", None))
 
         # 2️⃣ Gestion des formations archivées : exclusion par défaut, sauf si demandé.
-        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in ["1", "true", "yes", "on"]
+        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in [
+            "1",
+            "true",
+            "yes",
+            "on",
+        ]
         if not inclure_archivees:
             qs = qs.exclude(formation__activite="archivee")
 
         # 3️⃣ Restriction "owned" éventuelle si utilisateur non staff/admin
         user = getattr(self.request, "user", None)
         is_staff_like = bool(
-            user and (
+            user
+            and (
                 getattr(user, "is_superuser", False)
                 or is_staff_or_staffread(user)
                 or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
@@ -298,9 +311,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         # Département — couvre CP du centre **ou** du candidat (cohérent avec le scope staff)
         if p.get("departement"):
             dep = str(p.get("departement"))[:2]
-            qs = qs.filter(
-                Q(formation__centre__code_postal__startswith=dep) | Q(code_postal__startswith=dep)
-            )
+            qs = qs.filter(Q(formation__centre__code_postal__startswith=dep) | Q(code_postal__startswith=dep))
 
         if p.get("statut"):
             qs = qs.filter(statut=p.get("statut"))
@@ -335,7 +346,18 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     @staticmethod
     def _guess_label_field(model: type[models.Model]) -> Optional[str]:
         """Tente de trouver un champ 'nom', 'name', 'label', etc. pour les FK utilisés dans les regroupements."""
-        preferred = {"nom", "name", "label", "libelle", "libellé", "titre", "username", "email", "first_name", "last_name"}
+        preferred = {
+            "nom",
+            "name",
+            "label",
+            "libelle",
+            "libellé",
+            "titre",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        }
         name_map = {f.name: f for f in model._meta.get_fields() if isinstance(f, models.Field)}
         for cand in preferred:
             f = name_map.get(cand)
@@ -425,18 +447,17 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             en_formation=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_FORMATION), distinct=True),
             en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
             en_accompagnement=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_ACCOMPAGNEMENT), distinct=True),
-
             # ⭐️ nouveaux compteurs
             osia_count=Count("id", filter=Q(numero_osia__isnull=False) & ~Q(numero_osia=""), distinct=True),
             cv_renseigne=Count("id", filter=Q(cv_statut__isnull=False) & ~Q(cv_statut=""), distinct=True),
             courrier_rentree_count=Count("id", filter=Q(courrier_rentree=True), distinct=True),
-
             # 🆕 Ateliers TRE — nombre d'ateliers distincts impliquant ≥1 candidat du périmètre
             ateliers_tre_total=Count("ateliers_tre", distinct=True),
-
             # contrats (POEI/POEC fusionnés)
             contrat_apprentissage=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.APPRENTISSAGE), distinct=True),
-            contrat_professionnalisation=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.PROFESSIONNALISATION), distinct=True),
+            contrat_professionnalisation=Count(
+                "id", filter=Q(type_contrat=Candidat.TypeContrat.PROFESSIONNALISATION), distinct=True
+            ),
             contrat_poei_poec=Count("id", filter=Q(type_contrat__in=_poei_poec_values()), distinct=True),
             contrat_sans=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.SANS_CONTRAT), distinct=True),
             contrat_crif=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.CRIF), distinct=True),
@@ -453,15 +474,21 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             app_annule=Count("appairages", filter=Q(appairages__statut="annule"), distinct=True),
             app_a_faire=Count("appairages", filter=Q(appairages__statut="a_faire"), distinct=True),
             app_contrat_a_signer=Count("appairages", filter=Q(appairages__statut="contrat a signer"), distinct=True),
-            app_contrat_en_attente=Count("appairages", filter=Q(appairages__statut="contrat en attente"), distinct=True),
+            app_contrat_en_attente=Count(
+                "appairages", filter=Q(appairages__statut="contrat en attente"), distinct=True
+            ),
             app_appairage_ok=Count("appairages", filter=Q(appairages__statut="appairage ok"), distinct=True),
         )
 
         # Répartitions principales
         rep_statut = list(qs.values("statut").annotate(count=Count("id", distinct=True)).order_by("statut"))
-        rep_type_contrat = list(qs.values("type_contrat").annotate(count=Count("id", distinct=True)).order_by("type_contrat"))
+        rep_type_contrat = list(
+            qs.values("type_contrat").annotate(count=Count("id", distinct=True)).order_by("type_contrat")
+        )
         rep_cv = list(qs.values("cv_statut").annotate(count=Count("id", distinct=True)).order_by("cv_statut"))
-        rep_resultat = list(qs.values("resultat_placement").annotate(count=Count("id", distinct=True)).order_by("resultat_placement"))
+        rep_resultat = list(
+            qs.values("resultat_placement").annotate(count=Count("id", distinct=True)).order_by("resultat_placement")
+        )
 
         payload = {
             "kpis": {k: int(v or 0) for k, v in kpis.items()},
@@ -556,7 +583,8 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         fields = group_fields_map[by]
 
         rows = list(
-            qs.values(*fields).annotate(
+            qs.values(*fields)
+            .annotate(
                 total=Count("id", distinct=True),
                 entretien_ok=Count("id", filter=Q(entretien_done=True), distinct=True),
                 test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
@@ -564,24 +592,24 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 admissibles=Count("id", filter=Q(admissible=True), distinct=True),
                 en_formation=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_FORMATION), distinct=True),
                 en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
-
                 # ⭐️ nouveaux compteurs (groupés)
                 rqth_count=Count("id", filter=Q(rqth=True), distinct=True),
                 osia_count=Count("id", filter=Q(numero_osia__isnull=False) & ~Q(numero_osia=""), distinct=True),
                 cv_renseigne=Count("id", filter=Q(cv_statut__isnull=False) & ~Q(cv_statut=""), distinct=True),
                 courrier_rentree_count=Count("id", filter=Q(courrier_rentree=True), distinct=True),
-
                 # 🆕 Ateliers TRE — nombre d'ateliers distincts impliquant ≥1 candidat du groupe
                 ateliers_tre_total=Count("ateliers_tre", distinct=True),
-
                 # contrats (POEI/POEC fusionnés)
-                contrat_apprentissage=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.APPRENTISSAGE), distinct=True),
-                contrat_professionnalisation=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.PROFESSIONNALISATION), distinct=True),
+                contrat_apprentissage=Count(
+                    "id", filter=Q(type_contrat=Candidat.TypeContrat.APPRENTISSAGE), distinct=True
+                ),
+                contrat_professionnalisation=Count(
+                    "id", filter=Q(type_contrat=Candidat.TypeContrat.PROFESSIONNALISATION), distinct=True
+                ),
                 contrat_poei_poec=Count("id", filter=Q(type_contrat__in=_poei_poec_values()), distinct=True),
                 contrat_sans=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.SANS_CONTRAT), distinct=True),
                 contrat_autre=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.AUTRE), distinct=True),
                 contrat_crif=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.CRIF), distinct=True),
-
                 # appairages (distinct pour éviter les doublons)
                 appairages_total=Count("appairages", distinct=True),
                 app_transmis=Count("appairages", filter=Q(appairages__statut="transmis"), distinct=True),
@@ -590,10 +618,15 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 app_refuse=Count("appairages", filter=Q(appairages__statut="refuse"), distinct=True),
                 app_annule=Count("appairages", filter=Q(appairages__statut="annule"), distinct=True),
                 app_a_faire=Count("appairages", filter=Q(appairages__statut="a_faire"), distinct=True),
-                app_contrat_a_signer=Count("appairages", filter=Q(appairages__statut="contrat a signer"), distinct=True),
-                app_contrat_en_attente=Count("appairages", filter=Q(appairages__statut="contrat en attente"), distinct=True),
+                app_contrat_a_signer=Count(
+                    "appairages", filter=Q(appairages__statut="contrat a signer"), distinct=True
+                ),
+                app_contrat_en_attente=Count(
+                    "appairages", filter=Q(appairages__statut="contrat en attente"), distinct=True
+                ),
                 app_appairage_ok=Count("appairages", filter=Q(appairages__statut="appairage ok"), distinct=True),
-            ).order_by(*fields)
+            )
+            .order_by(*fields)
         )
 
         # Ajout de group_key / group_label selon la clé de regroupement demandée.
@@ -601,7 +634,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             for r in rows:
                 r["group_key"] = r.get("formation__centre_id")
                 r["group_label"] = r.get("formation__centre__nom") or (
-                    f"Centre #{r.get('formation__centre_id')}" if r.get('formation__centre_id') is not None else "—"
+                    f"Centre #{r.get('formation__centre_id')}" if r.get("formation__centre_id") is not None else "—"
                 )
         elif by == "departement":
             for r in rows:
@@ -627,6 +660,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 r["group_label"] = gid or "—"
         elif by == "responsable":
             from django.contrib.auth import get_user_model
+
             ids = [r.get("responsable_placement_id") for r in rows if r.get("responsable_placement_id") is not None]
             if ids:
                 User = get_user_model()
@@ -645,11 +679,14 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             for r in rows:
                 r["group_key"] = r.get("entreprise_placement_id")
                 r["group_label"] = r.get("entreprise_placement__nom") or (
-                    f"Entreprise #{r.get('entreprise_placement_id')}" if r.get("entreprise_placement_id") is not None else "—"
+                    f"Entreprise #{r.get('entreprise_placement_id')}"
+                    if r.get("entreprise_placement_id") is not None
+                    else "—"
                 )
 
         logger.debug("CandidatStats grouped by %s → %d lignes", by, len(rows))
         return Response({"group_by": by, "results": rows})
+
 
 # End of documentation. Les méthodes non présentes (create, update, partial_update, destroy, retrieve) ne sont ni implémentées ni autorisées ici.
 # Start/end pointes par le code ci-dessous.

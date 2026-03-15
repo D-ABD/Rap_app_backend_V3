@@ -1,13 +1,18 @@
-from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_serializer, extend_schema_field, OpenApiExample
-from django.utils.translation import gettext_lazy as _
 from django.apps import apps
+from django.utils.translation import gettext_lazy as _
+from django_filters import rest_framework as filters
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    extend_schema_field,
+    extend_schema_serializer,
+)
+from rest_framework import serializers
 
+from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ..serializers.formations_serializers import FormationLightSerializer
-from ...models.custom_user import CustomUser
-from django_filters import rest_framework as filters
+
 
 @extend_schema_serializer(
     examples=[
@@ -31,6 +36,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     """
     Sérialiseur pour CustomUser : champs du modèle, formation (write_only), formation_info (read_only), centres (write_only), centres_info et centre (read_only), champs calculés (avatar_url, is_admin, is_staff_read, etc.). validate_role : seul superadmin peut attribuer superadmin ; seul admin/superadmin peut attribuer admin ; interdiction de modifier son propre rôle. create/update : attribution des centres réservée à admin/superadmin via _is_admin_user et _assign_centres.
     """
+
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     full_name = serializers.CharField(source="get_full_name", read_only=True)
 
@@ -112,18 +118,46 @@ class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            "id", "email", "username", "first_name", "last_name", "phone", "bio",
-            "avatar", "avatar_url", "role", "role_display",
-            "is_active", "date_joined", "full_name",
-            "is_staff", "is_superuser", "is_admin", "is_staff_read",
-            "formation", "formation_info",
-            "centres", "centres_info",
-            "centre",   "consent_rgpd", "consent_date",
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "phone",
+            "bio",
+            "avatar",
+            "avatar_url",
+            "role",
+            "role_display",
+            "is_active",
+            "date_joined",
+            "full_name",
+            "is_staff",
+            "is_superuser",
+            "is_admin",
+            "is_staff_read",
+            "formation",
+            "formation_info",
+            "centres",
+            "centres_info",
+            "centre",
+            "consent_rgpd",
+            "consent_date",
         ]
         read_only_fields = [
-            "id", "avatar_url", "role_display", "date_joined", "full_name",
-            "formation_info", "centres_info", "centre", "consent_date",
-            "is_staff", "is_superuser", "is_admin", "is_staff_read",
+            "id",
+            "avatar_url",
+            "role_display",
+            "date_joined",
+            "full_name",
+            "formation_info",
+            "centres_info",
+            "centre",
+            "consent_date",
+            "is_staff",
+            "is_superuser",
+            "is_admin",
+            "is_staff_read",
         ]
         extra_kwargs = {
             "email": {
@@ -184,9 +218,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             if request and self._is_admin_user(request.user):
                 self._assign_centres(user, centres_ids)
             elif request:
-                raise serializers.ValidationError(
-                    {"centres": "Seul un admin/superadmin peut affecter des centres."}
-                )
+                raise serializers.ValidationError({"centres": "Seul un admin/superadmin peut affecter des centres."})
         return user
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -201,9 +233,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             if request and self._is_admin_user(request.user):
                 self._assign_centres(instance, centres_ids)
             elif request:
-                raise serializers.ValidationError(
-                    {"centres": "Seul un admin/superadmin peut modifier les centres."}
-                )
+                raise serializers.ValidationError({"centres": "Seul un admin/superadmin peut modifier les centres."})
         return instance
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -221,22 +251,26 @@ class CustomUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Tu ne peux pas changer ton propre rôle.")
         return value
 
+
 class RoleChoiceSerializer(serializers.Serializer):
     """
     Option (value, label) pour un choix de rôle. Pas de validation personnalisée.
     """
+
     value = serializers.CharField(help_text="Identifiant du rôle (ex: 'admin')")
     label = serializers.CharField(help_text="Libellé du rôle (ex: 'Administrateur')")
 
+
 from django.utils import timezone
+
 
 class RegistrationSerializer(serializers.ModelSerializer):
     """
     Inscription d'un nouvel utilisateur : email, password (write_only), first_name, last_name, consent_rgpd (obligatoire). validate_consent_rgpd : exige True. create : crée un utilisateur is_active=False, role='stagiaire', enregistre consent_date si consent_rgpd.
     """
+
     consent_rgpd = serializers.BooleanField(
-        required=True,
-        help_text="Consentement explicite au traitement des données personnelles (RGPD)."
+        required=True, help_text="Consentement explicite au traitement des données personnelles (RGPD)."
     )
 
     class Meta:
@@ -248,9 +282,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate_consent_rgpd(self, value):
         """Exige value == True ; sinon ValidationError."""
         if not value:
-            raise serializers.ValidationError(
-                "Vous devez accepter la politique de confidentialité (RGPD)."
-            )
+            raise serializers.ValidationError("Vous devez accepter la politique de confidentialité (RGPD).")
         return value
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -258,11 +290,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         """Crée un utilisateur is_active=False, role='stagiaire' ; si consent_rgpd, enregistre consent_rgpd et consent_date."""
         consent_rgpd = validated_data.pop("consent_rgpd", False)
 
-        user = CustomUser.objects.create_user(
-            is_active=False,
-            role="stagiaire",
-            **validated_data
-        )
+        user = CustomUser.objects.create_user(is_active=False, role="stagiaire", **validated_data)
 
         if consent_rgpd:
             user.consent_rgpd = True

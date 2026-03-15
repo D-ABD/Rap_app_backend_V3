@@ -42,7 +42,6 @@ class CVThequeAdmin(admin.ModelAdmin):
         "extension",
         "taille",
         "preview_file",
-
         # 👉 propriétés du modèle (elles existent !)
         "formation_nom",
         "formation_centre",
@@ -80,45 +79,57 @@ class CVThequeAdmin(admin.ModelAdmin):
     # 📌 Formulaire admin
     # ----------------------------
     fieldsets = (
-        ("📄 Document", {
-            "fields": (
-                "titre",
-                "document_type",
-                "fichier",
-                "preview_file",
-                "mots_cles",
-                "est_public",
-                "date_depot",
-                "extension",
-                "taille",
-            )
-        }),
-        ("👤 Candidat", {
-            "fields": (
-                "candidat",
-                "candidat_ville",
-                "candidat_type_contrat_display",
-                "candidat_cv_statut_display",
-            )
-        }),
-        ("🎓 Formation associée", {
-            "fields": (
-                "formation_nom",
-                "formation_type_offre",
-                "formation_centre",
-                "formation_statut",
-                "formation_start_date",
-                "formation_end_date",
-                "formation_resume",
-            )
-        }),
-        ("🔐 Consentements", {
-            "fields": (
-                "consentement_stockage_cv",
-                "consentement_transmission_cv",
-                "date_consentement_cv",
-            )
-        }),
+        (
+            "📄 Document",
+            {
+                "fields": (
+                    "titre",
+                    "document_type",
+                    "fichier",
+                    "preview_file",
+                    "mots_cles",
+                    "est_public",
+                    "date_depot",
+                    "extension",
+                    "taille",
+                )
+            },
+        ),
+        (
+            "👤 Candidat",
+            {
+                "fields": (
+                    "candidat",
+                    "candidat_ville",
+                    "candidat_type_contrat_display",
+                    "candidat_cv_statut_display",
+                )
+            },
+        ),
+        (
+            "🎓 Formation associée",
+            {
+                "fields": (
+                    "formation_nom",
+                    "formation_type_offre",
+                    "formation_centre",
+                    "formation_statut",
+                    "formation_start_date",
+                    "formation_end_date",
+                    "formation_resume",
+                )
+            },
+        ),
+        (
+            "🔐 Consentements",
+            {
+                "fields": (
+                    "consentement_stockage_cv",
+                    "consentement_transmission_cv",
+                    "date_consentement_cv",
+                )
+            },
+        ),
     )
 
     # ----------------------------
@@ -141,15 +152,13 @@ class CVThequeAdmin(admin.ModelAdmin):
     # ----------------------------
     def candidat_fullname(self, obj):
         return f"{obj.candidat.prenom} {obj.candidat.nom}"
+
     candidat_fullname.short_description = "Candidat"
 
     def preview_link(self, obj):
         if not obj.fichier:
             return "-"
-        return format_html(
-            "<a href='{}' target='_blank'><strong>Ouvrir</strong></a>",
-            obj.fichier.url
-        )
+        return format_html("<a href='{}' target='_blank'><strong>Ouvrir</strong></a>", obj.fichier.url)
 
     # ----------------------------
     # 📌 Aperçu PDF intégré
@@ -165,7 +174,7 @@ class CVThequeAdmin(admin.ModelAdmin):
                 <embed src="{}" type="application/pdf"
                        width="100%" height="600px" style="border:1px solid #ccc;" />
                 """,
-                url
+                url,
             )
 
         return format_html("<a href='{}' target='_blank'>Télécharger</a>", url)
