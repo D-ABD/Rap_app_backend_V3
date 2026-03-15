@@ -9,6 +9,7 @@ from django.utils.crypto import get_random_string
 from ..models.candidat import Candidat
 from ..models.custom_user import CustomUser
 from ..models.prospection import Prospection
+from ..utils.signals import signal_processing
 
 logger = logging.getLogger(__name__)
 
@@ -69,19 +70,24 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
     Maintient la cohérence entre CustomUser et Candidat selon le rôle de l'utilisateur.
     Lie ou dissocie un Candidat en fonction du rôle actuel.
     """
-    if getattr(instance, "_skip_candidate_sync", False):
-        logger.debug("⏭️ Sync candidat ignoré (flag admin actif) pour user #%s", instance.pk)
-        return
 
-    if instance.is_superadmin() or instance.is_admin():
-        logger.debug("⏭️ Sync candidat ignoré pour admin/superadmin user #%s", instance.pk)
-        return
-
-    role = (instance.role or "").strip().lower()
-
-    if role in CANDIDATE_ROLES:
-        if Candidat.objects.filter(compte_utilisateur=instance).exists():
+    with signal_processing(instance) as can_run:
+        if not can_run:
             return
+
+        if getattr(instance, "_skip_candidate_sync", False):
+            logger.debug("⏭️ Sync candidat ignoré (flag admin actif) pour user #%s", instance.pk)
+            return
+
+        if instance.is_superadmin() or instance.is_admin():
+            logger.debug("⏭️ Sync candidat ignoré pour admin/superadmin user #%s", instance.pk)
+            return
+
+        role = (instance.role or "").strip().lower()
+
+        if role in CANDIDATE_ROLES:
+            if Candidat.objects.filter(compte_utilisateur=instance).exists():
+                return
 
         email = (instance.email or "").lower()
         local = _email_local(email)

@@ -37,6 +37,28 @@ class TestSyncCandidatForUser:
         # Aucun nouveau candidat ne doit avoir été créé
         assert Candidat.objects.filter(email__iexact="test@example.com").count() == 1
 
+    def test_signal_processing_guard_prevents_recursion(self):
+        """Vérifie que le guard de signal stoppe la récursion de save()."""
+
+        from rap_app.utils.signals import signal_processing
+
+        class Dummy:
+            def __init__(self):
+                self.call_count = 0
+
+            def save(self):
+                self.call_count += 1
+                with signal_processing(self) as can_run:
+                    if not can_run:
+                        return
+                    # Simule un signal qui appelle à nouveau save()
+                    self.save()
+
+        d = Dummy()
+        d.save()
+        # Le guard doit empêcher l'appel infini et limiter la récursion à une seule re-entrée.
+        assert d.call_count == 2
+
     def test_transaction_rollback_on_integrity_error(self):
         """
         Vérifie que la transaction rollback en cas d'erreur d'intégrité.
