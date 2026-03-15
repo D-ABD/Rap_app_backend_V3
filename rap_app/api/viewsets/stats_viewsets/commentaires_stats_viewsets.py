@@ -1,0 +1,552 @@
+from __future__ import annotations
+
+from ...serializers.base_serializers import EmptySerializer
+
+from datetime import timedelta
+from typing import Dict, List, Optional
+
+from django.db import models
+from django.db.models import Q, Count, Avg, Value, F
+from django.db.models.functions import Substr, Coalesce
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+
+from rest_framework import permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+
+try:
+    from ..permissions import IsOwnerOrStaffOrAbove  # type: ignore
+except Exception:  # pragma: no cover
+    IsOwnerOrStaffOrAbove = permissions.IsAuthenticated
+
+# ⚠️ adapte l'import à ton arborescence
+from ....models.commentaires import Commentaire
+
+
+class CommentaireStatsViewSet(viewsets.ViewSet):
+    """
+    ViewSet d’API pour les statistiques sur les Commentaires.
+
+    ====== ROUTES DISPONIBLES ======
+    - [GET] /api/commentaire-stats/             → Statistiques globales (voir `.list()`)
+    - [GET] /api/commentaire-stats/grouped/     → Statistiques groupées par centre, département, formation ou auteur
+    - [GET] /api/commentaire-stats/tops/        → Top formations / auteurs selon le nombre de commentaires
+    - [GET] /api/commentaire-stats/latest/      → Derniers commentaires créés ou modifiés
+
+    ====== PERMISSIONS ======
+    - `permission_classes = [IsStaffOrAbove]`
+        - Seuls les utilisateurs validés comme "staff" ou de niveau supérieur ont accès à tous les endpoints de ce ViewSet.
+        - La permission `IsStaffOrAbove` est importée, mais sa logique exacte dépend du module externe `...permissions`.
+        - S’il existe une subtilité (admin vs staff), elle est traitée par la logique métier des helpers privés.
+
+    ====== COMPORTEMENT DU QUERYSET / FILTRAGE ======
+    - Les accès et la visibilité sont restreints en fonction du rôle utilisateur :
+        1. Pour les administrateurs (`_is_admin_like(user)`), visibilité totale sur tous les commentaires.
+        2. Pour le staff (testé via `is_staff_or_staffread`), visibilité restreinte :
+            - Aux centres et/ou départements liés à l’utilisateur (helpers : `_staff_centre_ids`, `_staff_departement_codes`).
+            - Si aucun centre/département associé → accès vide.
+        3. Pour les autres, accès vide.
+
+    - Pas d’attribut natif `get_queryset()` à la ViewSet, mais logique équivalente dans `_base_qs()`. 
+    - Pas d’attributs natifs DRF : `search_fields`, `ordering_fields`, `filter_backends` ou `filterset_class`.
+
+    - FILTRES autorisés par les query params :
+        - `date_from`, `date_to`   : filtre sur la date de création
+        - `formation`, `centre`, `departement` : filtre sur les FK/relations
+        - `auteur`             : id de l’auteur du commentaire
+        - `search`             : cherche mot-clé dans contenu, username ou nom de formation
+        - `saturation_min`, `saturation_max` : bornes numériques sur la saturation
+
+    - Ces filtres sont appliqués dans la méthode `_apply_filters()`.
+
+    ====== SERIALIZER ======
+    - `serializer_class = EmptySerializer`
+        - Les réponses ne sont donc pas sérialisées via un Serializer DRF dédié mais construites/combinées manuellement.
+
+    """
+
+    serializer_class = EmptySerializer
+    permission_classes = [IsStaffOrAbove]
+
+    # ────────────────────────────────────────────────────────────
+    # Helpers — scope staff (centres + départements)
+    # (Non exposés à l’API : pure logique d’accès/restriction métier interne)
+    # ────────────────────────────────────────────────────────────
+
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        """
+        Entrée API : [GET] /api/commentaire-stats/latest/?limit=5&full=false
+
+        OBJECTIF :
+            - Récupérer les derniers commentaires (créés ou modifiés).
+            - Permet une visualisation rapide du flux récent.
+        PERMISSIONS :
+            - Restreint à IsStaffOrAbove.
+            - La visibilité réelle dépend des droits (voir _base_qs).
+
+        FILTRES :
+            - limit (par défaut 5, borné entre 1–50)
+            - full (booléen, inclut le contenu détaillé)
+            - Tous les filtres standards via `_apply_filters` (cf. doc globale).
+
+        RÉPONSE :
+            - Format JSON, structure explicite :
+                {
+                  "results": [ ...dict to_serializable_dict sur chaque Commentaire... ],
+                  "count": <int>,
+                  "limit": <int>,
+                  "filters_echo": <dict des paramètres utilisés>
+                }
+            - (Impossible de garantir le schéma interne de chaque "result" depuis ce fichier : dépend de `Commentaire.to_serializable_dict(include_full_content=...)`, non fourni ici).
+        """
+
+        qs = self._apply_filters(self._base_qs(request), request)
+
+        # Limite & contenu complet ?
+        try:
+            limit = int(request.query_params.get("limit", 5))
+        except ValueError:
+            limit = 5
+        limit = max(1, min(limit, 50))
+
+        include_full = str(request.query_params.get("full", "false")).lower() in {"1", "true", "yes", "on"}
+
+        # Trie par `updated_at` (pour montrer les récents modifiés aussi)
+        rows = qs.order_by("-updated_at").all()[:limit]
+
+        results = [
+            obj.to_serializable_dict(include_full_content=include_full)
+            for obj in rows
+        ]
+
+        return Response({
+            "results": results,
+            "count": len(results),
+            "limit": limit,
+            "filters_echo": {k: v for k, v in request.query_params.items()},
+        })
+    
+    def _is_admin_like(self, user) -> bool:
+        """
+        Helper privé.
+        Retourne True si l’utilisateur a un statut équivalent admin global.
+        Utilisé dans _base_qs pour donner la visibilité maximale.
+        """
+        return bool(
+            getattr(user, "is_superuser", False)
+            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
+        )
+
+    def _staff_centre_ids(self, user) -> Optional[list[int]]:
+        """
+        Helper privé.
+        Retourne la liste des IDs des centres à lesquels un utilisateur staff est rattaché,
+        ou None si on détecte un admin "full access".
+        """
+        if self._is_admin_like(user):
+            return None
+        if is_staff_or_staffread(user) and hasattr(user, "centres"):
+            return list(user.centres.values_list("id", flat=True))
+        return []
+
+    def _staff_departement_codes(self, user) -> list[str]:
+        """
+        Helper privé.
+        Détecte les codes départements liés à un user (ou son profile), pour restreindre la visibilité.
+        Sert pour le filtrage dans _base_qs pour les profils staff à périmètre limité.
+        """
+        def _norm_codes(val):
+            if val is None:
+                return []
+            if hasattr(val, "all"):  # M2M
+                return list({str(getattr(o, "code", o))[:2] for o in val.all() if o})
+            if isinstance(val, (list, tuple, set)):
+                return list({str(x)[:2] for x in val if x})
+            s = str(val).strip()
+            return [s[:2]] if s else []
+        for owner in (user, getattr(user, "profile", None)):
+            if not owner:
+                continue
+            for attr in ("departements_codes", "departements"):
+                if hasattr(owner, attr):
+                    codes = _norm_codes(getattr(owner, attr))
+                    if codes:
+                        return codes
+        return []
+
+    def _base_qs(self, request):
+        """
+        Helper principal.
+        Équivaut à un `get_queryset()`, mais sur ViewSet DRF basique.
+        Applique la sélection des Commentaires accessibles selon le statut du user :
+            - admin : accès intégral
+            - staff : accès limité à ses centres/départements
+            - non staff/auth : pas d’accès
+        Le queryset est non filtré à ce stade (on applique ensuite _apply_filters())
+        """
+        qs = Commentaire.objects.select_related(
+            "formation",
+            "formation__centre",
+            "formation__type_offre",
+            "formation__statut",
+            "created_by",
+        )
+        user = getattr(request, "user", None)
+        if not (user and user.is_authenticated):
+            return qs.none()
+
+        if self._is_admin_like(user):
+            return qs
+
+        if is_staff_or_staffread(user):
+            centre_ids = self._staff_centre_ids(user)
+            if centre_ids is None:
+                return qs
+            dep_codes = self._staff_departement_codes(user)
+            if not centre_ids and not dep_codes:
+                return qs.none()
+            q = Q()
+            if centre_ids:
+                q |= Q(formation__centre_id__in=centre_ids)
+            if dep_codes:
+                q_dep = Q()
+                for code in dep_codes:
+                    q_dep |= Q(formation__centre__code_postal__startswith=code)
+                q |= q_dep
+            return qs.filter(q).distinct()
+
+        # non-staff
+        return qs
+
+    # ────────────────────────────────────────────────────────────
+    # Filtres
+    # (Non exposé DRF, pure logique interne d’application des filtres query param)
+    # ────────────────────────────────────────────────────────────
+    def _apply_filters(self, qs, request):
+        """
+        Helper privé.
+        Applique les filtres disponibles à partir des query parameters de la requête HTTP :
+            - [date_from], [date_to] : filtre sur les bornes de création
+            - [formation], [centre], [departement] : relations/FK
+            - [auteur] : id de l’auteur (created_by)
+            - [search] : substring sur contenu, username auteur, ou nom formation
+            - [saturation_min], [saturation_max] : borne sur la note de "saturation"
+        """
+        p = request.query_params
+
+        dfrom = parse_date(p.get("date_from") or "") if p.get("date_from") else None
+        dto = parse_date(p.get("date_to") or "") if p.get("date_to") else None
+        if dfrom:
+            qs = qs.filter(created_at__date__gte=dfrom)
+        if dto:
+            qs = qs.filter(created_at__date__lte=dto)
+
+        if p.get("formation"):
+            qs = qs.filter(formation_id=p.get("formation"))
+        if p.get("centre"):
+            qs = qs.filter(formation__centre_id=p.get("centre"))
+        if p.get("departement"):
+            dep = str(p.get("departement"))[:2]
+            qs = qs.filter(formation__centre__code_postal__startswith=dep)
+
+        if p.get("auteur"):
+            qs = qs.filter(created_by_id=p.get("auteur"))
+
+        if p.get("search"):
+            s = p.get("search")
+            qs = qs.filter(
+                Q(contenu__icontains=s)
+                | Q(created_by__username__icontains=s)
+                | Q(formation__nom__icontains=s)
+            )
+
+        def _as_int(v):
+            try:
+                return int(v) if v is not None else None
+            except ValueError:
+                return None
+
+        smin = _as_int(p.get("saturation_min"))
+        smax = _as_int(p.get("saturation_max"))
+        if smin is not None:
+            qs = qs.filter(saturation__gte=max(0, smin))
+        if smax is not None:
+            qs = qs.filter(saturation__lte=min(100, smax))
+
+        return qs
+
+    # ────────────────────────────────────────────────────────────
+    # Overview
+    # ────────────────────────────────────────────────────────────
+    def list(self, request):
+        """
+        Entrée API : [GET] /api/commentaire-stats/
+
+        OBJECTIF :
+            - Donne une vue agrégée sur les commentaires accessibles à l’utilisateur courant.
+            - Retourne des KPIs clefs : nombre total, nombre avec saturation, saturation moyenne, etc.
+        PERMISSIONS :
+            - Seuls les utilisateurs IsStaffOrAbove.
+            - La visibilité réelle dépend des droits (cf. _base_qs).
+        SÉRIALISATION :
+            - Pas de vrai serializer : la réponse est générée manuellement (voir ci-dessous).
+        JSON ATTENDU :
+            {
+              "kpis": {
+                  "total": <int>,
+                  "avec_saturation": <int>,
+                  "avg_saturation": <float|null>,
+                  "min_saturation": <int|null>,
+                  "max_saturation": <int|null>,
+                  "nb_formations": <int>,
+                  "nb_auteurs": <int>,
+                  "recent_7d": <int>,
+                  "edited": <int>
+              },
+              "filters_echo": { ...dict reflétant les query params reçus... }
+            }
+        FILTRES :
+            - Tous les filtres standards s’appliquent (cf. _apply_filters).
+        """
+        qs = self._apply_filters(self._base_qs(request), request)
+
+        seven_days_ago = timezone.now() - timedelta(days=7)
+
+        agg = qs.aggregate(
+            total=Count("id"),
+            avec_saturation=Count("id", filter=Q(saturation__isnull=False)),
+            avg_saturation=Avg("saturation"),
+            min_saturation=models.Min("saturation"),
+            max_saturation=models.Max("saturation"),
+            nb_formations=Count("formation", distinct=True),
+            nb_auteurs=Count("created_by", distinct=True),
+            recent_7d=Count("id", filter=Q(created_at__gte=seven_days_ago)),
+            edited=Count("id", filter=Q(updated_at__gt=F("created_at"))),
+        )
+
+        data = {
+            "kpis": {
+                "total": int(agg.get("total") or 0),
+                "avec_saturation": int(agg.get("avec_saturation") or 0),
+                "avg_saturation": round(float(agg["avg_saturation"]), 2) if agg.get("avg_saturation") is not None else None,
+                "min_saturation": int(agg["min_saturation"]) if agg.get("min_saturation") is not None else None,
+                "max_saturation": int(agg["max_saturation"]) if agg.get("max_saturation") is not None else None,
+                "nb_formations": int(agg.get("nb_formations") or 0),
+                "nb_auteurs": int(agg.get("nb_auteurs") or 0),
+                "recent_7d": int(agg.get("recent_7d") or 0),
+                "edited": int(agg.get("edited") or 0),
+            },
+            "filters_echo": {k: v for k, v in request.query_params.items()},
+        }
+        return Response(data)
+
+    # ────────────────────────────────────────────────────────────
+    # Grouped
+    # ────────────────────────────────────────────────────────────
+    @action(detail=False, methods=["get"])
+    def grouped(self, request):
+        """
+        Entrée API : [GET] /api/commentaire-stats/grouped/?by=centre|departement|formation|auteur
+
+        OBJECTIF :
+            - Fournir des agrégations groupées (statistiques par centre, département, formation ou auteur).
+            - Supporte le paramètre query `by` : "centre" (par défaut "departement"), "formation", "auteur".
+
+        PERMISSIONS :
+            - Restriction IsStaffOrAbove à la racine ViewSet, donc idem.
+            - La visibilité effective dépend du périmètre utilisateur (cf. _base_qs).
+
+        FILTRES :
+            - Tous les filtres standards sont disponibles via query params.
+
+        FONCTIONNEMENT :
+            - Groupes dynamiquement selon le champ demandé (variable "by"),
+              puis effectue des agrégats sur chaque groupe (nombre, saturation, etc).
+
+        STRUCTURE DE LA RÉPONSE :
+            {
+              "group_by": "<by>",
+              "results": [
+                {
+                  "group_key": ...,
+                  "group_label": ...,
+                  ...agrégats numériques calculés...,
+                  ...infos complémentaires selon le groupement (ex: nom formation, email auteur, etc)...
+                }
+              ],
+              "filters_echo": {...}
+            }
+
+        - Les champs précis varient selon le groupement sélectionné (voir code).
+        - Le schéma exact des objets dans results dépend de la clé "by", consultable dans la méthode.
+
+        ERREUR :
+            - Si la valeur `by` n’est pas reconnue, renvoie un 400 expliquant la liste valide.
+
+        """
+        by = (request.query_params.get("by") or "departement").lower()
+        allowed = {"centre", "departement", "formation", "auteur"}
+        if by not in allowed:
+            return Response({"detail": f"'by' doit être dans {sorted(allowed)}"}, status=400)
+
+        base = self._apply_filters(self._base_qs(request), request)
+
+        seven_days_ago = timezone.now() - timedelta(days=7)
+
+        # departement annotate
+        qs = base.annotate(
+            departement=Coalesce(Substr("formation__centre__code_postal", 1, 2), Value("NA"))
+        )
+
+        group_fields: List[str] = []
+        if by == "centre":
+            group_fields = ["formation__centre_id", "formation__centre__nom"]
+        elif by == "departement":
+            group_fields = ["departement"]
+        elif by == "formation":
+            group_fields = [
+                "formation_id",
+                "formation__nom",
+                "formation__num_offre",
+                "formation__type_offre",
+                "formation__type_offre__nom",
+            ]
+        elif by == "auteur":
+            group_fields = [
+                "created_by_id",
+                "created_by__first_name",
+                "created_by__last_name",
+                "created_by__email",
+                "created_by__username",
+            ]
+
+        rows = list(
+            qs.values(*group_fields).annotate(
+                total=Count("id"),
+                avec_saturation=Count("id", filter=Q(saturation__isnull=False)),
+                avg_saturation=Avg("saturation"),
+                min_saturation=models.Min("saturation"),
+                max_saturation=models.Max("saturation"),
+                recent_7d=Count("id", filter=Q(created_at__gte=seven_days_ago)),
+            ).order_by(*group_fields)
+        )
+
+        # group_key / group_label
+        results: List[Dict] = []
+        for r in rows:
+            out = dict(r)
+            if by == "centre":
+                out["group_key"] = r.get("formation__centre_id")
+                out["group_label"] = r.get("formation__centre__nom") or (
+                    f"Centre #{r.get('formation__centre_id')}" if r.get("formation__centre_id") is not None else "—"
+                )
+            elif by == "departement":
+                out["group_key"] = r.get("departement")
+                out["group_label"] = r.get("departement") or "—"
+            elif by == "formation":
+                out["group_key"] = r.get("formation_id")
+                out["formation_nom"] = r.get("formation__nom")
+                out["group_label"] = r.get("formation__nom") or (
+                    f"Formation #{r.get('formation_id')}" if r.get("formation_id") is not None else "—"
+                )
+                # Infos complémentaires
+                out["num_offre"] = r.get("formation__num_offre")
+                out["type_offre_id"] = r.get("formation__type_offre")       # ID brut
+                out["type_offre_nom"] = r.get("formation__type_offre__nom") # Nom lisible
+            elif by == "auteur":
+                rid = r.get("created_by_id")
+                fn = (r.get("created_by__first_name") or "").strip()
+                ln = (r.get("created_by__last_name") or "").strip()
+                full = f"{fn} {ln}".strip()
+                fallback = r.get("created_by__email") or r.get("created_by__username")
+                out["group_key"] = rid
+                out["group_label"] = full or fallback or (f"Utilisateur #{rid}" if rid is not None else "—")
+
+            # normalise numériques
+            for k in ("total", "avec_saturation", "recent_7d"):
+                out[k] = int(out.get(k) or 0)
+            for k in ("avg_saturation", "min_saturation", "max_saturation"):
+                v = out.get(k)
+                out[k] = round(float(v), 2) if v is not None else None
+
+            results.append(out)
+
+        return Response({
+            "group_by": by,
+            "results": results,
+            "filters_echo": {k: v for k, v in request.query_params.items()},
+        })
+
+
+    # ────────────────────────────────────────────────────────────
+    # Tops
+    # ────────────────────────────────────────────────────────────
+    @action(detail=False, methods=["get"])
+    def tops(self, request):
+        """
+        Entrée API : [GET] /api/commentaire-stats/tops/
+
+        OBJECTIF :
+            - Obtenir les "tops" :
+                - Top 10 formations les plus commentées (total de commentaires)
+                - Top 10 auteurs ayant le plus écrit de commentaires
+
+        PERMISSIONS :
+            - Hérite de IsStaffOrAbove (cf. ViewSet).
+
+        FILTRES :
+            - Tous les filtres standards possibles (cf. _apply_filters).
+
+        STRUCTURE DE RÉPONSE JSON (explicite ici) :
+            {
+              "top_formations": [
+                  {"id": <formation_id>, "nom": <nom formation ou fallback>, "count": <nb commentaires>}
+              ],
+              "top_auteurs": [
+                  {"id": <created_by_id>, "nom": <labellisation nom-prénom/email/username>, "count": <nb commentaires>}
+              ],
+              "filters_echo": { ...dict des filtres utilisés... }
+            }
+        """
+
+        qs = self._apply_filters(self._base_qs(request), request)
+
+        # Formations les plus commentées
+        top_formations = list(
+            qs.values("formation_id", "formation__nom")
+            .annotate(cnt=Count("id"))
+            .order_by("-cnt", "formation__nom")[:10]
+        )
+        top_formations = [
+            {
+                "id": r["formation_id"],
+                "nom": r["formation__nom"] or (f"Formation #{r['formation_id']}" if r["formation_id"] is not None else "—"),
+                "count": r["cnt"],
+            }
+            for r in top_formations
+        ]
+
+        # Auteurs les plus actifs
+        top_auteurs = list(
+            qs.values("created_by_id", "created_by__first_name", "created_by__last_name", "created_by__email", "created_by__username")
+            .annotate(cnt=Count("id"))
+            .order_by("-cnt")[:10]
+        )
+        def _label(u):
+            full = f"{(u.get('created_by__first_name') or '').strip()} {(u.get('created_by__last_name') or '').strip()}".strip()
+            return full or u.get("created_by__email") or u.get("created_by__username") or (f"User #{u['created_by_id']}" if u["created_by_id"] is not None else "—")
+
+        top_auteurs = [
+            {"id": r["created_by_id"], "nom": _label(r), "count": r["cnt"]}
+            for r in top_auteurs
+        ]
+
+        return Response({
+            "top_formations": top_formations,
+            "top_auteurs": top_auteurs,
+            "filters_echo": {k: v for k, v in request.query_params.items()},
+        })

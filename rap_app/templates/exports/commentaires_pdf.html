@@ -1,0 +1,241 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Commentaires de formation — Rap_App</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 2cm 2.5cm 2cm;
+      @bottom-center {
+        content: "Rap_App — Export généré le {{ now|date:'d/m/Y à H:i' }}";
+        font-size: 9px;
+        color: #666;
+      }
+    }
+
+    body {
+      font-family: "DejaVu Sans", sans-serif;
+      font-size: 11px;
+      color: #333;
+    }
+
+    /* ================= HEADER ================= */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #0077cc;
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      height: 40px;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #0077cc;
+      text-align: right;
+    }
+
+    /* ================= TITRE GLOBAL ================= */
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 4px;
+      color: #333;
+    }
+
+    .export-date {
+      text-align: center;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 18px;
+    }
+
+    /* ================= COMMENTAIRES ================= */
+    .commentaire {
+      margin-bottom: 22px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fafafa;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+    }
+
+    .section {
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #0077cc;
+    }
+
+    /* ================= CONTENU RICHE (Quill) ================= */
+    .contenu {
+      margin-top: 8px;
+      padding: 6px 8px;
+      background: #fff;
+      border-left: 3px solid #0077cc;
+      border-radius: 3px;
+      font-size: 11px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .contenu p {
+      margin: 4px 0;
+    }
+
+    .contenu ul,
+    .contenu ol {
+      margin: 6px 0 6px 20px;
+      padding-left: 20px;
+    }
+
+    .contenu li {
+      margin: 2px 0;
+    }
+
+    .contenu strong,
+    .contenu b {
+      font-weight: bold;
+      color: #000;
+    }
+
+    .contenu em,
+    .contenu i {
+      font-style: italic;
+    }
+
+    .contenu u {
+      text-decoration: underline;
+    }
+
+    .contenu s {
+      text-decoration: line-through;
+    }
+
+    /* ✅ Couleurs de texte Quill */
+    .contenu span[style*="color:"] {
+      font-weight: 500;
+    }
+
+    /* ✅ Surlignages / fonds colorés Quill */
+    .contenu span[style*="background-color"] {
+      padding: 1px 3px;
+      border-radius: 2px;
+      box-shadow: 0 0 0 0.5px rgba(0,0,0,0.1) inset;
+    }
+
+    /* Ajuste la lisibilité pour surlignages très clairs */
+    .contenu span[style*="background-color: #ffff00"] { color: #000; } /* jaune */
+    .contenu span[style*="background-color: #ff0"] { color: #000; }
+    .contenu span[style*="background-color: #fff"] { color: #000; }
+
+    .contenu blockquote {
+      margin: 6px 0;
+      padding-left: 10px;
+      border-left: 3px solid #ccc;
+      color: #555;
+      font-style: italic;
+    }
+
+    .contenu code {
+      font-family: monospace;
+      background: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+      color: #c7254e;
+    }
+
+    /* ================= SATURATION ================= */
+    .saturation-block {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background-color: #eef6ff;
+      border-left: 4px solid #0077cc;
+      border-radius: 4px;
+      font-size: 10.5px;
+    }
+
+    .saturation-block span {
+      display: block;
+      margin: 2px 0;
+    }
+
+    /* ================= AUCUN COMMENTAIRE ================= */
+    .empty {
+      text-align: center;
+      color: #777;
+      margin-top: 40px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <img src="{{ logo_url }}" alt="Logo Rap_App" class="logo">
+    <div class="app-title">Rap_App</div>
+  </header>
+
+  <!-- TITRE GLOBAL -->
+  <h1>Commentaires de formation</h1>
+  <div class="export-date">
+    📅 Export réalisé le <strong>{{ now|date:"d/m/Y à H:i" }}</strong>
+  </div>
+
+  {% for c in items %}
+  <div class="commentaire">
+    <!-- ID + Statut -->
+    <div class="section">
+      <span class="label">🆔 Commentaire :</span> #{{ c.id }}
+      {% if c.statut %} — <strong>{{ c.statut|capfirst }}</strong>{% endif %}
+    </div>
+
+    <!-- Formation -->
+    <div class="section">
+      <span class="label">🎓 Formation :</span> {{ c.formation.nom|default:"—" }}
+      {% if c.formation.num_offre %}
+        (offre {{ c.formation.num_offre }})
+      {% endif %}
+      <div class="meta">
+        Type : {{ c.formation.type_offre_nom|default:"—" }} /
+        Centre : {{ c.formation.centre_nom|default:"—" }}
+      </div>
+    </div>
+
+    <!-- Auteur, date, activité -->
+    <div class="section">
+      <span class="label">✍️ Auteur :</span> {{ c.auteur|default:"—" }}<br>
+      <span class="label">📅 Créé le :</span> {{ c.created_at|default:"—" }}<br>
+      <span class="label">🛠️ Activité :</span> {{ c.activite|default:"—" }}
+    </div>
+
+    <!-- Contenu enrichi -->
+    <div class="contenu">
+      {{ c.contenu|safe }}
+    </div>
+
+    <!-- Saturation -->
+    <div class="saturation-block">
+      <span>Saturation au moment du commentaire : {{ c.saturation_formation|default:"—" }} %</span>
+      <span>Taux actuel de la formation : {{ c.taux_saturation|default:"—" }} %</span>
+      <span>Moyenne des commentaires : {{ c.formation.saturation_commentaires|default:"—" }} %</span>
+    </div>
+  </div>
+  {% empty %}
+    <p class="empty">Aucun commentaire de formation à afficher.</p>
+  {% endfor %}
+
+</body>
+</html>

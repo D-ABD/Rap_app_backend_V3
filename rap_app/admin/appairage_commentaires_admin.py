@@ -1,0 +1,139 @@
+import logging
+from django.contrib import admin, messages
+from django.utils.translation import gettext_lazy as _
+
+from ..models.commentaires_appairage import CommentaireAppairage
+
+logger = logging.getLogger("application.commentaires_appairage")
+
+
+class CommentaireAppairageInline(admin.TabularInline):
+    """Affichage en ligne des commentaires d'appairage dans l'admin."""
+    model = CommentaireAppairage
+    extra = 0
+    can_delete = False
+    readonly_fields = ("created_at", "created_by", "statut_snapshot")
+    fields = ("body", "statut_snapshot", "created_by", "created_at")
+    ordering = ("-created_at",)
+    verbose_name = _("Commentaire")
+    verbose_name_plural = _("Commentaires d’appairage")
+
+    def has_add_permission(self, request, obj=None):
+        """Désactive l'ajout via l'inline."""
+        return False
+
+
+@admin.register(CommentaireAppairage)
+class CommentaireAppairageAdmin(admin.ModelAdmin):
+    """Admin des commentaires d'appairage."""
+    date_hierarchy = "created_at"
+    ordering = ("-created_at", "-id")
+
+    list_display = (
+        "id",
+        "appairage",
+        "auteur_nom",
+        "short_body",
+        "statut_snapshot",
+        "statut_commentaire",
+        "created_at",
+    )
+    list_filter = (
+        "statut_commentaire",
+        "statut_snapshot",
+        ("created_at", admin.DateFieldListFilter),
+        "created_by",
+    )
+    search_fields = (
+        "body",
+        "created_by__username",
+        "created_by__first_name",
+        "created_by__last_name",
+        "appairage__id",
+        "appairage__candidat__nom",
+        "appairage__partenaire__nom",
+    )
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "statut_snapshot",
+    )
+
+    fieldsets = (
+        (_("Commentaire"), {"fields": ("appairage", "body", "statut_snapshot")}),
+        (_("Statut"), {"fields": ("statut_commentaire",)}),
+        (
+            _("Métadonnées"),
+            {"fields": ("created_by", "updated_by", "created_at", "updated_at")},
+        ),
+    )
+
+    raw_id_fields = ("appairage", "created_by", "updated_by")
+
+    def auteur_nom(self, obj):
+        """Nom de l'auteur du commentaire."""
+        return obj.auteur_nom()
+    auteur_nom.short_description = _("Auteur")
+
+    def short_body(self, obj):
+        """Aperçu du texte du commentaire."""
+        if not obj.body:
+            return "-"
+        return (obj.body[:70] + "…") if len(obj.body) > 70 else obj.body
+    short_body.short_description = _("Aperçu")
+
+    def get_queryset(self, request):
+        """Queryset optimisé avec select_related."""
+        qs = super().get_queryset(request)
+        return qs.select_related("appairage", "created_by", "updated_by")
+
+    def save_model(self, request, obj, form, change):
+        """Sauvegarde l'objet en ajoutant l'utilisateur courant."""
+        obj.save(user=request.user)
+        logger.info("CommentaireAppairage #%s enregistré par %s", obj.pk, request.user)
+
+    def save_formset(self, request, form, formset, change):
+        """Sauvegarde les inlines en ajoutant l'utilisateur courant si possible."""
+        instances = formset.save(commit=False)
+        for inst in instances:
+            try:
+                inst.save(user=request.user)
+            except TypeError:
+                inst.save()
+        formset.save_m2m()
+
+    @admin.action(description="Archiver les commentaires sélectionnés")
+    def act_archiver(self, request, queryset):
+        updated = 0
+        for c in queryset:
+            if not c.est_archive:
+                c.archiver(save=True)
+                updated += 1
+        if updated:
+            self.message_user(
+                request,
+                _(f"{updated} commentaire(s) archivé(s)."),
+                level=messages.SUCCESS,
+            )
+        else:
+            self.message_user(request, _("Aucun commentaire à archiver."), level=messages.INFO)
+
+    @admin.action(description="Désarchiver les commentaires sélectionnés")
+    def act_desarchiver(self, request, queryset):
+        updated = 0
+        for c in queryset:
+            if c.est_archive:
+                c.desarchiver(save=True)
+                updated += 1
+        if updated:
+            self.message_user(
+                request,
+                _(f"{updated} commentaire(s) désarchivé(s)."),
+                level=messages.SUCCESS,
+            )
+        else:
+            self.message_user(request, _("Aucun commentaire à désarchiver."), level=messages.INFO)
+
+    actions = ("act_archiver", "act_desarchiver")

@@ -1,0 +1,207 @@
+from django.test import TestCase
+from django.utils import timezone
+from datetime import timedelta
+from django.core.exceptions import ValidationError
+
+from ...models.centres import Centre
+from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
+
+from ...models.formations import Formation
+from ...models.partenaires import Partenaire
+from ...models.prospection import Prospection, HistoriqueProspection, ProspectionChoices
+from .setup_base_tests import BaseModelTestSetupMixin
+
+
+class ProspectionModelTest(BaseModelTestSetupMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.centre = self.create_instance(Centre, nom="Centre Prospection")
+        self.type_offre = self.create_instance(TypeOffre, nom=TypeOffre.CRIF)
+        self.statut = self.create_instance(Statut, nom=Statut.NON_DEFINI)
+        self.formation = self.create_instance(
+            Formation,
+            nom="Formation Prospection",
+            centre=self.centre,
+            type_offre=self.type_offre,
+            statut=self.statut,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=30),
+        )
+        self.partenaire = self.create_instance(Partenaire, nom="Partenaire Test")
+        self.prospection = Prospection.objects.create(
+            formation=self.formation,
+            partenaire=self.partenaire,
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            motif=ProspectionChoices.MOTIF_PARTENARIAT,
+            statut=ProspectionChoices.STATUT_A_FAIRE,
+            objectif=ProspectionChoices.OBJECTIF_PARTENARIAT,
+            created_by=self.user,
+        )
+
+    def test_str_and_repr(self):
+        self.assertIn("Partenaire Test", str(self.prospection))
+        self.assertIn("Prospection", repr(self.prospection))
+        self.assertIn(str(self.prospection.pk), repr(self.prospection))
+
+    def test_clean_future_date(self):
+        self.prospection.date_prospection = timezone.now() + timedelta(days=1)
+        with self.assertRaises(ValidationError):
+            self.prospection.full_clean()
+
+    def test_clean_refusee_requires_comment(self):
+        self.prospection.statut = ProspectionChoices.STATUT_REFUSEE
+        self.prospection.commentaire = ""
+        with self.assertRaises(ValidationError):
+            self.prospection.full_clean()
+
+    def test_is_active(self):
+        self.assertTrue(self.prospection.is_active)
+        self.prospection.activite = Prospection.ACTIVITE_ARCHIVEE
+        self.prospection.save(skip_history=True)
+        self.assertFalse(self.prospection.is_active)
+
+    def test_creer_historique_creates_record(self):
+        self.prospection.creer_historique(
+            champ_modifie="statut",
+            ancien_statut=ProspectionChoices.STATUT_A_FAIRE,
+            nouveau_statut=ProspectionChoices.STATUT_EN_COURS,
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            commentaire="Premier contact",
+            resultat="Initiée",
+            user=self.user,
+        )
+        self.assertGreaterEqual(self.prospection.historiques.count(), 1)
+        dernier = self.prospection.historiques.order_by("-id").first()
+        self.assertEqual(dernier.nouveau_statut, ProspectionChoices.STATUT_EN_COURS)
+
+    def test_relance_prevue_sur_prospection(self):
+        date_relance = timezone.now().date() + timedelta(days=3)
+        self.prospection.relance_prevue = date_relance
+        self.prospection.save(skip_history=True)
+        self.prospection.refresh_from_db()
+        self.assertEqual(self.prospection.relance_prevue, date_relance)
+
+    def test_relance_necessaire_when_prevue_past(self):
+        self.prospection.statut = ProspectionChoices.STATUT_A_RELANCER
+        self.prospection.relance_prevue = timezone.now().date() - timedelta(days=1)
+        self.prospection.activite = Prospection.ACTIVITE_ACTIVE
+        self.prospection.save(skip_history=True)
+        self.prospection.refresh_from_db()
+        self.assertTrue(self.prospection.relance_necessaire)
+
+    def test_to_serializable_dict_keys(self):
+            self.prospection.commentaire = "Refusée après entretien"
+            self.prospection.save(skip_history=True)
+            self.prospection.creer_historique(
+                champ_modifie="statut",
+                ancien_statut=self.prospection.statut,
+                nouveau_statut=ProspectionChoices.STATUT_REFUSEE,
+                type_prospection=ProspectionChoices.TYPE_RELANCE,
+                commentaire="Refusée après entretien",
+                user=self.user,
+            )
+            historique = self.prospection.historiques.order_by("-id").first()
+            self.assertIsNotNone(historique)
+            data = historique.to_serializable_dict()
+            self.assertIn("prospection", data)
+            self.assertEqual(data["nouveau_statut"], historique.nouveau_statut)
+
+    def test_get_stats_par_statut(self):
+        stats = Prospection.custom.statistiques_par_statut()
+        self.assertIn(self.prospection.statut, stats)
+
+
+class HistoriqueProspectionModelTest(BaseModelTestSetupMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.centre = self.create_instance(Centre, nom="Centre Historique")
+        self.type_offre = self.create_instance(TypeOffre, nom=TypeOffre.CRIF)
+        self.statut = self.create_instance(Statut, nom=Statut.NON_DEFINI)
+        self.formation = self.create_instance(
+            Formation,
+            nom="Formation Histo",
+            centre=self.centre,
+            type_offre=self.type_offre,
+            statut=self.statut
+        )
+        self.partenaire = self.create_instance(Partenaire, nom="Partenaire Histo")
+        self.prospection = Prospection.objects.create(
+            formation=self.formation,
+            partenaire=self.partenaire,
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            motif=ProspectionChoices.MOTIF_PARTENARIAT,
+            statut=ProspectionChoices.STATUT_A_RELANCER,
+            objectif=ProspectionChoices.OBJECTIF_PARTENARIAT,
+            created_by=self.user,
+        )
+
+    def test_prochain_contact_est_defini(self):
+        historique = HistoriqueProspection.objects.create(
+            prospection=self.prospection,
+            champ_modifie="statut",
+            ancien_statut=ProspectionChoices.STATUT_A_FAIRE,
+            nouveau_statut=ProspectionChoices.STATUT_A_RELANCER,
+            type_prospection=ProspectionChoices.TYPE_RELANCE,
+            commentaire="Relance prévue",
+            prochain_contact=timezone.now().date() + timedelta(days=5),
+            created_by=self.user,
+        )
+        self.assertEqual(historique.prochain_contact, historique.prochain_contact)
+
+    def test_clean_prochain_contact_past_allowed(self):
+        historique = HistoriqueProspection(
+            prospection=self.prospection,
+            champ_modifie="statut",
+            ancien_statut=ProspectionChoices.STATUT_EN_COURS,
+            nouveau_statut=ProspectionChoices.STATUT_A_RELANCER,
+            type_prospection=ProspectionChoices.TYPE_RELANCE,
+            commentaire="Test",
+            prochain_contact=timezone.now().date() - timedelta(days=1),
+        )
+        historique.full_clean()
+
+    def test_est_recent_true(self):
+        self.prospection.creer_historique(
+            champ_modifie="statut",
+            ancien_statut=self.prospection.statut,
+            nouveau_statut=ProspectionChoices.STATUT_EN_COURS,
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            commentaire="Suivi actif",
+            user=self.user,
+        )
+        historique = self.prospection.historiques.order_by("-id").first()
+        self.assertIsNotNone(historique)
+        self.assertTrue(historique.est_recent)
+
+    def test_jours_avant_relance_value(self):
+        date = timezone.now().date() + timedelta(days=5)
+        self.prospection.creer_historique(
+            champ_modifie="statut",
+            ancien_statut=self.prospection.statut,
+            nouveau_statut=ProspectionChoices.STATUT_EN_COURS,
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            commentaire="Prévu dans 5 jours",
+            prochain_contact=date,
+            user=self.user,
+        )
+        historique = self.prospection.historiques.order_by("-id").first()
+        self.assertIsNotNone(historique)
+        self.assertEqual(historique.jours_avant_relance, 5)
+
+    def test_to_serializable_dict_keys(self):
+            self.prospection.commentaire = "Refusée après entretien"
+            self.prospection.save(skip_history=True)
+            self.prospection.creer_historique(
+                champ_modifie="statut",
+                ancien_statut=self.prospection.statut,
+                nouveau_statut=ProspectionChoices.STATUT_REFUSEE,
+                type_prospection=ProspectionChoices.TYPE_RELANCE,
+                commentaire="Refusée après entretien",
+                user=self.user,
+            )
+            historique = self.prospection.historiques.order_by("-id").first()
+            self.assertIsNotNone(historique)
+            data = historique.to_serializable_dict()
+            self.assertIn("prospection", data)
+            self.assertEqual(data["nouveau_statut"], historique.nouveau_statut)

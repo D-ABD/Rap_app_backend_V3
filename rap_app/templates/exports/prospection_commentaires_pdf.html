@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Commentaires de prospection — Rap_App</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 2cm 2.5cm 2cm;
+      @bottom-center {
+        content: "Rap_App — export généré le {{ now|date:'d/m/Y à H:i' }}";
+        font-size: 9px;
+        color: #666;
+      }
+    }
+
+    body {
+      font-family: "DejaVu Sans", "Helvetica", sans-serif;
+      font-size: 11px;
+      color: #333;
+      line-height: 1.45;
+    }
+
+    /* =============== HEADER =============== */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #0077cc;
+      padding-bottom: 8px;
+      margin-bottom: 22px;
+    }
+
+    .logo {
+      height: 48px;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #0077cc;
+      text-align: right;
+    }
+
+    /* =============== TITRE GLOBAL =============== */
+    h1 {
+      text-align: center;
+      font-size: 19px;
+      color: #222;
+      margin: 0 0 4px 0;
+    }
+
+    .export-date {
+      text-align: center;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 22px;
+    }
+
+    /* =============== COMMENTAIRES =============== */
+    .commentaire {
+      margin-bottom: 25px;
+      padding: 14px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fcfcfc;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+    }
+
+    .commentaire:nth-child(even) {
+      background: #f9fbff;
+    }
+
+    .section {
+      margin-top: 5px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #005fa3;
+    }
+
+    .contenu {
+      margin-top: 10px;
+      font-style: italic;
+      white-space: pre-wrap;
+      padding: 8px 10px;
+      background: #fff;
+      border-left: 3px solid #0077cc;
+      border-radius: 4px;
+      box-shadow: inset 0 0 2px rgba(0,0,0,0.05);
+    }
+
+    .meta {
+      font-size: 10.5px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* =============== AUCUN COMMENTAIRE =============== */
+    .empty {
+      text-align: center;
+      color: #777;
+      margin-top: 60px;
+      font-style: italic;
+      font-size: 12px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <img src="{{ logo_url }}" alt="Logo Rap_App" class="logo">
+    <div class="app-title">Rap_App</div>
+  </header>
+
+  <!-- TITRE -->
+  <h1>Commentaires de prospection</h1>
+  <div class="export-date">
+    📅 Export réalisé le <strong>{{ now|date:"d/m/Y à H:i" }}</strong>
+  </div>
+
+  {% for c in commentaires %}
+  <div class="commentaire">
+    <!-- Contexte Prospection -->
+    <div class="section">
+      <span class="label">🆔 Prospection :</span>
+      #{{ c.prospection.id|default:"—" }}<br>
+      <span class="label">📅 Date prospection :</span>
+      {{ c.prospection.date_prospection|date:"d/m/Y"|default:"—" }}<br>
+      <span class="label">📌 Statut prospection :</span>
+      {{ c.prospection.statut|default:"—" }}
+    </div>
+
+    <!-- Statut du commentaire -->
+    <div class="section">
+      <span class="label">💬 Statut du commentaire :</span>
+      {{ c.statut_commentaire|default:"—" }}
+    </div>
+
+    <!-- Partenaire -->
+    <div class="section">
+      <span class="label">🤝 Partenaire :</span>
+      {{ c.partenaire.nom|default:"—" }}
+    </div>
+
+    <!-- Formation -->
+    <div class="section">
+      <span class="label">🎓 Formation :</span>
+      {{ c.formation.nom|default:"—" }}
+      <div class="meta">
+        Type : {{ c.formation.type_offre|default:"—" }} /
+        Centre : {{ c.formation.centre_nom|default:"—" }}<br>
+        Début : {{ c.formation.start_date|date:"d/m/Y"|default:"—" }} /
+        Fin : {{ c.formation.end_date|date:"d/m/Y"|default:"—" }}
+      </div>
+    </div>
+
+    <!-- Auteur / Activité / Création -->
+    <div class="section">
+      <span class="label">✍️ Auteur :</span> {{ c.created_by|default:"—" }}<br>
+      <span class="label">📅 Créé le :</span> {{ c.created_at|date:"d/m/Y H:i"|default:"—" }}<br>
+      <span class="label">🛠️ Activité :</span> {{ c.activite|default:"—" }}
+    </div>
+
+    <!-- Contenu -->
+    <div class="contenu">
+      {{ c.body|default:"(aucun contenu)"|linebreaksbr }}
+    </div>
+  </div>
+  {% empty %}
+    <p class="empty">Aucun commentaire de prospection à afficher.</p>
+  {% endfor %}
+
+</body>
+</html>

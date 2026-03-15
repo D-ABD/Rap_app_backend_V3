@@ -1,0 +1,21 @@
+# Coverage : rapport ciblé sur le code métier (dont signals/)
+# Lancer : pytest --cov=rap_app/signals --cov-report=term-missing rap_app/tests
+# ou : coverage run -m pytest rap_app/tests && coverage report -m --include="rap_app/signals/*"
+
+[run]
+source = rap_app
+branch = false
+omit =
+    */tests/*
+    */migrations/*
+    */__pycache__/*
+    */apps.py
+
+[report]
+include = rap_app/signals/*
+show_missing = true
+skip_covered = false
+precision = 1
+
+[html]
+directory = htmlcov

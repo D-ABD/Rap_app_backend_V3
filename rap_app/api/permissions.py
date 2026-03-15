@@ -1,0 +1,355 @@
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+from django.db.models import Q
+
+from .roles import (
+    get_staff_centre_ids_cached,
+    is_admin_like,
+    is_candidate,
+    is_declic_staff,
+    is_prepa_staff,
+    is_staff_like,
+    is_staff_or_staffread,
+    is_staff_read,
+    is_staff_standard,
+)
+
+
+class CanAccessProspectionComment(BasePermission):
+    """
+    Gère l'accès objet aux commentaires de prospection selon le rôle et la méthode.
+    """
+    message = "Accès refusé."
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+
+        role = str(getattr(user, "role", "")).lower()
+
+        if is_admin_like(user):
+            return True
+
+        if is_staff_like(user) and role != "staff_read":
+            return True
+
+        if role == "staff_read":
+            return request.method in SAFE_METHODS
+
+        if is_candidate(user):
+            if request.method in SAFE_METHODS:
+                return (not getattr(obj, "is_internal", True)) and (
+                    getattr(getattr(obj, "prospection", None), "owner_id", None) == user.id
+                )
+            return (
+                (not getattr(obj, "is_internal", True))
+                and (getattr(getattr(obj, "prospection", None), "owner_id", None) == user.id)
+                and (getattr(obj, "created_by_id", None) == user.id)
+            )
+
+        if request.method in SAFE_METHODS:
+            return True
+        return getattr(obj, "created_by_id", None) == user.id
+
+
+class IsSuperAdminOnly(BasePermission):
+    """
+    Autorise uniquement les superadmins.
+    """
+    message = "Accès réservé aux superadmins uniquement."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return getattr(user, "is_authenticated", False) and user.is_superadmin()
+
+
+class IsAdminLikeOnly(BasePermission):
+    """
+    Autorise uniquement les utilisateurs admin ou superadmin selon is_admin_like.
+    """
+    message = "Accès réservé aux administrateurs et superadministrateurs."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return getattr(user, "is_authenticated", False) and is_admin_like(user)
+
+
+class IsAdmin(BasePermission):
+    """
+    Autorise admin, superadmin, staff et staff_read.
+    """
+    message = "Accès réservé au staff, admin ou superadmin."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return (
+            getattr(user, "is_authenticated", False)
+            and (is_admin_like(user) or is_staff_or_staffread(user))
+        )
+
+
+class ReadWriteAdminReadStaff(BasePermission):
+    """
+    Accès lecture aux staff, staff_read, admin ; écriture réservée aux admins.
+    """
+    message = "Lecture réservée au staff/staff_read. Écriture réservée aux admins."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+
+        role = str(getattr(user, "role", "")).lower()
+
+        if request.method in SAFE_METHODS:
+            return (
+                is_staff_or_staffread(user)
+                or is_admin_like(user)
+                or role == "staff_read"
+            )
+        return is_admin_like(user) or getattr(user, "is_superuser", False)
+
+
+class IsStaffOrAbove(BasePermission):
+    """
+    Autorise staff, staff_read, admin ou superadmin. Refuse les candidats et autres.
+    """
+    message = "Accès réservé au staff, staff_read, admin ou superadmin."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+
+        if is_candidate(user):
+            return False
+
+        if is_admin_like(user):
+            return True
+
+        role = str(getattr(user, "role", "")).lower()
+        if role == "staff_read":
+            return request.method in SAFE_METHODS
+        if role == "staff":
+            return True
+        return False
+
+
+class ReadOnlyOrAdmin(BasePermission):
+    """
+    Lecture ouverte à tous ; modification réservée à admin ou superadmin.
+    """
+    message = "Lecture publique. Modifications réservées aux admins ou superadmins."
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        user = request.user
+        return getattr(user, "is_authenticated", False) and user.has_role("admin", "superadmin")
+
+
+class IsOwnerOrSuperAdmin(BasePermission):
+    """
+    Autorise le créateur de l'objet ou le superadmin.
+    """
+    message = "Accès refusé : vous n'êtes pas le créateur ni superadmin."
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+        return user.is_superadmin() or getattr(obj, "created_by_id", None) == user.id
+
+
+class IsOwnerOrStaffOrAbove(BasePermission):
+    """
+    Gère l'accès objet selon le rôle ou lien explicite (owner, created_by).
+    """
+    message = "Accès restreint."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+        role = str(getattr(user, "role", "")).lower()
+        if role == "staff_read" and request.method not in SAFE_METHODS:
+            return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        role = str(getattr(user, "role", "")).lower()
+
+        if is_admin_like(user):
+            return True
+        if is_staff_like(user) and role != "staff_read":
+            return True
+        if role == "staff_read":
+            return request.method in SAFE_METHODS
+        if getattr(obj, "owner_id", None) == user.id:
+            return True
+        if getattr(obj, "created_by_id", None) == user.id:
+            return True
+
+        if request.method in SAFE_METHODS and hasattr(obj, "prospections"):
+            qs = getattr(obj, "prospections", None)
+            if hasattr(qs, "all"):
+                try:
+                    if qs.filter(owner_id=user.id).exists():
+                        return True
+                except Exception:
+                    pass
+        return False
+
+
+class UserVisibilityScopeMixin:
+    """
+    Applique un filtre d'accès utilisateurs dans les queryset selon le rôle.
+    """
+    user_field = "created_by"
+
+    def user_visibility_q(self, user):
+        return Q(**{self.user_field: user})
+
+    def apply_user_scope(self, qs):
+        user = self.request.user
+        if not getattr(user, "is_authenticated", False):
+            return qs.none()
+        if is_admin_like(user):
+            return qs
+        if is_staff_or_staffread(user):
+            return qs
+        return qs.filter(self.user_visibility_q(user)).distinct()
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return self.apply_user_scope(qs)
+
+class IsStaffReadOnly(BasePermission):
+    """
+    Autorise staff_read en lecture seule ; pas de restriction pour les autres.
+    """
+    message = "Accès en lecture seule uniquement pour le rôle staff_read."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+        role = str(getattr(user, "role", "")).lower()
+        if role == "staff_read":
+            return request.method in SAFE_METHODS
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        role = str(getattr(user, "role", "")).lower()
+        if role == "staff_read":
+            return request.method in SAFE_METHODS
+        return True
+
+
+class IsDeclicStaffOrAbove(BasePermission):
+    """
+    Autorise admin, superadmin, staff, declic_staff ; staff_read en lecture seule. Refuse les candidats et autres.
+    """
+    message = "Accès réservé au staff Déclic ou supérieur."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+
+        if is_admin_like(user):
+            return True
+        if is_staff_like(user):
+            if str(getattr(user, "role", "")).lower() == "staff_read":
+                return request.method in SAFE_METHODS
+            return True
+        if is_declic_staff(user):
+            return True
+        if is_candidate(user):
+            self.message = "Les candidats n’ont pas accès à ce module."
+            return False
+        return False
+
+
+class IsPrepaStaffOrAbove(BasePermission):
+    """
+    Autorise admin, superadmin, staff standard, prepa_staff. Staff_read uniquement en lecture. Refuse les autres.
+    """
+    message = "Accès réservé au staff PrépaComp ou supérieur."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+        if is_admin_like(user):
+            return True
+        if is_staff_standard(user):
+            return True
+        if is_prepa_staff(user):
+            return True
+        if is_staff_read(user):
+            return request.method in SAFE_METHODS
+        return False
+
+
+class CanAccessCVTheque(BasePermission):
+    """
+    Gère l'accès à la CVThèque selon le rôle, le centre, l'auteur ou le type d'accès.
+    """
+    message = "Accès refusé."
+
+    def has_permission(self, request, view):
+        """
+        Autorise uniquement les utilisateurs authentifiés.
+        """
+        user = request.user
+        return bool(user and getattr(user, "is_authenticated", False))
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Gère l'accès à un objet de la CVThèque selon le profil utilisateur et l'action.
+        """
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+
+        is_preview = getattr(view, "action", None) == "preview"
+        is_download = getattr(view, "action", None) == "download"
+        is_readonly = request.method in SAFE_METHODS or is_preview or is_download
+
+        cand = getattr(obj, "candidat", None)
+        form = getattr(cand, "formation", None) if cand else None
+
+        if is_admin_like(user):
+            return True
+
+        if is_staff_read(user):
+            centres = get_staff_centre_ids_cached(request)
+            return (
+                is_readonly
+                and form is not None
+                and centres is not None
+                and form.centre_id in centres
+            )
+
+        if is_staff_like(user):
+            centres = get_staff_centre_ids_cached(request)
+            if centres is None:
+                return True
+            return form is not None and form.centre_id in centres
+
+        if is_candidate(user):
+            return cand is not None and getattr(cand, "compte_utilisateur_id", None) == user.id
+
+        if is_readonly:
+            return (
+                getattr(obj, "created_by_id", None) == user.id or
+                (cand and getattr(cand, "compte_utilisateur_id", None) == user.id)
+            )
+
+        return False

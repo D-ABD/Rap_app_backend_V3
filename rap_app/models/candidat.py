@@ -1,0 +1,708 @@
+import logging
+import unicodedata
+import re
+from datetime import date
+from django.core.validators import RegexValidator
+
+from django.conf import settings
+from django.db import models, transaction
+from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+from .custom_user import CustomUser
+from .formations import Formation
+from .base import BaseModel
+from .evenements import Evenement
+# Pour éviter les imports circulaires, le modèle "Appairage" est référencé par une chaîne de caractères.
+
+logger = logging.getLogger("application.candidats")
+
+NIVEAU_CHOICES = [(i, f"{i} ★") for i in range(1, 6)]
+
+
+def slugify_username(value: str) -> str:
+    """
+    Nettoie et convertit un identifiant en slug compatible ASCII, utilisé pour les usernames candidats.
+    """
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"[^\w.@+-]", "", value)
+    return value.lower()
+
+
+def generate_unique_username(base: str) -> str:
+    """
+    Génère un identifiant utilisateur unique basé sur la valeur fournie, avec suffixe en cas de collision.
+    """
+    User = get_user_model()
+    username = base
+    suffix = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base}_{suffix}"
+        suffix += 1
+    return username
+
+
+class ResultatPlacementChoices(models.TextChoices):
+    """
+    Etats possibles pour le résultat du placement ou appairage.
+    """
+    ADMIS = "admis", _("Admis")
+    NON_ADMIS = "non_admis", _("Non admis")
+    SECOND_ENTRETIEN = "second_entretien", _("Second entretien")
+    EN_ATTENTE = "en_attente", _("En attente")
+    ABANDON_CANDIDAT = "abandon_candidat", _("Abandon candidat")
+    ABANDON_ETS = "abandon_ets", _("Abandon entreprise")
+    DEJA_PLACE = "deja_place", _("Déjà placé")
+    ABSENT = "absent", _("Absent")
+    APPAIRAGE_EN_COURS = "appairage_en_cours", _("Appairage en cours")
+
+
+class Candidat(BaseModel):
+    """
+    Modèle principal représentant un candidat et les informations associées à son parcours.
+    """
+
+    class StatutCandidat(models.TextChoices):
+        """
+        Etats de progression d'un candidat dans le parcours.
+        """
+        EN_ATTENTE_ENTRETIEN = "att_entretien", _("En attente d'entretien")
+        EN_ATTENTE_RENTREE = "att_rentee", _("En attente de rentrée")
+        EN_ATTENTE_COMMISSION = "att_commission", _("En attente de commission")
+        EN_ACCOMPAGNEMENT = "accompagnement", _("En accompagnement")
+        EN_APPAIRAGE = "appairage", _("En appairage")
+        EN_FORMATION = "formation", _("En formation")
+        ABANDON = "abandon", _("Abandon")
+        AUTRE = "autre", _("Autre")
+
+    class TypeContrat(models.TextChoices):
+        """
+        Types de contrat possibles.
+        """
+        APPRENTISSAGE = "apprentissage", _("Apprentissage")
+        PROFESSIONNALISATION = "professionnalisation", _("Professionnalisation")
+        SANS_CONTRAT = "sans_contrat", _("Sans contrat")
+        POEI_POEC = "poei_poec", _("POEI / POEC")
+        CRIF = "crif", _("Crif")
+        AUTRE = "autre", _("Autre")
+
+    class Disponibilite(models.TextChoices):
+        """
+        Disponibilité pour un placement.
+        """
+        IMMEDIATE = "immediate", _("Immédiate")
+        DEUX_TROIS_MOIS = "2_3_mois", _("2-3 mois")
+        SIX_MOIS = "6_mois", _("6 mois")
+
+    class ContratSigne(models.TextChoices):
+        """
+        Etat de signature du contrat.
+        """
+        EN_COURS = "en_cours", _("En cours")
+        OUI = "oui", _("Oui")
+        NON = "non", _("Non")
+
+    class CVStatut(models.TextChoices):
+        """
+        Statut d'avancement du CV.
+        """
+        OUI = "oui", _("Oui")
+        EN_COURS = "en_cours", _("En cours")
+        A_MODIFIER = "a_modifier", _("À modifier")
+
+    # Champs principaux
+
+    sexe = models.CharField(max_length=1, choices=[("M", "Masculin"), ("F", "Féminin")], blank=True, null=True)
+    nom_naissance = models.CharField(max_length=100, blank=True, null=True)
+    nom = models.CharField(max_length=100, verbose_name=_("Nom d'usage"))
+    prenom = models.CharField(max_length=100, verbose_name=_("Prénom"))
+    date_naissance = models.DateField(null=True, blank=True, verbose_name=_("Date de naissance"))
+    departement_naissance = models.CharField(max_length=3, blank=True, null=True)
+    commune_naissance = models.CharField(max_length=100, blank=True, null=True)
+    pays_naissance = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name=_("Pays de naissance"), default="France"
+    )
+    nationalite = models.CharField(max_length=100, blank=True, null=True, default="Française")
+    nir = models.CharField(
+        max_length=15, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)")
+    )
+    # Contact
+    email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
+    phone_regex = RegexValidator(
+        regex=r'^0\d{9}$',
+        message=_("Le numéro doit comporter 10 chiffres et commencer par 0 (ex : 0612345678)."),
+    )
+    telephone = models.CharField(
+        validators=[phone_regex], max_length=10, blank=True, null=True, verbose_name=_("Téléphone")
+    )
+    # Adresse
+    street_number = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Numéro de voie"))
+    street_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Nom de la rue"))
+    street_complement = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Complément d'adresse")
+    )
+    ville = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Ville"))
+    code_postal = models.CharField(max_length=10, blank=True, null=True, verbose_name=_("Code postal"))
+
+    compte_utilisateur = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="candidat_associe",
+        verbose_name=_("Compte utilisateur"),
+        null=True,
+        blank=True,
+    )
+    # Statut & formation
+    entretien_done = models.BooleanField(default=False, verbose_name=_("Entretien réalisé"))
+    test_is_ok = models.BooleanField(default=False, verbose_name=_("Test d'entrée réussi"))
+    cv_statut = models.CharField(
+        max_length=15,
+        choices=CVStatut.choices,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("CV"),
+    )
+    statut = models.CharField(
+        max_length=30,
+        choices=StatutCandidat.choices,
+        default=StatutCandidat.AUTRE,
+        verbose_name=_("Statut"),
+        db_index=True,
+    )
+    formation = models.ForeignKey(
+        Formation, on_delete=models.SET_NULL, null=True, blank=True, related_name="candidats",
+        verbose_name=_("Formation"),
+    )
+    evenement = models.ForeignKey(
+        Evenement, on_delete=models.CASCADE, null=True, blank=True, related_name="candidats",
+        verbose_name=_("Événement"),
+    )
+    notes = models.TextField(blank=True, null=True, verbose_name=_("Notes"))
+    origine_sourcing = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Origine du sourcing"))
+    date_inscription = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Date d’inscription"), db_index=True
+    )
+    rqth = models.BooleanField(default=False, verbose_name=_("RQTH"))
+    type_contrat = models.CharField(
+        max_length=30, choices=TypeContrat.choices, blank=True, null=True, verbose_name=_("Type de contrat")
+    )
+    disponibilite = models.CharField(
+        max_length=30, choices=Disponibilite.choices, blank=True, null=True, verbose_name=_("Disponibilité")
+    )
+    permis_b = models.BooleanField(default=False, verbose_name=_("Permis B"))
+    communication = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Communication (étoiles)"),
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        choices=NIVEAU_CHOICES,
+    )
+    experience = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Expérience (étoiles)"),
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        choices=NIVEAU_CHOICES,
+    )
+    csp = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("CSP (étoiles)"),
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        choices=NIVEAU_CHOICES,
+    )
+    vu_par = models.ForeignKey(
+        get_user_model(),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="candidats_vus",
+        verbose_name=_("Vu par (staff)"),
+    )
+
+    # Champs complémentaires
+    regime_social = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name=_("Régime social (Sécurité sociale)")
+    )
+    sportif_haut_niveau = models.BooleanField(default=False, verbose_name=_("Sportif de haut niveau?"))
+    equivalence_jeunes = models.BooleanField(default=False, verbose_name=_("Equivalence jeune?"))
+    extension_boe = models.BooleanField(default=False, verbose_name=_("Extension BOE?"))
+    situation_actuelle = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Situation avant ce contrat"),
+        help_text=_("Ex. demandeur d’emploi, lycéen, salarié…"),
+    )
+    dernier_diplome_prepare = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Dernier diplôme préparé")
+    )
+    diplome_plus_eleve_obtenu = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Diplôme ou titre le plus élevé obtenu")
+    )
+    derniere_classe = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Dernière classe fréquentée")
+    )
+    intitule_diplome_prepare = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Intitulé du diplôme préparé")
+    )
+    situation_avant_contrat = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Situation avant le contrat")
+    )
+    projet_creation_entreprise = models.BooleanField(default=False)
+    representant_lien = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name=_("Lien avec le candidat"),
+        help_text=_("Ex. père, mère, tuteur, autre"),
+    )
+    representant_nom_naissance = models.CharField(
+        max_length=150, blank=True, null=True, verbose_name=_("Nom de naissance du représentant légal")
+    )
+    representant_prenom = models.CharField(
+        max_length=150, blank=True, null=True, verbose_name=_("Prénom du représentant légal")
+    )
+    representant_email = models.EmailField(
+        blank=True, null=True, verbose_name=_("Courriel du représentant légal")
+    )
+    representant_street_name = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name=_("Adresse du représentant légal")
+    )
+    representant_zip_code = models.CharField(
+        max_length=10, blank=True, null=True, verbose_name=_("Code postal du représentant légal")
+    )
+    representant_city = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name=_("Commune du représentant légal")
+    )
+    # Placement
+    responsable_placement = models.ForeignKey(
+        get_user_model(),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="candidats_gérés",
+        verbose_name=_("Responsable placement"),
+    )
+    date_placement = models.DateField(null=True, blank=True, verbose_name=_("Date de placement"))
+    entreprise_placement = models.ForeignKey(
+        "Partenaire",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="placements",
+        verbose_name=_("Entreprise de placement"),
+    )
+    resultat_placement = models.CharField(
+        max_length=30,
+        choices=ResultatPlacementChoices.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("Résultat du placement"),
+    )
+    entreprise_validee = models.ForeignKey(
+        "Partenaire",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="entreprises_validees",
+        verbose_name=_("Entreprise validée"),
+    )
+    contrat_signe = models.CharField(
+        max_length=10, choices=ContratSigne.choices, null=True, blank=True, verbose_name=_("Contrat signé")
+    )
+    inscrit_gespers = models.BooleanField(
+        default=False,
+        verbose_name=_("Inscrit GESPERS"),
+        help_text="Indique si le candidat est inscrit dans GESPERS."
+    )
+    courrier_rentree = models.BooleanField(default=False, verbose_name=_("Courrier de rentrée envoyé"))
+    date_rentree = models.DateField(null=True, blank=True, verbose_name=_("Date de rentrée"))
+    admissible = models.BooleanField(default=False, verbose_name=_("Admissible"))
+    numero_osia = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        unique=True,
+        help_text="Numéro OSIA du contrat signé",
+    )
+    # Appairage courant
+    placement_appairage = models.ForeignKey(
+        "Appairage",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="as_current_for",
+        verbose_name=_("Appairage courant (placement)"),
+    )
+
+    class DemandeCompteStatut(models.TextChoices):
+        """
+        Statut d'une demande de création de compte utilisateur associé au candidat.
+        """
+        AUCUNE = "aucune", _("Aucune demande")
+        EN_ATTENTE = "en_attente", _("Demande en attente")
+        ACCEPTEE = "acceptee", _("Demande acceptée")
+        REFUSEE = "refusee", _("Demande refusée")
+
+    demande_compte_statut = models.CharField(
+        max_length=20,
+        choices=DemandeCompteStatut.choices,
+        default=DemandeCompteStatut.AUCUNE,
+        verbose_name=_("Statut de demande de compte"),
+        help_text=_("Suivi minimal de la demande de création de compte utilisateur associée au candidat."),
+    )
+    demande_compte_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de demande de compte"),
+        help_text=_("Horodatage de la dernière demande de création de compte effectuée par le candidat."),
+    )
+    demande_compte_traitee_par = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="demandes_compte_traitees",
+        verbose_name=_("Demande de compte traitée par"),
+        help_text=_("Utilisateur staff/admin ayant validé ou refusé la demande de compte."),
+    )
+    demande_compte_traitee_le = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Demande de compte traitée le"),
+        help_text=_("Horodatage de la validation ou du refus de la demande de compte."),
+    )
+
+    class Meta:
+        verbose_name = _("Candidat")
+        verbose_name_plural = _("Candidats")
+        ordering = ["-date_inscription"]
+        indexes = [
+            models.Index(fields=["evenement"]),
+            models.Index(fields=["nom", "prenom"]),
+            models.Index(fields=["placement_appairage"]),
+        ]
+
+    def __init__(self, *args, **kwargs):
+        """
+        Stocke un snapshot initial des valeurs pour permettre le suivi des changements.
+        """
+        super().__init__(*args, **kwargs)
+        init = {}
+        for f in self._meta.concrete_fields:
+            init[f.name] = self.__dict__.get(f.attname, None)
+        self._initial = init
+
+    def __str__(self):
+        """
+        Retourne le nom complet du candidat.
+        """
+        return self.nom_complet
+
+    def __repr__(self):
+        """
+        Affiche un identifiant technique du candidat.
+        """
+        return f"<Candidat id={self.pk} nom='{self.nom}' prenom='{self.prenom}'>"
+
+    @property
+    def cv_statut_display(self):
+        """
+        Affiche le label du statut CV.
+        """
+        return self.get_cv_statut_display() if self.cv_statut else None
+
+    @property
+    def nom_complet(self):
+        """
+        Retourne la chaine "Prénom Nom".
+        """
+        return f"{self.prenom} {self.nom}".strip()
+
+    @property
+    def age(self):
+        """
+        Calcule l'âge en années à partir de la date de naissance.
+        """
+        if self.date_naissance:
+            today = date.today()
+            return today.year - self.date_naissance.year - (
+                (today.month, today.day) < (self.date_naissance.month, self.date_naissance.day)
+            )
+        return None
+
+    @property
+    def nb_appairages(self) -> int:
+        """
+        Retourne le nombre d'appairages liés.
+        """
+        return self.appairages.count()
+
+    @property
+    def placement_statut(self):
+        """
+        Retourne le statut de l'appairage courant (placement_appairage).
+        """
+        a = getattr(self, "placement_appairage", None)
+        return getattr(a, "statut", None) if a else None
+
+    @property
+    def placement_statut_display(self):
+        """
+        Affiche le label du statut de l'appairage courant.
+        """
+        a = getattr(self, "placement_appairage", None)
+        return a.get_statut_display() if a else None
+
+    @property
+    def placement_partenaire(self):
+        """
+        Retourne le partenaire lié à l'appairage courant.
+        """
+        a = getattr(self, "placement_appairage", None)
+        return getattr(a, "partenaire", None) if a else None
+
+    @property
+    def placement_partenaire_nom(self):
+        """
+        Retourne le nom du partenaire de l'appairage courant.
+        """
+        p = self.placement_partenaire
+        return getattr(p, "nom", None) if p else None
+
+    @property
+    def placement_responsable(self):
+        """
+        Retourne le responsable principal du placement courant.
+        """
+        a = getattr(self, "placement_appairage", None)
+        if not a:
+            return None
+        return getattr(a, "created_by", None) or getattr(a, "updated_by", None)
+
+    @property
+    def placement_responsable_nom(self):
+        """
+        Retourne le nom du responsable du placement courant, ou l'email ou username si indisponible.
+        """
+        u = self.placement_responsable
+        if not u:
+            return None
+        full = u.get_full_name()
+        return full or getattr(u, "email", None) or getattr(u, "username", None)
+
+    def valider_comme_stagiaire(self):
+        """
+        Modifie le compte utilisateur lié pour passer au rôle 'stagiaire'.
+        """
+        if not self.admissible:
+            raise ValidationError(_("Ce candidat n'est pas admissible."))
+        if not self.compte_utilisateur:
+            raise ValidationError(_("Ce candidat n’a pas de compte utilisateur associé."))
+        self.compte_utilisateur.role = CustomUser.ROLE_STAGIAIRE
+        self.compte_utilisateur.save()
+        return self.compte_utilisateur
+
+    def valider_comme_candidatuser(self):
+        """
+        Modifie le compte utilisateur lié pour passer au rôle 'CANDIDAT_USER'.
+        """
+        if not self.compte_utilisateur:
+            raise ValidationError(
+                _("Impossible de valider comme candidat : aucun compte utilisateur n'est associé.")
+            )
+        user = self.compte_utilisateur
+        user.role = CustomUser.ROLE_CANDIDAT_USER
+        user.save()
+        return user
+
+    @property
+    def est_valide_comme_stagiaire(self) -> bool:
+        """
+        Indique si le compte est validé comme stagiaire.
+        """
+        return bool(self.compte_utilisateur and self.compte_utilisateur.role == CustomUser.ROLE_STAGIAIRE)
+
+    @property
+    def est_valide_comme_candidatuser(self) -> bool:
+        """
+        Indique si le compte utilisateur lié est de type CANDIDAT_USER.
+        """
+        return bool(self.compte_utilisateur and self.compte_utilisateur.role == CustomUser.ROLE_CANDIDAT_USER)
+
+    @property
+    def role_utilisateur(self):
+        """
+        Retourne le libellé du rôle du compte utilisateur associé, ou '-' si absent.
+        """
+        if self.compte_utilisateur:
+            return self.compte_utilisateur.get_role_display()
+        return "-"
+
+    def clean(self):
+        """
+        Valide l'intégrité métier du candidat (nom/prénom requis). Log certains statuts.
+        """
+        super().clean()
+        if not self.nom or not self.prenom:
+            logger.warning(f"Candidat incomplet : nom ou prénom manquant (id={self.pk})")
+        if self.statut == self.StatutCandidat.AUTRE:
+            logger.info(f"Candidat #{self.pk} a un statut 'autre'")
+
+    def save(self, *args, **kwargs):
+        """
+        Gère la sauvegarde, la validation et la gestion d'historique de placement.
+        """
+        user = kwargs.pop("user", None)
+        update_fields = kwargs.get("update_fields", None)
+
+        is_new = self.pk is None
+        original = None
+        if not is_new:
+            champs_placement = [
+                "entreprise_placement_id",
+                "resultat_placement",
+                "date_placement",
+                "responsable_placement_id",
+                "contrat_signe",
+            ]
+            original = self.__class__.objects.filter(pk=self.pk).only(*champs_placement).first()
+
+        if update_fields is None:
+            self.full_clean()
+
+        with transaction.atomic():
+            super().save(*args, user=user, **kwargs)
+
+            if original:
+                self._log_changes()
+
+            champs_placement = [
+                "entreprise_placement_id",
+                "resultat_placement",
+                "date_placement",
+                "responsable_placement_id",
+                "contrat_signe",
+            ]
+
+            if original:
+                changed = any(getattr(original, f) != getattr(self, f) for f in champs_placement)
+            else:
+                def _is_set(v):
+                    return v not in (None, "", False)
+                changed = any(_is_set(getattr(self, f)) for f in champs_placement)
+
+            if changed:
+                HistoriquePlacement.objects.create(
+                    candidat=self,
+                    date_placement=self.date_placement or date.today(),
+                    entreprise=self.entreprise_placement,
+                    resultat=self.resultat_placement or ResultatPlacementChoices.EN_ATTENTE,
+                    responsable=self.responsable_placement,
+                    commentaire="Historique créé automatiquement à la modification du placement.",
+                )
+
+    def delete(self, *args, **kwargs):
+        """
+        Supprime le candidat et son compte utilisateur associé.
+        """
+        logger.warning(f"Suppression du candidat : {self} (id={self.pk})")
+        user = self.compte_utilisateur
+        super().delete(*args, **kwargs)
+        if user:
+            user.delete()
+
+    def _log_changes(self):
+        """
+        Journalise les modifications détectées sur l'objet.
+        """
+        changements = []
+        for champ in self._initial:
+            old = self._initial.get(champ)
+            new = getattr(self, champ)
+            if old != new:
+                changements.append(f"{champ}: '{old}' → '{new}'")
+        if changements:
+            logger.info(f"Candidat modifié (id={self.pk}) – changements : " + "; ".join(changements))
+
+    @property
+    def ateliers_effectues(self):
+        """
+        Nombre d'ateliers TRE suivis par le candidat.
+        """
+        return self.ateliers_tre.count()
+
+    @property
+    def ateliers_labels(self):
+        """
+        Liste des labels des ateliers suivis.
+        """
+        return [a.get_type_atelier_display() for a in self.ateliers_tre.all()]
+
+    @property
+    def ateliers_resume(self):
+        """
+        Labels des ateliers suivis sous forme de texte concaténé.
+        """
+        return ", ".join(self.ateliers_labels)
+
+    def lier_utilisateur(self, mot_de_passe: str = "Temporaire123"):
+        """
+        Crée et lie un utilisateur Django à ce candidat si non existant, avec les infos email/prénom/nom.
+        """
+        User = get_user_model()
+        if self.compte_utilisateur:
+            raise ValueError("Ce candidat a déjà un compte utilisateur.")
+        if not self.email:
+            raise ValueError("Ce candidat n’a pas d’adresse email définie.")
+        if User.objects.filter(email=self.email).exists():
+            raise ValueError("Un utilisateur avec cette adresse email existe déjà.")
+        utilisateur = User.objects.create_user(
+            email=self.email, password=mot_de_passe, first_name=self.prenom, last_name=self.nom
+        )
+        self.compte_utilisateur = utilisateur
+        self.save()
+        return utilisateur
+
+
+class HistoriquePlacement(BaseModel):
+    """
+    Historique des modifications de placement d'un candidat.
+    """
+    candidat = models.ForeignKey(
+        "Candidat", on_delete=models.CASCADE, related_name="historique_placements", verbose_name=_("Candidat")
+    )
+    date_placement = models.DateField(verbose_name=_("Date du placement"))
+    entreprise = models.ForeignKey(
+        "Partenaire",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="placements_historique",
+        verbose_name=_("Entreprise"),
+    )
+    resultat = models.CharField(max_length=30, choices=ResultatPlacementChoices.choices, verbose_name=_("Résultat"))
+    responsable = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="placements_realises",
+        verbose_name=_("Responsable"),
+    )
+    commentaire = models.TextField(blank=True, null=True, verbose_name=_("Commentaire"))
+
+    class Meta:
+        verbose_name = _("Historique de placement")
+        verbose_name_plural = _("Historique de placements")
+        ordering = ["-date_placement"]
+
+    def __str__(self):
+        """
+        Retourne une représentation lisible pour l'historique de placement.
+        """
+        return f"{self.candidat} – {self.date_placement} – {self.resultat}"
