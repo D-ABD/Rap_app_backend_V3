@@ -1,6 +1,8 @@
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from django.db.models import Q, QuerySet
+from rest_framework import status
+from rest_framework.response import Response
 
 from .roles import get_staff_centre_ids_cached
 
@@ -173,3 +175,42 @@ class StaffCentresScopeMixin:
         """
         base = super().get_queryset()
         return self.scope_queryset_to_centres(base)
+
+
+class ApiResponseMixin:
+    """
+    Mixin DRF pour standardiser les réponses JSON de l'API.
+    """
+
+    default_success_message: str = "Operation reussie."
+    default_error_message: str = "Une erreur est survenue."
+
+    def success_response(
+        self,
+        data: Any = None,
+        message: str | None = None,
+        status_code: int = status.HTTP_200_OK,
+    ) -> Response:
+        return Response(
+            {
+                "success": True,
+                "message": message or self.default_success_message,
+                "data": data,
+            },
+            status=status_code,
+        )
+
+    def error_response(
+        self,
+        message: str | None = None,
+        errors: Mapping[str, Any] | list[Any] | None = None,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+    ) -> Response:
+        payload: dict[str, Any] = {
+            "success": False,
+            "message": message or self.default_error_message,
+            "data": None,
+        }
+        if errors is not None:
+            payload["errors"] = errors
+        return Response(payload, status=status_code)

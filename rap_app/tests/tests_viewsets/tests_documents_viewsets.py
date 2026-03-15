@@ -38,12 +38,14 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         url = reverse("document-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
         self.assertIn("data", response.data)
 
     def test_retrieve_document(self):
         url = reverse("document-detail", args=[self.document.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
         self.assertEqual(response.data.get("data", {}).get("id"), self.document.id)
 
     def test_create_document(self):
@@ -57,6 +59,8 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         }
         response = self.client.post(url, data, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["success"])
+        self.assertIn("data", response.data)
         self.assertTrue(Document.objects.filter(nom_fichier="new_doc.pdf").exists())
 
     def test_update_document(self):
@@ -64,12 +68,15 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         data = {"nom_fichier": "updated_name.pdf"}
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
         self.assertEqual(response.data.get("data", {}).get("nom_fichier"), "updated_name.pdf")
 
     def test_delete_document(self):
         url = reverse("document-detail", args=[self.document.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertIsNone(response.data["data"])
         self.assertFalse(Document.objects.filter(id=self.document.id).exists())
 
     def test_documents_by_formation(self):

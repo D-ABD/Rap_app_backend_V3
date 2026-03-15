@@ -46,10 +46,8 @@ class FormationSerializerTest(TestCase):
     def test_serialization(self):
         serializer = FormationDetailSerializer(instance=self.formation, context={"request": None})
         data = serializer.data
-        self.assertIn("success", data)
-        self.assertTrue(data["success"])
-        self.assertIn("data", data)
-        self.assertEqual(data["data"]["nom"], "Test Formation")
+        self.assertIn("nom", data)
+        self.assertEqual(data["nom"], "Test Formation")
 
     def test_creation_invalid_date(self):
         payload = {

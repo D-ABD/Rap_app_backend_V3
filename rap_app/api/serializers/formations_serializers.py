@@ -239,7 +239,7 @@ class FormationLightSerializer(serializers.ModelSerializer):
 class FormationDetailSerializer(serializers.Serializer):
     """
     Structure de sortie pour le détail d'une formation : champs, relations (centre, statut, type_offre), champs calculés, listes commentaires, documents, evenements, partenaires, prospections.
-    validate : start_date doit être antérieure à end_date. to_representation : enveloppe la sortie dans {success, message, data}.
+    validate : start_date doit être antérieure à end_date.
     """
 
     id = serializers.IntegerField(read_only=True)
@@ -403,15 +403,6 @@ class FormationDetailSerializer(serializers.Serializer):
             setattr(instance, attr, val)
         instance.save(user=user)
         return instance
-
-    def to_representation(self, instance):
-        base = super().to_representation(instance)
-        return {
-            "success": True,
-            "message": "Formation récupérée avec succès.",
-            "data": base,
-        }
-
 
 class FormationCreateSerializer(serializers.ModelSerializer):
     centre_id = serializers.PrimaryKeyRelatedField(

@@ -22,7 +22,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from PIL import Image as PILImage
-from rest_framework import filters, serializers, status, viewsets
+from rest_framework import filters, serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -38,6 +38,7 @@ from ...api.serializers.formations_serializers import (
 from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
+from .base import BaseApiViewSet
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 
 logger = logging.getLogger("application.api")
@@ -67,7 +68,7 @@ class FormationSearchFilter(filters.SearchFilter):
 
 
 @extend_schema(tags=["Formations"])
-class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
+class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
     """ViewSet pour Formation. IsStaffOrAbove ; UserVisibilityScopeMixin ; _restrict_to_user_centres. Filtres : centre, type_offre, statut, created_by, start_date ; search (texte/search) ; ordering. get_serializer_class : list=>FormationListSerializer, retrieve/update/partial=>FormationDetailSerializer, create=>FormationCreateSerializer. Actions : filtres, historique, partenaires, commentaires, documents, prospections, ajouter_commentaire, ajouter_evenement, ajouter_document, dupliquer, stats_par_mois, liste_simple, archiver, desarchiver, archivees, export_xlsx."""
 
     queryset = Formation.objects.all()
@@ -147,9 +148,9 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             .get(pk=formation.pk)
         )
         response_serializer = FormationDetailSerializer(formation, context={"request": request})
-        return Response(
-            {"success": True, "message": "Formation créée avec succès.", "data": response_serializer.data},
-            status=status.HTTP_201_CREATED,
+        return self.created_response(
+            data=response_serializer.data,
+            message="Formation créée avec succès.",
         )
 
     @extend_schema(
@@ -171,9 +172,9 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
             .get(pk=formation.pk)
         )
         response_serializer = FormationDetailSerializer(formation, context={"request": request})
-        return Response(
-            {"success": True, "message": "Formation mise à jour avec succès.", "data": response_serializer.data},
-            status=status.HTTP_200_OK,
+        return self.success_response(
+            data=response_serializer.data,
+            message="Formation mise à jour avec succès.",
         )
 
     def _restrict_to_user_centres(self, qs):
@@ -322,26 +323,19 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(page or qs, many=True)
 
         if page is not None:
-            return Response(
-                {
-                    "success": True,
-                    "message": "Liste paginée des formations",
-                    "data": {
-                        "count": self.paginator.page.paginator.count,
-                        "results": serializer.data,
-                    },
-                }
-            )
+            return self.paginated_response(serializer.data, message="Liste paginée des formations")
 
-        return Response(
-            {
-                "success": True,
-                "message": "Liste complète des formations",
-                "data": {
-                    "count": len(serializer.data),
-                    "results": serializer.data,
-                },
-            }
+        return self.success_response(
+            data={"count": len(serializer.data), "results": serializer.data},
+            message="Liste complète des formations",
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        formation = self.get_object()
+        serializer = self.get_serializer(formation)
+        return self.success_response(
+            data=serializer.data,
+            message="Formation récupérée avec succès.",
         )
 
     @extend_schema(summary="Filtres disponibles (centres, statuts, types d’offre, activités, périodes à venir)")

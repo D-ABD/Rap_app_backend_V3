@@ -20,6 +20,7 @@ from ..serializers.user_profil_serializers import (
     RegistrationSerializer,
     RoleChoiceSerializer,
 )
+from .base import BaseApiViewSet
 
 
 @extend_schema(
@@ -91,7 +92,7 @@ def _ensure_candidate_for_user(user: CustomUser, formation_id: int | None) -> Ca
     return candidat
 
 
-class CustomUserViewSet(viewsets.ModelViewSet):
+class CustomUserViewSet(BaseApiViewSet):
     """
     ViewSet de gestion des utilisateurs (CRUD, filtres, actions RGPD
     et vues utilitaires) avec scoping par centres et permissions
@@ -287,13 +288,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
             details="Création d’un utilisateur",
         )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Utilisateur créé avec succès.",
-                "data": user.to_serializable_dict(include_sensitive=True),
-            },
-            status=status.HTTP_201_CREATED,
+        return self.created_response(
+            data=user.to_serializable_dict(include_sensitive=True),
+            message="Utilisateur créé avec succès.",
         )
 
     @transaction.atomic
@@ -311,14 +308,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         ("📦 Données brutes reçues:", request.data)
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except ValidationError:
-            ("❌ Erreurs de validation:", serializer.errors)
-            return Response(
-                {"success": False, "message": "Erreur de validation", "errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
 
         user: CustomUser = serializer.save()
         (f"✅ Utilisateur mis à jour : {user.email}")
@@ -340,13 +330,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
             details="Mise à jour d'un utilisateur",
         )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Utilisateur mis à jour avec succès.",
-                "data": user.to_serializable_dict(include_sensitive=True),
-            },
-            status=status.HTTP_200_OK,
+        return self.success_response(
+            data=user.to_serializable_dict(include_sensitive=True),
+            message="Utilisateur mis à jour avec succès.",
         )
 
     @action(detail=False, methods=["get"], url_path="me", permission_classes=[permissions.IsAuthenticated])
@@ -362,13 +348,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         CustomUserSerializer dans un wrapper JSON success/message/data.
         """
         serializer = CustomUserSerializer(request.user, context={"request": request})
-        return Response(
-            {
-                "success": True,
-                "message": "Profil utilisateur chargé avec succès.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_200_OK,
+        return self.success_response(
+            data=serializer.data,
+            message="Profil utilisateur chargé avec succès.",
         )
 
     @action(detail=False, methods=["get"], url_path="roles", permission_classes=[permissions.IsAuthenticated])
@@ -388,12 +370,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         Retourne les rôles utilisateurs disponibles pour la création et
         la modification de comptes.
         """
-        return Response(
-            {
-                "success": True,
-                "message": "Liste des rôles récupérée avec succès.",
-                "data": CustomUser.get_role_choices_display(),
-            }
+        return self.success_response(
+            data=CustomUser.get_role_choices_display(),
+            message="Liste des rôles récupérée avec succès.",
         )
 
     def retrieve(self, request, *args, **kwargs):
@@ -403,9 +382,9 @@ class CustomUserViewSet(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
-        return Response(
-            {"success": True, "message": "Utilisateur récupéré avec succès.", "data": serializer.data},
-            status=status.HTTP_200_OK,
+        return self.success_response(
+            data=serializer.data,
+            message="Utilisateur récupéré avec succès.",
         )
 
     @action(detail=False, methods=["get"], url_path="liste-simple")

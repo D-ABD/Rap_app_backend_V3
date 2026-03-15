@@ -12,7 +12,7 @@ from drf_spectacular.utils import (
     OpenApiTypes,
     extend_schema,
 )
-from rest_framework import status, viewsets
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -28,6 +28,7 @@ from ...api.serializers.documents_serializers import (
 )
 from ...models.documents import Document
 from ...models.logs import LogUtilisateur
+from .base import BaseApiViewSet
 
 logger = logging.getLogger("application.api")
 
@@ -52,7 +53,7 @@ class DocumentFilter(django_filters.FilterSet):
 
 
 @extend_schema(tags=["Documents"])
-class DocumentViewSet(viewsets.ModelViewSet):
+class DocumentViewSet(BaseApiViewSet):
     """
     📎 API REST complète pour la gestion des documents liés aux formations.
 
@@ -214,7 +215,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """
         doc = self.get_object()  # get_object() utilise get_queryset() -> scopé
         serializer = self.get_serializer(doc)
-        return Response({"success": True, "message": "Document récupéré avec succès.", "data": serializer.data})
+        return self.success_response(
+            data=serializer.data,
+            message="Document récupéré avec succès.",
+        )
 
     # ------------------------------ create/update/destroy -----------------
 
@@ -239,27 +243,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
         - Échec : {"success": False, "message": "...", "errors": ...}
         """
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            # contrôle périmètre avant save
-            formation = serializer.validated_data.get("formation")
-            self._assert_staff_can_use_formation(formation)
+        serializer.is_valid(raise_exception=True)
+        formation = serializer.validated_data.get("formation")
+        self._assert_staff_can_use_formation(formation)
 
-            document = serializer.save(created_by=request.user)
-            LogUtilisateur.log_action(
-                instance=document,
-                user=request.user,
-                action=LogUtilisateur.ACTION_CREATE,
-                details=f"Ajout du document « {document.nom_fichier} »",
-            )
-            return Response(
-                {"success": True, "message": "Document créé avec succès.", "data": document.to_serializable_dict()},
-                status=status.HTTP_201_CREATED,
-            )
-
-        logger.warning(f"[API] Erreur création document : {serializer.errors}")
-        return Response(
-            {"success": False, "message": "Échec de la création du document.", "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST,
+        document = serializer.save(created_by=request.user)
+        LogUtilisateur.log_action(
+            instance=document,
+            user=request.user,
+            action=LogUtilisateur.ACTION_CREATE,
+            details=f"Ajout du document « {document.nom_fichier} »",
+        )
+        response_serializer = self.get_serializer(document)
+        return self.created_response(
+            data=response_serializer.data,
+            message="Document créé avec succès.",
         )
 
     @extend_schema(
@@ -291,30 +289,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
             data.pop("fichier", None)
 
         serializer = self.get_serializer(instance, data=data, partial=True)
-        if serializer.is_valid():
-            # contrôle périmètre (nouvelle formation si fournie, sinon formation existante)
-            new_formation = serializer.validated_data.get("formation", instance.formation)
-            self._assert_staff_can_use_formation(new_formation)
+        serializer.is_valid(raise_exception=True)
+        new_formation = serializer.validated_data.get("formation", instance.formation)
+        self._assert_staff_can_use_formation(new_formation)
 
-            document = serializer.save()
-            LogUtilisateur.log_action(
-                instance=document,
-                user=request.user,
-                action=LogUtilisateur.ACTION_UPDATE,
-                details=f"Mise à jour du document « {document.nom_fichier} »",
-            )
-            return Response(
-                {
-                    "success": True,
-                    "message": "Document mis à jour avec succès.",
-                    "data": document.to_serializable_dict(),
-                },
-                status=status.HTTP_200_OK,
-            )
-
-        return Response(
-            {"success": False, "message": "Erreur de validation.", "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST,
+        document = serializer.save()
+        LogUtilisateur.log_action(
+            instance=document,
+            user=request.user,
+            action=LogUtilisateur.ACTION_UPDATE,
+            details=f"Mise à jour du document « {document.nom_fichier} »",
+        )
+        response_serializer = self.get_serializer(document)
+        return self.success_response(
+            data=response_serializer.data,
+            message="Document mis à jour avec succès.",
         )
 
     @extend_schema(
@@ -346,9 +335,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
             action=LogUtilisateur.ACTION_DELETE,
             details=f"Suppression du document « {document.nom_fichier} »",
         )
-        return Response(
-            {"success": True, "message": "Document supprimé avec succès.", "data": None},
-            status=status.HTTP_204_NO_CONTENT,
+        return self.success_response(
+            data=None,
+            message="Document supprimé avec succès.",
+            status_code=status.HTTP_200_OK,
         )
 
     # ------------------------------ actions custom ------------------------
