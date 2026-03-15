@@ -2,19 +2,26 @@
 env/
 venv/
 venv-test/
+.venv/
 
 # === Fichiers sensibles ===
 .env
-.venv/
 .env.local
 .env.*
 !.env.example
 .pgpass
 
+# === Tests / coverage ===
 coverage/
 htmlcov/
 .pytest_cache/
 .coverage
+
+# === Backups / dumps ===
+*.sql
+backup*
+backup_complet.json
+restored_files/
 
 # === Caches Python ===
 __pycache__/
@@ -37,7 +44,7 @@ backups/
 .idea/
 .vscode/
 
-# === Ignorer les fichiers shell sauf ceux explicitement suivis ===
+# === Scripts shell ===
 *.sh
 !utils/backup_db.sh
 !utils/check_alert.sh
