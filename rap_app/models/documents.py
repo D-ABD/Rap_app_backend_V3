@@ -2,6 +2,7 @@ import logging
 import os
 
 import magic
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
@@ -12,8 +13,6 @@ from django.utils.html import escape
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
-from .formations import HistoriqueFormation  # utilisé pour l'historique
-from .formations import Formation
 
 logger = logging.getLogger("application.documents")
 
@@ -99,7 +98,7 @@ class Document(BaseModel):
     MAX_MIME_LENGTH = 100
 
     formation = models.ForeignKey(
-        Formation,
+        "Formation",
         on_delete=models.CASCADE,
         related_name="documents",
         verbose_name=_("Formation associée"),
@@ -291,6 +290,7 @@ class Document(BaseModel):
 
         if is_new and self.formation_id and not skip_history:
             try:
+                HistoriqueFormation = apps.get_model("rap_app", "HistoriqueFormation")
                 HistoriqueFormation.objects.create(
                     formation_id=self.formation_id,
                     champ_modifie="document",
@@ -314,6 +314,7 @@ class Document(BaseModel):
 
         if formation_id and not skip_history:
             try:
+                HistoriqueFormation = apps.get_model("rap_app", "HistoriqueFormation")
                 HistoriqueFormation.objects.create(
                     formation_id=formation_id,
                     champ_modifie="document",

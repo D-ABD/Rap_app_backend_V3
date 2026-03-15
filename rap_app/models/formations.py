@@ -3,6 +3,7 @@ import logging
 from datetime import timedelta
 from typing import Dict, Optional
 
+from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import (
@@ -23,7 +24,6 @@ from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
 from .centres import Centre
-from .partenaires import Partenaire
 from .statut import Statut, get_default_color
 from .types_offre import TypeOffre
 
@@ -456,7 +456,7 @@ class Formation(BaseModel):
         help_text=_("Contenu du dernier commentaire ajouté"),
     )
     partenaires = models.ManyToManyField(
-        Partenaire,
+        "Partenaire",
         related_name="formations",
         verbose_name=_("Partenaires"),
         blank=True,
@@ -956,7 +956,6 @@ class Formation(BaseModel):
         Ajoute un document lié à la formation et historise l'ajout.
         """
         from .documents import Document
-        from .formations import HistoriqueFormation
 
         if not titre or not titre.strip():
             raise ValidationError("Le titre du document ne peut pas être vide.")
@@ -1004,8 +1003,6 @@ class Formation(BaseModel):
             if type_evenement == Evenement.TypeEvenement.AUTRE
             else dict(Evenement.TypeEvenement.choices).get(type_evenement, type_evenement)
         )
-        from .formations import HistoriqueFormation
-
         HistoriqueFormation.objects.create(
             formation=self,
             champ_modifie="evenement",
@@ -1015,7 +1012,7 @@ class Formation(BaseModel):
         )
         return evenement
 
-    def add_partenaire(self, partenaire: Partenaire, user=None) -> None:
+    def add_partenaire(self, partenaire, user=None) -> None:
         """
         Ajoute un partenaire à la formation et historise l'ajout.
         """
@@ -1147,8 +1144,6 @@ class Formation(BaseModel):
         """
         Passe la formation en mode archivée et historise le changement.
         """
-        from .formations import HistoriqueFormation
-
         ancien_etat = self.activite
         if ancien_etat == Activite.ARCHIVEE:
             logger.info(f"[Formation] {self.nom} déjà archivée.")
@@ -1171,8 +1166,6 @@ class Formation(BaseModel):
         """
         Restaure une formation archivée et historise le changement.
         """
-        from .formations import HistoriqueFormation
-
         ancien_etat = self.activite
         if ancien_etat == Activite.ACTIVE:
             logger.info(f"[Formation] {self.nom} déjà active.")
@@ -1340,9 +1333,8 @@ class HistoriqueFormation(BaseModel):
         """
         skip_duplicate_check = kwargs.pop("skip_duplicate_check", False)
         if self.formation_id is not None:
-            from rap_app.models import Formation
-
-            if not Formation.objects.filter(pk=self.formation_id).exists():
+            FormationModel = apps.get_model("rap_app", "Formation")
+            if not FormationModel.objects.filter(pk=self.formation_id).exists():
                 self.formation = None
 
         if not skip_duplicate_check and not self.pk:

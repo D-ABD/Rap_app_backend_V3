@@ -318,6 +318,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             instance = serializer.save()
+            instance.full_clean()
 
             try:
                 instance.save(user=self.request.user)
@@ -334,6 +335,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             updated = serializer.save()
+            updated.full_clean()
             try:
                 updated.save(user=self.request.user)
             except TypeError:

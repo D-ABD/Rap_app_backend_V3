@@ -5,7 +5,6 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from ..models.formations import Formation
 from .base import BaseModel
 
 

@@ -12,8 +12,10 @@ from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
 from .custom_user import CustomUser
-from .evenements import Evenement
-from .formations import Formation
+from ..services.historique_service import (
+    PLACEMENT_FIELDS,
+    creer_historique_placement_si_necessaire,
+)
 
 # Pour éviter les imports circulaires, le modèle "Appairage" est référencé par une chaîne de caractères.
 
@@ -175,7 +177,7 @@ class Candidat(BaseModel):
         db_index=True,
     )
     formation = models.ForeignKey(
-        Formation,
+        "Formation",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -183,7 +185,7 @@ class Candidat(BaseModel):
         verbose_name=_("Formation"),
     )
     evenement = models.ForeignKey(
-        Evenement,
+        "Evenement",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
@@ -550,13 +552,30 @@ class Candidat(BaseModel):
 
     def clean(self):
         """
-        Valide l'intégrité métier du candidat (nom/prénom requis). Log certains statuts.
+        Valide l'intégrité métier du candidat et normalise les champs sensibles.
         """
         super().clean()
+        errors = {}
+
+        self.nom = (self.nom or "").strip()
+        self.prenom = (self.prenom or "").strip()
+
+        if self.email:
+            self.email = self.email.strip().lower()
+
+        if self.nir:
+            normalized_nir = re.sub(r"\s+", "", str(self.nir))
+            if not normalized_nir.isdigit() or len(normalized_nir) not in (13, 15):
+                errors["nir"] = _("Le NIR doit contenir 13 ou 15 chiffres.")
+            else:
+                self.nir = normalized_nir
+
         if not self.nom or not self.prenom:
             logger.warning(f"Candidat incomplet : nom ou prénom manquant (id={self.pk})")
         if self.statut == self.StatutCandidat.AUTRE:
             logger.info(f"Candidat #{self.pk} a un statut 'autre'")
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         """
@@ -568,14 +587,7 @@ class Candidat(BaseModel):
         is_new = self.pk is None
         original = None
         if not is_new:
-            champs_placement = [
-                "entreprise_placement_id",
-                "resultat_placement",
-                "date_placement",
-                "responsable_placement_id",
-                "contrat_signe",
-            ]
-            original = self.__class__.objects.filter(pk=self.pk).only(*champs_placement).first()
+            original = self.__class__.objects.filter(pk=self.pk).only(*PLACEMENT_FIELDS).first()
 
         if update_fields is None:
             self.full_clean()
@@ -586,32 +598,7 @@ class Candidat(BaseModel):
             if original:
                 self._log_changes()
 
-            champs_placement = [
-                "entreprise_placement_id",
-                "resultat_placement",
-                "date_placement",
-                "responsable_placement_id",
-                "contrat_signe",
-            ]
-
-            if original:
-                changed = any(getattr(original, f) != getattr(self, f) for f in champs_placement)
-            else:
-
-                def _is_set(v):
-                    return v not in (None, "", False)
-
-                changed = any(_is_set(getattr(self, f)) for f in champs_placement)
-
-            if changed:
-                HistoriquePlacement.objects.create(
-                    candidat=self,
-                    date_placement=self.date_placement or date.today(),
-                    entreprise=self.entreprise_placement,
-                    resultat=self.resultat_placement or ResultatPlacementChoices.EN_ATTENTE,
-                    responsable=self.responsable_placement,
-                    commentaire="Historique créé automatiquement à la modification du placement.",
-                )
+            creer_historique_placement_si_necessaire(self, original=original)
 
     def delete(self, *args, **kwargs):
         """
@@ -712,6 +699,7 @@ class Candidat(BaseModel):
             )
 
         self.compte_utilisateur = utilisateur
+        self.full_clean()
         self.save(update_fields=["compte_utilisateur"])
         return utilisateur
 
