@@ -128,11 +128,13 @@ def test_creer_ou_lier_compte_refuse_si_user_deja_lie_a_autre_candidat():
         role=CustomUser.ROLE_STAFF,
     )
 
-    user = CustomUser.objects.create_user_with_role(
+    user = CustomUser.objects.create_user(
         email="candidat4@example.com",
         username="cand4",
         password=None,
-        role=CustomUser.ROLE_CANDIDAT_USER,
+        first_name="Premier",
+        last_name="Candidat",
+        role=CustomUser.ROLE_TEST,
     )
 
     cand1 = Candidat.objects.create(

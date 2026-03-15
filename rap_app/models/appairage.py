@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q
+from django.forms import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import logging
@@ -116,6 +117,16 @@ class Appairage(BaseModel):
         Représentation compacte : <candidat> → <partenaire> (<statut>).
         """
         return f"{self.candidat} → {self.partenaire} ({self.get_statut_display()})"
+
+    def clean(self):
+        """
+        Valide la cohérence de l'appairage.
+        """
+        super().clean()
+        if self.formation and self.candidat.formation_id != self.formation_id:
+            raise ValidationError(
+                _("L'appairage doit lier le candidat à sa formation d'origine.")
+            )
 
     def get_formation_identite_complete(self):
         """

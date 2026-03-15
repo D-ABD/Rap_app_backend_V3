@@ -233,8 +233,8 @@ class ProspectionSerializer(BaseProspectionSerializer):
         return data
 
     def validate_date_prospection(self, value):
-        """Refuse une date postérieure à now()."""
-        if value > timezone.now():
+        """Validation : la date de prospection ne peut pas être dans le futur."""
+        if value and value > timezone.now():
             raise serializers.ValidationError(_("La date de prospection ne peut pas être dans le futur."))
         return value
 

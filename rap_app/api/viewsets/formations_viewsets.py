@@ -634,6 +634,10 @@ class FormationViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get", "post"], url_path="export-xlsx")
     def export_xlsx(self, request):
         """GET/POST : export Excel ; GET avec_archivees ; POST avec_archivees et ids ; attachment."""
+        import mimetypes
+
+        # Fix openpyxl / mimetypes pour certains environnements où .webp n'est pas enregistré
+        mimetypes.add_type("image/webp", ".webp")
         inclure_archivees = False
         if request.method == "GET":
             inclure_archivees = request.query_params.get("avec_archivees", "false").lower() == "true"

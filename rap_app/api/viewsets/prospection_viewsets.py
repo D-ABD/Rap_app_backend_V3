@@ -873,6 +873,10 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         sous-ensemble identifié par des IDs) avec mise en forme, sans
         réponse JSON.
         """
+        import mimetypes
+
+        # Fix openpyxl / mimetypes pour certains environnements où .webp n'est pas enregistré
+        mimetypes.add_type("image/webp", ".webp")
         user = request.user
 
         # ==========================================================

@@ -109,7 +109,7 @@ python3 manage.py createsuperuser
 # Configuration initiale
 git init
 git add .
-git commit -m "Initial commit"
+git commit -m "## Lot 2 — cohérence rôles / permissions (Terminé. corrigé)"
 git branch -M main
 git remote add origin URL_DU_DEPOT.git
 git push -u origin main

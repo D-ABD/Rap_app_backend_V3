@@ -386,14 +386,9 @@ class FormationDetailSerializer(serializers.Serializer):
         return None
 
     def validate(self, data):
-        """Refuse start_date > end_date."""
-        start = data.get("start_date")
-        end = data.get("end_date")
-        if start and end and start > end:
-            raise serializers.ValidationError({
-                "start_date": _("La date de début doit être antérieure à la date de fin."),
-                "end_date": _("La date de fin doit être postérieure à la date de début."),
-            })
+        """Validation déléguée au modèle pour cohérence."""
+        # La validation start_date < end_date est désormais dans le modèle Formation.clean()
+        # Pas de duplication ici
         return data
 
     def create(self, validated_data):

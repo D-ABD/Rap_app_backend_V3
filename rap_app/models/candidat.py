@@ -608,13 +608,10 @@ class Candidat(BaseModel):
 
     def delete(self, *args, **kwargs):
         """
-        Supprime le candidat et son compte utilisateur associé.
+        Supprime le candidat (sans supprimer le compte utilisateur associé).
         """
         logger.warning(f"Suppression du candidat : {self} (id={self.pk})")
-        user = self.compte_utilisateur
         super().delete(*args, **kwargs)
-        if user:
-            user.delete()
 
     def _log_changes(self):
         """
@@ -666,6 +663,45 @@ class Candidat(BaseModel):
         )
         self.compte_utilisateur = utilisateur
         self.save()
+        return utilisateur
+
+    def creer_ou_lier_compte_utilisateur(self):
+        """
+        Crée un nouveau compte utilisateur ou lie un compte existant basé sur l'email du candidat.
+        """
+        User = get_user_model()
+        if self.compte_utilisateur:
+            raise ValidationError("Ce candidat a déjà un compte utilisateur associé.")
+        if not self.email:
+            raise ValidationError("Ce candidat n’a pas d’adresse email définie.")
+        
+        utilisateur = User.objects.filter(email__iexact=self.email).first()
+        if utilisateur:
+            # Vérifier si l'utilisateur est déjà lié à un autre candidat
+            if hasattr(utilisateur, 'candidat_associe') and utilisateur.candidat_associe:
+                associe = utilisateur.candidat_associe
+                if associe.created_by is None:
+                    # C'est un candidat auto-créé par signal, on peut le délier
+                    associe.compte_utilisateur = None
+                    associe.save()
+                else:
+                    raise ValidationError(
+                        {"compte_utilisateur": ["Un objet Candidat (pk={}) est déjà associé à cet utilisateur.".format(associe.pk)]}
+                    )
+            # Réutiliser l'utilisateur existant
+            pass
+        else:
+            # Créer un nouvel utilisateur
+            utilisateur = User.objects.create_user(
+                email=self.email,
+                password=None,  # Pas de mot de passe pour les comptes candidats
+                first_name=self.prenom,
+                last_name=self.nom,
+                role=CustomUser.ROLE_CANDIDAT_USER,
+            )
+        
+        self.compte_utilisateur = utilisateur
+        self.save(update_fields=['compte_utilisateur'])
         return utilisateur
 
 

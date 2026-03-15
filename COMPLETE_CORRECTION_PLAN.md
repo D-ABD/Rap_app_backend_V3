@@ -692,21 +692,21 @@ P3
 
 # 7. Ordre d’exécution concret recommandé
 
-## Lot 1 — sécurité objet (Déjà corrigé)
+## Lot 1 — sécurité objet (Terminé. Déjà corrigé)
 1. `rap_app/api/viewsets/appairage_viewsets.py`
 2. tests API appairage
 3. `rap_app/api/viewsets/formations_viewsets.py`
 4. tests API formations
 5. audit express de tous les `@action(detail=True)` du backend
 
-## Lot 2 — cohérence rôles / permissions
+## Lot 2 — cohérence rôles / permissions (Terminé. corrigé)
 6. `rap_app/models/custom_user.py`
 7. `rap_app/api/roles.py`
 8. `rap_app/api/permissions.py`
 9. `rap_app/admin/user_admin.py`
 10. tests utilisateurs / rôles / permissions
 
-## Lot 3 — structure métier
+## Lot 3 — structure métier (Terminé. corrigé)
 11. validation formations
 12. validation prospection
 13. validation candidat
