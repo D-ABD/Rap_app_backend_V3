@@ -13,8 +13,11 @@ logger = logging.getLogger("rap_app.customuser")
 
 
 class CustomUserManager(BaseUserManager):
-    """
-    Manager personnalisé pour CustomUser.
+    """Manager applicatif pour la création et le filtrage des ``CustomUser``.
+
+    Ce manager centralise les règles de création d'utilisateur afin de garder
+    une cohérence entre le ``role`` métier et les flags Django
+    (``is_staff`` / ``is_superuser``).
     """
 
     @property
@@ -99,8 +102,13 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractUser):
-    """
-    Utilisateur personnalisé avec gestion des rôles, consentement RGPD et champs additionnels.
+    """Modèle utilisateur étendu pour la plateforme RAP.
+
+    Responsabilités principales :
+    - porter les rôles métier (admin, staff, candidats, etc.) ;
+    - normaliser les données sensibles (email, téléphone, rôle) ;
+    - synchroniser les flags Django techniques avec le rôle métier ;
+    - exposer des helpers d'accès (rôles, centres, export sérialisé).
     """
 
     consent_rgpd = models.BooleanField(default=False)
@@ -197,9 +205,23 @@ class CustomUser(AbstractUser):
             self.email = self.email.lower().strip()
 
     def save(self, *args, _skip_candidate_sync: bool = False, **kwargs):
-        """
-        Sauvegarde avec normalisation des champs, affectation automatique des droits selon le rôle,
-        et mise à jour de la date de consentement RGPD.
+        """Persiste l'utilisateur en appliquant les invariants métier.
+
+        Invariants garantis avant sauvegarde :
+        - normalisation de ``email``, ``role`` et ``phone`` ;
+        - initialisation de ``consent_date`` lors du premier consentement RGPD ;
+        - synchronisation *déterministe* ``role`` -> ``is_staff`` / ``is_superuser``.
+
+        Contrat de synchronisation des flags :
+        - ``superadmin`` => ``is_superuser=True`` et ``is_staff=True`` ;
+        - ``admin`` => ``is_staff=True`` et ``is_superuser=False`` ;
+        - rôles staff métier (``staff``, ``staff_read``, ``prepa_staff``, ``declic_staff``)
+          => ``is_staff=True`` et ``is_superuser=False`` ;
+        - rôles candidats / test => ``is_staff=False`` et ``is_superuser=False``.
+
+        Le paramètre privé ``_skip_candidate_sync`` est propagé temporairement pour
+        permettre aux couches appelantes (ex. admin) de neutraliser une synchro
+        via signaux lorsque nécessaire.
         """
         is_new = self.pk is None
 
@@ -228,7 +250,7 @@ class CustomUser(AbstractUser):
             self.ROLE_DECLIC_STAFF,
         }:
             self.is_superuser = False
-            self.is_staff = False
+            self.is_staff = True
         elif self.role in self.CANDIDATE_ROLES or self.role == self.ROLE_TEST:
             self.is_superuser = False
             self.is_staff = False
@@ -360,12 +382,19 @@ class CustomUser(AbstractUser):
         return None
 
     def has_centre_access(self, centre_id):
-        """
-        Retourne True si l'utilisateur a accès à un centre donné.
+        """Indique si l'utilisateur peut accéder à un centre.
+
+        Règles :
+        - admin/superadmin : accès global ;
+        - rôles staff métier : accès limité à la M2M ``centres`` ;
+        - autres rôles : pas d'accès.
+
+        Cette méthode se base sur ``role`` (source de vérité métier) plutôt que
+        sur le seul flag technique ``is_staff``.
         """
         if self.is_superuser or self.is_admin():
             return True
-        if self.is_staff:
+        if self.role in self.STAFF_ROLES:
             return self.centres.filter(id=centre_id).exists()
         return False
 

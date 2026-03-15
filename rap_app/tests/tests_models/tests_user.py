@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.utils.timezone import now
 
+from rap_app.models.centres import Centre
+
 CustomUser = get_user_model()
 
 
@@ -109,6 +111,54 @@ class CustomUserModelTest(TestCase):
         self.assertTrue(admin.has_module_perms("admin"))
         self.assertFalse(staff.has_module_perms("admin"))
 
+
+    def test_staff_roles_are_marked_as_staff(self):
+        for role in [
+            CustomUser.ROLE_STAFF,
+            CustomUser.ROLE_STAFF_READ,
+            CustomUser.ROLE_PREPA_STAFF,
+            CustomUser.ROLE_DECLIC_STAFF,
+        ]:
+            user = CustomUser.objects.create_user(
+                email=f"{role}@example.com",
+                username=role,
+                password="x",
+                role=role,
+            )
+            self.assertTrue(user.is_staff)
+            self.assertFalse(user.is_superuser)
+
+    def test_has_centre_access_uses_staff_roles(self):
+        centre = Centre.objects.create(nom="Centre Test", code_postal="75001")
+        staff_user = CustomUser.objects.create_user(
+            email="staff-centre@example.com",
+            username="staff-centre",
+            password="x",
+            role=CustomUser.ROLE_STAFF,
+        )
+        staff_user.centres.add(centre)
+
+        self.assertTrue(staff_user.has_centre_access(centre.id))
+        self.assertFalse(staff_user.has_centre_access(999999))
+
+    def test_has_centre_access_for_all_staff_roles(self):
+        centre = Centre.objects.create(nom="Centre Staff Roles", code_postal="69001")
+        for role in [
+            CustomUser.ROLE_STAFF,
+            CustomUser.ROLE_STAFF_READ,
+            CustomUser.ROLE_PREPA_STAFF,
+            CustomUser.ROLE_DECLIC_STAFF,
+        ]:
+            user = CustomUser.objects.create_user(
+                email=f"{role}-centre@example.com",
+                username=f"{role}-centre",
+                password="x",
+                role=role,
+            )
+            user.centres.add(centre)
+            self.assertTrue(user.has_centre_access(centre.id))
+            self.assertFalse(user.has_centre_access(123456789))
+
     def test_get_role_choices_display(self):
         choices = CustomUser.get_role_choices_display()
         self.assertEqual(choices["stagiaire"], "Stagiaire")
@@ -118,4 +168,3 @@ class CustomUserModelTest(TestCase):
         headers = CustomUser.get_csv_headers()
         self.assertIn("email", fields)
         self.assertIn("Email", headers)
-
