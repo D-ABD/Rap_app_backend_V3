@@ -7,6 +7,7 @@ from django.dispatch import receiver
 
 from ..models.appairage import Appairage, AppairageStatut
 from ..models.candidat import Candidat, HistoriquePlacement
+from ..services.placement_services import is_appairage_snapshot_sync_deferred
 
 
 @receiver(post_save, sender=Appairage, dispatch_uid="rap_app.appairage.sync_appairage_to_candidat")
@@ -15,6 +16,9 @@ def sync_appairage_to_candidat(sender, instance: Appairage, created: bool, **kwa
     Synchronise les champs de placement du Candidat lors de la sauvegarde d'un Appairage.
     Met à jour ou retire les données de placement sur le Candidat selon le statut de l'Appairage.
     """
+    if is_appairage_snapshot_sync_deferred() or getattr(instance, "_placement_synced_by_service", False):
+        return
+
     candidat = instance.candidat
 
     date_appairage = instance.date_appairage.date() if instance.date_appairage else None
@@ -95,6 +99,9 @@ def unsync_appairage_from_candidat(sender, instance: Appairage, **kwargs):
     """
     Retire les champs de placement du Candidat si l'Appairage correspondant est supprimé.
     """
+    if is_appairage_snapshot_sync_deferred() or getattr(instance, "_placement_synced_by_service", False):
+        return
+
     candidat = instance.candidat
 
     if candidat.entreprise_placement != instance.partenaire:

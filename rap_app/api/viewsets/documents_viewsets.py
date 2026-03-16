@@ -28,7 +28,8 @@ from ...api.serializers.documents_serializers import (
 )
 from ...models.documents import Document
 from ...models.logs import LogUtilisateur
-from .base import BaseApiViewSet
+from ..roles import is_admin_like
+from .scoped_viewset import ScopedModelViewSet
 
 logger = logging.getLogger("application.api")
 
@@ -53,7 +54,7 @@ class DocumentFilter(django_filters.FilterSet):
 
 
 @extend_schema(tags=["Documents"])
-class DocumentViewSet(BaseApiViewSet):
+class DocumentViewSet(ScopedModelViewSet):
     """
     📎 API REST complète pour la gestion des documents liés aux formations.
 
@@ -89,47 +90,14 @@ class DocumentViewSet(BaseApiViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
+    scope_mode = "centre"
+    centre_lookup_paths = ("formation__centre_id",)
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DocumentFilter
 
     # --------------------- helpers scope/permissions ---------------------
     # (helpers internes, ne sont pas des endpoints API)
-
-    def _is_admin_like(self, user) -> bool:
-        """
-        Teste si l'utilisateur est superadmin OU admin selon la logique métier.
-        """
-        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
-
-    def _staff_centre_ids(self, user):
-        """
-        Retourne la liste des id des centres accessibles à l'utilisateur staff.
-        - None : si admin/superadmin (accès global)
-        - [] : si staff mais M2M vides ou non staff
-        Nécessite M2M user.centres (modèle non visible ici).
-        """
-        if self._is_admin_like(user):
-            return None
-        if is_staff_or_staffread(user):
-            # nécessite le M2M user.centres (déjà ajouté)
-            return list(user.centres.values_list("id", flat=True))
-        return []
-
-    def _scope_qs_to_user_centres(self, qs):
-        """
-        Restreint le queryset aux seuls documents accessibles à l'utilisateur via ses centres.
-        - Admin/Superadmin : aucune restriction
-        - Staff : que les documents des formations de ses centres
-        - Sinon : queryset vide
-        """
-        user = self.request.user
-        centre_ids = self._staff_centre_ids(user)
-        if centre_ids is None:
-            return qs  # admin/superadmin
-        if centre_ids:
-            return qs.filter(formation__centre_id__in=centre_ids)
-        return qs.none()
 
     def _assert_staff_can_use_formation(self, formation):
         """
@@ -140,7 +108,7 @@ class DocumentViewSet(BaseApiViewSet):
         if not formation:
             return
         user = self.request.user
-        if self._is_admin_like(user):
+        if is_admin_like(user):
             return
         if is_staff_or_staffread(user):
             allowed = set(user.centres.values_list("id", flat=True))
@@ -149,7 +117,7 @@ class DocumentViewSet(BaseApiViewSet):
 
     # ------------------------------ queryset ------------------------------
 
-    def get_queryset(self):
+    def get_base_queryset(self):
         """
         Retourne le queryset des documents exploitable par l'utilisateur courant.
 
@@ -166,10 +134,9 @@ class DocumentViewSet(BaseApiViewSet):
 
         Usages : toutes actions list/retrieve personnalisées ou génériques.
         """
-        base = Document.objects.select_related(
+        return Document.objects.select_related(
             "formation", "formation__centre", "formation__statut", "formation__type_offre", "created_by"
         ).all()
-        return self._scope_qs_to_user_centres(base)
 
     # ------------------------------ list/retrieve -------------------------
 

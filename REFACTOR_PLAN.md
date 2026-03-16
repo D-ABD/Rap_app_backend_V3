@@ -83,6 +83,33 @@ Routes API
 
 ## 2. Standardisation API (P0)
 
+### État d’avancement
+
+Statut : `en cours`
+
+Implémenté :
+- `ApiResponseMixin` ajouté dans [`rap_app/api/mixins.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/mixins.py)
+- `BaseApiViewSet` créé dans [`rap_app/api/viewsets/base.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/base.py)
+- `exception_handler` global créé dans [`rap_app/api/exception_handler.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/exception_handler.py)
+- branchement DRF effectué dans [`rap_app_project/settings.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app_project/settings.py)
+- endpoint pilote `formations` migré
+- endpoint pilote `documents` migré
+- endpoint pilote `users` migré
+- enveloppe HTTP retirée de `FormationDetailSerializer`
+- premiers tests de contrat API ajoutés
+
+Validé localement :
+- compilation Python ciblée OK sur les fichiers refactorés
+
+Non validé automatiquement dans cette session :
+- exécution `pytest` impossible dans l’environnement courant
+- blocage constaté : `python3 -m pytest` échoue car le module `pytest` n’est pas installé
+
+Reste à clôturer pour terminer réellement la Phase 1 :
+- exécuter les tests ciblés dans un environnement où `pytest` est disponible
+- corriger les éventuelles divergences de contrat sur les endpoints pilotes si des tests existants exposent encore des écarts
+- décider si le `DELETE` de `documents` doit rester en `200` avec payload ou revenir à `204` sans body dans la convention finale
+
 ### Problème à corriger
 
 Le contrat JSON varie selon les endpoints :
@@ -170,6 +197,14 @@ class BaseApiViewSet(ApiResponseMixin, ModelViewSet):
 - les viewsets construisent les réponses HTTP
 - les erreurs DRF doivent être harmonisées via un `exception_handler` global
 
+### Implémentation retenue
+
+Décisions effectivement prises pendant la Phase 1 :
+- typage explicite des méthodes du mixin de réponse
+- `ValidationError` DRF normalisée dans une enveloppe globale
+- conservation du format `errors` sous forme de mapping champ -> liste d’erreurs quand la structure source le permet
+- déplacement strict de l’enveloppe HTTP hors de `FormationDetailSerializer`, sans suppression des champs métier
+
 ### Exception handler recommandé
 
 Objectif :
@@ -192,6 +227,44 @@ Format cible :
 ---
 
 ## 3. Sécurité & Scoping (P1)
+
+### État d’avancement
+
+Statut : `en cours`
+
+Implémenté :
+- `ScopedModelViewSet` créé dans [`rap_app/api/viewsets/scoped_viewset.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/scoped_viewset.py)
+- stratégie `deny by default` appliquée :
+  - utilisateur non authentifié => `qs.none()`
+  - mode `centre` sans centre visible => `qs.none()`
+  - mode inconnu ou mal configuré => `qs.none()`
+- migration du scoping centre sur :
+  - [`rap_app/api/viewsets/formations_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/formations_viewsets.py)
+  - [`rap_app/api/viewsets/documents_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/documents_viewsets.py)
+  - [`rap_app/api/viewsets/candidat_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/candidat_viewsets.py)
+  - [`rap_app/api/viewsets/appairage_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/appairage_viewsets.py)
+- test isolé ajouté pour vérifier la construction du `Q` en mode `centre` :
+  - [`rap_app/tests/tests_api/test_scoped_viewset.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_api/test_scoped_viewset.py)
+- test de non-régression ajouté sur le périmètre documents :
+  - [`rap_app/tests/tests_viewsets/tests_documents_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_viewsets/tests_documents_viewsets.py)
+
+Décision prise :
+- `ProspectionViewSet` n’a pas été basculé intégralement vers la classe parente à ce stade
+- le filtre spécifique fondé sur `Exists(ProspectionComment...)` reste pour l’instant dans le viewset
+- objectif : ne pas réduire la visibilité métier réelle ni introduire de fuite silencieuse
+
+Validé localement :
+- compilation Python ciblée OK sur les fichiers migrés
+
+Non validé automatiquement dans cette session :
+- `python3 manage.py test ...` échoue car `django` n’est pas installé dans l’interpréteur disponible
+
+Reste à clôturer pour terminer réellement la Phase 2 :
+- exécuter les tests de sécurité dans un environnement Django opérationnel
+- migrer prudemment `ProspectionViewSet` avec une approche hybride :
+  - `ScopedModelViewSet` pour le scope réutilisable
+  - filtre `Exists(...)` conservé localement
+- traiter ensuite `CVTheque`, `partenaires` et les endpoints stats qui ont encore des logiques de visibilité spécifiques
 
 ### Problème à corriger
 
@@ -260,7 +333,23 @@ class ScopedModelViewSet(BaseApiViewSet):
         if self.scope_mode == "owner":
             return self.apply_owner_scope(qs)
         if self.scope_mode == "centre_or_owner":
-            return self.apply_owner_scope(self.apply_centre_scope(qs) | qs.none())
+            centre_q = Q()
+            owner_q = Q()
+
+            if self.centre_lookup_paths:
+                centre_ids = self.get_user_centre_ids()
+                if centre_ids is None:
+                    return qs
+                for path in self.centre_lookup_paths:
+                    centre_q |= Q(**{f"{path}__in": centre_ids})
+
+            for path in self.owner_lookup_paths:
+                owner_q |= Q(**{path: user})
+
+            combined_q = centre_q | owner_q
+            if not combined_q:
+                return qs.none()
+            return qs.filter(combined_q).distinct()
 
         return qs.none()
 
@@ -328,6 +417,68 @@ class ScopedModelViewSet(BaseApiViewSet):
 ---
 
 ## 4. Encapsulation métier (P1)
+
+### État d’avancement
+
+Statut : `en cours`
+
+Implémenté :
+- service de synchronisation placement appairage -> candidat :
+  - [`rap_app/services/placement_services.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/services/placement_services.py)
+- service de gestion des comptes candidats :
+  - [`rap_app/services/candidate_account_service.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/services/candidate_account_service.py)
+- service de résolution owner/formation/centre des prospections :
+  - [`rap_app/services/prospection_ownership_service.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/services/prospection_ownership_service.py)
+
+Branches API déjà migrées :
+- [`rap_app/api/viewsets/appairage_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/appairage_viewsets.py)
+  - appel explicite à `AppairagePlacementService.sync_after_save()`
+- [`rap_app/api/viewsets/candidat_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/candidat_viewsets.py)
+  - `creer_compte` branché sur `CandidateAccountService.promote_to_stagiaire()`
+  - `valider_demande_compte` branché sur `CandidateAccountService.provision_candidate_account()`
+- [`rap_app/api/viewsets/prospection_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/prospection_viewsets.py)
+  - `perform_create` et `perform_update` branchés sur `ProspectionOwnershipService.resolve_and_sync_ownership()`
+
+Garde-fous temporaires en place :
+- différé du sync placement implicite :
+  - [`rap_app/signals/appairage_signals.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/signals/appairage_signals.py)
+  - [`rap_app/models/appairage.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/models/appairage.py)
+- différé du sync user <-> candidat :
+  - [`rap_app/signals/candidats_signals.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/signals/candidats_signals.py)
+- différé du sync owner -> formation prospection :
+  - [`rap_app/signals/candidats_signals.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/signals/candidats_signals.py)
+
+Comportements désormais sécurisés côté API :
+- la synchronisation du placement candidat ne dépend plus uniquement du signal
+- la liaison `CustomUser <-> Candidat` ne peut plus écraser silencieusement une relation existante
+- une collision d’email avec un autre candidat réel est refusée explicitement
+- un candidat qui crée sa propre prospection n’a plus besoin d’envoyer `formation` ni `centre_id`
+- `owner`, `formation` et `centre_id` sont résolus côté backend via service
+
+Tests ajoutés :
+- [`rap_app/tests/tests_services/test_placement_services.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_services/test_placement_services.py)
+- [`rap_app/tests/tests_services/test_candidate_account_service.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_services/test_candidate_account_service.py)
+- [`rap_app/tests/tests_services/test_prospection_ownership_service.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_services/test_prospection_ownership_service.py)
+- extension des tests viewsets :
+  - [`rap_app/tests/tests_viewsets/tests_candidat_accounts_viewset.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_viewsets/tests_candidat_accounts_viewset.py)
+  - [`rap_app/tests/tests_viewsets/tests_prospection_viewsets.py`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/tests/tests_viewsets/tests_prospection_viewsets.py)
+
+Validé localement :
+- compilation Python ciblée OK sur les services, signaux, modèles, viewsets et tests touchés
+
+Non validé automatiquement dans cette session :
+- l’exécution `python3 manage.py test ...` reste bloquée car `django` n’est pas installé dans l’interpréteur disponible
+
+Reste à clôturer pour terminer réellement la Phase 3 :
+- exécuter les tests Django dans un environnement outillé
+- confirmer qu’aucune duplication fonctionnelle résiduelle ne subsiste entre :
+  - services
+  - serializers prospection
+  - méthodes modèle héritées
+  - signaux de sécurité temporaires
+- décider si certaines logiques encore présentes dans les serializers/modèles doivent être supprimées maintenant que les services sont en place
+- lancer la prochaine extraction métier :
+  - `FormationMetricsService`
 
 ### Objectif
 
@@ -475,6 +626,12 @@ Pourquoi commencer par là :
 - le frontend dépend immédiatement de cette stabilité
 - cela ne modifie pas encore la logique métier profonde
 
+État :
+- infrastructure commune créée
+- 3 endpoints pilotes refactorés
+- tests ajoutés/ajustés
+- validation `pytest` encore à exécuter dans un environnement outillé
+
 ### Phase 2 — Factoriser le scoping sécurité
 
 Objectif :
@@ -499,6 +656,12 @@ Pourquoi en deuxième :
 - le scoping est critique pour la sécurité
 - mais moins dangereux à déplacer une fois le contrat API stabilisé
 
+État :
+- `ScopedModelViewSet` créé
+- scoping centre déjà migré sur `documents`, `formations`, `candidats`, `appairages`
+- `prospections` volontairement laissé en mode hybride en attente
+- validation runtime encore bloquée par l’absence de Django dans l’environnement courant
+
 ### Phase 3 — Introduire les services sans supprimer les signaux
 
 Objectif :
@@ -512,6 +675,13 @@ Tâches :
 
 Pourquoi cette phase tampon :
 - elle permet d’introduire les services sans casser immédiatement la prod
+
+État :
+- `AppairagePlacementService` implémenté et branché sur l’API
+- `CandidateAccountService` implémenté et branché sur les actions comptes candidats
+- `ProspectionOwnershipService` implémenté et branché sur create/update prospections
+- garde-fous `defer_...` ajoutés pour laisser les signaux comme filet de sécurité hors API
+- validation runtime encore bloquée par l’absence de Django dans l’environnement courant
 
 ### Phase 4 — Désactiver progressivement les signaux critiques
 

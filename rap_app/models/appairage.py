@@ -11,6 +11,7 @@ from .base import BaseModel
 from .candidat import Candidat, ResultatPlacementChoices
 from .formations import Formation
 from .partenaires import Partenaire
+from ..services.placement_services import is_appairage_snapshot_sync_deferred
 
 logger = logging.getLogger("application.appairages")
 
@@ -335,9 +336,16 @@ class Appairage(BaseModel):
             else:
                 self._log_changes(original)
 
-            self._sync_candidat_snapshot(self.candidat)
+            if not is_appairage_snapshot_sync_deferred() and not getattr(self, "_skip_snapshot_sync", False):
+                self._sync_candidat_snapshot(self.candidat)
 
-            if not is_new and original_candidat_id and original_candidat_id != self.candidat_id:
+            if (
+                not is_new
+                and original_candidat_id
+                and original_candidat_id != self.candidat_id
+                and not is_appairage_snapshot_sync_deferred()
+                and not getattr(self, "_skip_snapshot_sync", False)
+            ):
                 try:
                     old_cand = Candidat.objects.get(pk=original_candidat_id)
                     self._sync_candidat_snapshot(old_cand)
@@ -352,7 +360,8 @@ class Appairage(BaseModel):
         with transaction.atomic():
             logger.warning("Suppression appairage : %s", self)
             super().delete(*args, **kwargs)
-            self._sync_candidat_snapshot(cand)
+            if not is_appairage_snapshot_sync_deferred() and not getattr(self, "_skip_snapshot_sync", False):
+                self._sync_candidat_snapshot(cand)
 
     def _log_changes(self, original):
         """

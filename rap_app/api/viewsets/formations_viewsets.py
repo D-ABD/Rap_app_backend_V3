@@ -38,7 +38,7 @@ from ...api.serializers.formations_serializers import (
 from ...models.formations import Formation
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
-from .base import BaseApiViewSet
+from .scoped_viewset import ScopedModelViewSet
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 
 logger = logging.getLogger("application.api")
@@ -68,12 +68,14 @@ class FormationSearchFilter(filters.SearchFilter):
 
 
 @extend_schema(tags=["Formations"])
-class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
+class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     """ViewSet pour Formation. IsStaffOrAbove ; UserVisibilityScopeMixin ; _restrict_to_user_centres. Filtres : centre, type_offre, statut, created_by, start_date ; search (texte/search) ; ordering. get_serializer_class : list=>FormationListSerializer, retrieve/update/partial=>FormationDetailSerializer, create=>FormationCreateSerializer. Actions : filtres, historique, partenaires, commentaires, documents, prospections, ajouter_commentaire, ajouter_evenement, ajouter_document, dupliquer, stats_par_mois, liste_simple, archiver, desarchiver, archivees, export_xlsx."""
 
     queryset = Formation.objects.all()
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
+    scope_mode = "centre"
+    centre_lookup_paths = ("centre_id",)
 
     filter_backends = [DjangoFilterBackend, FormationSearchFilter, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["centre", "type_offre", "statut", "created_by", "start_date"]
@@ -177,33 +179,10 @@ class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
             message="Formation mise à jour avec succès.",
         )
 
-    def _restrict_to_user_centres(self, qs):
-        """Admin : tout ; staff/staffread : centre_id in staff_centre_ids ; sinon mixin."""
-        # Définition indispensable de 'u' à partir de la requête
-        u = self.request.user
-
-        # Sécurité : vérification si l'utilisateur est authentifié
-        if not u.is_authenticated:
-            return qs.none()
-
-        if is_admin_like(u):
-            return qs
-
-        if is_staff_or_staffread(u):
-            centres = staff_centre_ids(u)
-            # Utilisation de print ou d'un logger propre
-            logger.debug("Utilisateur %s (%s) → centres visibles: %s", u.username, u.role, centres)
-
-            if not centres:
-                return qs.none()
-            return qs.filter(centre_id__in=centres)
-
-        return qs
-
     def _build_base_queryset(self):
         """Queryset de base : _restrict_to_user_centres + filtres activite, dans, annee, avec_archivees."""
         qs = Formation.objects.all_including_archived()
-        qs = self._restrict_to_user_centres(qs)
+        qs = self.scope_queryset(qs)
         params = self.request.query_params
         activite = params.get("activite")
         dans = params.get("dans")
@@ -259,7 +238,7 @@ class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
             .select_related("centre", "type_offre", "statut")
             .prefetch_related("commentaires", "documents", "evenements", "partenaires", "prospections")
         )
-        qs = self._restrict_to_user_centres(qs)
+        qs = self.scope_queryset(qs)
         return get_object_or_404(qs, pk=pk)
 
     @extend_schema(
@@ -584,7 +563,7 @@ class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
     @action(detail=False, methods=["get"], url_path="archivees")
     def archivees(self, request):
         """GET : liste des formations archivées (scope utilisateur)."""
-        qs = self._restrict_to_user_centres(Formation.objects.filter(activite="archivee"))
+        qs = self.scope_queryset(Formation.objects.filter(activite="archivee"))
         serializer = self.get_serializer(qs, many=True)
         return Response({"success": True, "message": "Liste des formations archivées", "data": serializer.data})
 
@@ -598,7 +577,7 @@ class FormationViewSet(UserVisibilityScopeMixin, BaseApiViewSet):
             inclure_archivees = bool(request.data.get("avec_archivees"))
 
         if inclure_archivees:
-            qs = self._restrict_to_user_centres(Formation.objects.all_including_archived()).select_related(
+            qs = self.scope_queryset(Formation.objects.all_including_archived()).select_related(
                 "centre", "type_offre", "statut"
             )
             logger.info(f"[EXPORT XLSX] {request.user} a demandé l’export avec formations archivées.")

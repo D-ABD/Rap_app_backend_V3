@@ -45,6 +45,10 @@ from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
 from ...models.prospection import Prospection, ProspectionChoices
 from ...models.prospection_comments import ProspectionComment
+from ...services.prospection_ownership_service import (
+    ProspectionOwnershipService,
+    defer_prospection_owner_sync,
+)
 from ...utils.filters import ProspectionFilterSet
 from ..permissions import CanAccessProspectionComment, IsOwnerOrStaffOrAbove
 from ..serializers.prospection_serializers import (
@@ -539,38 +543,35 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
         # 🧩 Cas 1 : Candidat ou stagiaire → owner forcé à lui-même
         if hasattr(user, "is_candidat_or_stagiaire") and user.is_candidat_or_stagiaire():
-            instance = serializer.save(
-                created_by=user,
-                owner=user,
-                formation=get_candidate_formation(user),
+            resolved = ProspectionOwnershipService.resolve_and_sync_ownership(
+                actor=user,
+                validated_data=serializer.validated_data,
             )
+            with defer_prospection_owner_sync():
+                instance = serializer.save(
+                    created_by=user,
+                    owner=resolved["owner"],
+                    formation=resolved["formation"],
+                    centre_id=resolved["centre_id"],
+                )
         # 🧩 Cas 2 : Staff / Admin → owner par défaut = user, mais modifiable
         else:
-            owner = serializer.validated_data.get("owner") or user
-            owner_form = get_owner_formation(owner)
-            formation_payload = serializer.validated_data.get("formation")
-            partenaire = serializer.validated_data.get("partenaire")
-
-            # Choisit la formation en priorité liée au owner, sinon celle du payload
-            chosen_formation = owner_form or formation_payload
+            resolved = ProspectionOwnershipService.resolve_and_sync_ownership(
+                actor=user,
+                validated_data=serializer.validated_data,
+            )
 
             # 🔒 Contrôle périmètre staff (si non admin)
-            self._ensure_staff_can_use_formation(user, chosen_formation)
-
-            # Résolution du centre
-            centre_id = None
-            if chosen_formation:
-                centre_id = chosen_formation.centre_id
-            elif partenaire:
-                centre_id = getattr(partenaire, "default_centre_id", None)
+            self._ensure_staff_can_use_formation(user, resolved["formation"])
 
             # ✅ Enregistrement final
-            instance = serializer.save(
-                created_by=user,
-                owner=owner,
-                formation=chosen_formation,
-                centre_id=centre_id,
-            )
+            with defer_prospection_owner_sync():
+                instance = serializer.save(
+                    created_by=user,
+                    owner=resolved["owner"],
+                    formation=resolved["formation"],
+                    centre_id=resolved["centre_id"],
+                )
 
         LogUtilisateur.log_action(
             instance, LogUtilisateur.ACTION_CREATE, user, f"Création d’une prospection (owner={instance.owner or '—'})"
@@ -596,44 +597,30 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
             data_owner = instance.owner
             data_formation = instance.formation
+            centre_id = instance.centre_id
 
         # 🧩 Cas 2 — staff/admin
         else:
-            new_owner = serializer.validated_data.get("owner", instance.owner)
-            owner_changed = new_owner is not None and new_owner.pk != instance.owner_id
-
-            # Si on change d’owner → la formation suit celle du candidat (s’il en a une)
-            if owner_changed:
-                owner_form = get_owner_formation(new_owner)
-                if owner_form:
-                    data_formation = owner_form
-                else:
-                    data_formation = serializer.validated_data.get("formation", instance.formation)
-            else:
-                # Si pas de changement d’owner → on peut modifier librement la formation
-                data_formation = serializer.validated_data.get("formation", instance.formation)
+            resolved = ProspectionOwnershipService.resolve_and_sync_ownership(
+                actor=user,
+                validated_data=serializer.validated_data,
+                instance=instance,
+            )
+            data_owner = resolved["owner"]
+            data_formation = resolved["formation"]
 
             # Vérification périmètre formation (staff non admin)
             self._ensure_staff_can_use_formation(user, data_formation)
-
-            data_owner = new_owner
-
-        # 🔁 recalcul du centre en fonction de la formation ou du partenaire
-        partenaire = serializer.validated_data.get("partenaire", instance.partenaire)
-        if data_formation:
-            centre_id = data_formation.centre_id
-        elif partenaire:
-            centre_id = getattr(partenaire, "default_centre_id", None) or instance.centre_id
-        else:
-            centre_id = instance.centre_id
+            centre_id = resolved["centre_id"]
 
         # 💾 Sauvegarde finale
-        instance = serializer.save(
-            updated_by=user,
-            owner=data_owner,
-            formation=data_formation,
-            centre_id=centre_id,
-        )
+        with defer_prospection_owner_sync():
+            instance = serializer.save(
+                updated_by=user,
+                owner=data_owner,
+                formation=data_formation,
+                centre_id=centre_id,
+            )
 
         LogUtilisateur.log_action(
             instance,

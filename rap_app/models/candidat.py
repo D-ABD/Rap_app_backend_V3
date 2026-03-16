@@ -598,7 +598,8 @@ class Candidat(BaseModel):
             if original:
                 self._log_changes()
 
-            creer_historique_placement_si_necessaire(self, original=original)
+            if not getattr(self, "_skip_placement_history", False):
+                creer_historique_placement_si_necessaire(self, original=original)
 
     def delete(self, *args, **kwargs):
         """

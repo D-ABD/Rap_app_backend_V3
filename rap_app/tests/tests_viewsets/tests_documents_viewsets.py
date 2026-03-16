@@ -90,3 +90,35 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response["Content-Type"], "text/csv")
+
+    def test_staff_sees_only_documents_in_its_centres(self):
+        staff = UserFactory(role=CustomUser.ROLE_STAFF)
+        staff.centres.add(self.centre)
+
+        other_centre = Centre.objects.create(nom="OtherCentre", created_by=self.user)
+        other_formation = Formation.objects.create(
+            nom="FormationOther",
+            centre=other_centre,
+            type_offre=self.type_offre,
+            statut=self.statut,
+            created_by=self.user,
+        )
+        other_file = SimpleUploadedFile("other_doc.pdf", b"other_content", content_type="application/pdf")
+        hidden_document = Document.objects.create(
+            formation=other_formation,
+            nom_fichier="other_doc.pdf",
+            fichier=other_file,
+            type_document=Document.PDF,
+            created_by=self.user,
+        )
+
+        self.client.force_authenticate(user=staff)
+
+        response = self.client.get(reverse("document-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+
+        self.assertIn(self.document.id, returned_ids)
+        self.assertNotIn(hidden_document.id, returned_ids)

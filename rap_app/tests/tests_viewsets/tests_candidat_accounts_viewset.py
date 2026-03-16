@@ -188,6 +188,59 @@ def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
 
 
 @pytest.mark.django_db
+def test_valider_demande_compte_refuse_collision_email_avec_autre_candidat_reel():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet 6B", code_postal="75118")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet 6B",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_viewset6b@example.com",
+        username="staff_viewset6b",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    existing_user = CustomUser.objects.create_user_with_role(
+        email="collision-viewset@example.com",
+        username="collision_viewset",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    existing_candidate = existing_user.candidat_associe
+    existing_candidate.nom = "Existant"
+    existing_candidate.prenom = "Candidat"
+    existing_candidate.email = "collision-viewset@example.com"
+    existing_candidate.formation = formation
+    existing_candidate.created_by = staff
+    existing_candidate.updated_by = staff
+    existing_candidate.save()
+
+    cand = Candidat.objects.create(
+        nom="Nouveau",
+        prenom="Candidat",
+        email="collision-viewset@example.com",
+        formation=formation,
+        demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    url_valider = reverse("candidat-valider-demande-compte", args=[cand.id])
+    resp = client.post(url_valider)
+
+    assert resp.status_code == 400
+    cand.refresh_from_db()
+    assert cand.compte_utilisateur is None
+    assert cand.demande_compte_statut == Candidat.DemandeCompteStatut.EN_ATTENTE
+
+
+@pytest.mark.django_db
 def test_staff_cannot_access_candidat_outside_its_centre():
     """Un staff ne doit pas pouvoir voir un candidat dont la formation est dans un autre centre."""
     client = APIClient()

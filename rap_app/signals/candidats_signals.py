@@ -9,6 +9,8 @@ from django.utils.crypto import get_random_string
 from ..models.candidat import Candidat
 from ..models.custom_user import CustomUser
 from ..models.prospection import Prospection
+from ..services.candidate_account_service import is_candidate_user_sync_deferred
+from ..services.prospection_ownership_service import is_prospection_owner_sync_deferred
 from ..utils.signals import signal_processing
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,10 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
 
     with signal_processing(instance) as can_run:
         if not can_run:
+            return
+
+        if is_candidate_user_sync_deferred():
+            logger.debug("⏭️ Sync candidat différée par le service pour user #%s", instance.pk)
             return
 
         if getattr(instance, "_skip_candidate_sync", False):
@@ -153,6 +159,9 @@ def sync_formation_from_owner(sender, instance: Prospection, **kwargs):
     """
     Copie l'identifiant de formation du candidat associé à l'owner vers la prospection, selon le contexte.
     """
+    if is_prospection_owner_sync_deferred():
+        return
+
     owner = getattr(instance, "owner", None)
     if not owner:
         return

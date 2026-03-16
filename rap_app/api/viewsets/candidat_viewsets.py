@@ -17,7 +17,7 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from rest_framework import filters, viewsets
+from rest_framework import filters
 from rest_framework.decorators import action
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -38,10 +38,12 @@ from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.prospection import Prospection
+from ...services.candidate_account_service import CandidateAccountService
 from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from .scoped_viewset import ScopedModelViewSet
 from ..serializers.candidat_serializers import (
     CandidatCreateUpdateSerializer,
     CandidatListSerializer,
@@ -105,13 +107,15 @@ def _build_candidat_meta(user=None) -> dict:
     }
 
 
-class CandidatViewSet(viewsets.ModelViewSet):
+class CandidatViewSet(ScopedModelViewSet):
     """
     ViewSet pour les candidats. IsStaffOrAbove ; scope par centre (_scope_qs_to_user_centres, _assert_staff_can_use_formation). get_serializer_class : list + lite=1 => CandidatLiteSerializer, list => CandidatListSerializer, create/update/partial => CandidatCreateUpdateSerializer, sinon CandidatSerializer. Actions : meta (GET), creer-compte, valider-stagiaire, valider-demande-compte, refuser-demande-compte (POST), export-xlsx (GET).
     """
 
     permission_classes = [IsStaffOrAbove, CanAccessCandidatObject]
     pagination_class = RapAppPagination
+    scope_mode = "centre"
+    centre_lookup_paths = ("formation__centre_id",)
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CandidatFilter
@@ -184,17 +188,6 @@ class CandidatViewSet(viewsets.ModelViewSet):
         except Exception:
             logger.exception("Erreur pendant le logging des filtres.")
 
-    def _scope_qs_to_user_centres(self, qs):
-        """Admin : tout ; staff : candidats dont formation.centre_id in user.centres ; sinon none()."""
-        user = self.request.user
-        if is_admin_like(user):
-            return qs
-
-        centre_ids = staff_centre_ids(user) or []
-        if centre_ids:
-            return qs.filter(formation__centre_id__in=centre_ids)
-        return qs.none()
-
     def _assert_staff_can_use_formation(self, formation):
         """Lève PermissionDenied si staff et formation.centre_id hors de user.centres."""
         if not formation:
@@ -207,7 +200,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
 
-    def base_queryset(self):
+    def get_base_queryset(self):
         """Queryset de base : select_related, prefetch_related, annotations nb_appairages_calc, nb_prospections_calc, flags ateliers."""
         qs = Candidat.objects.select_related(
             "formation",
@@ -258,10 +251,6 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
         qs = atelier_tre.AtelierTRE.annotate_candidats_with_atelier_flags(qs)
         return qs
-
-    def get_queryset(self):
-        """Retourne base_queryset() filtré par _scope_qs_to_user_centres."""
-        return self._scope_qs_to_user_centres(self.base_queryset())
 
     def list(self, request, *args, **kwargs):
         """Liste paginée avec validation qp (CandidatQueryParamsSerializer), log des filtres, puis super().list()."""
@@ -348,10 +337,10 @@ class CandidatViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="creer-compte")
     def creer_compte(self, request, pk=None):
-        """POST : appelle candidat.creer_ou_lier_compte_utilisateur() ; 400 si ValidationError."""
+        """POST : provisionne/lie un compte puis promeut le candidat comme stagiaire."""
         candidat = self.get_object()
         try:
-            user = candidat.valider_comme_stagiaire()
+            user = CandidateAccountService.promote_to_stagiaire(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
 
@@ -375,7 +364,7 @@ class CandidatViewSet(viewsets.ModelViewSet):
             raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
 
         try:
-            user = candidat.creer_ou_lier_compte_utilisateur()
+            user = CandidateAccountService.provision_candidate_account(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
 

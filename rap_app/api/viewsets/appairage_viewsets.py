@@ -14,16 +14,18 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from ...models.appairage import Appairage, AppairageActivite, AppairageStatut
 from ...models.commentaires_appairage import CommentaireAppairage
+from ...services.placement_services import AppairagePlacementService, defer_appairage_snapshot_sync
 from ...utils.filters import AppairageFilterSet
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove, is_staff_or_staffread
+from ..roles import is_admin_like
 from ..serializers.appairage_serializers import (
     AppairageCreateUpdateSerializer,
     AppairageListSerializer,
@@ -31,9 +33,10 @@ from ..serializers.appairage_serializers import (
     AppairageSerializer,
     CommentaireAppairageSerializer,
 )
+from .scoped_viewset import ScopedModelViewSet
 
 
-class AppairageViewSet(viewsets.ModelViewSet):
+class AppairageViewSet(ScopedModelViewSet):
     """
     ViewSet pour les appairages. Permission IsStaffOrAbove. get_queryset : _scope_qs_to_user_centres, annotation last_commentaire, filtres annee, date_min, date_max, activite, avec_archivees. get_serializer_class : list=AppairageListSerializer, create/update/partial=AppairageCreateUpdateSerializer, sinon AppairageSerializer. perform_create/perform_update : refus candidats/stagiaires, _assert_staff_can_use_formation, refus si doublon (candidat, partenaire, formation). Actions : meta (GET), commentaires (GET/POST), archiver, desarchiver (POST), export_xlsx (GET/POST).
     """
@@ -60,6 +63,8 @@ class AppairageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
     serializer_class = AppairageSerializer
+    scope_mode = "centre"
+    centre_lookup_paths = ("formation__centre_id", "candidat__formation__centre_id")
 
     filterset_class = AppairageFilterSet
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -90,41 +95,12 @@ class AppairageViewSet(viewsets.ModelViewSet):
         "created_at",
     ]
 
-    def _is_admin_like(self, user) -> bool:
-        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
-
-    def _staff_centre_ids(self, user):
-        # Renvoie [id centre1, id centre2 ...] pour staff, None pour admin, vide sinon
-        if self._is_admin_like(user):
-            return None
-        if is_staff_or_staffread(user):
-            return list(user.centres.values_list("id", flat=True))
-        return []
-
-    def _scope_qs_to_user_centres(self, qs):
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if hasattr(user, "is_candidat_or_stagiaire") and user.is_candidat_or_stagiaire():
-            return qs.none()
-
-        centre_ids = self._staff_centre_ids(user)
-        if centre_ids is None:
-            return qs
-
-        if centre_ids:
-            return qs.filter(
-                Q(formation__centre_id__in=centre_ids) | Q(candidat__formation__centre_id__in=centre_ids)
-            ).distinct()
-
-        return qs.none()
-
     def _assert_staff_can_use_formation(self, formation):
         # Refuse l’utilisation d’une formation d’un centre non autorisé lors d'une écriture
         if not formation:
             return
         user = self.request.user
-        if self._is_admin_like(user):
+        if is_admin_like(user):
             return
         if is_staff_or_staffread(user):
             allowed = set(user.centres.values_list("id", flat=True))
@@ -199,13 +175,20 @@ class AppairageViewSet(viewsets.ModelViewSet):
                 {"detail": "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."}
             )
 
-        instance = serializer.save(created_by=user, formation=formation or serializer.validated_data.get("formation"))
-        if hasattr(instance, "set_user"):
-            instance.set_user(user)
-        try:
-            instance.save(user=user)
-        except TypeError:
-            instance.save()
+        with defer_appairage_snapshot_sync():
+            instance = serializer.save(
+                created_by=user,
+                updated_by=user,
+                formation=formation or serializer.validated_data.get("formation"),
+            )
+            if hasattr(instance, "set_user"):
+                instance.set_user(user)
+            try:
+                instance.save(user=user)
+            except TypeError:
+                instance.save()
+
+        AppairagePlacementService.sync_after_save(instance, actor=user)
 
     def perform_update(self, serializer):
         """
@@ -214,6 +197,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         instance = serializer.instance
+        previous_candidat = instance.candidat
         if hasattr(user, "is_candidat_or_stagiaire") and user.is_candidat_or_stagiaire():
             raise PermissionDenied("Les candidats/stagiaires ne peuvent pas modifier un appairage.")
 
@@ -221,13 +205,16 @@ class AppairageViewSet(viewsets.ModelViewSet):
         if data_formation:
             self._assert_staff_can_use_formation(data_formation)
 
-        instance = serializer.save(formation=data_formation)
-        if hasattr(instance, "set_user"):
-            instance.set_user(user)
-        try:
-            instance.save(user=user)
-        except TypeError:
-            instance.save()
+        with defer_appairage_snapshot_sync():
+            instance = serializer.save(formation=data_formation, updated_by=user)
+            if hasattr(instance, "set_user"):
+                instance.set_user(user)
+            try:
+                instance.save(user=user)
+            except TypeError:
+                instance.save()
+
+        AppairagePlacementService.sync_after_save(instance, actor=user, previous_candidat=previous_candidat)
 
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
@@ -301,7 +288,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
             if not (avec_archivees and str(avec_archivees).lower() in ["1", "true", "yes", "on"]):
                 qs = qs.exclude(activite=AppairageActivite.ARCHIVE)
 
-        return self._scope_qs_to_user_centres(qs)
+        return self.scope_queryset(qs)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -365,7 +352,7 @@ class AppairageViewSet(viewsets.ModelViewSet):
         )
         qs = qs.annotate(last_commentaire=Subquery(last_comment_qs))
 
-        qs = self._scope_qs_to_user_centres(qs)
+        qs = self.scope_queryset(qs)
         return get_object_or_404(qs, pk=pk)
 
     # ----------------------------------------------------------------------

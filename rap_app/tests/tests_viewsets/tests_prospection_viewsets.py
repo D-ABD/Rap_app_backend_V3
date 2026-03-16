@@ -143,6 +143,61 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(updated.commentaire, "Mise à jour")
 
 
+@pytest.mark.django_db
+def test_candidate_create_prospection_infers_owner_formation_and_centre():
+    client = APIClient()
+
+    centre = Centre.objects.create(nom="Centre Candidate Prospection", code_postal="75999")
+    statut = Statut.objects.create(nom="non_defini", couleur="#000000")
+    type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
+    formation = Formation.objects.create(
+        nom="Formation Candidate Prospection",
+        centre=centre,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=5),
+    )
+    partenaire = Partenaire.objects.create(nom="Partenaire Candidate", type="entreprise")
+
+    candidate_user = CustomUser.objects.create_user_with_role(
+        email="candidate-prosp@example.com",
+        username="candidate_prosp",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    candidate = candidate_user.candidat_associe
+    candidate.nom = "Candidate"
+    candidate.prenom = "Prospection"
+    candidate.email = "candidate-prosp@example.com"
+    candidate.formation = formation
+    candidate.save()
+
+    client.force_authenticate(user=candidate_user)
+
+    response = client.post(
+        reverse("prospection-list"),
+        data={
+            "partenaire": partenaire.id,
+            "date_prospection": timezone.now().isoformat(),
+            "type_prospection": ProspectionChoices.TYPE_PREMIER_CONTACT,
+            "motif": ProspectionChoices.MOTIF_PARTENARIAT,
+            "statut": ProspectionChoices.STATUT_EN_COURS,
+            "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
+            "commentaire": "Création candidat sans formation payload",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    prospection_id = response.data["data"]["id"]
+    prospection = Prospection.objects.get(pk=prospection_id)
+
+    assert prospection.owner_id == candidate_user.id
+    assert prospection.formation_id == formation.id
+    assert prospection.centre_id == centre.id
+
+
 @unittest.skip("HistoriqueProspection n'est pas exposé comme API list/detail.")
 class HistoriqueProspectionViewSetTestCase(AuthenticatedTestCase):
     def setUp(self):
