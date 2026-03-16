@@ -89,70 +89,21 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
             logger.debug("⏭️ Sync candidat ignoré pour admin/superadmin user #%s", instance.pk)
             return
 
-        role = (instance.role or "").strip().lower()
+        logger.warning(
+            "SIGNAL_EXECUTION_DETECTED: sync_candidat_for_user user_id=%s created=%s role=%s email=%s",
+            getattr(instance, "pk", None),
+            created,
+            getattr(instance, "role", None),
+            getattr(instance, "email", None),
+        )
 
-        if role in CANDIDATE_ROLES:
-            if Candidat.objects.filter(compte_utilisateur=instance).exists():
-                return
-
-        email = (instance.email or "").lower()
-        local = _email_local(email)
-        safe_nom = _safe_non_blank(instance.last_name, instance.username, local)
-        safe_prenom = _safe_non_blank(instance.first_name)
-
-        if email:
-            # Si un candidat existe déjà et est déjà lié à un utilisateur (différent), on n'intervient pas.
-            if Candidat.objects.filter(email__iexact=email, compte_utilisateur__isnull=False).exists():
-                logger.warning(
-                    "⚠️ Candidat déjà lié à un utilisateur avec email %s, pas de création pour User #%s",
-                    email,
-                    instance.pk,
-                )
-                return
-
-            try:
-                with transaction.atomic():
-                    cand = (
-                        Candidat.objects.select_for_update(skip_locked=True)
-                        .filter(compte_utilisateur__isnull=True, email__iexact=email)
-                        .order_by("id")
-                        .first()
-                    )
-                    if cand:
-                        cand.nom = cand.nom or safe_nom
-                        cand.prenom = cand.prenom or safe_prenom
-                        cand.compte_utilisateur = instance
-                        cand.save(update_fields=["compte_utilisateur", "nom", "prenom"])
-                        logger.info("🔗 Réconciliation Candidat #%s ↔ User #%s", cand.pk, instance.pk)
-                        return
-            except IntegrityError as e:
-                logger.warning("⚠️ Conflit réconciliation User->Candidat (email=%s): %s", email, e)
-                return  # Ajout : sortir en cas d'erreur pour éviter la création
-
-        # Envelopper la création dans une transaction pour rollback si échec
-        try:
-            with transaction.atomic():
-                Candidat.objects.get_or_create(
-                    compte_utilisateur=instance,
-                    defaults={"nom": safe_nom, "prenom": safe_prenom, "email": email or None},
-                )
-                logger.info("➕ Candidat créé pour User #%s (role=%s)", instance.pk, role)
-        except IntegrityError as e:
-            logger.error("❌ Erreur création Candidat pour User #%s : %s", instance.pk, e)
-            # Rollback automatique via atomic()
-
+        # Legacy logic intentionally disabled during Phase 4.
+        # Previous behavior:
+        # - if role was a candidate role, reconcile an existing Candidat by email
+        # - otherwise create a Candidat linked to the CustomUser
+        # - on role change away from candidate roles, unlink candidat.compte_utilisateur
+        # - use transaction.atomic() around reconciliation / creation paths
         return
-
-    cand = getattr(instance, "candidat_associe", None)
-    if cand:
-        cand._unlinking_from_user_sync = True  # type: ignore[attr-defined]
-        try:
-            cand.compte_utilisateur = None
-            cand.save(update_fields=["compte_utilisateur"])
-            logger.info("🚫 Lien Candidat #%s ↔ User #%s supprimé (role=%s)", cand.pk, instance.pk, role)
-        finally:
-            if getattr(cand, "_unlinking_from_user_sync", False):
-                delattr(cand, "_unlinking_from_user_sync")
 
 @receiver(pre_save, sender=Prospection, dispatch_uid="rap_app.candidats_signals.sync_formation_from_owner")
 def sync_formation_from_owner(sender, instance: Prospection, **kwargs):
@@ -162,23 +113,17 @@ def sync_formation_from_owner(sender, instance: Prospection, **kwargs):
     if is_prospection_owner_sync_deferred():
         return
 
-    owner = getattr(instance, "owner", None)
-    if not owner:
-        return
-    cand = getattr(owner, "candidat_associe", None) or getattr(owner, "candidat", None)
-    f_id = getattr(cand, "formation_id", None)
-    if not f_id:
-        return
+    logger.warning(
+        "SIGNAL_EXECUTION_DETECTED: sync_formation_from_owner prospection_id=%s owner_id=%s formation_id=%s creating=%s",
+        getattr(instance, "pk", None),
+        getattr(instance, "owner_id", None),
+        getattr(instance, "formation_id", None),
+        getattr(instance._state, "adding", False),
+    )
 
-    if instance._state.adding:
-        instance.formation_id = f_id
-        return
-
-    try:
-        old = Prospection.objects.only("owner_id", "formation_id").get(pk=instance.pk)
-    except Prospection.DoesNotExist:
-        instance.formation_id = f_id
-        return
-
-    if old.owner_id != getattr(instance, "owner_id", None) or not getattr(instance, "formation_id", None):
-        instance.formation_id = f_id
+    # Legacy logic intentionally disabled during Phase 4.
+    # Previous behavior:
+    # - infer formation from owner.candidat_associe
+    # - set prospection.formation_id on create
+    # - refresh formation_id on owner change or when formation_id was empty
+    return

@@ -117,11 +117,11 @@ Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourr
 # Configuration initiale
 git init
 git add .
-git commit -m "## Lot 2 — cohérence rôles / permissions (Terminé. corrigé)"
-git branch -M main
-git remote add origin URL_DU_DEPOT.git
+git commit -m "Fix(Signals): Sécurisation du signal sync_candidat_for_user via réconciliation et ajout des tests de validation"
 git push -u origin main
 
+git branch -M main
+git remote add origin URL_DU_DEPOT.git
 # Workflow quotidien
 # Vérifier les modifications
 # Ajouter tous les fichiers

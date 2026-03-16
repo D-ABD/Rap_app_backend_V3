@@ -197,18 +197,6 @@ class Appairage(BaseModel):
             for app_id in qs.values_list("id", flat=True):
                 logger.info("Appairage #%s désarchivé (batch, formation)", app_id)
 
-    _STATUS_PRIORITY = {
-        AppairageStatut.APPAIRAGE_OK: 100,
-        AppairageStatut.ACCEPTE: 90,
-        AppairageStatut.CONTRAT_A_SIGNER: 80,
-        AppairageStatut.CONTRAT_EN_ATTENTE: 70,
-        AppairageStatut.EN_ATTENTE: 60,
-        AppairageStatut.TRANSMIS: 50,
-        AppairageStatut.A_FAIRE: 40,
-        AppairageStatut.REFUSE: 10,
-        AppairageStatut.ANNULE: 0,
-    }
-
     _STATUS_TO_RESULTAT = {
         AppairageStatut.APPAIRAGE_OK: ResultatPlacementChoices.ADMIS,
         AppairageStatut.ACCEPTE: ResultatPlacementChoices.ADMIS,
@@ -337,7 +325,10 @@ class Appairage(BaseModel):
                 self._log_changes(original)
 
             if not is_appairage_snapshot_sync_deferred() and not getattr(self, "_skip_snapshot_sync", False):
-                self._sync_candidat_snapshot(self.candidat)
+                logger.warning("MODEL_SYNC_TRIGGERED: appairage %s candidat %s", self.pk, self.candidat_id)
+                # Legacy snapshot sync intentionally disabled during Phase 4.
+                # Previous behavior:
+                # self._sync_candidat_snapshot(self.candidat)
 
             if (
                 not is_new
@@ -346,11 +337,18 @@ class Appairage(BaseModel):
                 and not is_appairage_snapshot_sync_deferred()
                 and not getattr(self, "_skip_snapshot_sync", False)
             ):
-                try:
-                    old_cand = Candidat.objects.get(pk=original_candidat_id)
-                    self._sync_candidat_snapshot(old_cand)
-                except Candidat.DoesNotExist:
-                    pass
+                logger.warning(
+                    "MODEL_SYNC_TRIGGERED: appairage %s previous_candidat %s",
+                    self.pk,
+                    original_candidat_id,
+                )
+                # Legacy snapshot sync intentionally disabled during Phase 4.
+                # Previous behavior:
+                # try:
+                #     old_cand = Candidat.objects.get(pk=original_candidat_id)
+                #     self._sync_candidat_snapshot(old_cand)
+                # except Candidat.DoesNotExist:
+                #     pass
 
     def delete(self, *args, **kwargs):
         """
@@ -361,7 +359,14 @@ class Appairage(BaseModel):
             logger.warning("Suppression appairage : %s", self)
             super().delete(*args, **kwargs)
             if not is_appairage_snapshot_sync_deferred() and not getattr(self, "_skip_snapshot_sync", False):
-                self._sync_candidat_snapshot(cand)
+                logger.warning(
+                    "MODEL_SYNC_TRIGGERED: appairage %s deleted_candidat %s",
+                    self.pk,
+                    getattr(cand, "pk", None),
+                )
+                # Legacy snapshot sync intentionally disabled during Phase 4.
+                # Previous behavior:
+                # self._sync_candidat_snapshot(cand)
 
     def _log_changes(self, original):
         """
