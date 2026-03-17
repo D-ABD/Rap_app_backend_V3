@@ -13,6 +13,12 @@ class FieldMaskingMixin:
 
     Les serializers peuvent surcharger `masked_fields_for_non_staff`,
     `masked_fields_for_non_owner` et `owner_attr` si nécessaire.
+
+    Hypothèses :
+    - le `request.user` est fourni dans `serializer.context`
+    - la notion de "propriétaire" repose sur `owner_attr`
+    - le masquage est purement de présentation et ne remplace pas une
+      permission d'accès ou un scoping queryset
     """
 
     masked_fields_for_non_staff: Tuple[str, ...] = ()
@@ -55,7 +61,11 @@ class FieldMaskingMixin:
 
 class StaffCentresScopeMixin:
     """
-    Mixin pour restreindre le queryset selon les centres ou départements de rattachement du staff.
+    Mixin historique de scoping par centres/départements pour les profils
+    staff.
+
+    Il reste utile pour certains modules spécialisés, mais la brique commune
+    à privilégier pour les nouveaux viewsets est `ScopedModelViewSet`.
     """
 
     centre_lookups: Tuple[str, ...] = ("centre_id",)

@@ -38,7 +38,17 @@ from ...models.types_offre import TypeOffre
 )
 class RapportSerializer(serializers.ModelSerializer):
     """
-    Sérialiseur pour le modèle Rapport : champs du modèle, champs _display et _nom (source modèle ou relation). to_representation : enveloppe la sortie dans {success, message, data} avec data = instance.to_serializable_dict(). validate : instancie Rapport(**attrs) et appelle clean() pour la validation métier.
+    Sérialiseur principal du modèle `Rapport`.
+
+    Etat actuel du code :
+    - sérialise les champs du modèle et plusieurs champs dérivés en lecture
+    - délègue la validation métier à `Rapport.clean()`
+    - conserve encore une logique legacy dans `to_representation()` qui
+      encapsule la sortie dans `{success, message, data}`
+
+    Cette enveloppe HTTP dans le serializer ne correspond plus à la cible
+    architecturale du projet, mais elle reste la source de vérité tant que le
+    code n'est pas refactoré.
     """
 
     type_rapport_display = serializers.CharField(source="get_type_rapport_display", read_only=True)
@@ -110,11 +120,20 @@ class RapportSerializer(serializers.ModelSerializer):
         }
 
     def to_representation(self, instance):
-        """Retourne {success: True, message: '...', data: instance.to_serializable_dict()}."""
+        """
+        Retourne encore une enveloppe HTTP legacy autour de
+        `instance.to_serializable_dict()`.
+
+        Ce comportement est conservé pour compatibilité avec le code actuel,
+        mais devrait à terme être déplacé vers les viewsets.
+        """
         return {"success": True, "message": "Rapport récupéré avec succès.", "data": instance.to_serializable_dict()}
 
     def validate(self, attrs):
-        """Instancie Rapport(**attrs) et appelle clean() ; propage ValidationError du modèle."""
+        """
+        Instancie un `Rapport` temporaire et appelle `clean()` afin
+        d'appliquer la validation métier centralisée au niveau modèle.
+        """
         instance = Rapport(**attrs)
         instance.clean()
         return attrs
@@ -127,7 +146,8 @@ from ...models.rapports import Rapport
 
 class RapportChoiceSerializer(serializers.Serializer):
     """
-    Option (value, label) pour un choix de rapport (type, période, format). Pas de validation personnalisée.
+    Représente une option simple `(value, label)` pour les listes de choix
+    associées aux rapports.
     """
 
     value = serializers.CharField(help_text="Valeur interne (ex: 'occupation')")
@@ -136,7 +156,8 @@ class RapportChoiceSerializer(serializers.Serializer):
 
 class RapportChoiceGroupSerializer(serializers.Serializer):
     """
-    Structure de sortie des groupes d'options : type_rapport, periode, format (listes de RapportChoiceSerializer).
+    Regroupe les listes de choix exposées au client pour `type_rapport`,
+    `periode` et `format`.
     """
 
     type_rapport = RapportChoiceSerializer(many=True)

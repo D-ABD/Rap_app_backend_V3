@@ -42,66 +42,19 @@ GroupKey = Literal[
 
 class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
-    ViewSet read-only proposant des agrégats (KPIs, statistiques, regroupements)
-    sur les Commentaires d’Appairage.
+    Statistiques read-only sur les commentaires d'appairage.
 
-    ─────────────────────────────────────────────
-    Permissions
-    ─────────────────────────────────────────────
-    - Basé sur la permission IsStaffOrAbove (définie ailleurs).
-      → Permet l’accès aux utilisateurs de type staff ou supérieur (ex : admin, superadmin).
-      → Les utilisateurs non staffs ou non authentifiés n’ont pas accès.
-      → L’étendue “admin” ou “admin-like” est jugée via méthode _is_admin_like (cf. code).
+    Le queryset est restreint au périmètre visible pour l'utilisateur courant,
+    puis filtré manuellement par dates et dimensions métier usuelles
+    (`centre`, `departement`, `formation`, `partenaire`, `statut`).
 
-    ─────────────────────────────────────────────
-    Filtrage et limitations visuelles
-    ─────────────────────────────────────────────
-    - get_queryset() :
-        - Base = tous les objets CommentaireAppairage avec select_related sur relations principales.
-        - Appelle restrict_queryset_to_user si disponible (mixin optionnel). En l'absence du mixin RestrictToUserOwnedQueryset, un stub local (restrict_queryset_to_user retourne qs) est utilisé.
-        - Restreint l’accès selon l’utilisateur via _scope_queryset_for_user :
-            - Utilisateur “admin-like” : visibilité sur tout le queryset.
-            - Staff : restriction possible via centres (user.centres) ou départements (user.departements_codes ou user.departements).
-            - Si aucun périmètre staff détecté : queryset vide.
+    Endpoints exposés :
+    - `list` pour les KPI globaux ;
+    - `latest` pour les derniers commentaires visibles ;
+    - `grouped` pour les agrégats par dimension.
 
-    - _apply_common_filters(qs) :
-        - Prend en compte les query params date_from/date_to (filter created_at).
-        - Prend en compte centre, departement, formation, partenaire, statut comme clés de filtrage.
-        - Pas de filter_backends, search_fields ou ordering_fields explicitement définis.
-
-    ─────────────────────────────────────────────
-    Serializers
-    ─────────────────────────────────────────────
-    - EmptySerializer (aucune validation d’input, utilisé ici car endpoints readonly).
-
-    ─────────────────────────────────────────────
-    Actions exposées
-    ─────────────────────────────────────────────
-    - list (GET /)
-        - Agrégats globaux sur les commentaires.
-        - Ne retourne pas des instances CommentaireAppairage mais des statistiques.
-        - Voir détaillé plus bas.
-
-    - latest (GET /latest)
-        - Action personnalisée : derniers commentaires (sliced via param “limit”).
-        - Voir docstring dans la méthode.
-
-    - grouped (GET /grouped)
-        - Action personnalisée : statistiques agrégées par dimension.
-        - Paramétrable via query ?by=…
-        - Voir docstring dans la méthode.
-
-    ─────────────────────────────────────────────
-    Méthodes “standards” non exposées
-    ─────────────────────────────────────────────
-    - retrieve, create, update, destroy, partial_update ne sont pas définies/actives.
-
-    ─────────────────────────────────────────────
-    Limites de documentation
-    ─────────────────────────────────────────────
-    - La granularité exacte d’IsStaffOrAbove dépend d’un composant externe (non visible ici).
-    - La logique de RestrictToUserOwnedQueryset dépend d’un mixin optionnel qui n’est pas documenté ici.
-    - Le format exhaustif des objets liés (“created_by”, “appairage”, etc.) n’est pas détaillé ici.
+    Les réponses sont construites manuellement avec `EmptySerializer` comme
+    placeholder d'entrée.
     """
 
     serializer_class = EmptySerializer

@@ -1,3 +1,10 @@
+"""Signaux de journalisation autour des formations et de leur historique.
+
+Le fichier reste centré sur le logging et la traçabilité des créations,
+modifications et suppressions de formations, sans porter de logique de
+scoping ou de contrat API.
+"""
+
 import logging
 import sys
 
@@ -36,8 +43,7 @@ def get_user(instance):
 @receiver(post_save, sender=Formation, dispatch_uid="rap_app.formations_signals.log_formation_saved")
 def log_formation_saved(sender, instance, created, **kwargs):
     """
-    Inscrit un message dans le logger à chaque création ou modification d'une formation.
-    Ajoute une entrée dans HistoriqueFormation lors d'une création.
+    Journalise la sauvegarde d'une formation et crée l'historique de création.
     """
     if skip_during_migrations():
         return
@@ -65,7 +71,7 @@ def log_formation_saved(sender, instance, created, **kwargs):
 @receiver(pre_delete, sender=Formation, dispatch_uid="rap_app.formations_signals.log_formation_deleted")
 def log_formation_deleted(sender, instance, **kwargs):
     """
-    Ajoute un log de suppression de formation et enregistre les informations dans HistoriqueFormation.
+    Journalise la suppression d'une formation et enregistre son historique.
     """
     if skip_during_migrations():
         return

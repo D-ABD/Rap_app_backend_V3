@@ -1,3 +1,10 @@
+"""Signaux de synchronisation légère entre événements et métriques formation.
+
+Ces handlers maintiennent `Formation.nombre_evenements` et l'historique
+associé. Ils restent actifs tant que cette responsabilité n'a pas été extraite
+vers un service métier dédié.
+"""
+
 import logging
 import sys
 
@@ -32,7 +39,7 @@ def get_user_from_instance(instance):
 
 def maj_nombre_evenements(formation: Formation, operation: str, user=None):
     """
-    Met à jour le champ nombre_evenements pour la formation et crée un historique associé.
+    Met à jour `Formation.nombre_evenements` et crée l'entrée d'historique liée.
     """
     try:
         with transaction.atomic():

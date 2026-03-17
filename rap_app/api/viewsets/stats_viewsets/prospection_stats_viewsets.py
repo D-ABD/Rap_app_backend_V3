@@ -2,43 +2,11 @@ from __future__ import annotations
 
 from rap_app.api.serializers.base_serializers import EmptySerializer
 
-"""
-ViewSet DRF — Statistiques Prospection (scope staff centres + départements)
----------------------------------------------------------------------------
+"""Reporting agrégé sur les prospections visibles par l'utilisateur courant.
 
-Brancher dans `urls.py` (router) :
-
-    from rest_framework.routers import SimpleRouter
-    from .prospection_stats import ProspectionStatsViewSet
-    router = SimpleRouter()
-    router.register(r"prospection-stats", ProspectionStatsViewSet, basename="prospection-stats")
-
-Endpoints :
-    GET /prospection-stats/                    → KPIs globaux (résumé)
-    GET /prospection-stats/grouped/?by=...     → groupés par centre|departement|owner|formation|partenaire|statut|objectif|motif|type
-
-Filtres (query params, tous optionnels) :
-    - date_from=YYYY-MM-DD       (date_prospection >= …)
-    - date_to=YYYY-MM-DD         (date_prospection <= …)
-    - centre=<id>
-    - departement=<DD>           (sur Centre.code_postal commence par DD)
-    - formation=<id>
-    - partenaire=<id>
-    - owner=<user_id>
-    - statut=<code>              (ProspectionChoices)
-    - objectif=<code>            (ProspectionChoices)
-    - motif=<code>               (ProspectionChoices)
-    - type=<code>                (ProspectionChoices.TYPE_*)
-    - relance_due=true|false     (uniquement celles à relancer aujourd’hui ou avant)
-
-Notes :
-    • Périmètre staff : centres affectés + départements (préfixe CP) ; admin = global.
-    • KPIs : total, actives, à relancer, acceptées, refusées, annulées, par statut/motif/objectif/moyen,
-             + taux_acceptation (% acceptées / total).
-    • `group_label` renvoyé pour tous les regroupements.
-    • Quand `by=formation`, les champs suivants sont aussi renvoyés :
-        - formation__num_offre
-        - formation__centre__nom
+Le module expose des KPI globaux et groupés. Les filtres sont manuels et
+portent notamment sur les dates, le centre, le département, la formation, le
+partenaire, l'owner et les différents codes métier de `ProspectionChoices`.
 """
 
 
@@ -91,22 +59,12 @@ GroupKey = Literal[
 class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     serializer_class = EmptySerializer
     """
-    ViewSet dédié aux statistiques agrégées sur les objets Prospection.
+    Statistiques agrégées sur les prospections.
 
-    ### Permissions
-    - Accès conditionné à `IsOwnerOrStaffOrAbove`.
-        * Ce composant provient potentiellement d'un module local non visible ici.
-        * À défaut, fallback sur `IsAuthenticated`, donc utilisateur authentifié requis.
-    - Comportement détaillé (voir `_scope_prospections_for_user`) :
-        * Les utilisateurs "admin-like" (`is_superuser` ou méthode `is_admin`) ont un accès global à toutes les prospections.
-        * Les utilisateurs staff ou staffread via `is_staff_or_staffread` : visibilité restreinte aux centres et/ou départements affectés.
-        * Les profils candidats/stagiaires n'accèdent qu'à leurs propres prospections.
-        * Tout cas non couvert : aucun résultat n'est exposé (`qs.none()`).
-
-    ### Intention
-    - Fournit des agrégats (KPIs) globaux et groupés, avec filtres dynamiques multiples.
-    - Aucun CRUD direct sur des instances Prospection (seulement stats agrégées ; read-only).
-    - Réponse toujours au format JSON.
+    Le périmètre est restreint par rôle avant application de filtres manuels.
+    Les actions principales sont `list` pour les KPI globaux et `grouped` pour
+    les agrégats par centre, département, owner, formation, partenaire ou code
+    métier.
     """
 
     permission_classes = [IsOwnerOrStaffOrAbove]

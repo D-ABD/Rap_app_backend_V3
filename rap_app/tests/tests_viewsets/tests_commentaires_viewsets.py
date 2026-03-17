@@ -65,7 +65,7 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
         payload = {"formation": self.formation.id, "contenu": "   ", "saturation": 50}
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("contenu", response.data)
+        self.assertIn("contenu", response.data.get("errors", {}))
 
     def test_create_commentaire_avec_saturation(self):
         url = reverse("commentaire-list")

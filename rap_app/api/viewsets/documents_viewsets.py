@@ -56,35 +56,19 @@ class DocumentFilter(django_filters.FilterSet):
 @extend_schema(tags=["Documents"])
 class DocumentViewSet(ScopedModelViewSet):
     """
-    📎 API REST complète pour la gestion des documents liés aux formations.
+    ViewSet CRUD des documents liés aux formations.
 
-    ----
-    #### Permissions
-    - Seuls les utilisateurs staff, admin et superadmin peuvent accéder à ce ViewSet.
-    - Le stricte contrôle des permissions et du périmètre est réalisé via IsStaffOrAbove (non visible ici) et via des helpers additionnels.
-    - Admin/Superadmin : accès global à tous les documents.
-    - Staff : accès limité aux documents de ses propres centres (via relation M2M user.centres).
-    - Toute tentative de création, modification ou suppression sur une formation hors du périmètre staff lève PermissionDenied.
+    Source de vérité actuelle :
+    - permissions via `IsStaffOrAbove`
+    - scoping via `ScopedModelViewSet` avec `scope_mode = "centre"`
+    - visibilité calculée à partir de `formation__centre_id`
+    - validation d'écriture renforcée par `_assert_staff_can_use_formation`
 
-    ----
-    #### Filtres & Queryset
-    - `filter_backends`: utilise DjangoFilterBackend pour le filtrage dynamique.
-    - `filterset_class`: DocumentFilter (voir ci-dessus pour ses champs).
-    - Aucune recherche textuelle à ce niveau (pas de `search_fields` ou `ordering_fields` définis ici).
-    - `get_queryset()`:
-        - Récupère tous les documents avec optimisation via `select_related`.
-        - Scopé dynamiquement selon le rôle de l'utilisateur :
-          - Admin/Superadmin voient toute la base.
-          - Staff limité aux centres auxquels il a accès.
-          - Utilisateur non staff/admin/superadmin : queryset vide.
-
-    ----
-    #### Sérialiseur principal
-    - DocumentSerializer est toujours utilisé pour la lecture et l'écriture (POST/PUT/PATCH/etc.), sauf sur certains endpoints custom.
-
-    ----
-    #### Pagination
-    - Utilise la classe RapAppPagination pour tout listing multi-résultats.
+    Contrat de réponse actuel :
+    - `list()` passe par la pagination configurée sur `RapAppPagination`
+    - `retrieve()`, `create()`, `update()` et `destroy()` renvoient une enveloppe
+      JSON `{success, message, data}`
+    - `destroy()` renvoie actuellement un `200 OK` avec body JSON
     """
 
     serializer_class = DocumentSerializer
@@ -119,20 +103,10 @@ class DocumentViewSet(ScopedModelViewSet):
 
     def get_base_queryset(self):
         """
-        Retourne le queryset des documents exploitable par l'utilisateur courant.
+        Retourne le queryset de base avant application du scoping centralisé.
 
-        - Optimisé via select_related sur :
-            - formation
-            - formation__centre
-            - formation__statut
-            - formation__type_offre
-            - created_by
-        - Restreint via _scope_qs_to_user_centres :
-            - Pour staff : uniquement formations de ses centres
-            - Pour admin/superadmin : aucun filtre
-            - Autres : queryset vide
-
-        Usages : toutes actions list/retrieve personnalisées ou génériques.
+        Le filtrage par rôle/centre n'est pas fait ici : il est appliqué ensuite
+        par `ScopedModelViewSet.get_queryset()`.
         """
         return Document.objects.select_related(
             "formation", "formation__centre", "formation__statut", "formation__type_offre", "created_by"
@@ -145,40 +119,18 @@ class DocumentViewSet(ScopedModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         """
-        Liste paginée des documents accessibles à l'utilisateur courant.
+        Liste paginée des documents visibles après application du scope centre.
 
-        #### Permissions :
-        - staff: limités à leurs centres
-        - admin/superadmin: global
-
-        #### Filtres disponibles (GET params):
-        - centre_id
-        - statut_id
-        - type_offre_id
-
-        #### Sérialiseur utilisé :
-        - DocumentSerializer (mode many)
-
-        #### Format de réponse :
-        - Liste paginée standard DRF
-        - Structure JSON : non customisée explicitement ici (format DRF par défaut, ou celui personnalisé par RapAppPagination)
+        Le format de sortie est celui de `RapAppPagination`, pas l'enveloppe
+        `{success, message, data}` utilisée par les autres actions CRUD.
         """
         return super().list(request, *args, **kwargs)
 
     @extend_schema(summary="📂 Détail d’un document", responses={200: OpenApiResponse(response=DocumentSerializer)})
     def retrieve(self, request, *args, **kwargs):
         """
-        Retourne le détail d'un document accessible à l'utilisateur courant.
-
-        #### Permissions :
-        - staff: document doit appartenir à ses centres
-        - admin/superadmin: global
-
-        #### Sérialiseur utilisé :
-        - DocumentSerializer
-
-        #### Format de réponse :
-        - {"success": True, "message": "...", "data": {...}} (structure explicite ici)
+        Retourne un document visible pour l'utilisateur courant dans
+        l'enveloppe JSON standard de l'API.
         """
         doc = self.get_object()  # get_object() utilise get_queryset() -> scopé
         serializer = self.get_serializer(doc)
@@ -196,18 +148,8 @@ class DocumentViewSet(ScopedModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         """
-        Crée un nouveau document lié à une formation.
-
-        #### Permissions :
-        - staff: la formation visée doit appartenir à un de ses centres (contrôlé via _assert_staff_can_use_formation)
-        - admin/superadmin: aucune restriction
-
-        #### Sérialiseur utilisé :
-        - DocumentSerializer
-
-        #### Format de réponse :
-        - Succès : {"success": True, "message": "...", "data": ...}
-        - Échec : {"success": False, "message": "...", "errors": ...}
+        Crée un document après validation du serializer et contrôle explicite
+        du périmètre centre sur la formation cible.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -234,19 +176,8 @@ class DocumentViewSet(ScopedModelViewSet):
     )
     def update(self, request, *args, **kwargs):
         """
-        Modifie un document existant accessible à l'utilisateur courant.
-
-        #### Permissions :
-        - staff: nouvelle formation (si changée) ou formation existante doit appartenir à ses centres.
-        - admin/superadmin: global
-        - Contrôle interne via _assert_staff_can_use_formation.
-
-        #### Sérialiseur utilisé :
-        - DocumentSerializer
-
-        #### Format de réponse :
-        - Succès : {"success": True, "message": "...", "data": ...}
-        - Échec : {"success": False, "message": "...", "errors": ...}
+        Met à jour un document visible pour l'utilisateur courant et vérifie
+        que la formation finale reste dans le périmètre autorisé.
         """
         instance = self.get_object()
         data = request.data.copy()
@@ -275,21 +206,15 @@ class DocumentViewSet(ScopedModelViewSet):
 
     @extend_schema(
         summary="🗑️ Supprimer un document",
-        responses={204: OpenApiResponse(description="Document supprimé avec succès.")},
+        responses={200: OpenApiResponse(description="Document supprimé avec succès avec enveloppe JSON.")},
     )
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime définitivement un document.
+        Supprime définitivement un document puis renvoie actuellement un
+        `200 OK` avec l'enveloppe JSON standard.
 
-        #### Permissions :
-        - staff: document visé doit appartenir à un de ses centres.
-        - admin/superadmin: global
-
-        #### Sérialiseur utilisé :
-        - N/A
-
-        #### Format de réponse :
-        - {"success": True, "message": "...", "data": None}
+        La convention `DELETE` est donc, dans le code actuel, un succès
+        enveloppé et non un `204 No Content`.
         """
         document = self.get_object()
         # verrouille la suppression au périmètre centre
@@ -322,22 +247,11 @@ class DocumentViewSet(ScopedModelViewSet):
     @action(detail=False, methods=["get"], url_path="par-formation")
     def par_formation(self, request):
         """
-        Endpoint personnalisé pour récupérer tous les documents d'une formation spécifique donnée par son id.
+        Retourne les documents d'une formation après contrôle explicite du
+        périmètre centre sur la formation demandée.
 
-        #### Permission :
-        - staff: la formation doit appartenir à un de ses centres.
-        - admin/superadmin: accès global.
-
-        #### Méthode requise : GET
-        #### Paramètres :
-        - formation (query param, obligatoire): id de la formation
-
-        #### Sérialiseur utilisé :
-        - DocumentSerializer (many=True)
-
-        #### Format de réponse :
-        - Si pagination : format paginé DRF standard
-        - Sinon : {"success": True, "data": [ ... ] }
+        La réponse est paginée si nécessaire ; sinon elle reste dans un petit
+        payload JSON `{success, data}` propre à cette action.
         """
         formation_id = request.query_params.get("formation")
         if not formation_id:
@@ -368,21 +282,9 @@ class DocumentViewSet(ScopedModelViewSet):
     @action(detail=False, methods=["get"], url_path="export-csv")
     def export_csv(self, request):
         """
-        Exporte la liste des documents accessibles (en respectant les filtres et le scope centres) dans un fichier CSV.
+        Exporte le queryset visible et filtré au format CSV.
 
-        #### Permissions :
-        - staff: documents de ses centres
-        - admin/superadmin: global
-
-        #### Méthode : GET
-
-        #### Format de réponse :
-        - Réponse HTTP avec content-type CSV, fichier joint nommé 'documents.csv'
-        - Entête CSV : ID, Nom, Type, Formation, Auteur, Taille (Ko), MIME
-        - Pas de format JSON
-
-        #### Sérialiseur utilisé :
-        - N/A (export direct sur le queryset)
+        La réponse est un fichier binaire `documents.csv`, sans enveloppe JSON.
         """
         qs = self.filter_queryset(self.get_queryset())
 
@@ -416,18 +318,8 @@ class DocumentViewSet(ScopedModelViewSet):
     @action(detail=False, methods=["get"], url_path="types", url_name="types")
     def get_types(self, request):
         """
-        Retourne la liste des types de documents acceptés, avec nom technique et libellé.
-
-        #### Permissions :
-        - staff, admin, superadmin
-
-        #### Méthode : GET
-
-        #### Sérialiseur utilisé :
-        - TypeDocumentChoiceSerializer (many=True)
-
-        #### Format de réponse :
-        - {"success": True, "message": "...", "data": [ {"value":..., "label":...}, ... ] }
+        Retourne la liste des types de documents acceptés dans l'enveloppe JSON
+        standard des actions utilitaires du module.
         """
         data = [{"value": value, "label": label} for value, label in Document.TYPE_DOCUMENT_CHOICES]
         serializer = TypeDocumentChoiceSerializer(data, many=True)
@@ -440,23 +332,11 @@ class DocumentViewSet(ScopedModelViewSet):
     @action(detail=False, methods=["get"], url_path="filtres")
     def get_filtres(self, request):
         """
-        Fournit dynamiquement les options de filtres pertinentes côté front en fonction des documents accessibles.
+        Retourne les options de filtres calculées à partir des documents visibles
+        pour l'utilisateur courant.
 
-        #### Permissions :
-        - staff, admin/superadmin : scope et affichage filtré selon le rôle
-
-        #### Méthode : GET
-
-        #### Structure de réponse JSON :
-        - {"success": True, "message": ..., "data": {
-              "centres": [ {"id": ..., "nom": ...}, ... ],
-              "statuts": [ ... ],
-              "type_offres": [ ... ],
-              "formations": [ {"id":...,"nom":...,"num_offre":...,"type_offre_nom":...,"type_offre_libelle":... }, ...]
-          }}
-
-        - Les listes ne peuvent contenir que des valeurs pour lesquelles au moins un document existe ET accessibles via le scope de l'utilisateur courant.
-        - Champs retournés explicitement visibles ci-dessous.
+        Le payload `data` contient les centres, statuts, types d'offre et
+        formations effectivement présents dans le queryset scopé.
         """
         scoped = self.get_queryset()
 
@@ -522,20 +402,11 @@ class DocumentViewSet(ScopedModelViewSet):
     @action(detail=True, methods=["get"], url_path="download")
     def download(self, request, pk=None):
         """
-        Permet au client de télécharger le fichier associé au document ciblé (GET /documents/<pk>/download/).
+        Télécharge le fichier du document ciblé.
 
-        #### Permissions :
-        - staff : seulement s'il a accès au document via ses centres
-        - admin/superadmin : accès global
-
-        #### Format de réponse :
-        - FileResponse ("application/octet-stream" ou MIME approprié)
-        - Headers HTTP pour forcer le téléchargement
-        - En cas d'erreur (pas de fichier/absent/404) : {"success": False, "message": "..."}
-        - Pas de structure JSON en cas de succès
-
-        #### Usage :
-        - Réponse attendue : binaire
+        En cas de succès, la réponse est une `FileResponse` binaire avec
+        `Content-Disposition`. En cas d'échec, la vue renvoie un payload JSON
+        d'erreur.
         """
         doc = self.get_object()
 

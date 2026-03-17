@@ -69,7 +69,21 @@ class FormationSearchFilter(filters.SearchFilter):
 
 @extend_schema(tags=["Formations"])
 class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
-    """ViewSet pour Formation. IsStaffOrAbove ; UserVisibilityScopeMixin ; _restrict_to_user_centres. Filtres : centre, type_offre, statut, created_by, start_date ; search (texte/search) ; ordering. get_serializer_class : list=>FormationListSerializer, retrieve/update/partial=>FormationDetailSerializer, create=>FormationCreateSerializer. Actions : filtres, historique, partenaires, commentaires, documents, prospections, ajouter_commentaire, ajouter_evenement, ajouter_document, dupliquer, stats_par_mois, liste_simple, archiver, desarchiver, archivees, export_xlsx."""
+    """
+    ViewSet principal des formations.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsStaffOrAbove`
+    - scoping centralisé via `ScopedModelViewSet` avec `scope_mode = "centre"`
+    - `UserVisibilityScopeMixin` reste présent comme brique complémentaire
+      historique, mais le filtrage principal passe par `scope_queryset()`
+    - serializers par action :
+      - `list` => `FormationListSerializer`
+      - `retrieve`, `update`, `partial_update` => `FormationDetailSerializer`
+      - `create` => `FormationCreateSerializer`
+    - expose en plus plusieurs actions liées aux ressources de la formation,
+      à l'archivage, au duplicat et aux exports
+    """
 
     queryset = Formation.objects.all()
     permission_classes = [IsStaffOrAbove]
@@ -122,7 +136,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             raise ValidationError({"detail": f"Champs obligatoires manquants: {', '.join(missing)}"})
 
     def get_serializer_class(self):
-        """list => FormationListSerializer ; retrieve/update/partial => FormationDetailSerializer ; create => FormationCreateSerializer."""
+        """Sélectionne le serializer selon l'action CRUD appelée."""
         if self.action == "list":
             return FormationListSerializer
         if self.action == "retrieve":
@@ -137,7 +151,10 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         summary="Créer une formation", request=FormationCreateSerializer, responses={201: FormationDetailSerializer}
     )
     def create(self, request, *args, **kwargs):
-        """Crée une formation ; _normalize_payload_for_fk, _ensure_required_refs ; transaction.atomic ; retourne success/message/data."""
+        """
+        Crée une formation après normalisation des FK et vérification des
+        références obligatoires, puis renvoie le détail enrichi.
+        """
         payload = self._normalize_payload_for_fk(request.data)
         self._ensure_required_refs(payload)
         serializer = self.get_serializer(data=payload)
@@ -161,7 +178,10 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         responses={200: FormationDetailSerializer},
     )
     def update(self, request, *args, **kwargs):
-        """Met à jour la formation ; _normalize_payload_for_fk ; transaction.atomic ; retourne success/message/data."""
+        """
+        Met à jour une formation existante après normalisation du payload
+        et renvoie la ressource rechargée avec ses relations utiles.
+        """
         instance = self.get_object()
         payload = self._normalize_payload_for_fk(request.data)
         serializer = self.get_serializer(instance, data=payload, partial=True)
@@ -180,7 +200,10 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         )
 
     def _build_base_queryset(self):
-        """Queryset de base : _restrict_to_user_centres + filtres activite, dans, annee, avec_archivees."""
+        """
+        Construit le queryset de base en appliquant d'abord le scope centre,
+        puis les filtres métier de période, activité et archivage.
+        """
         qs = Formation.objects.all_including_archived()
         qs = self.scope_queryset(qs)
         params = self.request.query_params
@@ -227,11 +250,14 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         return qs
 
     def get_queryset(self):
-        """_build_base_queryset() + select_related(centre, type_offre, statut)."""
+        """Retourne le queryset de base enrichi avec les relations FK utiles."""
         return self._build_base_queryset().select_related("centre", "type_offre", "statut")
 
     def get_object(self):
-        """Objet formation (all_including_archived) avec select_related + prefetch_related ; _restrict_to_user_centres."""
+        """
+        Résout une formation, y compris archivée, en réappliquant le scope
+        et les optimisations de chargement nécessaires au détail.
+        """
         pk = self.kwargs.get(self.lookup_field, None)
         qs = (
             Formation.objects.all_including_archived()

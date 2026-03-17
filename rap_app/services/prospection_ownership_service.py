@@ -36,7 +36,17 @@ def is_prospection_owner_sync_deferred() -> bool:
 
 class ProspectionOwnershipService:
     """
-    Centralise la résolution de owner/formation/centre pour les prospections.
+    Centralise la résolution explicite de `owner`, `formation` et `centre_id`
+    pour les prospections.
+
+    Règles clés :
+    - un candidat créant/modifiant sa prospection devient son propre owner
+    - si un owner candidat est connu, sa formation devient prioritaire
+    - le `centre_id` est dérivé d'abord de la formation, puis éventuellement
+      du partenaire ou de l'instance existante
+
+    Ce service remplace l'ancien couplage implicite porté par les signaux
+    autour de `owner.candidat_associe`.
     """
 
     @classmethod
@@ -48,6 +58,10 @@ class ProspectionOwnershipService:
         validated_data: dict[str, Any],
         instance: Prospection | None = None,
     ) -> dict[str, Any]:
+        """
+        Retourne un payload enrichi prêt à être sauvegardé par le serializer
+        ou le viewset appelant.
+        """
         owner = cls._resolve_owner(actor=actor, validated_data=validated_data, instance=instance)
         formation = cls._resolve_formation(actor=actor, owner=owner, validated_data=validated_data, instance=instance)
         partenaire = validated_data.get("partenaire") or getattr(instance, "partenaire", None)

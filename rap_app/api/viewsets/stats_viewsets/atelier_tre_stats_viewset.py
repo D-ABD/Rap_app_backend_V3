@@ -33,116 +33,16 @@ def _to_int_or_none(v) -> Optional[int]:
 
 class AtelierTREStatsViewSet(viewsets.ViewSet):
     """
-    ViewSet API REST pour la consultation agrégée des statistiques des ateliers TRE (Techniques Recherche d’Emploi).
+    Reporting read-only sur les ateliers TRE.
 
-    Points d’entrée :
-      - GET /api/ateliertre-stats/ (→ list)
-          → Vue synthétique (indicateurs globaux)
-      - GET /api/ateliertre-stats/grouped/ (→ grouped)
-          → Vue groupée par centre, département ou type d’atelier (statistiques par groupe)
-      - GET /api/ateliertre-stats/tops/ (→ tops)
-          → Top 10 des types d’ateliers et des centres selon le volume d’ateliers
+    Le viewset expose trois vues agrégées :
+    - `list` pour les KPI globaux ;
+    - `grouped` pour les regroupements par centre, département ou type ;
+    - `tops` pour les classements synthétiques.
 
-    ─────────────────────────────────────────────────────────────
-    1. Permissions d’accès
-    ─────────────────────────────────────────────────────────────
-    - permission_classes = [IsStaffOrAbove]
-        - Seuls les utilisateurs avec permission “IsStaffOrAbove” peuvent accéder aux points d’API de ce ViewSet.
-        - Cette permission inclut : les superadmin, admin, et certain staff (voir code “IsStaffOrAbove” pour le détail complet).
-        - Les autres utilisateurs reçoivent une réponse d’accès refusé.
-
-    ─────────────────────────────────────────────────────────────
-    2. Filtrage & queryset
-    ─────────────────────────────────────────────────────────────
-    - Il n’existe pas de méthode `get_queryset()`, mais un équivalent via get_base_queryset().
-        - Cette méthode restreint les données visibles selon le rôle :
-            * Administrateur/superadmin : accès à tous les ateliers
-            * Staff rattaché à des centres/départements spécifiques : accès restreint à leur périmètre (centres ou départements)
-            * Autres : aucun accès
-    - Filtres via paramètres de requête sur chaque action :
-        - date_from (YYYY-MM-DD) et date_to : filtre sur la date de l’atelier
-        - centre, centre_id : filtre par identifiant du centre
-        - departement : filtre par code département (2 lettres/chiffres)
-        - type_atelier, type : filtre par type d’atelier
-      Les filtres sont appliqués dynamiquement dans `_apply_filters`.
-    - Pas de filter_backends, search_fields, ordering_fields, filterset_class en place dans cette vue (tout est fait à la main).
-
-    ─────────────────────────────────────────────────────────────
-    3. Actions standards (list seulement)
-    ─────────────────────────────────────────────────────────────
-    - list (GET)
-        - Objectif métier : fournir une vue synthétique chiffrée des ateliers TRE, sur le périmètre de visibilité de l’utilisateur, éventuellement filtré.
-        - Serializer utilisé : EmptySerializer (pas de validation sur l’entrée)
-        - Structure de réponse :
-            {
-                "kpis": {
-                    "nb_ateliers": <int>,                # Nombre total d'ateliers trouvés
-                    "nb_candidats_uniques": <int>,       # Nombre de candidats distincts inscrits sur ces ateliers
-                    "inscrits_total": <int>,             # Nombre total d'inscriptions (pas forcément unique)
-                    "ateliers": {<type>: <count>, ...},  # Détail par type d’atelier
-                    "presences_total": <int>,            # Nombre total de présences enregistrées
-                    "presences": {...},                  # Répartition des présences par statut (clé = valeur PresenceStatut)
-                    "taux_presence": <float|null>,       # Taux de présence (%) global
-                },
-                "filters_echo": { ... }   # Echo brut des filtres GET utilisés
-            }
-
-        - Aucun autre action standard (retrieve, create, update, destroy) n’est implémentée/documentée dans ce ViewSet.
-
-    ─────────────────────────────────────────────────────────────
-    4. Actions personnalisées
-    ─────────────────────────────────────────────────────────────
-
-    - grouped (GET /grouped/)
-        - Objectif métier : obtenir des statistiques agrégées groupées selon l’un des axes suivants :
-            centre, département ou type d’atelier (paramètre required : by=centre|departement|type_atelier, par défaut centre).
-        - Structure de la requête :
-            - Paramètre GET “by” obligatoire (centre|departement|type_atelier)
-            - Filtres additionnels identiques à ceux de list
-        - Structure de la réponse :
-            {
-                "by": "<axe de regroupement>",
-                "results": [
-                    {
-                        "group_key": ...,
-                        "group_label": ...,
-                        "nb_ateliers": <int>,
-                        "candidats_uniques": <int>,
-                        "presences_total": <int>,
-                        "present": <int>,
-                        "absent": <int>,
-                        "excuse": <int>,
-                        "inconnu": <int>,
-                        "taux_presence": <float|null>
-                    },
-                    ...
-                ],
-                "filters_echo": { ... }    # Echo brut des filtres GET utilisés
-            }
-        - Si le paramètre “by” est absent ou invalide, retourne 400.
-
-    - tops (GET /tops/)
-        - Objectif métier : afficher les “top 10” des types d’atelier et des centres les plus nombreux sur le périmètre de l’utilisateur (optionnellement filtré).
-        - Requête : accepte les mêmes filtres standard via GET.
-        - Structure de la réponse :
-            {
-                "top_types": [
-                    { "type_atelier": <str>, "label": <str>, "count": <int> },
-                    ...
-                ],
-                "top_centres": [
-                    { "id": <int>, "nom": <str>, "count": <int> },
-                    ...
-                ],
-                "filters_echo": { ... }
-            }
-
-    ─────────────────────────────────────────────────────────────
-    5. Éléments non parfaitement documentables
-    ─────────────────────────────────────────────────────────────
-    - Le détail exact du mapping de certains choix (type_atelier, PresenceStatut) dépend de la configuration du modèle (cf. AtelierTRE, PresenceStatut), non recapitulé ici.
-    - Le serializer utilisé est un EmptySerializer, donc pas de schéma d’entrée attendu/certifié côté API.
-    - Les permissions “IsStaffOrAbove” dépendent de l’implémentation externe (vérifier code pour plus de détail).
+    Le périmètre est calculé selon le rôle courant, puis affiné via des filtres
+    manuels (`date_from`, `date_to`, `centre`, `departement`, `type_atelier`).
+    Les réponses sont des payloads JSON construits à la main.
     """
 
     serializer_class = EmptySerializer

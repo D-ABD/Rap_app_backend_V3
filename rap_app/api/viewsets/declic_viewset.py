@@ -36,12 +36,10 @@ from ..serializers.declic_serializers import DeclicSerializer
 
 class ScopeMixin:
     """
-    Mixin réutilisable pour toutes les ViewSets filtrant par centre.
+    Mixin local de scoping par centre pour le module Déclic.
 
-    - Utilisé pour restreindre automatiquement les résultats d'un queryset selon les centres auxquels
-      l'utilisateur a accès, selon son rôle.
-    - La logique des droits d'accès précis dépend d'utilitaires (is_admin_like, is_candidate) fournis ailleurs,
-      non documentés ici.
+    Il conserve une implémentation historique autonome et ne remplace pas la
+    stratégie plus récente portée ailleurs par `ScopedModelViewSet`.
     """
 
     def _centre_ids_for_user(self, user):
@@ -111,113 +109,15 @@ class ScopeMixin:
 )
 class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
     """
-    =============================================================
-    📊 DeclicViewSet — Gestion des ateliers Déclic (IC supprimée)
-    =============================================================
+    ViewSet CRUD du module Déclic.
 
-    ---
-    🔒 Permissions globales :
-    -------------------------
-    - permission_classes = [IsDeclicStaffOrAbove]
-        * L'accès est restreint selon la permission IsDeclicStaffOrAbove.
-        * Le détail du contrôle (profils/admin/staff...) dépend de ce composant non visible ici.
-        * Les helpers ScopeMixin ajoutent une restriction supplémentaire :
-            - Si l'utilisateur est 'candidat' (cf. is_candidate), il n'accède à rien du tout (aucun résultat).
-            - Les utilisateurs "admin-like" obtiennent tous les résultats (pas de filtrage par centre).
-            - Les autres utilisateurs (ex : déclic_staff) voient seulement les données rattachées à leurs centres.
-
-    ---
-    🔎 Filtrage et QuerySet :
-    ------------------------
-    - Le queryset de base est tous les ateliers Déclic (Declic.objects.select_related('centre').all()).
-    - Des restrictions additionnelles sont appliquées dans get_queryset (cf. ci-dessous).
-    - Il n'y a pas de filter_backends déclarés explicitement : le filtrage repose sur des paramètres manuels dans get_queryset().
-
-    - get_queryset() :
-        * Applique le filtrage par centre selon le ScopeMixin (cf. _scope_qs_to_user_centres).
-        * Prend en charge les paramètres de query string :
-            - annee : filtre sur l'année de l'atelier (date_declic__year).
-            - centre : filtre exact sur le centre_id.
-            - departement : filtre si le centre dont le code postal ou le champ 'departement' commence par la valeur.
-            - type_declic : filtre exact sur le type d'atelier.
-            - date_min/date_max : bornes sur la date (incluse).
-            - search : recherche insensible à la casse sur le nom du centre ou le commentaire associé.
-            - ordering : champ de tri préféré. Défaut : -date_declic, -id.
-
-    ---
-    ⚡ Actions standard :
-    ---------------------
-    list (GET /declic/)
-        - Intention : Lister les ateliers Déclic accessibles à l'utilisateur.
-        - Filtrage : voir get_queryset. Prise en compte des restrictions par centre ou rôle utilisateur.
-        - Serializer utilisé : DeclicSerializer.
-        - Réponse : paginée, format DRF standard, contenu généré par DeclicSerializer. Le format exact dépend du serializer, non explicitement documenté ici.
-
-    retrieve (GET /declic/{id}/)
-        - Intention : Récupérer le détail d'un atelier en particulier si visible pour l'utilisateur.
-        - Permission : même contrôle que pour list (restrictions ScopeMixin et IsDeclicStaffOrAbove).
-        - Serializer utilisé : DeclicSerializer (instance unique).
-        - Réponse : structure DRF standard issue du serializer, non détaillée explicitement ici.
-
-    create (POST /declic/)
-        - Intention : Créer un nouvel atelier Déclic.
-        - Permission : requiert d'avoir accès à la création (IsDeclicStaffOrAbove, contrôle interne non visible ici).
-        - Serializer utilisé : DeclicSerializer.
-        - Réponse : format de DeclicSerializer pour l'instance créée, format JSON DRF par défaut (non précisé autrement dans ce code).
-
-    update / partial_update (PUT/PATCH /declic/{id}/)
-        - Intention : Mettre à jour un atelier existant.
-        - Permission : contrôle identique, restreint par ScopeMixin.
-        - Serializer utilisé : DeclicSerializer.
-        - Réponse : format de DeclicSerializer pour l'instance modifiée (DRF standard).
-
-    destroy (DELETE /declic/{id}/)
-        - Intention : Supprimer un atelier.
-        - Permission : dépend de la permission et du scope. Aucun log explicite ici, pas de format custom de réponse.
-        - Réponse : format DRF standard (statut HTTP sans body).
-
-    ---
-    🧩 Actions personnalisées :
-    ---------------------------
-
-    filters (GET /declic/filters/)
-      - Objectif : Fournir une liste d'options (années, départements, centres filtrés selon les droits, types ateliers) pour aider le front à construire les interfaces de filtres/menus déroulants.
-      - Accès : soumis aux mêmes permissions/scopes que le ViewSet principal (restriction par centre via ScopeMixin).
-      - Réponse : JSON contenant
-        {
-            "annees": [liste d'années disponibles int],
-            "departements": [{"value": <code_dep>, "label": ...}],
-            "centres": [
-                {
-                  "value": <id centre>, "label": <nom centre>, "departement": <dep>, "code_postal": <str>
-                }
-            ],
-            "type_declic": [{"value": <code>, "label": <libellé>}]
-        }
-
-    stats-centres (GET /declic/stats-centres/?annee=YYYY)
-      - Objectif : Retourner des statistiques (par centre) sur les accueillis à Déclic pour une année donnée (défaut année en cours).
-      - Accès : soumis aux limitations ScopeMixin, résultats agrégés.
-      - Réponse : Le format exact de la réponse JSON dépend de la méthode Declic.accueillis_par_centre(annee), qui n'est pas documentée ici.
-
-    stats-departements (GET /declic/stats-departements/?annee=YYYY)
-      - Objectif : Retourner des statistiques (par département) sur les accueillis pour une année donnée.
-      - Même flux, même remarque : format JSON exact dépendant de la méthode appelée (Declic.accueillis_par_departement).
-
-    export-xlsx (GET /declic/export-xlsx/?annee=YYYY)
-      - Objectif métier : Exporter tous les ateliers visibles (selon scope et params fournis via get_queryset)
-        dans un fichier Excel : 1 feuille 'Ateliers Déclic' contenant toutes les lignes visibles + agrégats.
-      - Accès : soumis à ScopeMixin + droits globaux.
-      - Réponse : Fichier attaché Excel (HTTP 200 avec Content-Disposition attachment ; content type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet).
-        Structure : 1 ligne d'en-têtes suivie de 1 ligne par atelier.
-        Champs : [ID, Atelier, Date, Centre, Inscrits, Présents, Absents, Taux présence, Objectif annuel, Ateliers cumulés, Taux atteinte, Reste à faire, Commentaire].
-      - Rendez-vous : aucun log, aucun format JSON custom en cas d'erreur n'est défini ici.
-
-    ---
-    LIMITES :
-    - Les réponses de toutes les actions standard et personnalisées qui retournent des objets ou des listes reposent soit sur DeclicSerializer, soit sur des helpers non détaillés ici, donc les formats JSON précis ne sont pas explicitement garantis hors ce que la structure Response montre.
-    - Les permissions détaillées dépendent de composants externes (IsDeclicStaffOrAbove, helpers 'roles'), le détail exact n'est donc pas contrôlable ici.
-
+    Le fichier conserve une logique de scope locale via `ScopeMixin` et une
+    documentation historiquement très détaillée. La source de vérité actuelle
+    est plus simple :
+    - permission principale : `IsDeclicStaffOrAbove`
+    - visibilité filtrée par centres accessibles, sauf profils admin-like
+    - filtres manuels dans `get_queryset()`
+    - actions custom de filtres, statistiques et export XLSX
     """
 
     serializer_class = DeclicSerializer

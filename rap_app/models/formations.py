@@ -1,3 +1,10 @@
+"""Modèles métier des formations et de leur historique.
+
+Le fichier concentre la donnée persistante et plusieurs helpers de calcul. Les
+recalculs transverses restent encore partiellement déclenchés par des signaux,
+en attendant une extraction plus explicite vers des services dédiés.
+"""
+
 import datetime
 import logging
 from datetime import timedelta
@@ -268,6 +275,8 @@ class FormationManager(models.Manager):
 
 
 class Formation(BaseModel):
+    """Modèle principal d'une formation et de ses indicateurs persistés."""
+
     """
     Modèle principal décrivant une offre de formation, ses propriétés, et ses méthodes associées.
     """

@@ -68,8 +68,15 @@ logger = logging.getLogger("PROSPECTION_COMMENT")
 )
 class ProspectionCommentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet de gestion des commentaires de prospection, avec filtrage,
-    permissions par rôle et exports Excel/PDF.
+    ViewSet des commentaires de prospection.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsOwnerOrStaffOrAbove`
+    - visibilité dépendante du rôle, du caractère interne du commentaire,
+      et des liens owner/created_by/prospection
+    - actions custom dédiées au filtrage, à l'archivage et aux exports
+    - plusieurs réponses d'actions custom sortent volontairement du CRUD
+      strict pour exposer soit du JSON métier, soit des téléchargements
     """
 
     queryset = ProspectionComment.objects.select_related(
@@ -105,8 +112,8 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Retourne les commentaires visibles pour l'utilisateur courant en
-        appliquant les règles de rôle (candidat, staff, admin) et les
-        filtres de requête liés au statut et aux entités associées.
+        appliquant les règles de rôle, le filtre d'archivage et les filtres
+        additionnels de requête.
         """
         base = ProspectionComment.objects.select_related(
             "prospection",

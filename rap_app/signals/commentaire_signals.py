@@ -1,3 +1,10 @@
+"""Signaux de recalcul léger autour des commentaires de formation.
+
+Ces handlers mettent encore à jour certains indicateurs de formation après
+création ou suppression d'un commentaire. Ils constituent un candidat naturel
+à une future extraction vers un service de métriques plus explicite.
+"""
+
 import logging
 
 from django.db import transaction
@@ -12,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def update_formation_stats_on_save(commentaire: Commentaire):
     """
-    Met à jour certains champs de la formation liée après la sauvegarde d'un commentaire.
+    Recalcule les indicateurs de formation impactés après sauvegarde.
     """
     try:
         with transaction.atomic():
@@ -59,7 +66,7 @@ def update_formation_stats_on_save(commentaire: Commentaire):
 
 def update_formation_stats_on_delete(commentaire: Commentaire):
     """
-    Met à jour la formation liée après suppression d'un commentaire.
+    Recalcule les indicateurs de formation impactés après suppression.
     """
     try:
         with transaction.atomic():

@@ -34,12 +34,13 @@ class ProspectionOwnershipServiceTests(TestCase):
             password="password123",
             role=CustomUser.ROLE_CANDIDAT,
         )
-        candidat = self.user.candidat_associe
-        candidat.nom = "Service"
-        candidat.prenom = "Candidate"
-        candidat.email = "prosp-service@example.com"
-        candidat.formation = self.formation
-        candidat.save()
+        Candidat.objects.create(
+            nom="Service",
+            prenom="Candidate",
+            email="prosp-service@example.com",
+            formation=self.formation,
+            compte_utilisateur=self.user,
+        )
 
     def test_candidate_resolution_forces_owner_formation_and_centre(self):
         resolved = ProspectionOwnershipService.resolve_and_sync_ownership(

@@ -1,3 +1,10 @@
+"""Modèle des événements liés aux formations.
+
+Le fichier définit le cœur persistant des événements ; le reporting agrégé est
+porté par les viewsets stats et certaines mises à jour de métriques formation
+restent encore gérées par signaux.
+"""
+
 import logging
 
 from django.core.exceptions import ValidationError
@@ -57,7 +64,7 @@ class EvenementManager(models.Manager):
 
 
 class Evenement(BaseModel):
-    """Modèle représentant un événement pouvant être lié à une formation."""
+    """Modèle représentant un événement potentiellement rattaché à une formation."""
 
     MAX_TYPE_LENGTH = 100
     MAX_DESC_LENGTH = 255

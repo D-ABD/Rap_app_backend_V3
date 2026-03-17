@@ -8,10 +8,12 @@ User = get_user_model()
 
 @pytest.mark.django_db
 class TestSyncCandidatForUser:
-    def test_reconciliation_lie_candidat_existant_au_user(self):
+    def test_reconciliation_does_not_run_in_audit_only_mode(self, caplog):
         """
-        Vérifie que la création d'un CustomUser avec un email existant lie un candidat orphelin à l'utilisateur.
+        Vérifie que le signal ne lie plus automatiquement le candidat en mode audit-only.
         """
+        caplog.set_level("WARNING")
+
         # Étape A : Créer un candidat orphelin (sans compte_utilisateur)
         candidat = Candidat.objects.create(
             nom="Dupont",
@@ -30,12 +32,14 @@ class TestSyncCandidatForUser:
             role=CustomUser.ROLE_CANDIDAT_USER,
         )
 
-        # Étape C : Vérifier que le signal a lié le candidat existant au user
+        # Étape C : Vérifier que le signal a seulement logué et n'a rien lié
         candidat.refresh_from_db()
-        assert candidat.compte_utilisateur == user
+        assert candidat.compte_utilisateur is None
+        assert "SIGNAL_EXECUTION_DETECTED: sync_candidat_for_user" in caplog.text
 
-        # Aucun nouveau candidat ne doit avoir été créé
+        # Aucun nouveau candidat ne doit avoir été créé ni réconcilié
         assert Candidat.objects.filter(email__iexact="test@example.com").count() == 1
+        assert Candidat.objects.filter(compte_utilisateur=user).count() == 0
 
     def test_signal_processing_guard_prevents_recursion(self):
         """Vérifie que le guard de signal stoppe la récursion de save()."""
@@ -71,8 +75,6 @@ class TestSyncCandidatForUser:
             password="password123",
             role=CustomUser.ROLE_CANDIDAT_USER
         )
-        # Supposer une erreur simulée (dans un vrai test, utiliser mock pour IntegrityError)
-        # Après signal, vérifier cohérence
+        # En mode audit-only, le signal ne doit créer aucun candidat lié.
         candidat = Candidat.objects.filter(compte_utilisateur=user).first()
-        if candidat:
-            assert candidat.email == "unique@example.com"
+        assert candidat is None

@@ -1,3 +1,9 @@
+"""Modèle des commentaires de formation et helpers d'export associés.
+
+Les commentaires restent une source de données métier ; certains effets de
+bord sur les statistiques de formation sont encore orchestrés par des signaux.
+"""
+
 import csv
 import io
 import logging
@@ -82,6 +88,10 @@ class CommentaireManager(models.Manager.from_queryset(CommentaireQuerySet)):
 class Commentaire(BaseModel):
     """
     Modèle principal pour les commentaires associés à une formation.
+
+    Il stocke le contenu métier et quelques mesures dérivées (saturation,
+    statut logique), tandis que la mise à jour de certains indicateurs de
+    formation est encore traitée côté signaux.
     """
 
     SATURATION_MIN = 0

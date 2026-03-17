@@ -85,47 +85,14 @@ def _poei_poec_values() -> list[str]:
 # =============================================================================
 class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
-    ViewSet pour les statistiques agrégées sur les Candidats.
+    Statistiques agrégées sur les candidats visibles par l'utilisateur courant.
 
-    ╔══════════════════════════════════════════════╗
-    ║                PERMISSIONS                  ║
-    ╚══════════════════════════════════════════════╝
-      - Par défaut : seule la permission IsStaffOrAbove (visible dans ce fichier) est appliquée sur l'ensemble du ViewSet.
-        -> Interdit l'accès aux utilisateurs non staff.
-      - La portée exacte de IsStaffOrAbove ou is_staff_or_staffread dépend de l’implémentation externe.
+    Le périmètre combine la permission staff/admin, un éventuel mixin de
+    restriction propriétaire et un scoping par centres ou départements.
 
-      - Cas "admin/superuser" : accès global sans restriction.
-      - Cas "staff"           : accès restreint aux candidats liés à leurs centres ou départements.
-      - Cas non staff         : accès filtré via RestrictToUserOwnedQueryset (mixin), si disponible.
-      - Cas non authentifié   : accès refusé.
-
-    ╔══════════════════════════════════════════════╗
-    ║                QUERSET                      ║
-    ╚══════════════════════════════════════════════╝
-      - Le queryset issu de get_queryset() applique dans l’ordre :
-        1. Un filtrage par scope utilisateur (centre/département, ou restriction "owned").
-        2. Optionnellement exclusion des candidats dont la formation est archivée, sauf si le paramètre "avec_archivees" est fourni true.
-        3. Pour les utilisateurs non staff/admin, une restriction supplémentaire via le mixin RestrictToUserOwnedQueryset si présent.
-
-      - Filter/ordering/search/filterset DRF :
-        -> Aucun filter_backend, search_field, ordering_field, filterset_class déclaré explicitement ici.
-
-    ╔══════════════════════════════════════════════╗
-    ║        STRUCTURE ET OBJECTIFS DES ACTIONS   ║
-    ╚══════════════════════════════════════════════╝
-
-    - list (GET /candidat-stats/)
-       But métier : Délivrer les KPI globaux et répartitions sur les candidats (voir détail dans docstring list()).
-
-    - grouped (GET /candidat-stats/grouped/?by=...)
-       But métier : Fournir les mêmes KPI mais groupés selon le paramètre donné (centre, département, formation, etc.).
-
-    - create/update/post/patch/delete/retrieve...
-       Non implémenté/Non pertinent (seulement statistiques lecture).
-
-    ═ NOTE D'USAGE ═
-    Ce ViewSet ne permet aucune modification, suppression ou création côté API REST.
-    L'unique traitement concerne la visualisation de statistiques agrégées et groupées.
+    Les endpoints exposent des KPI globaux (`list`) et des agrégats groupés
+    (`grouped`). Les réponses sont construites manuellement plutôt que via des
+    serializers de sortie DRF.
     """
 
     serializer_class = EmptySerializer

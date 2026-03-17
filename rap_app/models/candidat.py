@@ -1,3 +1,10 @@
+"""Modèle métier des candidats et de leur historique de placement.
+
+Le modèle porte les données métier persistantes ; les créations de compte,
+liaisons utilisateur et synchronisations cross-modules sont désormais pilotées
+par les services applicatifs plutôt que par des effets implicites de signaux.
+"""
+
 import logging
 import re
 import unicodedata
@@ -64,7 +71,11 @@ class ResultatPlacementChoices(models.TextChoices):
 
 class Candidat(BaseModel):
     """
-    Modèle principal représentant un candidat et les informations associées à son parcours.
+    Modèle principal représentant un candidat et son parcours.
+
+    Les champs couvrent l'identité, la situation de formation et les données de
+    placement ; les workflows de compte utilisateur et de promotion de rôle
+    sont délégués aux services métier.
     """
 
     class StatutCandidat(models.TextChoices):

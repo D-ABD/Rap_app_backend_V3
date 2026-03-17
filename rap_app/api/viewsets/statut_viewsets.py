@@ -48,9 +48,16 @@ logger = logging.getLogger("application.statut")
 )
 class StatutViewSet(viewsets.ModelViewSet):
     """
-    ViewSet CRUD pour les statuts de formation, réservé aux profils
-    autorisés par IsStaffOrAbove et utilisant StatutSerializer pour les
-    opérations standard et StatutChoiceSerializer pour les choix.
+    ViewSet CRUD des statuts de formation.
+
+    Contrat de sortie actuel :
+    - `create`, `update`, `retrieve`, `destroy` renvoient une enveloppe
+      `{success, message, data}`
+    - `list` et `choices` renvoient une structure de type pagination
+      `{count, next, previous, results}`
+
+    Cette hétérogénéité est volontairement documentée ici car c'est le code
+    actuel qui fait foi.
     """
 
     queryset = Statut.objects.all()
@@ -115,8 +122,8 @@ class StatutViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        Retourne la liste paginée des statuts avec la structure de
-        pagination DRF (count, next, previous, results).
+        Retourne la liste des statuts au format pagination simple
+        `{count, next, previous, results}`.
         """
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
@@ -143,8 +150,8 @@ class StatutViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="choices", url_name="choices")
     def get_choices(self, request):
         """
-        Retourne les choix possibles pour le champ `nom` des statuts
-        avec valeur, libellé, couleur par défaut et couleur de texte.
+        Retourne les choix possibles pour `nom` au même format
+        `{count, next, previous, results}` que `list()`.
         """
         results = [
             {

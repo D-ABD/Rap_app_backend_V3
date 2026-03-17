@@ -38,7 +38,23 @@ from .scoped_viewset import ScopedModelViewSet
 
 class AppairageViewSet(ScopedModelViewSet):
     """
-    ViewSet pour les appairages. Permission IsStaffOrAbove. get_queryset : _scope_qs_to_user_centres, annotation last_commentaire, filtres annee, date_min, date_max, activite, avec_archivees. get_serializer_class : list=AppairageListSerializer, create/update/partial=AppairageCreateUpdateSerializer, sinon AppairageSerializer. perform_create/perform_update : refus candidats/stagiaires, _assert_staff_can_use_formation, refus si doublon (candidat, partenaire, formation). Actions : meta (GET), commentaires (GET/POST), archiver, desarchiver (POST), export_xlsx (GET/POST).
+    ViewSet principal des appairages.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsStaffOrAbove`
+    - scoping via `ScopedModelViewSet` avec visibilité par centre sur la
+      formation directe ou la formation du candidat
+    - serializers par action :
+      - `list` => `AppairageListSerializer`
+      - `create` / `update` / `partial_update` => `AppairageCreateUpdateSerializer`
+      - autres actions => `AppairageSerializer`
+    - `perform_create()` et `perform_update()` orchestrent désormais :
+      - validations métier
+      - sauvegarde de l'appairage
+      - appel explicite à `AppairagePlacementService.sync_after_save()`
+
+    Les anciens flux implicites modèle/signal restent seulement observés via
+    les warnings de transition Phase 4.
     """
 
     base_queryset = (
@@ -134,10 +150,8 @@ class AppairageViewSet(ScopedModelViewSet):
 
     def get_serializer_class(self):
         """
-        Sélectionne dynamiquement le serializer adapté à l'action.
-        - list => AppairageListSerializer
-        - create/update/partial_update => AppairageCreateUpdateSerializer
-        - retrieve/autres => AppairageSerializer
+        Sélectionne le serializer adapté au type de réponse attendu par
+        l'action courante.
         """
         if self.action == "list":
             return AppairageListSerializer
@@ -147,10 +161,14 @@ class AppairageViewSet(ScopedModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Handler création métier : interdit aux candidats/stagiaires ; staff/admin scope centre formation
-        - Refuse si déjà existant : (candidat, partenaire, formation) unique
-        - Réponse DRF : objet sérialisé (voir Serializer)
-        - Si la permission dépend d'un composant utilisateur non visible ici, impossible de décrire le format d'erreur d'autorisation précisément.
+        Orchestration de création d'un appairage.
+
+        Le flux réel est :
+        - refus candidats/stagiaires
+        - contrôle du périmètre centre sur la formation
+        - contrôle d'unicité métier `(candidat, partenaire, formation)`
+        - sauvegarde avec différé du vieux sync implicite
+        - synchronisation explicite du snapshot candidat via service
         """
         user = self.request.user
         if hasattr(user, "is_candidat_or_stagiaire") and user.is_candidat_or_stagiaire():
@@ -192,8 +210,8 @@ class AppairageViewSet(ScopedModelViewSet):
 
     def perform_update(self, serializer):
         """
-        Handler mise à jour métier : interdit aux candidats/stagiaires ; staff/admin scope formation
-        - Réponse type : objet DRF sérialisé, ou refus permission ou validation (details variable selon Serializer, non documenté ici)
+        Orchestration de mise à jour d'un appairage avec le même principe
+        que `perform_create()`, puis resynchronisation explicite du placement.
         """
         user = self.request.user
         instance = serializer.instance
@@ -219,18 +237,15 @@ class AppairageViewSet(ScopedModelViewSet):
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
         """
-        [GET] /appairages/meta/
-        Fournit au front les méta-informations métier nécessaires à l'initialisation des formulaires pour la création/appairage.
-        - Permissions : staff/admin uniquement (non exposé explicitement via permission_classes ; dépend de la route ViewSet)
-        - Serializer utilisé : AppairageMetaSerializer
-        - Réponse : {"success": true, ...} (contenu exact tributaire du serializer, non détaillé ici)
+        Retourne les métadonnées utiles à l'initialisation des formulaires
+        d'appairage pour l'utilisateur courant.
         """
         serializer = AppairageMetaSerializer(instance={}, context={"request": request})
         return Response(serializer.data)
 
     @action(detail=True, methods=["get", "post"], url_path="commentaires")
     def commentaires(self, request, pk=None):
-        """GET : liste des commentaires de l'appairage (ordre -created_at). POST : crée un commentaire (body, created_by=user, appairage)."""
+        """Lit ou crée les commentaires attachés à un appairage donné."""
         appairage = self.get_object()
         if request.method == "GET":
             qs = appairage.commentaires.select_related("created_by").order_by("-created_at")
@@ -246,15 +261,9 @@ class AppairageViewSet(ScopedModelViewSet):
 
     def get_queryset(self):
         """
-        Calcule le queryset tenant compte des permissions :
-        - Prend tous les appairages pour admin, restreint les autres aux centres "autorisés" (cf. _scope_qs_to_user_centres)
-        - Filtres additionnels :
-            * annee: filtre les appairages de cette année : ?annee=YYYY
-            * date_min/date_max: bornes (inclusives) sur la date_appairage
-            * activite: si 'ARCHIVE' ou 'ACTIF', sélection stricte, sinon default: exclut les archivés sauf ?avec_archivees
-        - Filtres DRF : voir search_fields, filterset_fields, ordering_fields plus haut
-        - ⚠ Le queryset annote chaque ligne d'un champ "last_commentaire" avec le dernier texte (pour lister ou exporter)
-        - La restriction d'accès/résultats dépend d'appels à des méthodes dont la logique n'est pas exposée ici (is_staff_or_staffread, is_admin etc.).
+        Retourne les appairages visibles après application du scope centre,
+        des filtres métier de période/activité et de l'annotation du dernier
+        commentaire visible pour les usages de liste ou d'export.
         """
         qs = self.base_queryset
 

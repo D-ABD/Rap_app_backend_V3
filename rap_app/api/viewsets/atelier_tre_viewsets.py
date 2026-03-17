@@ -46,7 +46,13 @@ logger = logging.getLogger(__name__)
 
 class AtelierTREViewSet(viewsets.ModelViewSet):
     """
-    ViewSet pour les ateliers TRE. Permission IsStaffOrAbove ; scope par centre (_scope_qs_to_user_centres, _assert_staff_can_use_centre). get_queryset : annotations présence, _scope_qs_to_user_centres. Actions : meta (GET), add_candidats, remove_candidats, set_presences, mark_present, mark_absent (POST), export_xlsx (GET).
+    ViewSet des ateliers TRE.
+
+    La visibilité est restreinte par centre pour les profils staff et
+    assimilés, avec contrôles supplémentaires sur les écritures. Le fichier
+    conserve des helpers locaux de scope historiques ; leur documentation doit
+    être lue comme une implémentation spécifique à ce module, pas comme la
+    nouvelle base commune `ScopedModelViewSet`.
     """
 
     permission_classes = [IsStaffOrAbove]

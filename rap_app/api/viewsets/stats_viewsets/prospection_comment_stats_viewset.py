@@ -32,115 +32,15 @@ except Exception:  # pragma: no cover
 
 class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
-    ViewSet dédié à l’analyse et au reporting sur les commentaires de prospection.
+    Analyse read-only des commentaires de prospection.
 
-    ⚠️ Ce ViewSet n’est pas CRUD sur les commentaires eux-mêmes, mais expose deux endpoints "stats" :
-    - /prospection-comment-stats/latest/   : derniers commentaires pertinents (analyse)
-    - /prospection-comment-stats/grouped/  : options groupées pour alimenter des filtres UI (<select>).
+    Le viewset n'expose pas de CRUD ; il sert à récupérer les derniers
+    commentaires visibles (`latest`) et des regroupements pour filtres ou
+    dashboards (`grouped`).
 
-    ───────────────
-    1. Permissions
-    ───────────────
-    - `permission_classes = [IsOwnerOrStaffOrAbove]`
-      → La permission dépend d'un composant externe non visible ici (is_owner, staff ou plus).
-      → Si `IsOwnerOrStaffOrAbove` indisponible, repli sur `IsAuthenticated`.
-      → Logique métier (voir _scope_for_user):
-          * Superuser/admin : accès global.
-          * Staff/staffread : accès limité à certains centres/départements (voir _staff_centre_ids et _staff_departement_codes).
-          * Utilisateur "candidat ou stagiaire" : uniquement ses propres commentaires non-internes.
-          * Tous les autres : accès refusé (aucun résultat).
-      - Note : la composition exacte de `IsOwnerOrStaffOrAbove` n’est pas visible ici.
-
-    ──────────────────────────
-    2. Filtrage & Queryset
-    ──────────────────────────
-    - La méthode `get_queryset()` prépare une queryset sur ProspectionComment (jointures: prospection, centre, formation, partenaire, auteur).
-    - Si un mixin RestrictToUserOwnedQueryset existe, il restreint encore le queryset (le détail dépend d’un code externe non visible ici).
-    - Application d’un filtrage métier via `_scope_for_user()` selon le profil utilisateur.
-    - Aucun filter_backend, search_field, ordering_field, ni filterset_class explicite dans ce ViewSet : tout le filtrage passe par `_apply_filters` :
-        • Filters acceptés via query params (tous optionnels, voir docstring classe et _apply_filters):
-            - date_from, date_to (filtre sur created_at)
-            - centre (id), departement (code), formation (id), partenaire (id), owner (user id)
-            - is_internal (booléen dans différents formats)
-            - search (mot-clé dans body, username, nom formation, nom partenaire)
-            - limit (pour /latest)
-      → Le format exact des query params autorisés est listé dans la docstring de classe et dans la logique de `_apply_filters`.
-
-    ──────────────────────────
-    3. Actions standard (list, retrieve…)
-    ──────────────────────────
-    - Ce ViewSet ne définit PAS d’actions list/create/retrieve/update/destroy.
-      → Seules des actions personnalisées readonly sont exposées.
-
-    ──────────────────────────
-    4. Actions personnalisées
-    ──────────────────────────
-
-    a) GET /prospection-comment-stats/latest/
-
-      - Objectif : Récupérer les derniers commentaires pertinents pour l’utilisateur courant, avec preview et infos enrichies.
-      - Permissions : logique restreinte décrite ci-dessus.
-      - Query params : tous ceux de _apply_filters + limit (défaut 5, max 200).
-      - Structure de réponse JSON : (clairement visible dans le code)
-        ```
-        {
-            "count": int,         # nombre de résultats
-            "results": [ {       # liste des commentaires filtrés et formatés
-                "id": int,
-                "prospection_id": int | null,
-                "prospection_text": str,
-                "centre_nom": str | null,
-                "formation_nom": str | null,
-                "partenaire_nom": str | null,
-                "num_offre": str | null,
-                "type_offre_nom": str | null,
-                "start_date": date | null,
-                "end_date": date | null,
-                "statut": any,
-                "type_prospection": any,
-                "objectif": any,
-                "body": str,            # extrait du body (180 caractères max + "…")
-                "is_internal": bool,
-                "auteur": str,
-                "date": str,            # format DD/MM/YYYY
-                "heure": str,           # format HH:MM
-                "created_at": ISO str,
-                "updated_at": ISO str | null,
-                "is_recent": bool,      # ≤7 jours
-                "is_edited": bool,      # modifié (>60s après création)
-            }, ... ],
-            "filters_echo": { ... }     # tous les query params reçus, en écho
-        }
-        ```
-
-    b) GET /prospection-comment-stats/grouped/?by=centre|departement|formation
-
-      - Objectif : Retourner la liste des options (clé, label, total) pour alimenter les <select> de filtre côté front, groupées selon le paramètre by.
-      - Permissions : même logique business.
-      - Query params : tous les filtres sauf le champ groupé (ex : /grouped/?by=centre&centre=5 retire centre du filtrage de ce endpoint)
-      - Structure de réponse JSON : (visiblement explicite dans le code)
-        ```
-        {
-            "group_by": str,               # valeur du paramètre by
-            "results": [
-                {
-                    ...                   # toutes les valeurs de group_fields (voir code selon by)
-                    "group_key": ...,     # valeur de regroupement (id ou code selon le cas)
-                    "group_label": str,   # libellé utilisable dans un select (voir code exact)
-                    "total": int,         # nombre de commentaires dans ce groupe
-                },
-                ...
-            ],
-            "filters_echo": { ... }        # écho des query params reçus
-        }
-        ```
-
-    ────────────────────────
-    ⚠️ Points particuliers :
-    ────────────────────────
-    - Ce ViewSet ne permet pas de création/modification/suppression de commentaires via l’API.
-    - Les droits sont strictement filtrés en amont (voir _scope_for_user et permissions).
-    - Si un paramètre (permission, mixin, ou champs user) dépend d’un composant ailleurs dans le code ou de la configuration projet, la documentation ne peut en donner le détail exhaustif.
+    Le périmètre dépend du rôle courant, puis de filtres manuels sur les dates,
+    le centre, le département, la formation, le partenaire, l'owner, le
+    caractère interne et la recherche texte.
     """
 
     serializer_class = EmptySerializer

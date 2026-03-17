@@ -1,5 +1,9 @@
 """
-Signaux pour la synchronisation des champs de placement entre Appairage et Candidat.
+Signaux legacy d'observation autour de la synchronisation Appairage <-> Candidat.
+
+Dans l'état actuel du code, ces handlers ne portent plus la synchronisation
+métière : ils émettent des warnings `SIGNAL_EXECUTION_DETECTED` pour repérer
+les flux résiduels hors API pendant la Phase 4.
 """
 
 import logging
@@ -17,8 +21,10 @@ logger = logging.getLogger("rap_app.signals.appairage")
 @receiver(post_save, sender=Appairage, dispatch_uid="rap_app.appairage.sync_appairage_to_candidat")
 def sync_appairage_to_candidat(sender, instance: Appairage, created: bool, **kwargs):
     """
-    Synchronise les champs de placement du Candidat lors de la sauvegarde d'un Appairage.
-    Met à jour ou retire les données de placement sur le Candidat selon le statut de l'Appairage.
+    Point d'observation `audit-only` déclenché après sauvegarde d'un appairage.
+
+    La synchronisation réelle du snapshot de placement doit désormais passer
+    par `AppairagePlacementService`.
     """
     if is_appairage_snapshot_sync_deferred() or getattr(instance, "_placement_synced_by_service", False):
         return
@@ -45,7 +51,10 @@ def sync_appairage_to_candidat(sender, instance: Appairage, created: bool, **kwa
 @receiver(post_delete, sender=Appairage, dispatch_uid="rap_app.appairage.unsync_appairage_from_candidat")
 def unsync_appairage_from_candidat(sender, instance: Appairage, **kwargs):
     """
-    Retire les champs de placement du Candidat si l'Appairage correspondant est supprimé.
+    Point d'observation `audit-only` déclenché après suppression d'un
+    appairage.
+
+    Le handler ne retire plus activement les champs de placement du candidat.
     """
     if is_appairage_snapshot_sync_deferred() or getattr(instance, "_placement_synced_by_service", False):
         return
@@ -66,7 +75,10 @@ def unsync_appairage_from_candidat(sender, instance: Appairage, **kwargs):
 @receiver(pre_save, sender=Candidat, dispatch_uid="rap_app.appairage.sync_candidat_to_appairage")
 def sync_candidat_to_appairage(sender, instance: Candidat, **kwargs):
     """
-    Met à jour le statut de l'Appairage associé si entreprise_placement du Candidat change manuellement.
+    Point d'observation `audit-only` déclenché quand un candidat est sauvé.
+
+    Le handler ne pousse plus de mise à jour vers un appairage : il sert
+    uniquement à détecter un ancien flux de synchronisation inverse.
     """
     if getattr(instance, "_from_appairage_signal", False):
         return

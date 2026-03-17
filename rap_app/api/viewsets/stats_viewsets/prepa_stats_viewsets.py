@@ -35,38 +35,15 @@ from ...serializers.base_serializers import EmptySerializer
 @extend_schema(tags=["Prépa - Statistiques"])
 class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet dédié aux statistiques Prépa.
+    Reporting read-only sur le module Prépa.
 
-    ──────────────────────────────────────────────────────────────
-    PERMISSIONS & VISIBILITÉ
-    ──────────────────────────────────────────────────────────────
+    Toutes les actions reposent sur `_filtered_qs()` pour appliquer le
+    périmètre Prépa staff/admin et les filtres métier (`centre`,
+    `departement`, `type_prepa`, `annee`).
 
-    - permission_classes = [IsPrepaStaffOrAbove]
-        • Seuls les utilisateurs ayant ce niveau de permission peuvent accéder à ce ViewSet. Cette permission peut désigner :
-            - Les membres du staff Prépa, éventuellement en lecture seule ou restrictive
-            - Les profils admin/superadmin
-        • Le détail exact de la permission dépend de l’implémentation du composant `IsPrepaStaffOrAbove`,
-          qui n’est pas visible ici. Référez-vous à ce code pour la granularité réelle.
-
-    ──────────────────────────────────────────────────────────────
-    FILTRAGE/QUERYSET
-    ──────────────────────────────────────────────────────────────
-
-    - queryset = Prepa.objects.select_related("centre").all()
-        • Source des données statistiques : tous les objets Prépa, joints au centre.
-        • La méthode _filtered_qs() restreint dynamiquement la visibilité des lignes Prépa selon :
-            • le rôle utilisateur (admin = tout ; staff = par centre/département autorisé)
-            • les filtres explicites passés dans la requête (centre, département, type_prepa, année)
-        • Pas de filter_backends ni search_fields ni ordering_fields ni filterset_class :
-          le filtrage est 100% custom dans le code.
-
-    ──────────────────────────────────────────────────────────────
-    SERIALIZER
-    ──────────────────────────────────────────────────────────────
-
-    - serializer_class = EmptySerializer
-        • Les actions de ce ViewSet ne servent qu’au reporting/statistiques, donc ne retournent ni objet Prépa CRUD ni liste standard REST
-        • Le mécanisme principal est la structure JSON personnalisée définie dans chaque action.
+    Le viewset expose surtout des endpoints dashboard et d'export ; les
+    réponses sont soit des payloads JSON construits à la main, soit des
+    exports binaires.
     """
 
     serializer_class = EmptySerializer

@@ -35,16 +35,16 @@ def test_staff_creer_compte_action():
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    # Le signal crée automatiquement un Candidat lié au CustomUser.
-    cand = getattr(cand_user, "candidat_associe")
-    cand.nom = "VS1"
-    cand.prenom = "Candidat"
-    cand.email = "viewset1@example.com"
-    cand.formation = formation
-    cand.admissible = True
-    cand.created_by = staff
-    cand.updated_by = staff
-    cand.save()
+    cand = Candidat.objects.create(
+        nom="VS1",
+        prenom="Candidat",
+        email="viewset1@example.com",
+        formation=formation,
+        admissible=True,
+        compte_utilisateur=cand_user,
+        created_by=staff,
+        updated_by=staff,
+    )
 
     url = reverse("candidat-creer-compte", args=[cand.id])
     resp = client.post(url)
@@ -82,16 +82,16 @@ def test_staff_creer_compte_refuse_si_deja_compte():
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    cand = getattr(cand_user, "candidat_associe")
-    cand.nom = "VS2"
-    cand.prenom = "Candidat"
-    cand.email = "viewset2@example.com"
-    cand.formation = formation
-    # Non admissible -> doit échouer
-    cand.admissible = False
-    cand.created_by = staff
-    cand.updated_by = staff
-    cand.save()
+    cand = Candidat.objects.create(
+        nom="VS2",
+        prenom="Candidat",
+        email="viewset2@example.com",
+        formation=formation,
+        admissible=False,
+        compte_utilisateur=cand_user,
+        created_by=staff,
+        updated_by=staff,
+    )
 
     url = reverse("candidat-creer-compte", args=[cand.id])
     resp = client.post(url)
@@ -117,21 +117,21 @@ def test_demande_compte_candidat_flow():
     )
     staff.centres.add(centre)
 
-    # Créer un user candidat et récupérer le profil Candidat automatiquement créé par le signal.
     user_cand = CustomUser.objects.create_user_with_role(
         email="demande@example.com",
         username="demande",
         password=None,
         role=CustomUser.ROLE_CANDIDAT,
     )
-    cand = user_cand.candidat_associe
-    cand.nom = "Demande"
-    cand.prenom = "Compte"
-    cand.email = "demande@example.com"
-    cand.formation = formation
-    cand.created_by = staff
-    cand.updated_by = staff
-    cand.save()
+    cand = Candidat.objects.create(
+        nom="Demande",
+        prenom="Compte",
+        email="demande@example.com",
+        formation=formation,
+        compte_utilisateur=user_cand,
+        created_by=staff,
+        updated_by=staff,
+    )
 
     client.force_authenticate(user=user_cand)
     url_demande = reverse("demande_compte_candidat")
@@ -211,14 +211,15 @@ def test_valider_demande_compte_refuse_collision_email_avec_autre_candidat_reel(
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    existing_candidate = existing_user.candidat_associe
-    existing_candidate.nom = "Existant"
-    existing_candidate.prenom = "Candidat"
-    existing_candidate.email = "collision-viewset@example.com"
-    existing_candidate.formation = formation
-    existing_candidate.created_by = staff
-    existing_candidate.updated_by = staff
-    existing_candidate.save()
+    Candidat.objects.create(
+        nom="Existant",
+        prenom="Candidat",
+        email="collision-viewset@example.com",
+        formation=formation,
+        compte_utilisateur=existing_user,
+        created_by=staff,
+        updated_by=staff,
+    )
 
     cand = Candidat.objects.create(
         nom="Nouveau",
@@ -301,11 +302,13 @@ def test_candidate_cannot_access_another_candidate():
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    cand_a = cand_user_a.candidat_associe
-    cand_a.nom = "A"
-    cand_a.prenom = "A"
-    cand_a.formation = formation
-    cand_a.save()
+    Candidat.objects.create(
+        nom="A",
+        prenom="A",
+        email="candidat_a@example.com",
+        formation=formation,
+        compte_utilisateur=cand_user_a,
+    )
 
     cand_user_b = CustomUser.objects.create_user_with_role(
         email="candidat_b@example.com",
@@ -313,11 +316,13 @@ def test_candidate_cannot_access_another_candidate():
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    cand_b = cand_user_b.candidat_associe
-    cand_b.nom = "B"
-    cand_b.prenom = "B"
-    cand_b.formation = formation
-    cand_b.save()
+    cand_b = Candidat.objects.create(
+        nom="B",
+        prenom="B",
+        email="candidat_b@example.com",
+        formation=formation,
+        compte_utilisateur=cand_user_b,
+    )
 
     client.force_authenticate(user=cand_user_a)
     url = reverse("candidat-detail", args=[cand_b.id])

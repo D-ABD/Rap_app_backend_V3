@@ -36,150 +36,22 @@ def _to_int_or_none(val) -> Optional[int]:
 
 class AppairageStatsViewSet(GenericViewSet):
     """
-    ViewSet d'agrégation statistique pour les objets Appairage.
+    Reporting agrégé sur les objets `Appairage`.
 
-    ──────────────────────────────────────────────────────────────
-    Permissions
-    -----------
-    - permission_classes = [IsStaffOrAbove]
-      → La permission d'accès dépend du composant 'IsStaffOrAbove' importé localement :
-        - Seul un utilisateur évalué comme staff ou "above" (incluant potentiellement admin, selon l'implémentation de IsStaffOrAbove)
-          peut accéder à n'importe quelle action de ce ViewSet.
-      → D'autres vérifications de périmètre sont présentes dans le code interne pour restreindre le scope selon le "type" d'utilisateur (voir
-        les helpers _is_admin_like, _staff_centre_ids...).
-      → Le contrat global d'accès n'est pas lisible sans voir le code d'IsStaffOrAbove.
+    Le queryset applique un scoping staff/admin-like, exclut les archives par
+    défaut puis accepte des filtres manuels sur les dates, le centre, le
+    département, la formation, le partenaire et le statut.
 
-    ──────────────────────────────────────────────────────────────
-    Filtres & requêtes
-    ------------------
-    - Ce ViewSet ne déclare pas de filter_backends ni de filterset_class.
-    - Les filtres sont appliqués exclusivement à la main dans get_queryset() puis dans _apply_common_filters().
-    - Les restrictions de visibilité dépendent à la fois de la permission globale and du périmètre calculé dynamiquement par
-      _scope_appairages_for_user (centré sur 'centres', 'départements', nature admin/staff), cf. ci-dessous.
+    Endpoints principaux :
+    - `list` pour les KPI globaux ;
+    - `grouped` pour les agrégats par dimension ;
+    - `tops` pour les classements partenaires/formations.
 
-    Méthodes de filtrage :
-    - get_queryset() :
-      - Appairage.objects.select_related(...) pour éviter le N+1
-      - Application du filtre de périmètre restreint via _scope_appairages_for_user pour ne garder que le scope vu par l'utilisateur connecté.
-        * admin-like → tout voir
-        * staff/staffread → limitation par centres ou départements d'affectation éventuels (récupérés dynamiquement sur user)
-        * Aucun other accès
-      - Par défaut, seuls les Appairages actifs sont retournés, sauf si le flag 'avec_archivees' (query param) est activé.
-    - _apply_common_filters(qs) :
-      - Applique les query_params :
-          * date_from / date_to (dates au format YYYY-MM-DD)
-          * centre (ID numérique)
-          * departement (code sur les 2 premiers chiffres du code postal du partenaire)
-          * formation (ID)
-          * partenaire (ID)
-          * statut (clé statut reconnue, sinon comportement fallback)
-      - Ne concerne QUE les actions qui utilisent _apply_common_filters.
-
-    ──────────────────────────────────────────────────────────────
-    Serializers
-    -----------
-    - Toutes les actions standard et custom utilisent EmptySerializer (n'est pas détaillé ici, il s'agit potentiellement d'un placeholder pour désactiver la sérialisation DRF standard).
-      - Les réponses sont construites dynamiquement et envoyées via Response(payload).
-      - Le format précis de chaque payload est analysé méthode par méthode.
-
-    ──────────────────────────────────────────────────────────────
-    Actions standard et personnalisées
-    ----------------------------------
-    - list (GET /appairage-stats/):
-        Objectif métier :
-            → Retourne des KPI globaux sur les appairages visibles par l'utilisateur, avec cumuls et taux de transformation.
-        Permissions :
-            - Restreint selon le scope staff/admin via IsStaffOrAbove + restriction dans get_queryset.
-        Filtres utilisables :
-            - voir .get_queryset() et ._apply_common_filters (voir ci-dessus)
-        Type de réponse JSON (structure visible dans le code) :
-            {
-                "kpis": {
-                    "appairages_total": int,
-                    "nb_candidats_distincts": int,
-                    "nb_partenaires_distincts": int,
-                    "nb_formations_distinctes": int,
-                    "statuts": { <clé_statut>: int, ... },
-                    "taux_transformation": float
-                },
-                "repartition": {
-                    "par_statut": [
-                        {"code": str, "label": str, "count": int},
-                        ... (par statut déclaré dans AppairageStatut.choices)
-                    ]
-                },
-                "filters_echo": { ... paramètres reçus ... }
-            }
-        Serializer utilisé :
-            - EmptySerializer (aucune transformation, tout dans le payload explicite).
-        Note :
-            - Toutes les valeurs sont calculées pour le scope vue/filtré par l'utilisateur.
-
-    - grouped (GET /appairage-stats/grouped/?by=...):
-        Objectif métier :
-            → Permet d'obtenir des KPI (dont le taux de transformation) groupés par une clé d'agrégation (centre, département, statut, formation, partenaire).
-        Permissions :
-            - Même modèle d'accès que pour list : IsStaffOrAbove + restriction sur le queryset utilisateur.
-        Arguments d'entrée attendus :
-            - Query param 'by' obligatoire, default="centre" (cf. GroupKey)
-                valeurs possibles : "centre", "departement", "statut", "formation", "partenaire"
-                -> Requête GET.
-            - Les mêmes filtres que pour list peuvent être fournis.
-        Structure de la réponse JSON (visibilité du code explicite) :
-            {
-                "group_by": str,  # la clé de groupement (valeur du paramètre 'by')
-                "results": [
-                    {
-                        ... champs du groupe sélectionné,
-                        "group_key": ... (clé unique du groupe, dépend de 'by')
-                        "group_label": ... (libellé, dépend de 'by')
-                        "appairages_total": int,
-                        "nb_candidats": int,
-                        "nb_partenaires": int,
-                        "nb_formations": int,
-                        <1...n clefs statut ex: appairage_ok, ...>: int,
-                        "taux_transformation": float,
-                    }, ...
-                ],
-                "filters_echo": { ... }
-            }
-        Serializer utilisé :
-            - EmptySerializer (pas de sérialisation DRF autom.)
-        Note :
-            - En cas de paramètre 'by' non reconnu, retourne un 400 avec message.
-            - La logique d'agrégation exacte dépend de la clé (voir group_fields_map).
-
-    - tops (GET /appairage-stats/tops/):
-        Objectif métier :
-            → Retourne les 10 meilleurs partenaires et 10 meilleures formations (triés sur le nombre d'appairages visibles dans le scope de l'utilisateur courant).
-        Permissions :
-            - Identique aux autres (scope staff/admin uniquement).
-        Arguments :
-            - GET, pas de paramètre particulier imposé, mais accepte tous les filtres standards via query params.
-        Structure de réponse JSON (visible explicitement) :
-            {
-                "top_partenaires": [ {"id": int, "nom": str, "count": int}, ... max 10 ],
-                "top_formations": [ {"id": int, "nom": str, "count": int}, ... max 10 ],
-                "filters_echo": { ... }
-            }
-        Serializer utilisé :
-            - EmptySerializer
-
-    ──────────────────────────────────────────────────────────────
-    Points non documentés / incertains
-    ----------------------------------
-    - Les noms de permissions et les mécanismes précis de 'IsStaffOrAbove'/'is_staff_or_staffread' dépendent de code externe (non visible ici).
-    - Si le format JSON devait changer dans une sous-classe ou via un renderer custom, ce ne serait pas visible ici.
+    Les réponses sont construites manuellement avec `Response` et
+    `EmptySerializer` sert uniquement de serializer d'entrée.
     """
 
     serializer_class = EmptySerializer
-    """
-    Endpoints
-    ---------
-    GET /appairage-stats/                  → KPIs globaux (résumé)
-    GET /appairage-stats/grouped/?by=...   → groupés par centre|departement|statut|formation|partenaire
-    GET /appairage-stats/tops/             → tops partenaires / formations
-    """
     permission_classes = [IsStaffOrAbove]
 
     # ────────────────────────────────────────────────────────────

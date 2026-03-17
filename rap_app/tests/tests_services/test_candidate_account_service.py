@@ -38,14 +38,15 @@ class CandidateAccountServiceTests(TestCase):
             password="password123",
             role=CustomUser.ROLE_CANDIDAT,
         )
-        existing_candidate = existing_user.candidat_associe
-        existing_candidate.nom = "Premier"
-        existing_candidate.prenom = "Candidat"
-        existing_candidate.email = "collision@example.com"
-        existing_candidate.formation = self.formation
-        existing_candidate.created_by = self.actor
-        existing_candidate.updated_by = self.actor
-        existing_candidate.save()
+        Candidat.objects.create(
+            nom="Premier",
+            prenom="Candidat",
+            email="collision@example.com",
+            formation=self.formation,
+            compte_utilisateur=existing_user,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
 
         candidate = Candidat.objects.create(
             nom="Second",

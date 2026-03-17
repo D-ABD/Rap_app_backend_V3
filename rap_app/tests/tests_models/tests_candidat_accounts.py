@@ -138,14 +138,15 @@ def test_creer_ou_lier_compte_refuse_si_user_deja_lie_a_autre_candidat():
         role=CustomUser.ROLE_TEST,
     )
 
-    cand1 = getattr(user, "candidat_associe")
-    cand1.nom = "Premier"
-    cand1.prenom = "Candidat"
-    cand1.email = "candidat4@example.com"
-    cand1.formation = formation
-    cand1.created_by = staff
-    cand1.updated_by = staff
-    cand1.save()
+    cand1 = Candidat.objects.create(
+        nom="Premier",
+        prenom="Candidat",
+        email="candidat4@example.com",
+        formation=formation,
+        compte_utilisateur=user,
+        created_by=staff,
+        updated_by=staff,
+    )
     assert cand1.compte_utilisateur_id == user.id
 
     with pytest.raises((ValidationError, IntegrityError)):

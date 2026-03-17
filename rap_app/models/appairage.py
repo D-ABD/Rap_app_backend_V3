@@ -1,3 +1,10 @@
+"""Modèle d'appairage entre candidat, partenaire et formation.
+
+Le modèle conserve la donnée persistante et un filet d'observation legacy
+autour de l'ancien snapshot de placement. La source de vérité métier visée pour
+la synchronisation vers `Candidat` est désormais `AppairagePlacementService`.
+"""
+
 import logging
 
 from django.conf import settings
@@ -62,6 +69,10 @@ class AppairageActivite(models.TextChoices):
 class Appairage(BaseModel):
     """
     Appairage entre un candidat, un partenaire et, optionnellement, une formation.
+
+    Le modèle reste responsable de la cohérence des champs persistés et de
+    l'historisation locale, mais ne doit plus être considéré comme la source
+    principale de synchronisation métier vers `Candidat`.
     """
 
     objects = AppairageManager()
@@ -231,7 +242,13 @@ class Appairage(BaseModel):
 
     def _sync_candidat_snapshot(self, candidat: Candidat):
         """
-        Met à jour le snapshot du candidat selon le dernier appairage actif.
+        Ancienne implémentation locale de synchronisation du snapshot de
+        placement sur `Candidat`.
+
+        Cette méthode est conservée comme référence technique pendant la
+        transition, mais le flux métier cible doit désormais passer par
+        `AppairagePlacementService`. Elle ne doit plus être vue comme la
+        responsabilité métier principale du modèle.
         """
         try:
             if not candidat:
@@ -295,7 +312,12 @@ class Appairage(BaseModel):
 
     def save(self, *args, **kwargs):
         """
-        Surcharge save. Crée ou met à jour un appairage. Gère les entrées historiques et la synchronisation du candidat associé.
+        Sauvegarde l'appairage et gère l'historique propre au modèle.
+
+        Dans l'état actuel du code, le modèle ne synchronise plus directement
+        le snapshot candidat : il émet seulement un warning
+        `MODEL_SYNC_TRIGGERED` lorsqu'un ancien flux modèle aurait pu se
+        déclencher.
         """
         user = kwargs.pop("user", None)
         is_new = self.pk is None
@@ -352,7 +374,8 @@ class Appairage(BaseModel):
 
     def delete(self, *args, **kwargs):
         """
-        Surcharge delete. Supprime l'appairage et met à jour le snapshot du candidat.
+        Supprime l'appairage et conserve un warning d'observation si un ancien
+        flux de synchronisation modèle aurait dû mettre à jour le candidat.
         """
         cand = self.candidat
         with transaction.atomic():

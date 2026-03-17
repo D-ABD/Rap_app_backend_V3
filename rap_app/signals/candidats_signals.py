@@ -54,7 +54,10 @@ def _build_unique_username(base: str) -> str:
 @receiver(pre_save, sender=CustomUser, dispatch_uid="rap_app.candidats_signals._remember_old_role")
 def _remember_old_role(sender, instance: CustomUser, **kwargs):
     """
-    Stocke l'ancien rôle du CustomUser dans _old_role avant sauvegarde.
+    Stocke l'ancien rôle sur l'instance avant sauvegarde.
+
+    Ce helper sert uniquement aux handlers de transition autour des changements
+    de rôle ; il ne porte pas de synchronisation métier en lui-même.
     """
     if not instance.pk:
         instance._old_role = None  # type: ignore[attr-defined]
@@ -69,8 +72,13 @@ def _remember_old_role(sender, instance: CustomUser, **kwargs):
 @receiver(post_save, sender=CustomUser, dispatch_uid="rap_app.candidats_signals.sync_candidat_for_user")
 def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs):
     """
-    Maintient la cohérence entre CustomUser et Candidat selon le rôle de l'utilisateur.
-    Lie ou dissocie un Candidat en fonction du rôle actuel.
+    Handler conservé en mode `audit-only` pendant la Phase 4.
+
+    Le code actuel ne synchronise plus `CustomUser` et `Candidat` :
+    il journalise uniquement qu'un ancien point d'entrée signal a été touché,
+    puis retourne immédiatement.
+
+    La logique métier cible a été déplacée vers `CandidateAccountService`.
     """
 
     with signal_processing(instance) as can_run:
@@ -108,7 +116,13 @@ def sync_candidat_for_user(sender, instance: CustomUser, created: bool, **kwargs
 @receiver(pre_save, sender=Prospection, dispatch_uid="rap_app.candidats_signals.sync_formation_from_owner")
 def sync_formation_from_owner(sender, instance: Prospection, **kwargs):
     """
-    Copie l'identifiant de formation du candidat associé à l'owner vers la prospection, selon le contexte.
+    Handler conservé en mode `audit-only` pendant la Phase 4.
+
+    Le code actuel ne copie plus la formation depuis `owner.candidat_associe` :
+    il journalise uniquement un warning de détection.
+
+    La résolution métier explicite owner/formation/centre relève désormais de
+    `ProspectionOwnershipService`.
     """
     if is_prospection_owner_sync_deferred():
         return

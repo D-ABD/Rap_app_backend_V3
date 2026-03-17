@@ -19,38 +19,14 @@ from ...serializers.base_serializers import EmptySerializer
 
 class PartenaireStatsViewSet(viewsets.ViewSet):
     """
-    ViewSet exposant des statistiques sur les Partenaires.
+    Reporting sur les partenaires visibles par l'utilisateur courant.
 
-    Points d'entrée principaux :
-        - GET /api/partenaire-stats/             : Statistiques globales sur les partenaires (action 'list')
-        - GET /api/partenaire-stats/grouped/     : Statistiques groupées selon critère paramétrable (action personnalisée 'grouped')
-        - GET /api/partenaire-stats/tops/        : Tops (classements) des partenaires selon critères (action personnalisée 'tops')
+    Le périmètre est déduit du rôle : accès global admin-like, restriction
+    staff par centres ou départements, restriction candidat à ses partenaires
+    issus de prospections, sinon queryset vide.
 
-    ---------------
-    Permissions :
-    ---------------
-    - Limite d'accès globale : permissions.IsAuthenticated (uniquement utilisateurs authentifiés)
-    - Restrictions supplémentaires basées sur le périmètre métier :
-        - Administrateur (is_superuser ou méthode is_admin du user): accès global à toutes les données partenaires
-        - Staff (selon fonction is_staff_or_staffread(user)):
-            - Accès limité à certains centres et/ou départements qui sont associés au user ou à son profil
-            - Voir la docstring de _scope_partenaires_for_user pour détails précis sur les règles de visibilité (reproduction métier).
-        - Candidats/Stagiaires ayant .is_candidat_or_stagiaire() : accès uniquement aux partenaires liés à leurs prospections
-        - Utilisateurs "autres" (rôle non reconnu ou non authentifié): aucun accès aux statistiques (résultats vides)
-    - À noter : La logique précise de reconnaissance staff/admin/candidat dépend de la fonction is_staff_or_staffread (permission importée) et des méthodes utilisateur, qui ne sont pas définies ici.
-
-    ---------------
-    Filtrage / queryset :
-    ---------------
-    - La totalité des actions web (list/grouped/tops) s'appuie sur une logique maison (_base_qs et _scope_partenaires_for_user) pour restreindre dynamiquement le QuerySet en fonction de l'utilisateur courant.
-    - Pas de filter_backends explicite, ni de search_fields, ordering_fields ou filterset_class sur ce ViewSet.
-    - _base_qs applique d'abord des 'filtres structurants' (personnalisables, mais laissés neutres dans _apply_base_filters), puis la restriction utilisateur.
-    - Les paramètres de dates ('date_from', 'date_to') peuvent être passés en query params, utilisés pour filtrer les événements de prospection et d'appairage.
-
-    ---------------
-    Serializers :
-    ---------------
-    - Unique serializer utilisé : EmptySerializer, car ce ViewSet ne retourne que des objets Response JSON "faits main".
+    Les actions exposées (`list`, `grouped`, `tops`) construisent directement
+    leurs payloads JSON sans serializer métier de sortie.
     """
 
     serializer_class = EmptySerializer

@@ -128,8 +128,8 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         }
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("date_debut", response.data)
-        self.assertIn("date_fin", response.data)
+        self.assertIn("date_debut", response.data.get("errors", {}))
+        self.assertIn("date_fin", response.data.get("errors", {}))
 
     def test_permission_required(self):
         """Accès non authentifié → 401 Unauthorized."""

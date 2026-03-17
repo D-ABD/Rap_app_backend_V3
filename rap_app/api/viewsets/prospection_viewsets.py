@@ -225,10 +225,21 @@ class CandidatReadMinimalSerializer(serializers.ModelSerializer):
 )
 class ProspectionViewSet(viewsets.ModelViewSet):
     """
-    ViewSet principal pour les prospections, gérant les opérations
-    CRUD, le scoping par rôle et centres, plusieurs filtres avancés,
-    des actions métier (filtres, archivage, changement de statut,
-    choix) et l'export XLSX.
+    ViewSet principal des prospections.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsOwnerOrStaffOrAbove`
+    - scoping hybride :
+      - admins : accès global
+      - staff : visibilité centre + certains liens owner/created_by
+      - candidats : visibilité centrée sur leurs propres prospections
+    - la résolution métier de `owner`, `formation` et `centre_id` lors des
+      créations/mises à jour passe par `ProspectionOwnershipService`
+    - le fichier reste dense et combine CRUD, filtres, actions métier,
+      archivage, choix et export
+
+    La documentation de ce viewset doit être lue avec cette réalité hybride,
+    non comme un simple CRUD standard.
     """
 
     queryset = Prospection.objects.select_related(

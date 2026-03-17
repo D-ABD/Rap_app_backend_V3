@@ -167,7 +167,19 @@ class IsOwnerOrSuperAdmin(BasePermission):
 
 class IsOwnerOrStaffOrAbove(BasePermission):
     """
-    Gère l'accès objet selon le rôle ou lien explicite (owner, created_by).
+    Autorise l'accès selon une combinaison de règles globales et objet.
+
+    Règles principales :
+    - admin-like : accès complet
+    - staff : accès complet
+    - `staff_read` : lecture seule
+    - utilisateur propriétaire via `owner_id`
+    - utilisateur créateur via `created_by_id`
+
+    `has_permission()` vérifie surtout l'éligibilité générale de la requête.
+    `has_object_permission()` applique ensuite la logique objet sur les champs
+    `owner_id`, `created_by_id` et, pour certains objets liés à des
+    prospections, un fallback de lecture via `obj.prospections`.
     """
 
     message = "Accès restreint."
@@ -209,7 +221,16 @@ class IsOwnerOrStaffOrAbove(BasePermission):
 
 class UserVisibilityScopeMixin:
     """
-    Applique un filtre d'accès utilisateurs dans les queryset selon le rôle.
+    Ajoute un filtre de visibilité queryset basé sur un champ utilisateur.
+
+    Comportement :
+    - admin-like : accès global
+    - staff/staff_read : pas de restriction supplémentaire dans ce mixin
+    - autres utilisateurs authentifiés : restreints à `user_field`
+
+    Ce mixin ne remplace pas le scoping par centres. Il sert surtout pour les
+    ressources où la visibilité non-staff repose sur un lien direct avec un
+    champ utilisateur (`created_by` par défaut).
     """
 
     user_field = "created_by"
@@ -306,21 +327,30 @@ class IsPrepaStaffOrAbove(BasePermission):
 
 class CanAccessCVTheque(BasePermission):
     """
-    Gère l'accès à la CVThèque selon le rôle, le centre, l'auteur ou le type d'accès.
+    Permission dédiée à la CVThèque.
+
+    `has_permission()` vérifie seulement que l'utilisateur est authentifié.
+    `has_object_permission()` applique ensuite les règles métier :
+    - admin-like : accès complet ;
+    - `staff_read` : lecture seule sur les CV de son périmètre centre ;
+    - autres profils staff : accès lecture/écriture dans leur périmètre centre ;
+    - candidat : accès à son propre CV ;
+    - autres utilisateurs : lecture limitée à leurs objets créés ou liés.
     """
 
     message = "Accès refusé."
 
     def has_permission(self, request, view):
         """
-        Autorise uniquement les utilisateurs authentifiés.
+        Vérifie uniquement l'authentification avant résolution de l'objet.
         """
         user = request.user
         return bool(user and getattr(user, "is_authenticated", False))
 
     def has_object_permission(self, request, view, obj):
         """
-        Gère l'accès à un objet de la CVThèque selon le profil utilisateur et l'action.
+        Affine l'accès sur un objet CVthèque selon le rôle, le centre visible
+        et le lien entre l'objet candidat et l'utilisateur courant.
         """
         user = request.user
         if not user or not getattr(user, "is_authenticated", False):
@@ -360,9 +390,15 @@ class CanAccessCVTheque(BasePermission):
 class CanAccessCandidatObject(BasePermission):
     """Permission objet pour limiter l'accès aux candidats.
 
-    - Les administrateurs et le staff (hors "staff_read") peuvent accéder aux candidats de leur périmètre centre.
-    - Les utilisateurs "staff_read" ont accès en lecture seule aux candidats de leur périmètre.
-    - Les candidats peuvent accéder uniquement à leur propre profil.
+    Règles :
+    - admin-like : accès complet ;
+    - staff/staff_read : accès selon le périmètre centre du candidat ;
+    - candidat : accès uniquement à son propre profil ;
+    - autres profils : refus.
+
+    `has_permission()` contrôle l'entrée générale dans la vue.
+    `has_object_permission()` applique ensuite le périmètre centre ou
+    l'égalité `compte_utilisateur_id == request.user.id`.
     """
 
     message = "Accès refusé."

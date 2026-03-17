@@ -38,6 +38,10 @@ class AppairagePlacementService:
     """
     Synchronise explicitement le snapshot de placement d'un candidat
     à partir de l'état courant des appairages.
+
+    Ce service est la source de vérité métier visée pour la synchronisation
+    Appairage -> Candidat, en remplacement progressif des anciens signaux et
+    hooks modèle.
     """
 
     @classmethod
@@ -48,6 +52,12 @@ class AppairagePlacementService:
         actor: CustomUser | None = None,
         previous_candidat: Candidat | None = None,
     ) -> dict[str, list[str]]:
+        """
+        Resynchronise le candidat courant, puis éventuellement l'ancien
+        candidat si l'appairage a été réaffecté.
+
+        Retourne les champs modifiés par cible (`current`, `previous`).
+        """
         changes: dict[str, list[str]] = {}
 
         changes["current"] = cls._sync_candidate_from_latest_appairage(
@@ -73,6 +83,10 @@ class AppairagePlacementService:
         actor: CustomUser | None = None,
         appairage: Appairage | None = None,
     ) -> list[str]:
+        """
+        Reconstruit le snapshot de placement du candidat à partir de
+        l'appairage de référence puis historise si quelque chose change.
+        """
         if candidat is None:
             return []
 
@@ -114,6 +128,10 @@ class AppairagePlacementService:
         appairage: Appairage | None,
         actor: CustomUser | None = None,
     ) -> dict[str, Any]:
+        """
+        Transforme l'état d'un appairage en snapshot normalisé pour les
+        champs de placement du candidat.
+        """
         from ..models.appairage import AppairageStatut
         from ..models.candidat import Candidat
 
@@ -156,6 +174,10 @@ class AppairagePlacementService:
         snapshot: dict[str, Any],
         actor: CustomUser | None = None,
     ) -> list[str]:
+        """
+        Applique au candidat uniquement les champs réellement modifiés puis
+        sauvegarde l'objet en marquant les drapeaux techniques nécessaires.
+        """
         changed_fields: list[str] = []
 
         for field, value in snapshot.items():

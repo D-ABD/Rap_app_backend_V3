@@ -30,91 +30,17 @@ from ...serializers.base_serializers import EmptySerializer
 @extend_schema(tags=["Déclic - Statistiques"])
 class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet dédié à la restitution des indicateurs statistiques liés au module Déclic.
+    Reporting read-only sur les indicateurs Déclic.
 
-    Points clés à propos de ce ViewSet :
-    -------------------------------------------------------
-    1. Permissions :
-        - permission_classes = [IsDeclicStaffOrAbove]
-        - Seules les personnes disposant du rôle lié à 'IsDeclicStaffOrAbove' peuvent accéder à ces endpoints.
-        - NOTE : Le contrôle exact de cette permission n'est PAS visible ici — se référer à la définition de la classe 'IsDeclicStaffOrAbove' pour la logique complète (staff, admin, etc.).
+    Les données sont restreintes par `_filtered_qs()` selon le rôle courant,
+    puis exposées via des actions orientées dashboard :
+    - `grouped` pour les agrégats par centre, département ou type ;
+    - `synthese` pour les objectifs annuels ;
+    - `resume` pour les KPI synthétiques ;
+    - `export_xlsx` pour l'export tabulaire.
 
-    2. Queryset et filtrage :
-        - queryset = Déclic.objects.select_related("centre").all()
-        - Le ViewSet ne fournit PAS d'accès direct à la liste ou au détail des objets Déclic.
-        - Le filtrage effectif utilisé par les actions dépendantes de _filtered_qs().
-            - Ce filtrage combine : année (requête GET ?annee=...), centre (?centre=...), type_declic (?type_declic=...)
-            - Contrôle de visibilité :
-                - Pour un 'admin_like' (fonction importée, logique exacte non visible ici) : accès global à l'année.
-                - Sinon (ex. staff centre, etc.) :
-                    - Si l'user possède des ids de centres dans 'staff_centre_ids' → accès à ces centres.
-                    - Si l'user possède l'attribut .centres (et que ceux-ci existent) → accès par départements des codes postaux des centres rattachés (premiers 2 chiffres).
-                    - Sinon, aucun accès (retourne queryset vide).
-        - Recherche et ordering DRF : aucun filter_backends, search_fields, ordering_fields, ni filterset_class explicitement définis ici.
-
-    3. Actions standards :
-        - ReadOnlyModelViewSet expose, par défaut, 'list' et 'retrieve', mais ici aucun serializer ou logique de liste/détail personnalisée n'est fournie.
-        - serializer_class = EmptySerializer → pas de sérialisation spécifique prévue pour des lignes Déclic dans ce ViewSet.
-        - Structure de réponse pour les actions standards : NON définie, ces points d’entrée standards ne semblent PAS pertinents dans ce contexte.
-
-    4. Actions personnalisées :
-
-        a) /grouped [GET]
-            - @action(detail=False, methods=["get"], url_path="grouped")
-            - Objectif métier : Fournir un agrégat des statistiques Déclic groupées selon le critère 'centre', 'departement' ou 'type_declic'.
-            - Filtrage : S'appuie sur _filtered_qs() donc restrictions détaillées plus haut.
-            - Paramètre GET attendu : ?by=[centre|departement|type_declic] (défaut : centre)
-            - Structure de réponse JSON : explicite, au format :
-                {
-                    "by": "centre"|"departement"|"type_declic",
-                    "results": [
-                        {
-                            "id": int|null,  # seulement si groupement par centre
-                            "group_key": str,  # nom du centre, code département, ou valeur type_declic
-                            "nb_inscrits_declic": int,
-                            "nb_presents_declic": int,
-                            "nb_absents_declic": int,
-                            "taux_presence_declic": float|null,
-                            "taux_retention": float|null,
-                        },
-                        ...
-                    ]
-                }
-            - Le calcul des taux est fait dynamiquement sur les agrégats.
-
-        b) /synthese [GET]
-            - @action(detail=False, methods=["get"], url_path="synthese")
-            - Objectif métier : Fournir la synthèse annuelle de l’atteinte des objectifs pour Déclic.
-            - Paramètre GET possible : ?annee=...
-            - Structure de la réponse : NON documentée depuis ce fichier (puisqu'elle dépend de 'Declic.synthese_objectifs'), impossible de préciser le format exact ici.
-
-        c) /resume [GET]
-            - @action(detail=False, methods=["get"], url_path="resume")
-            - Objectif métier : Dashboard — Fournir un résumé agrégé sur la participation aux Déclic (inscrits, présents, absents, taux présence, taux rétention, objectif, reste...).
-            - Paramètres GET possibles : ?annee=..., ?centre=...
-            - Structure de la réponse JSON : observable directement, exemple
-                {
-                    "annee": int,
-                    "objectif_total": int,
-                    "realise_total": int,
-                    "taux_atteinte_total": float,
-                    "reste_a_faire_total": int,
-                    "inscrits_total": int,
-                    "taux_presence_declic": float,
-                    "taux_retention": float,
-                }
-            - Les métriques retournées dépendent à la fois du filtre sur l'utilisateur/permissions, et des données requêtées.
-
-        d) /export-xlsx [GET]
-            - @action(detail=False, methods=["get"], url_path="export-xlsx")
-            - Objectif métier : Permet l’export de toutes les données filtrées Déclic saisies sous forme de fichier Excel (XLSX), avec formatage et calculs clés.
-            - Paramètres GET possibles : ?annee=..., ?centre=..., ?type_declic=...
-            - Structure de la réponse : Fichier binaire Excel, réponse HTTP 'Content-Disposition: attachment; ...'. PAS DE RESPONSE JSON.
-            - ATTENTION : Peu d’information sur la logique des champs personnalisés de chaque ligne Déclic hors du code métier (ex. s.taux_presence_declic, s.reste_a_faire).
-
-    NOTE IMPORTANTE :
-        - Toute permission ou business logic relevant de 'roles.is_admin_like', de la permission 'IsDeclicStaffOrAbove', ou de méthodes de modèle invoquées (e.g. Declic.synthese_objectifs) NE PEUT être documentée dans le détail ici sans consulter ces composants.
-
+    Les endpoints renvoient soit des payloads JSON construits à la main, soit
+    un fichier XLSX pour l'export.
     """
 
     serializer_class = EmptySerializer

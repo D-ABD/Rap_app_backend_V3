@@ -42,14 +42,22 @@ from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staf
         summary="🗑️ Supprimer un rapport",
         description="Supprime logiquement un rapport (désactivation).",
         tags=["Rapports"],
-        responses={204: OpenApiResponse(description="Rapport supprimé avec succès.")},
+        responses={204: OpenApiResponse(description="Rapport désactivé avec succès ; le code renvoie actuellement un body JSON malgré le statut 204.")},
     ),
 )
 class RapportViewSet(viewsets.ModelViewSet):
     """
-    ViewSet de gestion des rapports (systèmes et manuels) avec
-    opérations CRUD, filtrage, pagination et soft delete, réservé aux
-    utilisateurs ayant la permission IsStaffOrAbove.
+    ViewSet CRUD des rapports actifs.
+
+    Source de vérité actuelle :
+    - visibilité restreinte par rôle et centres dans `get_queryset()`
+    - suppression logique via `is_active = False`
+    - réponses JSON construites dans le viewset
+    - dépendance résiduelle à `RapportSerializer`, qui encapsule encore
+      aussi les données dans `to_representation()`
+
+    Tant que ce serializer n'est pas nettoyé, le contrat de sortie doit être
+    lu à partir du code de ce viewset et non de la cible architecturale.
     """
 
     queryset = Rapport.objects.filter(is_active=True)
@@ -108,8 +116,12 @@ class RapportViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Effectue une suppression logique du rapport (is_active à False),
-        journalise l'action puis renvoie une réponse JSON avec succès.
+        Effectue une suppression logique du rapport (`is_active = False`),
+        journalise l'action puis renvoie une réponse JSON de succès.
+
+        Le code renvoie actuellement un statut HTTP `204` tout en construisant
+        un body `{success, message, data}` ; cette combinaison reste la source
+        de vérité actuelle, même si elle est atypique pour un `DELETE`.
         """
         instance = self.get_object()
         instance.is_active = False
@@ -127,8 +139,8 @@ class RapportViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """
-        Crée un rapport après validation et renvoie une réponse JSON
-        contenant success, message et les données sérialisées.
+        Crée un rapport après validation et renvoie un payload JSON basé sur
+        `instance.to_serializable_dict()`.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -144,8 +156,8 @@ class RapportViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         """
-        Met à jour un rapport via PUT ou PATCH et renvoie une réponse
-        JSON contenant success, message et les données sérialisées.
+        Met à jour un rapport via `PUT` ou `PATCH` et renvoie une réponse JSON
+        basée sur l'état sérialisable du modèle.
         """
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
@@ -162,8 +174,8 @@ class RapportViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         """
-        Retourne le détail d’un rapport spécifique avec une réponse
-        JSON incluant success, message et data.
+        Retourne le détail d'un rapport dans l'enveloppe JSON standard du
+        viewset.
         """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -177,8 +189,11 @@ class RapportViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        Retourne la liste paginée des rapports actifs en appliquant la
-        recherche et l'ordering configurés.
+        Retourne la liste paginée des rapports actifs visibles pour
+        l'utilisateur courant.
+
+        Si une page est présente, le format de sortie est celui de
+        `RapAppPagination`. Sinon, la réponse est enveloppée manuellement.
         """
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
@@ -200,8 +215,7 @@ from rest_framework.views import APIView
 
 class RapportChoicesView(APIView):
     """
-    Vue renvoyant, pour un utilisateur authentifié, les choix possibles
-    pour les champs type_rapport, periode et format du modèle Rapport.
+    Expose les choix front pour `type_rapport`, `periode` et `format`.
     """
 
     permission_classes = [IsAuthenticated]
@@ -214,8 +228,8 @@ class RapportChoicesView(APIView):
     )
     def get(self, request):
         """
-        Retourne les choix disponibles pour les champs type_rapport,
-        periode et format du modèle Rapport.
+        Retourne les choix disponibles pour la création ou le filtrage des
+        rapports.
         """
 
         def serialize_choices(choices):

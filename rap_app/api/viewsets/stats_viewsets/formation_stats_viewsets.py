@@ -45,89 +45,17 @@ GroupKey = Literal["formation", "centre", "departement", "type_offre", "statut"]
 
 class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
-    ViewSet d’API REST pour la restitution agrégée de statistiques Formation/KPI.
+    Reporting agrégé sur les formations visibles par l'utilisateur courant.
 
-    ══════════════════════════════════════════
-    1. PERMISSIONS
-    ══════════════════════════════════════════
-    - permission_classes = [IsStaffOrAbove]
-        → Seuls les utilisateurs validés comme "staff" ou "admin" (au sens de IsStaffOrAbove) ont accès à tous les endpoints.
-        → La logique exacte de IsStaffOrAbove (staff vs admin, staffread, etc.) dépend du composant externe `...permissions` – non visible ici.
-        → La visibilité peut être restreinte dynamiquement dans _scope_formations_for_user selon le rôle utilisateur.
-        → Pour les non-staff/non-admin, restriction supplémentaire possible si RestrictToUserOwnedQueryset est présent (cf. "restriction éventuelle pour les non-staffs" dans get_queryset).
+    Le queryset applique un scoping staff/admin-like, exclut les archives par
+    défaut, puis accepte des filtres manuels sur les dates, le centre, le
+    département, le type d'offre et le statut.
 
-    ══════════════════════════════════════════
-    2. FILTRAGE ET QUERYSET
-    ══════════════════════════════════════════
-    - Méthode principale : get_queryset()
-        - Retourne les objets Formation visibles selon le périmètre utilisateur
-            * Si admin_like → toutes les formations
-            * Si staff/staff_read → limitation aux centres/departements accessibles depuis l'utilisateur
-            * Sinon → aucun accès (qs.none()), et restriction possible via restrict_queryset_to_user
-        - Par défaut, les formations archivées (activite="archivee") sont exclues, sauf si l'on passe ?avec_archivees=true
-    - Pas de filter_backends, search_fields, ordering_fields, filterset_class natifs du DRF
-    - Tous les filtres sont appliqués en interne dans les helpers : cf. _apply_common_filters (date_from, date_to, centre, departement, type_offre, statut).
-
-    ══════════════════════════════════════════
-    3. ACTIONS STANDARD DRF
-    ══════════════════════════════════════════
-
-    list (GET /formation-stats/):
-        - Objectif métier : vue synthétique d’indicateurs clés sur l’ensemble des Formations du périmètre visible.
-        - Filtres disponibles : voir _apply_common_filters + query param "avec_archivees"
-        - Serializer : EmptySerializer (aucune ligne Formation sérialisée individuellement)
-        - Réponse JSON (type explicitement construit dans la vue, voir "payload" en fin de méthode) :
-            * kpis : dictionnaire d’agrégats (total formations, actives, places prévues, taux de saturation, regroupement financeur, indicateurs candidats, appairages, …)
-            * filters_echo : echo de l’ensemble des query params fournis à l’entrée
-
-    retrieve / create / update / destroy :
-        - Non définis, comportement DRF par défaut (aucune intention métier documentée, aucun serializer spécifique).
-
-    ══════════════════════════════════════════
-    4. ACTIONS PERSONNALISÉES
-    ══════════════════════════════════════════
-
-    grouped (GET /formation-stats/grouped/?by=...):
-        - @action(detail=False, methods=["GET"], url_path="grouped")
-        - Objectif : Restituer des agrégats statistiques groupés par formation, centre, département, type_offre ou statut.
-        - Filtres : voir _apply_common_filters + query param "by" (par défaut : departement)
-        - Structure du résultat :
-            { "group_by": ..., "results": [ …liste d’agrégats par groupe… ] }
-        - Les champs présents dans chaque ligne résultent directement de l’aggregation/annotation DRF → voir rows dans la méthode.
-
-    tops (GET /formation-stats/tops/):
-        - @action(detail=False, methods=["GET"], url_path="tops")
-        - Objectif : Top formations à recruter (places dispo), saturées (taux ≥ 80%), en tension (taux < 50% avec places dispo).
-        - Filtres : voir _apply_common_filters, possibilité de restreindre par "limit"
-        - Structure du résultat JSON :
-            {
-                "a_recruter": [ … ],
-                "top_saturees": [ … ],
-                "en_tension": [ … ]
-            }
-        - Chaque tableau contient la liste des formations correspondantes (voir valeurs retournées en annotation .values dans la méthode).
-
-    filter-options (GET /formation-stats/filter-options/):
-        - @action(detail=False, methods=["GET"], url_path="filter-options")
-        - Objectif : Fournit les options des filtres (centres, types_offre, statuts, départements) pour alimenter les sélecteurs du front.
-        - Permissions : Périmètre respecté selon le rôle utilisateur (cf. logique identique à get_queryset).
-        - Structure :
-            {
-                "centresById": {id: nom, ...},
-                "typeOffreById": {id: nom, ...},
-                "statutById": {id: nom, ...},
-                "departements": [ … ]
-            }
-
-    ══════════════════════════════════════════
-    NOTES
-    ══════════════════════════════════════════
-    - Les calculs d’agrégats sont faits en base SQL via annotate/aggregate.
-    - Aucun serializer de détail n’est utilisé.
-    - Les permissions fines (IsStaffOrAbove) et les éventuelles restrictions sur le scope sont portées uniquement ici
-      (le détail des composants permission ou des helpers n’est PAS visible dans ce fichier).
-
-    ────────────────────────────────────────────────────────────
+    Endpoints principaux :
+    - `list` pour les KPI globaux ;
+    - `grouped` pour les agrégats par axe métier ;
+    - `tops` pour les classements opérationnels ;
+    - `filter_options` pour alimenter les sélecteurs du front.
     """
 
     serializer_class = EmptySerializer

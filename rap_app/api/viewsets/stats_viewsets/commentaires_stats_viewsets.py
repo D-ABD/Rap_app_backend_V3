@@ -26,44 +26,15 @@ from ....models.commentaires import Commentaire
 
 class CommentaireStatsViewSet(viewsets.ViewSet):
     """
-    ViewSet d’API pour les statistiques sur les Commentaires.
+    Reporting read-only sur les commentaires de formation.
 
-    ====== ROUTES DISPONIBLES ======
-    - [GET] /api/commentaire-stats/             → Statistiques globales (voir `.list()`)
-    - [GET] /api/commentaire-stats/grouped/     → Statistiques groupées par centre, département, formation ou auteur
-    - [GET] /api/commentaire-stats/tops/        → Top formations / auteurs selon le nombre de commentaires
-    - [GET] /api/commentaire-stats/latest/      → Derniers commentaires créés ou modifiés
+    Le viewset expose des KPI globaux, des regroupements, des tops et les
+    derniers commentaires visibles. Le périmètre dépend du rôle courant puis
+    d'un filtrage manuel par dates, formation, centre, département, auteur,
+    recherche plein texte et bornes de saturation.
 
-    ====== PERMISSIONS ======
-    - `permission_classes = [IsStaffOrAbove]`
-        - Seuls les utilisateurs validés comme "staff" ou de niveau supérieur ont accès à tous les endpoints de ce ViewSet.
-        - La permission `IsStaffOrAbove` est importée, mais sa logique exacte dépend du module externe `...permissions`.
-        - S’il existe une subtilité (admin vs staff), elle est traitée par la logique métier des helpers privés.
-
-    ====== COMPORTEMENT DU QUERYSET / FILTRAGE ======
-    - Les accès et la visibilité sont restreints en fonction du rôle utilisateur :
-        1. Pour les administrateurs (`_is_admin_like(user)`), visibilité totale sur tous les commentaires.
-        2. Pour le staff (testé via `is_staff_or_staffread`), visibilité restreinte :
-            - Aux centres et/ou départements liés à l’utilisateur (helpers : `_staff_centre_ids`, `_staff_departement_codes`).
-            - Si aucun centre/département associé → accès vide.
-        3. Pour les autres, accès vide.
-
-    - Pas d’attribut natif `get_queryset()` à la ViewSet, mais logique équivalente dans `_base_qs()`.
-    - Pas d’attributs natifs DRF : `search_fields`, `ordering_fields`, `filter_backends` ou `filterset_class`.
-
-    - FILTRES autorisés par les query params :
-        - `date_from`, `date_to`   : filtre sur la date de création
-        - `formation`, `centre`, `departement` : filtre sur les FK/relations
-        - `auteur`             : id de l’auteur du commentaire
-        - `search`             : cherche mot-clé dans contenu, username ou nom de formation
-        - `saturation_min`, `saturation_max` : bornes numériques sur la saturation
-
-    - Ces filtres sont appliqués dans la méthode `_apply_filters()`.
-
-    ====== SERIALIZER ======
-    - `serializer_class = EmptySerializer`
-        - Les réponses ne sont donc pas sérialisées via un Serializer DRF dédié mais construites/combinées manuellement.
-
+    Les réponses sont construites à la main et `EmptySerializer` n'est utilisé
+    que comme serializer d'entrée.
     """
 
     serializer_class = EmptySerializer

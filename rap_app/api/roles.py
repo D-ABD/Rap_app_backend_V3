@@ -1,4 +1,14 @@
-# Helpers de détection de rôles utilisateur pour le contrôle d'accès applicatif.
+"""Helpers centralisés de détection de rôles et de périmètre centre.
+
+Ce module sert de brique commune pour les permissions, les viewsets et les
+services qui doivent dériver un niveau d'accès à partir de `request.user`.
+Le code reste volontairement simple :
+- les helpers booléens répondent uniquement à la question "ce rôle appartient-il
+  à telle famille ?" ;
+- `staff_centre_ids()` calcule le périmètre centre courant ;
+- `get_staff_centre_ids_cached()` évite de recalculer ce périmètre plusieurs
+  fois sur la même requête.
+"""
 
 
 def is_candidate(u) -> bool:
@@ -94,10 +104,16 @@ def is_prepa_staff(u) -> bool:
 
 def staff_centre_ids(u):
     """
-    Retourne les IDs de centres liés à l'utilisateur staff ou assimilé.
-    - [] si non authentifié ou non concerné
-    - None si admin_like (accès tous centres)
-    - Liste d'IDs sinon, ou [] si absence de centres ou erreur d'accès.
+    Retourne le périmètre centre dérivé de l'utilisateur.
+
+    Convention utilisée dans tout le backend :
+    - `[]` si l'utilisateur n'est pas authentifié ou n'a pas de périmètre staff ;
+    - `None` si l'utilisateur est admin-like et doit être traité comme ayant
+      accès à tous les centres ;
+    - `list[int]` pour un staff limité à un sous-ensemble de centres.
+
+    En cas d'absence de relation `centres` exploitable ou d'erreur d'accès,
+    la fonction retombe sur `[]`.
     """
     if not getattr(u, "is_authenticated", False):
         return []
@@ -119,8 +135,11 @@ _STAFF_CENTRE_IDS_UNSET = object()
 
 def get_staff_centre_ids_cached(request):
     """
-    Retourne le périmètre centre en cache sur un objet request.
-    Utilise staff_centre_ids(request.user).
+    Retourne le périmètre centre en le mémorisant sur `request`.
+
+    Le cache stocke exactement la convention de `staff_centre_ids()` :
+    `None` pour un accès global admin-like, `[]` pour absence de périmètre,
+    ou une liste d'identifiants de centres.
     """
     if request is None:
         return []

@@ -65,9 +65,11 @@ from ..serializers.prepa_serializers import PrepaSerializer
 )
 class PrepaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet de gestion des séances Prépa (informations collectives et
-    ateliers), soumis aux permissions Prépa et complété par des actions
-    de filtrage, statistiques et export Excel.
+    ViewSet principal du module Prépa.
+
+    Il gère les séances Prépa visibles pour l'utilisateur courant avec un
+    helper de scope local par centre, des actions de métadonnées/front, des
+    statistiques et un export Excel.
     """
 
     serializer_class = PrepaSerializer
@@ -135,9 +137,8 @@ class PrepaViewSet(viewsets.ModelViewSet):
     # ---------------------------------------------------
     def get_queryset(self):
         """
-        Retourne les séances Prépa visibles pour l'utilisateur en
-        appliquant les filtres de requête (type d'activité, année,
-        centre, département, période, recherche textuelle et ordre).
+        Retourne les séances Prépa visibles pour l'utilisateur après
+        application du scope local par centre puis des filtres métier.
         """
         qs = Prepa.objects.select_related("centre")
         qs = self._scope_qs_to_user_centres(qs)

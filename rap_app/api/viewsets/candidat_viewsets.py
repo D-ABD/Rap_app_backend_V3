@@ -109,7 +109,26 @@ def _build_candidat_meta(user=None) -> dict:
 
 class CandidatViewSet(ScopedModelViewSet):
     """
-    ViewSet pour les candidats. IsStaffOrAbove ; scope par centre (_scope_qs_to_user_centres, _assert_staff_can_use_formation). get_serializer_class : list + lite=1 => CandidatLiteSerializer, list => CandidatListSerializer, create/update/partial => CandidatCreateUpdateSerializer, sinon CandidatSerializer. Actions : meta (GET), creer-compte, valider-stagiaire, valider-demande-compte, refuser-demande-compte (POST), export-xlsx (GET).
+    ViewSet principal des candidats.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsStaffOrAbove` et `CanAccessCandidatObject`
+    - scoping centralisé via `ScopedModelViewSet` avec `scope_mode = "centre"`
+      sur `formation__centre_id`
+    - sélection de serializer par action :
+      - `list` => `CandidatListSerializer` ou `CandidatLiteSerializer`
+      - `create` / `update` / `partial_update` => `CandidatCreateUpdateSerializer`
+      - autres actions => `CandidatSerializer`
+    - actions métier majeures :
+      - `meta`
+      - `creer-compte`
+      - `valider-stagiaire`
+      - `valider-demande-compte`
+      - `refuser-demande-compte`
+      - `export-xlsx`
+
+    Les actions liées au compte candidat s'appuient désormais sur
+    `CandidateAccountService` plutôt que sur les anciens signaux implicites.
     """
 
     permission_classes = [IsStaffOrAbove, CanAccessCandidatObject]
@@ -201,7 +220,15 @@ class CandidatViewSet(ScopedModelViewSet):
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
 
     def get_base_queryset(self):
-        """Queryset de base : select_related, prefetch_related, annotations nb_appairages_calc, nb_prospections_calc, flags ateliers."""
+        """
+        Construit le queryset métier de base avant application du scope centre.
+
+        Le queryset est enrichi avec :
+        - `select_related` sur les relations principales
+        - `prefetch_related` pour appairages et ateliers
+        - annotations de comptage (`nb_appairages_calc`, `nb_prospections_calc`)
+        - flags ateliers via `AtelierTRE.annotate_candidats_with_atelier_flags`
+        """
         qs = Candidat.objects.select_related(
             "formation",
             "formation__centre",
@@ -253,7 +280,10 @@ class CandidatViewSet(ScopedModelViewSet):
         return qs
 
     def list(self, request, *args, **kwargs):
-        """Liste paginée avec validation qp (CandidatQueryParamsSerializer), log des filtres, puis super().list()."""
+        """
+        Liste paginée des candidats visibles après validation souple des
+        query params et journalisation technique des filtres.
+        """
         qp_ser = CandidatQueryParamsSerializer(data=request.query_params)
         qp_ser.is_valid(raise_exception=False)
         logger.debug(

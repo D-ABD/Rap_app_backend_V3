@@ -25,13 +25,13 @@ class StatutViewSetTestCase(AuthenticatedTestCase):
         data = {"nom": Statut.AUTRE, "couleur": "#FF0000"}
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("description_autre", response.data)
+        self.assertIn("description_autre", response.data.get("errors", {}))
 
     def test_create_statut_invalid_color(self):
         data = {"nom": Statut.PLEINE, "couleur": "bleu"}
         response = self.client.post(self.list_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("couleur", response.data)
+        self.assertIn("couleur", response.data.get("errors", {}))
 
     def test_list_statuts(self):
         Statut.objects.create(nom=Statut.PLEINE, couleur="#111111")

@@ -59,116 +59,12 @@ from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
 )
 class ObjectifDeclicViewSet(viewsets.ModelViewSet):
     """
-    =============================================================
-    📚 ObjectifDeclicViewSet – API REST pour gérer les objectifs annuels Déclic
-    =============================================================
+    ViewSet CRUD des objectifs annuels Déclic.
 
-    ---
-    🔒 Permissions globales :
-    -------------------------
-    - permission_classes = [IsAuthenticated, IsDeclicStaffOrAbove]
-      * L’accès à ce ViewSet requiert que l’utilisateur soit authentifié ET possède le droit IsDeclicStaffOrAbove.
-      * La permission IsDeclicStaffOrAbove dépend d’un composant externe non détaillé ici. NATURE ATTENDUE (à confirmer dans le code source du permission) : typiquement, réservé aux profils “admin-like”, “staff”, ou assimilés du module Déclic (exclusion probable des candidats simples).
-      * L’application d’un filtrage supplémentaire dans le code restreint aussi le périmètre à certains centres selon les rôles.
-
-    ---
-    🔎 Filtrage et QuerySet principal :
-    ----------------------------------
-    - get_queryset():
-        * Par défaut, tous les ObjectifDeclic, liés à leur centre (optimisé via select_related), sont récupérés.
-        * Filtrage du périmètre :
-            - Si l’utilisateur est “admin-like”, l’accès est total à tous les objectifs.
-            - Si l’utilisateur a un rôle “declic_staff”, accès restreint aux centres renseignés dans user.centres_acces ou, à défaut, user.centres.
-            - Si staff/staff_read, accès limité aux centres de user.centres (ManyToMany).
-            - Les utilisateurs non authentifiés ou au rôle “candidate” n’ont accès à rien.
-        * Les filtres peuvent restreindre encore sur :
-            - l’année (`annee`)
-            - l’identifiant du centre (`centre_id`)
-            - le code du département lié au code_postal du centre (`departement`). Le filtre porte sur le préfixe du code postal.
-        * Résultat trié par défaut sur "-annee" (décroissant), puis "centre__nom".
-
-    - filter_backends :
-        * filters.SearchFilter : Recherche textuelle disponible sur "centre__nom", "centre__code_postal", "annee".
-        * filters.OrderingFilter : Tri personnalisable sur "annee" et "centre__nom".
-        * filterset_class absent : il n’y a pas de filtrage DjangoFilter explicité ici, seuls les paramètres manuels ci-dessus et le search sont actifs.
-
-    - search_fields :
-        * ["centre__nom", "centre__code_postal", "annee"]
-
-    - ordering_fields :
-        * ["annee", "centre__nom"]
-
-    ---
-    📦 Serializers utilisés :
-    ------------------------
-    - ObjectifDeclicSerializer : utilisé pour toutes les actions CRUD et la plupart des retours.
-
-    ---
-    ⚡ Actions standard :
-    ---------------------
-    list (GET /objectifs-declic/) :
-      - Intention métier : Obtenir la liste paginée des objectifs Déclic visibles pour l’utilisateur selon son périmètre d’accès.
-      - Filtrage : Respecte toutes les règles de filtrage/pré-périmètre ci-dessus.
-      - Permissions : Authentifié & IsDeclicStaffOrAbove.
-      - Serializer utilisé : ObjectifDeclicSerializer (many=True).
-      - Réponse : Pagination standard DRF (structure : { "count", "next", "previous", "results": [ ... ] }). Le format précis des items dépend du serializer.
-
-    retrieve (GET /objectifs-declic/{id}/) :
-      - Intention métier : Obtenir le détail d’un objectif spécifique.
-      - Permissions : Même logique que ci-dessus : restriction par permission + périmètre via get_queryset().
-      - Serializer utilisé : ObjectifDeclicSerializer.
-      - Réponse : Détail complet tel que défini dans le serializer (format exact non visible ici).
-
-    create (POST /objectifs-declic/) :
-      - Intention métier : Créer un nouvel ObjectifDéclic.
-      - Permissions : Identiques, pré-validation stricte sur le centre (cf : perform_create).
-      - Contrôle de périmètre : Après sérialisation, vérification que le centre est dans le périmètre autorisé, sinon PermissionDenied.
-      - Serializer utilisé : ObjectifDeclicSerializer.
-      - Réponse : Instance créée, format selon le serializer. Structure JSON exacte non précisée ici.
-
-    update/partial_update (PUT/PATCH /objectifs-declic/{id}/) :
-      - Intention métier : Mettre à jour un ObjectifDéclic.
-      - Permissions : Identiques. Vérification que tout changement de centre respecte le périmètre autorisé.
-      - Serializer utilisé : ObjectifDeclicSerializer.
-      - Réponse : Instance modifiée, format du serializer. Structure non explicitement précisée ici.
-
-    destroy (DELETE /objectifs-declic/{id}/) :
-      - Intention métier : Supprimer un objectif.
-      - Permissions : Identiques (RESTREINT selon permissions décrites).
-      - Réponse : Réponse DRF standard pour une suppression (format précis DRF : {"detail": ...} en cas d’erreur, vide ou succès implicite sinon).
-
-    ---
-    🧩 Actions personnalisées :
-    ---------------------------
-
-    filters (GET /objectifs-declic/filters/) :
-        - Objectif métier : Fournir les listes de choix possibles (année, centre, département) pour faciliter la construction de filtres côté front.
-        - Méthode : GET.
-        - Permissions : Mêmes restrictions que l’accès standard (périmètre appliqué).
-        - Structure de réponse  :
-          OrderedDict
-          - annee: Liste de dicts {"value": <année>, "label": <année str>}
-          - centre: Liste de dicts {"value": <centre_id>, "label": "<nom centre> (<CP>)"}
-          - departement: Liste de dicts {"value": <département>, "label": "Département <dep>"}
-        - Format JSON exact visible dans la méthode.
-
-    synthese (GET /objectifs-declic/synthese/) :
-        - Objectif métier : Retourner une synthèse globale des objectifs Déclic pour les données visibles de l’utilisateur.
-        - Méthode : GET.
-        - Permissions : Mêmes restrictions de périmètre.
-        - Structure de réponse : Liste d’objets résultant de obj.synthese_globale() pour chaque objectif. Le format JSON dépend du résultat de synthese_globale() sur le modèle et n'est pas visible ici.
-
-    export_xlsx (GET /objectifs-declic/export-xlsx/) :
-        - Objectif métier : Fournir un export Excel des ObjectifDeclic selon les filtres et la visibilité de l'utilisateur.
-        - Méthode : GET.
-        - Permissions : Mêmes restrictions.
-        - Format de réponse : Fichier Excel (.xlsx) en pièce jointe. En-têtes précisés dans le code. Le détail de chaque ligne dépend du résultat de obj.synthese_globale() et de Declic.taux_retention(). Si aucune donnée n'est trouvée, retourne un 404 JSON {"detail": "Aucun objectif à exporter."}.
-
-    ---
-    ----------
-    - La logique exacte des classes de permissions (IsDeclicStaffOrAbove) et des helpers de périmètre (_centre_ids_for_user…) dépend d’implémentations tierces/imports non visibles ici. Se reporter à leur code pour clarifier leurs comportements précis.
-    - Le format des réponses serializers dépend du contenu de ObjectifDeclicSerializer, non visible ici.
-
+    Le périmètre est restreint par centre selon le rôle :
+    admin-like, profils Déclic, staff/staff_read. Le fichier conserve un
+    helper local de scope historique et expose en plus des actions utilitaires
+    de filtres, synthèse et export Excel.
     """
 
     serializer_class = ObjectifDeclicSerializer

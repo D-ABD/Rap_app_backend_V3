@@ -1,4 +1,9 @@
-# rap_app/models/prospection.py
+"""Modèle métier des prospections et de leur historique.
+
+Le modèle reste la source de vérité des champs métier de prospection, tandis
+que le scoping et les résolutions owner/formation/centre sont désormais portés
+par les couches API et services dédiées.
+"""
 
 import logging
 from datetime import timedelta
@@ -84,7 +89,11 @@ class ProspectionManager(models.Manager):
 
 class Prospection(BaseModel):
     """
-    Modèle principal de suivi des prospections.
+    Modèle principal de suivi des prospections partenaires.
+
+    Il centralise l'état métier persistant d'une prospection ; les règles
+    d'attribution et de visibilité sont traitées en amont par les services et
+    viewsets spécialisés.
     """
 
     ACTIVITE_ACTIVE = "active"

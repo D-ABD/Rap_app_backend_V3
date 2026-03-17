@@ -71,7 +71,7 @@ class EvenementViewSetTest(AuthenticatedTestCase):
         }
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("description_autre", response.data)
+        self.assertIn("description_autre", response.data.get("errors", {}))
 
     def test_export_csv_evenements(self):
         url = reverse("evenement-export-csv")

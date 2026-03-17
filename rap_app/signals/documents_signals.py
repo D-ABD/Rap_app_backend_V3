@@ -1,6 +1,9 @@
 """
-Signal post_delete pour le modèle Document.
-Log l'action utilisateur et supprime le fichier associé après validation de la transaction.
+Signal `post_delete` du modèle `Document`.
+
+Le handler journalise la suppression puis supprime le fichier physique après
+validation de la transaction afin d'éviter un état incohérent entre base et
+stockage.
 """
 
 import logging
@@ -21,9 +24,7 @@ logger = logging.getLogger("rap_app.documents")
 @receiver(post_delete, sender=Document, dispatch_uid="rap_app.documents.log_and_cleanup_document")
 def log_and_cleanup_document(sender, instance, **kwargs):
     """
-    Après suppression d'une instance Document :
-    - Enregistre un log de suppression.
-    - Supprime le fichier associé dans le stockage après la transaction.
+    Journalise la suppression d'un document puis nettoie son fichier après commit.
     """
     if not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv:
         return

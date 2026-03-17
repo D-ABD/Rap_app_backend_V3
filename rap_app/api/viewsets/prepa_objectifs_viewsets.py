@@ -47,10 +47,11 @@ from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
 )
 class ObjectifPrepaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet de gestion des objectifs annuels Prépa, soumis aux
-    permissions Prepa et restreint au périmètre de centres accessibles.
-    Fournit les opérations CRUD standard, des filtres de liste, une
-    synthèse par objectif et un export Excel.
+    ViewSet CRUD des objectifs annuels Prépa.
+
+    Le périmètre est restreint par centre selon les rôles Prépa/admin/staff
+    avec des helpers locaux. Le fichier expose aussi des actions de filtres,
+    synthèse et export Excel.
     """
 
     serializer_class = ObjectifPrepaSerializer

@@ -32,6 +32,15 @@ def is_candidate_user_sync_deferred() -> bool:
 class CandidateAccountService:
     """
     Centralise la gestion explicite des comptes utilisateurs liés aux candidats.
+
+    Ce service remplace les anciens effets implicites des signaux pour :
+    - lier un utilisateur existant à un candidat
+    - provisionner un compte candidat quand un email est disponible
+    - promouvoir un candidat vers un compte stagiaire
+
+    Toutes les méthodes publiques sont transactionnelles et utilisent
+    `defer_candidate_user_sync()` pour éviter de réactiver le vieux flux
+    de synchronisation signal -> candidat pendant les écritures contrôlées.
     """
 
     @classmethod
@@ -42,6 +51,13 @@ class CandidateAccountService:
         candidate: Candidat,
         actor: CustomUser | None = None,
     ) -> CustomUser:
+        """
+        Lie explicitement un utilisateur existant à un candidat.
+
+        Refuse :
+        - si le candidat a déjà un autre compte lié
+        - si l'utilisateur est déjà lié à un autre candidat
+        """
         if candidate.compte_utilisateur_id:
             if candidate.compte_utilisateur_id == user.id:
                 return user
@@ -69,6 +85,10 @@ class CandidateAccountService:
         candidate: Candidat,
         actor: CustomUser | None = None,
     ) -> CustomUser:
+        """
+        Crée ou réutilise un compte utilisateur pour un candidat à partir
+        de son email, puis le lie explicitement au candidat.
+        """
         if candidate.compte_utilisateur_id:
             return candidate.compte_utilisateur
 
@@ -114,6 +134,10 @@ class CandidateAccountService:
         candidate: Candidat,
         actor: CustomUser | None = None,
     ) -> CustomUser:
+        """
+        Garantit qu'un candidat admissible possède un compte puis bascule ce
+        compte vers le rôle `stagiaire`.
+        """
         if not candidate.admissible:
             raise ValidationError({"detail": "Ce candidat n'est pas admissible."})
 

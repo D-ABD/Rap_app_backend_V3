@@ -1,4 +1,5 @@
 # Tests corrigés pour correspondre aux ViewSets nettoyés et à la pagination enrichie
+import pytest
 
 import unittest
 from datetime import timedelta
@@ -7,8 +8,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.test import APIClient
 
 from ...api.serializers.prospection_serializers import ProspectionSerializer
+from ...models.candidat import Candidat
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
@@ -166,12 +169,13 @@ def test_candidate_create_prospection_infers_owner_formation_and_centre():
         password="password123",
         role=CustomUser.ROLE_CANDIDAT,
     )
-    candidate = candidate_user.candidat_associe
-    candidate.nom = "Candidate"
-    candidate.prenom = "Prospection"
-    candidate.email = "candidate-prosp@example.com"
-    candidate.formation = formation
-    candidate.save()
+    Candidat.objects.create(
+        nom="Candidate",
+        prenom="Prospection",
+        email="candidate-prosp@example.com",
+        formation=formation,
+        compte_utilisateur=candidate_user,
+    )
 
     client.force_authenticate(user=candidate_user)
 

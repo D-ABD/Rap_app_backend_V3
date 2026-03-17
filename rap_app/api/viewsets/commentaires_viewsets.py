@@ -31,7 +31,18 @@ from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 
 
 class CommentaireViewSet(viewsets.ModelViewSet):
-    """ViewSet pour Commentaire (formation). IsStaffOrAbove ; scope par centre (_assert_staff_can_use_formation, get_queryset). Filtres qp : centre_id, type_offre_id, formation_etat, auteur_id, formation_nom, formation, statut. Actions : filter-options, saturation-stats, meta, archiver, desarchiver, export (pdf/xlsx)."""
+    """
+    ViewSet des commentaires liés aux formations.
+
+    Source de vérité actuelle :
+    - accès protégé par `IsStaffOrAbove`
+    - visibilité restreinte aux centres accessibles via `get_queryset()`
+    - `list()` peut retourner soit une pagination DRF, soit une enveloppe
+      `{success, message, data}` si aucune pagination n'est appliquée
+    - actions custom :
+      `filter-options`, `saturation-stats`, `meta`, `archiver`,
+      `desarchiver`, exports PDF/XLSX
+    """
 
     queryset = (
         Commentaire.objects.select_related(
@@ -128,7 +139,10 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-        """Admin : tout ; staff : formation__centre_id in staff_centre_ids ; filtres qp centre_id, type_offre_id, formation_etat, auteur_id, formation_nom, formation, statut_id/statut."""
+        """
+        Retourne les commentaires visibles pour l'utilisateur courant après
+        application du scope centre puis des filtres query-string supportés.
+        """
         qs = super().get_queryset()
         user = self.request.user
         params = self.request.query_params
@@ -188,7 +202,10 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Lister les commentaires actifs ou filtrés")
     def list(self, request, *args, **kwargs):
-        """Liste avec limit qp optionnel, pagination ou success/message/data."""
+        """
+        Liste les commentaires avec `limit` optionnel et renvoie soit une
+        pagination DRF, soit une enveloppe JSON standard.
+        """
         limit = request.query_params.get("limit")
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -205,7 +222,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Récupérer un commentaire")
     def retrieve(self, request, *args, **kwargs):
-        """Retourne success, message, data (commentaire sérialisé)."""
+        """Retourne un commentaire unique dans l'enveloppe JSON standard."""
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response(
@@ -218,7 +235,10 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Créer un commentaire")
     def create(self, request, *args, **kwargs):
-        """Crée commentaire, _assert_staff_can_use_formation, LogUtilisateur.log_action CREATE, 201."""
+        """
+        Crée un commentaire après contrôle explicite du périmètre formation et
+        journalisation de l'action utilisateur.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -245,7 +265,10 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Mettre à jour un commentaire")
     def update(self, request, *args, **kwargs):
-        """Met à jour, _assert_staff_can_use_formation, LogUtilisateur.log_action UPDATE, 200."""
+        """
+        Met à jour un commentaire après contrôle explicite du périmètre
+        formation et journalisation de la modification.
+        """
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
 
