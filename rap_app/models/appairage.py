@@ -321,6 +321,7 @@ class Appairage(BaseModel):
         """
         user = kwargs.pop("user", None)
         is_new = self.pk is None
+        actor = user or getattr(self, "_user", None) or getattr(self, "updated_by", None) or getattr(self, "created_by", None)
 
         original = None
         original_candidat_id = None
@@ -330,8 +331,8 @@ class Appairage(BaseModel):
             original_candidat_id = original.candidat_id
 
         with transaction.atomic():
-            if user:
-                self.set_user(user)
+            if actor:
+                self.set_user(actor)
 
             super().save(*args, **kwargs)
 

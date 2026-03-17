@@ -344,11 +344,7 @@ class Prospection(BaseModel):
 
         old_statut = getattr(ancien, "statut", None)
 
-        # Ajuste le statut en fonction de la relance
-        if self.relance_prevue and self.statut not in TERMINAUX:
-            self.statut = ProspectionChoices.STATUT_A_RELANCER
-        elif not self.relance_prevue and self.statut == ProspectionChoices.STATUT_A_RELANCER:
-            self.statut = ProspectionChoices.STATUT_EN_COURS
+        self.apply_relance_status_rules(terminal_statuses=TERMINAUX)
 
         self.full_clean()
 
@@ -399,6 +395,30 @@ class Prospection(BaseModel):
                         prochain_contact=self.relance_prevue,
                         moyen_contact=self.moyen_contact if champ == "moyen_contact" else None,
                     )
+
+    def apply_relance_status_rules(self, terminal_statuses=None):
+        """
+        Applique explicitement la règle métier liant `relance_prevue` et `statut`.
+
+        Source de vérité retenue pour cette transition :
+        - une prospection non terminale avec `relance_prevue` passe à `A_RELANCER`
+        - une prospection `A_RELANCER` sans `relance_prevue` repasse à `EN_COURS`
+
+        Le modèle reste responsable de cette cohérence afin que l'API, les
+        services et les écritures directes convergent vers le même état.
+        """
+        terminal_statuses = terminal_statuses or {
+            ProspectionChoices.STATUT_ACCEPTEE,
+            ProspectionChoices.STATUT_REFUSEE,
+            ProspectionChoices.STATUT_ANNULEE,
+        }
+
+        if self.relance_prevue and self.statut not in terminal_statuses:
+            self.statut = ProspectionChoices.STATUT_A_RELANCER
+        elif not self.relance_prevue and self.statut == ProspectionChoices.STATUT_A_RELANCER:
+            self.statut = ProspectionChoices.STATUT_EN_COURS
+
+        return self.statut
 
     def creer_historique(
         self,

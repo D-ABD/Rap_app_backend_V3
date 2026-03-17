@@ -936,7 +936,12 @@ class Formation(BaseModel):
 
     def add_commentaire(self, user, contenu: str, saturation=None):
         """
-        Ajoute un commentaire et historise le changement. Met à jour la saturation moyenne si besoin.
+        Ajoute un commentaire et historise le changement.
+
+        Le champ persistant `saturation` reste piloté par `taux_saturation`
+        (inscrits / places). Les valeurs de saturation portées par les
+        commentaires restent consultables via `get_saturation_moyenne_commentaires()`
+        mais ne redéfinissent plus la source de vérité de la formation.
         """
         from .commentaires import Commentaire
 
@@ -956,8 +961,6 @@ class Formation(BaseModel):
             commentaire=f"Commentaire ajouté par {user.get_full_name() or user.username}",
             created_by=user,
         )
-        if saturation is not None:
-            self.update_saturation_from_commentaires()
         return commentaire
 
     def add_document(self, user, fichier, titre: str, type_document=None):
@@ -1090,13 +1093,18 @@ class Formation(BaseModel):
 
     def update_saturation_from_commentaires(self):
         """
-        Met à jour le champ saturation à la moyenne des saturations des commentaires.
+        Méthode de compatibilité : réaligne `saturation` sur sa source de
+        vérité, `taux_saturation`.
+
+        Les saturations de commentaires restent disponibles via
+        `get_saturation_moyenne_commentaires()`, mais ne pilotent plus le
+        champ persistant de la formation.
         """
-        saturations = list(self.commentaires.filter(saturation__isnull=False).values_list("saturation", flat=True))
-        if saturations:
-            self.saturation = round(sum(saturations) / len(saturations), 2) if len(saturations) else 0.0
+        target = self.taux_saturation
+        if self.saturation != target:
+            self.saturation = target
             self.save(update_fields=["saturation"])
-            logger.info(f"[Formation] Saturation mise à jour pour {self.nom}: {self.saturation}%")
+            logger.info(f"[Formation] Saturation réalignée sur taux_saturation pour {self.nom}: {self.saturation}%")
             return True
         return False
 

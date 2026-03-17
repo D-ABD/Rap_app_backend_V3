@@ -118,9 +118,11 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
         self.formation.add_commentaire(user=self.user, contenu="Com1", saturation=70)
         self.formation.add_commentaire(user=self.user, contenu="Com2", saturation=90)
         updated = self.formation.update_saturation_from_commentaires()
-        self.assertTrue(updated)
         self.formation.refresh_from_db()
+        self.assertFalse(updated)
         self.assertGreaterEqual(self.formation.commentaires.count(), 2)
+        self.assertEqual(self.formation.saturation, self.formation.taux_saturation)
+        self.assertEqual(self.formation.get_saturation_moyenne_commentaires(), 80.0)
 
     def test_to_serializable_dict(self):
         data = self.formation.to_serializable_dict()

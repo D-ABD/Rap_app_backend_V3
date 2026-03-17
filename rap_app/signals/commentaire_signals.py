@@ -1,8 +1,9 @@
 """Signaux de recalcul léger autour des commentaires de formation.
 
-Ces handlers mettent encore à jour certains indicateurs de formation après
-création ou suppression d'un commentaire. Ils constituent un candidat naturel
-à une future extraction vers un service de métriques plus explicite.
+Ces handlers mettent encore à jour certains indicateurs dérivés de formation
+après création ou suppression d'un commentaire. Le champ persistant
+`Formation.saturation` n'est plus piloté ici : sa source de vérité reste
+`Formation.taux_saturation`.
 """
 
 import logging
@@ -28,11 +29,6 @@ def update_formation_stats_on_save(commentaire: Commentaire):
                 return
 
             updates = {}
-
-            # Met à jour la saturation si elle est renseignée sur le commentaire
-            if commentaire.saturation is not None:
-                updates["saturation"] = commentaire.saturation
-                logger.info(f"Saturation mise à jour sur formation #{formation.id} → {commentaire.saturation}%")
 
             # Met à jour le champ dernier_commentaire avec le dernier commentaire lié à la formation
             dernier = Commentaire.objects.filter(formation=formation).order_by("-created_at").first()

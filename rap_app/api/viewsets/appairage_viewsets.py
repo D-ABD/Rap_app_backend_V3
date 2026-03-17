@@ -199,12 +199,6 @@ class AppairageViewSet(ScopedModelViewSet):
                 updated_by=user,
                 formation=formation or serializer.validated_data.get("formation"),
             )
-            if hasattr(instance, "set_user"):
-                instance.set_user(user)
-            try:
-                instance.save(user=user)
-            except TypeError:
-                instance.save()
 
         AppairagePlacementService.sync_after_save(instance, actor=user)
 
@@ -225,12 +219,6 @@ class AppairageViewSet(ScopedModelViewSet):
 
         with defer_appairage_snapshot_sync():
             instance = serializer.save(formation=data_formation, updated_by=user)
-            if hasattr(instance, "set_user"):
-                instance.set_user(user)
-            try:
-                instance.save(user=user)
-            except TypeError:
-                instance.save()
 
         AppairagePlacementService.sync_after_save(instance, actor=user, previous_candidat=previous_candidat)
 

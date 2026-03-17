@@ -81,6 +81,18 @@ class ProspectionModelTest(BaseModelTestSetupMixin, TestCase):
         self.prospection.save(skip_history=True)
         self.prospection.refresh_from_db()
         self.assertEqual(self.prospection.relance_prevue, date_relance)
+        self.assertEqual(self.prospection.statut, ProspectionChoices.STATUT_A_RELANCER)
+
+    def test_remove_relance_reverts_status_to_en_cours(self):
+        self.prospection.statut = ProspectionChoices.STATUT_A_RELANCER
+        self.prospection.relance_prevue = timezone.now().date() + timedelta(days=3)
+        self.prospection.save(skip_history=True)
+
+        self.prospection.relance_prevue = None
+        self.prospection.save(skip_history=True)
+        self.prospection.refresh_from_db()
+
+        self.assertEqual(self.prospection.statut, ProspectionChoices.STATUT_EN_COURS)
 
     def test_relance_necessaire_when_prevue_past(self):
         self.prospection.statut = ProspectionChoices.STATUT_A_RELANCER

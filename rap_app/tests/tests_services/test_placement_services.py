@@ -61,3 +61,8 @@ class AppairagePlacementServiceTests(TestCase):
         self.assertEqual(second_changes["current"], [])
         self.assertEqual(HistoriquePlacement.objects.filter(candidat=self.candidat).count(), 1)
         self.assertTrue(getattr(self.appairage, "_placement_synced_by_service", False))
+
+    def test_appairage_save_uses_created_or_updated_by_as_history_actor(self):
+        self.assertEqual(self.appairage.historiques.count(), 1)
+        historique = self.appairage.historiques.first()
+        self.assertEqual(historique.auteur, self.appairage.created_by)
