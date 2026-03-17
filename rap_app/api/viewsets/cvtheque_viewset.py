@@ -108,12 +108,9 @@ class CVThequeViewSet(BaseApiViewSet):
     ordering = ["-date_depot"]
 
     def get_queryset(self):
-        """preview/download : pas de scope ; admin tout ; candidat : ses docs ; staff : par user.centres ; sinon none()."""
+        """Admin : tout ; candidat : ses docs ; staff : par user.centres ; sinon none()."""
         qs = super().get_queryset()
         user = self.request.user
-
-        if getattr(self, "action", None) in ["preview", "download"]:
-            return qs
 
         if is_admin_like(user):
             return qs

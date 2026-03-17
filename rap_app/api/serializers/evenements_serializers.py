@@ -104,7 +104,15 @@ class EvenementSerializer(serializers.ModelSerializer):
         return data
 
 
-@extend_schema_serializer(examples=[{"value": "job_dating", "label": "Job dating"}])
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Evenement choice",
+            value={"value": "job_dating", "label": "Job dating"},
+            response_only=True,
+        )
+    ]
+)
 class EvenementChoiceSerializer(serializers.Serializer):
     """
     Expose value et label pour les types d'événements (liste d'options pour le front).

@@ -363,6 +363,16 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    def get_detail_queryset(self):
+        """
+        Retourne le queryset de détail avec le même scoping métier que la liste,
+        sans appliquer le filtre d'activité implicite sur les archives.
+        """
+        base = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        qs = annotate_last_visible_comment(base, user)
+        return self._scoped_for_user(qs, user)
+
     # -------------------------------------------------------------------------
     # Actions personnalisées
     # -------------------------------------------------------------------------
@@ -523,10 +533,11 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """
-        Récupère une prospection sans filtrage sur l'activité puis
-        applique les permissions sur l'objet.
+        Récupère une prospection avec le même périmètre métier que la liste,
+        sans filtrer l'activité pour permettre l'accès explicite aux archives
+        lorsque l'utilisateur y a droit.
         """
-        queryset = Prospection.objects.all()  # ne filtre pas sur is_active
+        queryset = self.get_detail_queryset()
         obj = get_object_or_404(queryset, pk=self.kwargs["pk"])
         self.check_object_permissions(self.request, obj)
         return obj

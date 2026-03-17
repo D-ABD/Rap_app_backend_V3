@@ -14,6 +14,7 @@ from ..serializers.user_profil_serializers import (
     CustomUserSerializer,
     RoleChoiceSerializer,
 )
+from ..mixins import ApiResponseMixin
 
 
 class MeAPIView(APIView):
@@ -107,7 +108,7 @@ class MeAPIView(APIView):
         )
 
 
-class RoleChoicesView(APIView):
+class RoleChoicesView(ApiResponseMixin, APIView):
     """
     Vue publique retournant la liste des rôles utilisateurs définis
     dans CustomUser.ROLE_CHOICES.
@@ -118,12 +119,16 @@ class RoleChoicesView(APIView):
     @extend_schema(
         summary="Liste des rôles utilisateurs disponibles",
         description="Retourne tous les rôles utilisables avec leurs identifiants et libellés.",
-        responses={200: OpenApiResponse(response=RoleChoiceSerializer(many=True))},
+        responses={200: OpenApiResponse(description="Réponse JSON standard contenant la liste des rôles.")},
         tags=["Utilisateur"],
     )
     def get(self, request):
         data = [{"value": value, "label": label} for value, label in CustomUser.ROLE_CHOICES]
-        return Response(data, status=status.HTTP_200_OK)
+        return self.success_response(
+            data=data,
+            message="Liste des rôles récupérée avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
 
 class MonCandidatView(RetrieveUpdateAPIView):
@@ -145,7 +150,7 @@ class MonCandidatView(RetrieveUpdateAPIView):
         return user.candidat_associe
 
 
-class DemandeCompteCandidatView(APIView):
+class DemandeCompteCandidatView(ApiResponseMixin, APIView):
     """
     Endpoint permettant à un candidat authentifié de demander la création d'un compte utilisateur.
 
@@ -159,13 +164,14 @@ class DemandeCompteCandidatView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
+    serializer_class = EmptySerializer
 
     @extend_schema(
         summary="Demander la création d'un compte utilisateur",
         tags=["Utilisateur"],
         responses={
-            200: OpenApiResponse(description="Demande de compte enregistrée."),
-            400: OpenApiResponse(description="Demande impossible (déjà en attente, compte existant, ...)."),
+            200: OpenApiResponse(description="Réponse JSON standard confirmant l'enregistrement de la demande."),
+            400: OpenApiResponse(description="Réponse JSON standard indiquant pourquoi la demande est refusée."),
         },
     )
     def post(self, request, *args, **kwargs):
@@ -180,6 +186,7 @@ class DemandeCompteCandidatView(APIView):
                 {
                     "success": False,
                     "message": "Un compte utilisateur est déjà lié à ce candidat.",
+                    "data": None,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -189,6 +196,7 @@ class DemandeCompteCandidatView(APIView):
                 {
                     "success": False,
                     "message": "Une demande de compte est déjà en attente.",
+                    "data": None,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -206,10 +214,8 @@ class DemandeCompteCandidatView(APIView):
             ]
         )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Demande de création de compte enregistrée. Elle sera examinée par un membre du staff.",
-            },
-            status=status.HTTP_200_OK,
+        return self.success_response(
+            data=None,
+            message="Demande de création de compte enregistrée. Elle sera examinée par un membre du staff.",
+            status_code=status.HTTP_200_OK,
         )

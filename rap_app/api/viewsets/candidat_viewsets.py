@@ -472,7 +472,7 @@ class CandidatViewSet(ScopedModelViewSet):
         url_path="meta",
         url_name="meta",
         renderer_classes=[JSONRenderer],
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsStaffOrAbove],
     )
     def meta(self, request):
         """

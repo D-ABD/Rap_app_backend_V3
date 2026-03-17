@@ -251,27 +251,33 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             ),
         ],
         responses={
-            200: OpenApiExample(
-                name="Exemple regroupement",
-                value={
-                    "by": "centre",
-                    "results": [
-                        {
-                            "id": 2,
-                            "group_key": "Centre Lille",
-                            "total": 220,
-                            "nb_presents_info": 120,
-                            "nb_absents_info": 30,
-                            "nb_adhesions": 40,
-                            "nb_inscrits_prepa": 90,
-                            "nb_presents_prepa": 80,
-                            "nb_absents_prepa": 10,
-                            "taux_presence_info": 80.0,
-                            "taux_adhesion": 33.3,
-                            "taux_presence_prepa": 88.9,
-                        }
-                    ],
-                },
+            200: OpenApiResponse(
+                description="Regroupement statistique des données Prépa.",
+                examples=[
+                    OpenApiExample(
+                        name="Exemple regroupement",
+                        value={
+                            "by": "centre",
+                            "results": [
+                                {
+                                    "id": 2,
+                                    "group_key": "Centre Lille",
+                                    "total": 220,
+                                    "nb_presents_info": 120,
+                                    "nb_absents_info": 30,
+                                    "nb_adhesions": 40,
+                                    "nb_inscrits_prepa": 90,
+                                    "nb_presents_prepa": 80,
+                                    "nb_absents_prepa": 10,
+                                    "taux_presence_info": 80.0,
+                                    "taux_adhesion": 33.3,
+                                    "taux_presence_prepa": 88.9,
+                                }
+                            ],
+                        },
+                        response_only=True,
+                    )
+                ],
             )
         },
     )

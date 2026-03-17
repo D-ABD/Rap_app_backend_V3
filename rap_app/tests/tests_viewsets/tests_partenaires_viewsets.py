@@ -96,10 +96,6 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         )
         self.assertTrue(log.exists(), "Log de suppression manquant.")
 
-    @unittest.skip(
-        "Comportement API actuel : un stagiaire peut obtenir 200 sur PATCH partenaire d’un autre. "
-        "À réactiver lorsque le viewset restreint l’accès (403/404) pour non-propriétaire non-staff."
-    )
     def test_non_owner_non_staff_cannot_update_partenaire(self):
         """
         ❌ Un utilisateur non staff et non propriétaire ne doit pas pouvoir modifier (403 ou 404).

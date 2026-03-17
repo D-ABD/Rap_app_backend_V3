@@ -25,6 +25,7 @@ from ..serializers.login_logout_serializers import UserSerializer
 from ..serializers.partenaires_serializers import PartenaireSerializer
 from ..serializers.statut_serializers import StatutSerializer
 from ..serializers.types_offre_serializers import TypeOffreSerializer
+from ..mixins import ApiResponseMixin
 
 
 class SmallPagination(PageNumberPagination):
@@ -44,6 +45,10 @@ Recherche un mot-clé dans les objets suivants :
 - Statuts (nom ou description_autre)
 - Types d’offre (nom ou autre)
 - Partenaires (nom)
+
+La réponse HTTP suit désormais l'enveloppe standard :
+- succès : `{success, message, data}`
+- erreur de validation : `{success, message, data, errors}`
 """,
     parameters=[
         OpenApiParameter(name="q", required=True, type=str, description="Mot-clé à rechercher"),
@@ -57,25 +62,31 @@ Recherche un mot-clé dans les objets suivants :
     tags=["Recherche"],
     responses={
         200: OpenApiResponse(
-            description="Résultats paginés par ressource",
+            description="Réponse JSON standard contenant les résultats paginés par ressource.",
             examples=[
                 OpenApiExample(
                     "Exemple",
                     value={
-                        "formations": {"count": 1, "results": [{"id": 1, "nom": "BTS Bio"}]},
-                        "commentaires": {"count": 2, "results": [{"id": 7, "contenu": "Bon accueil"}]},
-                        "centres": {"count": 1, "results": [{"id": 3, "nom": "Lyon"}]},
-                        "utilisateurs": {"count": 1, "results": [{"id": 2, "first_name": "Alice"}]},
-                        "types_offre": {"count": 1, "results": [{"id": 5, "nom": "initiale", "autre": ""}]},
-                        "statuts": {"count": 1, "results": [{"id": 4, "nom": "pleine", "description_autre": ""}]},
-                        "partenaires": {"count": 1, "results": [{"id": 9, "nom": "Mission locale"}]},
+                        "success": True,
+                        "message": "Résultats de recherche.",
+                        "data": {
+                            "formations": {"count": 1, "results": [{"id": 1, "nom": "BTS Bio"}]},
+                            "commentaires": {"count": 2, "results": [{"id": 7, "contenu": "Bon accueil"}]},
+                            "centres": {"count": 1, "results": [{"id": 3, "nom": "Lyon"}]},
+                            "utilisateurs": {"count": 1, "results": [{"id": 2, "first_name": "Alice"}]},
+                            "types_offre": {"count": 1, "results": [{"id": 5, "nom": "initiale", "autre": ""}]},
+                            "statuts": {"count": 1, "results": [{"id": 4, "nom": "pleine", "description_autre": ""}]},
+                            "partenaires": {"count": 1, "results": [{"id": 9, "nom": "Mission locale"}]},
+                        },
                     },
+                    response_only=True,
                 )
             ],
-        )
+        ),
+        400: OpenApiResponse(description="Erreur de validation avec enveloppe JSON standard."),
     },
 )
-class SearchView(APIView):
+class SearchView(ApiResponseMixin, APIView):
     """
     Vue de recherche globale multi-ressources (formations, commentaires,
     centres, utilisateurs, statuts, types d'offre, partenaires) pour
@@ -92,7 +103,11 @@ class SearchView(APIView):
         """
         query = request.query_params.get("q", "").strip()
         if not query:
-            return Response({"error": "Paramètre 'q' requis"}, status=400)
+            return self.error_response(
+                message="Erreur de validation.",
+                errors={"q": ["Paramètre 'q' requis."]},
+                status_code=400,
+            )
 
         # Filtres secondaires sur les formations (dans l’URL)
         user = getattr(request, "user", None)
@@ -111,7 +126,10 @@ class SearchView(APIView):
                 "partenaires",
             ):
                 response[key] = {"count": 0, "next": None, "previous": None, "results": []}
-            return Response(response)
+            return self.success_response(
+                data=response,
+                message="Résultats de recherche.",
+            )
 
         centre_ids = get_staff_centre_ids_cached(request)
         if centre_ids is not None and len(centre_ids) == 0:
@@ -126,7 +144,10 @@ class SearchView(APIView):
                 "partenaires",
             ):
                 response[key] = {"count": 0, "next": None, "previous": None, "results": []}
-            return Response(response)
+            return self.success_response(
+                data=response,
+                message="Résultats de recherche.",
+            )
 
         # Filtres secondaires sur les formations (dans l'URL)
         filtre_type = request.query_params.get("type_offre")
@@ -199,4 +220,7 @@ class SearchView(APIView):
             partenaires_qs = partenaires_qs.filter(default_centre_id__in=centre_ids)
         response["partenaires"] = paginate_and_serialize(partenaires_qs, PartenaireSerializer)
 
-        return Response(response)
+        return self.success_response(
+            data=response,
+            message="Résultats de recherche.",
+        )

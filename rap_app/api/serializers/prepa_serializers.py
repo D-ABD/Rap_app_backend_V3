@@ -1,12 +1,20 @@
 # rap_app/api/serializers/prepa_serializers.py
-from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
+from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import Prepa
 
 
-@extend_schema_serializer(examples=[{"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}])
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Centre light prepa",
+            value={"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"},
+            response_only=True,
+        )
+    ]
+)
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les séances Prépa. Lecture seule.
@@ -19,22 +27,26 @@ class CentreLightSerializer(serializers.ModelSerializer):
 
 @extend_schema_serializer(
     examples=[
-        {
-            "id": 45,
-            "type_prepa": "info_collective",
-            "type_prepa_display": "Information collective",
-            "date_prepa": "2025-09-12",
-            "centre": {"id": 2, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"},
-            "centre_nom": "Centre de Lille",
-            "nb_presents_info": 10,
-            "nb_absents_info": 2,
-            "nb_adhesions": 8,
-            "nb_presents_prepa": 8,
-            "nb_absents_prepa": 2,
-            "taux_presence_info": 83.3,
-            "taux_presence_atelier": None,
-            "taux_presence_global": 83.3,
-        }
+        OpenApiExample(
+            "Prepa",
+            value={
+                "id": 45,
+                "type_prepa": "info_collective",
+                "type_prepa_display": "Information collective",
+                "date_prepa": "2025-09-12",
+                "centre": {"id": 2, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"},
+                "centre_nom": "Centre de Lille",
+                "nb_presents_info": 10,
+                "nb_absents_info": 2,
+                "nb_adhesions": 8,
+                "nb_presents_prepa": 8,
+                "nb_absents_prepa": 2,
+                "taux_presence_info": 83.3,
+                "taux_presence_atelier": None,
+                "taux_presence_global": 83.3,
+            },
+            response_only=True,
+        )
     ]
 )
 class PrepaSerializer(serializers.ModelSerializer):

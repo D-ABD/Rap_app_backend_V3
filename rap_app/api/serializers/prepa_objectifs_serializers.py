@@ -1,12 +1,20 @@
 # rap_app/api/serializers/prepa_objectifs_serializers.py
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
 
 
-@extend_schema_serializer(examples=[{"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"}])
+@extend_schema_serializer(
+    examples=[
+        OpenApiExample(
+            "Centre light prepa objectif",
+            value={"id": 1, "nom": "Centre de Lille", "departement": "59", "code_postal": "59000"},
+            response_only=True,
+        )
+    ]
+)
 class CentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les objectifs Prépa. Lecture seule.
@@ -19,30 +27,34 @@ class CentreLightSerializer(serializers.ModelSerializer):
 
 @extend_schema_serializer(
     examples=[
-        {
-            "id": 12,
-            "centre": {
-                "id": 3,
-                "nom": "Centre de Roubaix",
+        OpenApiExample(
+            "Objectif prepa",
+            value={
+                "id": 12,
+                "centre": {
+                    "id": 3,
+                    "nom": "Centre de Roubaix",
+                    "departement": "59",
+                    "code_postal": "59100",
+                },
+                "annee": 2025,
+                "valeur_objectif": 120,
+                "commentaire": "Objectif ambitieux pour l'année 2025",
                 "departement": "59",
-                "code_postal": "59100",
+                "taux_prescription": 80.5,
+                "taux_presence": 72.3,
+                "taux_adhesion": 65.0,
+                "taux_atteinte": 60.4,
+                "reste_a_faire": 48,
+                "data_prepa": {
+                    "places": 150,
+                    "prescriptions": 120,
+                    "presents": 72,
+                    "adhesions": 47,
+                },
             },
-            "annee": 2025,
-            "valeur_objectif": 120,
-            "commentaire": "Objectif ambitieux pour l'année 2025",
-            "departement": "59",
-            "taux_prescription": 80.5,
-            "taux_presence": 72.3,
-            "taux_adhesion": 65.0,
-            "taux_atteinte": 60.4,
-            "reste_a_faire": 48,
-            "data_prepa": {
-                "places": 150,
-                "prescriptions": 120,
-                "presents": 72,
-                "adhesions": 47,
-            },
-        }
+            response_only=True,
+        )
     ]
 )
 class ObjectifPrepaSerializer(serializers.ModelSerializer):

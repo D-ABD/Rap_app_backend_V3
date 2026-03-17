@@ -186,3 +186,29 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("results", response.data["data"])
         self.assertIn("filters", response.data["data"])
         self.assertIsInstance(response.data["data"]["results"], list)
+
+    def test_roles_endpoint_uses_standard_envelope(self):
+        response = self.client.get(reverse("roles"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIsInstance(response.data["data"], list)
+        self.assertGreater(len(response.data["data"]), 0)
+
+    def test_search_validation_error_uses_standard_envelope(self):
+        response = self.client.get(reverse("search"))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertFalse(response.data["success"])
+        self.assertIn("q", response.data["errors"])
+
+    def test_search_success_uses_standard_envelope(self):
+        response = self.client.get(reverse("search"), {"q": "Formation"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIn("formations", response.data["data"])
+        self.assertIn("commentaires", response.data["data"])
