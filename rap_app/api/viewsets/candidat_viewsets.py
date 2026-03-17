@@ -326,7 +326,7 @@ class CandidatViewSet(ScopedModelViewSet):
         return ctx
 
     def perform_create(self, serializer):
-        """ValidationError si formation absente ; _assert_staff_can_use_formation ; transaction.atomic() ; save(created_by, user)."""
+        """ValidationError si formation absente ; _assert_staff_can_use_formation ; transaction.atomic() ; sauvegarde unique."""
         data = serializer.validated_data
 
         formation = data.get("formation")
@@ -336,13 +336,7 @@ class CandidatViewSet(ScopedModelViewSet):
         self._assert_staff_can_use_formation(formation)
 
         with transaction.atomic():
-            instance = serializer.save()
-            instance.full_clean()
-
-            try:
-                instance.save(user=self.request.user)
-            except TypeError:
-                pass
+            serializer.save(created_by=self.request.user, updated_by=self.request.user)
 
     def perform_update(self, serializer):
         """Vérifie le périmètre centre avant mise à jour et cascade les prospections le cas échéant."""
@@ -353,12 +347,7 @@ class CandidatViewSet(ScopedModelViewSet):
         self._assert_staff_can_use_formation(new_formation)
 
         with transaction.atomic():
-            updated = serializer.save()
-            updated.full_clean()
-            try:
-                updated.save(user=self.request.user)
-            except TypeError:
-                pass
+            updated = serializer.save(updated_by=self.request.user)
 
         if getattr(old_formation, "id", None) != getattr(new_formation, "id", None):
             self._cascade_update_prospections_on_formation_change(

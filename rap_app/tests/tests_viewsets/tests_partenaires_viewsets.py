@@ -106,6 +106,8 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
             email="nonstaff@example.com", username="other", password="OtherPass123", role="stagiaire", is_staff=False
         )
         refresh = RefreshToken.for_user(autre_user)
+        # Le setUp force déjà un admin sur le client ; on le retire avant de tester le JWT réel.
+        self.client.force_authenticate(user=None)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {str(refresh.access_token)}")
 
         url = reverse("partenaire-detail", args=[partenaire.id])

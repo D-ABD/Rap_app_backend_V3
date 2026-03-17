@@ -410,6 +410,13 @@ class Candidat(BaseModel):
         Stocke un snapshot initial des valeurs pour permettre le suivi des changements.
         """
         super().__init__(*args, **kwargs)
+        self._refresh_initial_snapshot()
+
+    def _refresh_initial_snapshot(self):
+        """
+        Rafraîchit le snapshot interne utilisé pour comparer les changements
+        entre deux sauvegardes successives.
+        """
         init = {}
         for f in self._meta.concrete_fields:
             init[f.name] = self.__dict__.get(f.attname, None)
@@ -611,6 +618,8 @@ class Candidat(BaseModel):
 
             if not getattr(self, "_skip_placement_history", False):
                 creer_historique_placement_si_necessaire(self, original=original)
+
+        self._refresh_initial_snapshot()
 
     def delete(self, *args, **kwargs):
         """
