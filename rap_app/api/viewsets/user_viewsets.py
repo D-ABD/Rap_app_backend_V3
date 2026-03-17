@@ -17,6 +17,8 @@ from ...utils.filters import UserFilterSet
 from ..permissions import ReadWriteAdminReadStaff
 from ..serializers.user_profil_serializers import (
     CustomUserSerializer,
+    CustomUserCreateSerializer,
+    CustomUserUpdateSerializer,
     RegistrationSerializer,
     RoleChoiceSerializer,
 )
@@ -109,7 +111,10 @@ class CustomUserViewSet(BaseApiViewSet):
     ordering = ["-date_joined"]
 
     def get_serializer_class(self):
-        # Toujours CustomUserSerializer sauf extension future.
+        if self.action == "create":
+            return CustomUserCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return CustomUserUpdateSerializer
         return CustomUserSerializer
 
     # ---------- Scopage par centres pour les STAFF ----------

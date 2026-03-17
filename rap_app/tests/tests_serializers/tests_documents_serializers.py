@@ -4,7 +4,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 
-from ...api.serializers.documents_serializers import DocumentSerializer
+from ...api.serializers.documents_serializers import (
+    DocumentCreateSerializer,
+    DocumentSerializer,
+    DocumentUpdateSerializer,
+)
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.documents import Document
@@ -45,7 +49,7 @@ class DocumentSerializerTestCase(TestCase):
             "type_document": Document.PDF,
             "fichier": file,
         }
-        serializer = DocumentSerializer(data=data, context={"request": self._mock_request()})
+        serializer = DocumentCreateSerializer(data=data, context={"request": self._mock_request()})
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_missing_formation(self):
@@ -55,7 +59,7 @@ class DocumentSerializerTestCase(TestCase):
             "type_document": Document.PDF,
             "fichier": file,
         }
-        serializer = DocumentSerializer(data=data)
+        serializer = DocumentCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("formation", serializer.errors)
 
@@ -67,7 +71,7 @@ class DocumentSerializerTestCase(TestCase):
             "type_document": Document.PDF,
             "fichier": file,
         }
-        serializer = DocumentSerializer(data=data)
+        serializer = DocumentCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("fichier", serializer.errors)
 
@@ -84,3 +88,15 @@ class DocumentSerializerTestCase(TestCase):
         data = serializer.data
         self.assertIn("nom_fichier", data)
         self.assertEqual(data["nom_fichier"], "test.pdf")
+
+    def test_update_serializer_accepts_partial_payload_without_file(self):
+        file = SimpleUploadedFile("test.pdf", b"%PDF-1.4...", content_type="application/pdf")
+        doc = Document.objects.create(
+            formation=self.formation,
+            nom_fichier="test.pdf",
+            fichier=file,
+            type_document=Document.PDF,
+            created_by=self.user,
+        )
+        serializer = DocumentUpdateSerializer(instance=doc, data={"nom_fichier": "updated.pdf"}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)

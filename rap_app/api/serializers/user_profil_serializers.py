@@ -252,6 +252,47 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
 
+class BaseCustomUserWriteSerializer(CustomUserSerializer):
+    """
+    Base commune d'écriture pour les utilisateurs.
+
+    Le serializer de lecture `CustomUserSerializer` conserve les champs enrichis
+    destinés au front. Les opérations d'écriture utilisent ce contrat dédié
+    pour rendre explicites les champs réellement attendus en create/update.
+    """
+
+    class Meta(CustomUserSerializer.Meta):
+        read_only_fields = [
+            "id",
+            "avatar_url",
+            "role_display",
+            "date_joined",
+            "full_name",
+            "formation_info",
+            "centres_info",
+            "centre",
+            "consent_date",
+            "is_staff",
+            "is_superuser",
+            "is_admin",
+            "is_staff_read",
+        ]
+
+
+class CustomUserCreateSerializer(BaseCustomUserWriteSerializer):
+    """Contrat d'écriture pour la création d'un utilisateur."""
+
+    pass
+
+
+class CustomUserUpdateSerializer(BaseCustomUserWriteSerializer):
+    """Contrat d'écriture pour la mise à jour partielle ou complète d'un utilisateur."""
+
+    email = serializers.EmailField(required=False)
+    username = serializers.CharField(required=False)
+    role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES, required=False)
+
+
 class RoleChoiceSerializer(serializers.Serializer):
     """
     Option (value, label) pour un choix de rôle. Pas de validation personnalisée.

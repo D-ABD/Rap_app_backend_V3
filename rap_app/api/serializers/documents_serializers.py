@@ -139,6 +139,56 @@ class DocumentSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class BaseDocumentWriteSerializer(serializers.ModelSerializer):
+    """
+    Base commune d'écriture pour les documents.
+
+    Le serializer de lecture `DocumentSerializer` garde les champs enrichis
+    utiles au front. Les opérations create/update utilisent un contrat write
+    dédié pour ne pas mélanger métadonnées read-only et payload attendu.
+    """
+
+    class Meta:
+        model = Document
+        fields = [
+            "id",
+            "nom_fichier",
+            "fichier",
+            "type_document",
+            "formation",
+        ]
+
+    def validate(self, data):
+        fichier = data.get("fichier")
+        type_doc = data.get("type_document")
+
+        if fichier and type_doc:
+            try:
+                validate_file_extension(fichier, type_doc)
+            except ValidationError as e:
+                raise serializers.ValidationError({"fichier": str(e)})
+        return data
+
+    def update(self, instance, validated_data):
+        fichier = validated_data.pop("fichier", None)
+        if fichier:
+            instance.fichier = fichier
+        return super().update(instance, validated_data)
+
+
+class DocumentCreateSerializer(BaseDocumentWriteSerializer):
+    """Contrat d'écriture pour la création d'un document."""
+
+    pass
+
+
+class DocumentUpdateSerializer(BaseDocumentWriteSerializer):
+    """Contrat d'écriture pour la mise à jour d'un document."""
+
+    formation = serializers.PrimaryKeyRelatedField(queryset=Formation.objects.all(), required=False)
+    fichier = serializers.FileField(required=False)
+
+
 class TypeDocumentChoiceSerializer(serializers.Serializer):
     """
     Expose value et label pour les types de documents (choix API). Pas de validation personnalisée.

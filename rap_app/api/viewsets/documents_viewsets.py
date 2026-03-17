@@ -23,7 +23,9 @@ from ...api.permissions import (  # ✅ staff/admin/superadmin only
     is_staff_or_staffread,
 )
 from ...api.serializers.documents_serializers import (
+    DocumentCreateSerializer,
     DocumentSerializer,
+    DocumentUpdateSerializer,
     TypeDocumentChoiceSerializer,
 )
 from ...models.documents import Document
@@ -99,6 +101,13 @@ class DocumentViewSet(ScopedModelViewSet):
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
 
+    def get_serializer_class(self):
+        if self.action == "create":
+            return DocumentCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return DocumentUpdateSerializer
+        return DocumentSerializer
+
     # ------------------------------ queryset ------------------------------
 
     def get_base_queryset(self):
@@ -143,7 +152,7 @@ class DocumentViewSet(ScopedModelViewSet):
 
     @extend_schema(
         summary="➕ Ajouter un document",
-        request=DocumentSerializer,
+        request=DocumentCreateSerializer,
         responses={201: OpenApiResponse(response=DocumentSerializer)},
     )
     def create(self, request, *args, **kwargs):
@@ -171,7 +180,7 @@ class DocumentViewSet(ScopedModelViewSet):
 
     @extend_schema(
         summary="✏️ Modifier un document",
-        request=DocumentSerializer,
+        request=DocumentUpdateSerializer,
         responses={200: OpenApiResponse(response=DocumentSerializer)},
     )
     def update(self, request, *args, **kwargs):

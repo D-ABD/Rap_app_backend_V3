@@ -2,7 +2,11 @@
 
 from django.test import TestCase
 
-from ...api.serializers.user_profil_serializers import CustomUserSerializer
+from ...api.serializers.user_profil_serializers import (
+    CustomUserCreateSerializer,
+    CustomUserSerializer,
+    CustomUserUpdateSerializer,
+)
 from ...models.custom_user import CustomUser
 
 
@@ -22,7 +26,7 @@ class CustomUserSerializerTestCase(TestCase):
         """
         ✅ Test de création valide avec données complètes
         """
-        serializer = CustomUserSerializer(data=self.valid_data)
+        serializer = CustomUserCreateSerializer(data=self.valid_data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_missing_email(self):
@@ -31,7 +35,7 @@ class CustomUserSerializerTestCase(TestCase):
         """
         data = self.valid_data.copy()
         data.pop("email")
-        serializer = CustomUserSerializer(data=data)
+        serializer = CustomUserCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("email", serializer.errors)
         self.assertIn("Création échouée", serializer.errors["email"][0])
@@ -42,7 +46,7 @@ class CustomUserSerializerTestCase(TestCase):
         """
         data = self.valid_data.copy()
         data["role"] = "invalide"
-        serializer = CustomUserSerializer(data=data)
+        serializer = CustomUserCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("role", serializer.errors)
 
@@ -52,7 +56,7 @@ class CustomUserSerializerTestCase(TestCase):
         """
         data = self.valid_data.copy()
         data["username"] = ""
-        serializer = CustomUserSerializer(data=data)
+        serializer = CustomUserCreateSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("username", serializer.errors)
         self.assertIn("ne peut pas être vide", serializer.errors["username"][0])
@@ -71,3 +75,8 @@ class CustomUserSerializerTestCase(TestCase):
         self.assertTrue(output["success"])
         self.assertIsInstance(output["data"], dict)
         self.assertEqual(output["data"]["email"], self.valid_data["email"])
+
+    def test_update_serializer_accepts_partial_payload(self):
+        user = CustomUser.objects.create_user(**self.valid_data)
+        serializer = CustomUserUpdateSerializer(instance=user, data={"first_name": "Updated"}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
