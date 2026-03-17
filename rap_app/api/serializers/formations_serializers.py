@@ -1,6 +1,5 @@
 import logging
 
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -383,28 +382,16 @@ class FormationDetailSerializer(serializers.Serializer):
         # Pas de duplication ici
         return data
 
-    def create(self, validated_data):
-        user = self.context["request"].user
-        centre_id = validated_data.pop("centre_id", None)
-        type_offre_id = validated_data.pop("type_offre_id", None)
-        statut_id = validated_data.pop("statut_id", None)
-        instance = Formation(
-            **validated_data,
-            centre_id=centre_id,
-            type_offre_id=type_offre_id,
-            statut_id=statut_id,
-        )
-        instance.save(user=user)
-        return instance
 
-    def update(self, instance, validated_data):
-        user = self.context["request"].user
-        for attr, val in validated_data.items():
-            setattr(instance, attr, val)
-        instance.save(user=user)
-        return instance
+class BaseFormationWriteSerializer(serializers.ModelSerializer):
+    """
+    Base commune d'écriture pour les formations.
 
-class FormationCreateSerializer(serializers.ModelSerializer):
+    Le détail en lecture reste porté par `FormationDetailSerializer` tandis que
+    les opérations create/update passent par ce contrat dédié pour éviter de
+    mélanger champs read-only enrichis et payloads write.
+    """
+
     centre_id = serializers.PrimaryKeyRelatedField(
         source="centre", queryset=Centre.objects.all(), write_only=True, required=True
     )
@@ -453,8 +440,42 @@ class FormationCreateSerializer(serializers.ModelSerializer):
             )
         return data
 
+    def _actor(self):
+        request = self.context.get("request")
+        return getattr(request, "user", None)
+
     def create(self, validated_data):
-        user = self.context["request"].user
+        user = self._actor()
         instance = Formation(**validated_data)
         instance.save(user=user)
         return instance
+
+    def update(self, instance, validated_data):
+        user = self._actor()
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save(user=user)
+        return instance
+
+
+class FormationCreateSerializer(BaseFormationWriteSerializer):
+    """Contrat d'écriture utilisé pour la création d'une formation."""
+
+    pass
+
+
+class FormationUpdateSerializer(BaseFormationWriteSerializer):
+    """Contrat d'écriture utilisé pour la mise à jour partielle ou complète d'une formation."""
+
+    centre_id = serializers.PrimaryKeyRelatedField(
+        source="centre", queryset=Centre.objects.all(), write_only=True, required=False
+    )
+    type_offre_id = serializers.PrimaryKeyRelatedField(
+        source="type_offre", queryset=TypeOffre.objects.all(), write_only=True, required=False
+    )
+    statut_id = serializers.PrimaryKeyRelatedField(
+        source="statut", queryset=Statut.objects.all(), write_only=True, required=False
+    )
+
+    class Meta(BaseFormationWriteSerializer.Meta):
+        pass

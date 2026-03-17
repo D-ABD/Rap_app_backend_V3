@@ -13,6 +13,7 @@ from rap_app.api.serializers.formations_serializers import (
     EvenementSerializer,
     FormationCreateSerializer,
     FormationDetailSerializer,
+    FormationUpdateSerializer,
 )
 from rap_app.models.centres import Centre
 from rap_app.models.commentaires import Commentaire
@@ -61,6 +62,32 @@ class FormationSerializerTest(TestCase):
         serializer = FormationCreateSerializer(data=payload, context={"request": self._fake_request()})
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
+
+    def test_update_serializer_accepts_partial_payload_without_required_refs(self):
+        payload = {
+            "nom": "Formation renommée",
+            "end_date": "2025-06-15",
+        }
+        serializer = FormationUpdateSerializer(
+            instance=self.formation,
+            data=payload,
+            partial=True,
+            context={"request": self._fake_request()},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_update_serializer_persists_partial_changes(self):
+        payload = {"nom": "Formation MAJ"}
+        serializer = FormationUpdateSerializer(
+            instance=self.formation,
+            data=payload,
+            partial=True,
+            context={"request": self._fake_request()},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        updated = serializer.save()
+        self.assertEqual(updated.nom, "Formation MAJ")
+        self.assertEqual(updated.centre_id, self.centre.id)
 
     def _fake_request(self):
         class FakeRequest:

@@ -34,6 +34,7 @@ from ...api.serializers.formations_serializers import (
     FormationCreateSerializer,
     FormationDetailSerializer,
     FormationListSerializer,
+    FormationUpdateSerializer,
 )
 from ...models.formations import Formation
 from ...models.statut import Statut
@@ -79,8 +80,9 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
       historique, mais le filtrage principal passe par `scope_queryset()`
     - serializers par action :
       - `list` => `FormationListSerializer`
-      - `retrieve`, `update`, `partial_update` => `FormationDetailSerializer`
+      - `retrieve` => `FormationDetailSerializer`
       - `create` => `FormationCreateSerializer`
+      - `update`, `partial_update` => `FormationUpdateSerializer`
     - expose en plus plusieurs actions liées aux ressources de la formation,
       à l'archivage, au duplicat et aux exports
     """
@@ -144,7 +146,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         if self.action == "create":
             return FormationCreateSerializer
         if self.action in ["update", "partial_update"]:
-            return FormationDetailSerializer
+            return FormationUpdateSerializer
         return super().get_serializer_class()
 
     @extend_schema(
@@ -174,7 +176,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
     @extend_schema(
         summary="Mettre à jour une formation",
-        request=FormationDetailSerializer,
+        request=FormationUpdateSerializer,
         responses={200: FormationDetailSerializer},
     )
     def update(self, request, *args, **kwargs):
