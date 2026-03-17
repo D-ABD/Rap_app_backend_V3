@@ -20,6 +20,7 @@ from ..serializers.user_profil_serializers import (
     RegistrationSerializer,
     RoleChoiceSerializer,
 )
+from ..mixins import ApiResponseMixin
 from .base import BaseApiViewSet
 
 
@@ -36,7 +37,7 @@ from .base import BaseApiViewSet
     },
     tags=["Utilisateurs"],
 )
-class RegisterView(APIView):
+class RegisterView(ApiResponseMixin, APIView):
     """
     API publique permettant l'inscription d'un utilisateur stagiaire
     via RegistrationSerializer, sans authentification préalable.
@@ -48,22 +49,20 @@ class RegisterView(APIView):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response(
-                {
-                    "success": True,
-                    "message": "Compte créé. En attente de validation.",
-                    "user": {
-                        "email": user.email,
-                        "consent_rgpd": user.consent_rgpd,
-                        "consent_date": user.consent_date,
-                    },
+            return self.success_response(
+                data={
+                    "email": user.email,
+                    "consent_rgpd": user.consent_rgpd,
+                    "consent_date": user.consent_date,
                 },
-                status=status.HTTP_201_CREATED,
+                message="Compte créé. En attente de validation.",
+                status_code=status.HTTP_201_CREATED,
             )
 
-        return Response(
-            {"success": False, "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST,
+        return self.error_response(
+            message="Erreur de validation.",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
         )
 
 

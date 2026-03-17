@@ -383,6 +383,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         return Response(
             {
                 "success": True,
+                "message": "Filtres formations récupérés avec succès.",
                 "data": {
                     "centres": centres,
                     "statuts": statuts,

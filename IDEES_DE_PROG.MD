@@ -1,4 +1,27 @@
 
+
+
+identitifer les TODO dans la doc
+
+Creer le readme
+
+
+creer les vues, form, templates... django en se basant sur les viewsets et les serializers, sans toucher aux viewsets et serializers. je vais avoir 2 front. un 100% django et un deuxieme en react qui consommera les API.
+
+Ameliorer RGPD notemment quand le candidat est créé par le admin
+
+Le candidat doit pouvoir passer de candidat a stagiaire par une manipulation
+
+pouvoir imprimer et voir un rapport
+
+ateliers TRE, pouvoir selectonner plusieurs candidats dans admin et appa
+Creer un compte candidat que à la demande , ajouter un bouton "creer un copte" pas de compte automatique car tous les candidats n'ont pas besoin de compte.
+prospection. je veux pouvoir ajouter juste une formation pour la prospection
+
+je veux que le nombre de candidats soit automatiquement renseigné dans formation. 
+faire une distinction entre candidat, inscrits , en formation....
+
+dans admmin, 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------

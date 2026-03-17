@@ -32,6 +32,7 @@ from ..serializers.cvtheque_serializers import (
     CVThequeListSerializer,
     CVThequeWriteSerializer,
 )
+from .base import BaseApiViewSet
 
 
 class CVThequeFilterSet(django_filters.FilterSet):
@@ -68,7 +69,7 @@ class CVThequeFilterSet(django_filters.FilterSet):
         tags=["CVThèque"],
     ),
 )
-class CVThequeViewSet(viewsets.ModelViewSet):
+class CVThequeViewSet(BaseApiViewSet):
     """ViewSet CRUD pour CVTheque. CanAccessCVTheque. get_queryset : admin tout, candidat ses docs, staff par user.centres ; preview/download sans scope. list retourne results + filters (_get_filter_values). download (attachment), preview (inline PDF)."""
 
     queryset = CVTheque.objects.select_related(
@@ -191,21 +192,27 @@ class CVThequeViewSet(viewsets.ModelViewSet):
 
     # 📄 LIST
     def list(self, request, *args, **kwargs):
-        """Liste paginée ; results + filters (_get_filter_values(qs))."""
+        """Liste paginée dans l'enveloppe standard, avec `filters` au même niveau que `results`."""
         qs = self.filter_queryset(self.get_queryset())
 
         page = self.paginate_queryset(qs)
         serializer = self.get_serializer(page or qs, many=True)
-
-        data = {
-            "results": serializer.data,
-            "filters": self._get_filter_values(qs),
-        }
+        filters_data = self._get_filter_values(qs)
 
         if page:
-            return self.get_paginated_response(data)
+            response = self.get_paginated_response(serializer.data)
+            response.data["message"] = "Liste paginée des documents CVThèque."
+            response.data["data"]["filters"] = filters_data
+            return response
 
-        return Response(data)
+        return self.success_response(
+            data={
+                "count": len(serializer.data),
+                "results": serializer.data,
+                "filters": filters_data,
+            },
+            message="Liste des documents CVThèque.",
+        )
 
     # 📥 DOWNLOAD  (OK)
     @extend_schema(

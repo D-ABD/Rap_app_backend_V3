@@ -413,6 +413,8 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
+                "success": True,
+                "message": "Filtres prospections récupérés avec succès.",
                 "data": {
                     "formations": formations,
                     "partenaires": to_choice(partenaires),

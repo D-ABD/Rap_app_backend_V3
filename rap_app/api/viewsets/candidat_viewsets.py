@@ -488,7 +488,13 @@ class CandidatViewSet(ScopedModelViewSet):
         logger.debug("/candidats/meta called")
         data = _build_candidat_meta(request.user)
         logger.debug("/candidats/meta keys=%s", list(data.keys()))
-        return Response(data)
+        return Response(
+            {
+                "success": True,
+                "message": "Métadonnées candidats récupérées avec succès.",
+                "data": data,
+            }
+        )
 
     @action(detail=False, methods=["get"], url_path="export-xlsx")
     def export_xlsx(self, request):
