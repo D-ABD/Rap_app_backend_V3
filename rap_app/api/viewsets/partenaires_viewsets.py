@@ -222,7 +222,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         Indique si un utilisateur est traité comme administrateur
         (superuser ou utilisateur dont la méthode is_admin() renvoie True).
         """
-        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user):
         """

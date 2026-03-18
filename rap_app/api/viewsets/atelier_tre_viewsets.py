@@ -36,6 +36,7 @@ from ...models.atelier_tre import (
 from ...models.candidat import Candidat
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove, is_staff_or_staffread
+from ..roles import is_admin_like
 from ..serializers.atelier_tre_serializers import (
     AtelierTREMetaSerializer,
     AtelierTRESerializer,
@@ -70,7 +71,7 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
 
     def _is_admin_like(self, user) -> bool:
         """True si admin ou superadmin."""
-        return getattr(user, "is_superuser", False) or (hasattr(user, "is_admin") and user.is_admin())
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user):
         """

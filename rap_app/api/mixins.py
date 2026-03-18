@@ -4,7 +4,7 @@ from django.db.models import Q, QuerySet
 from rest_framework import status
 from rest_framework.response import Response
 
-from .roles import get_staff_centre_ids_cached
+from .roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread, is_staff_like
 
 
 class FieldMaskingMixin:
@@ -33,9 +33,7 @@ class FieldMaskingMixin:
         return None
 
     def _is_staff_like(self, user) -> bool:
-        if not user:
-            return False
-        return bool(getattr(user, "is_superuser", False) or getattr(user, "role", "") in {"staff", "staff_read", "admin", "superadmin"})
+        return is_staff_like(user)
 
     def _is_owner(self, instance, user) -> bool:
         if not user:
@@ -79,17 +77,13 @@ class StaffCentresScopeMixin:
         """
         Retourne True si l'utilisateur est admin ou superuser.
         """
-        return bool(
-            getattr(u, "is_superuser", False) or (hasattr(u, "is_admin") and callable(u.is_admin) and u.is_admin())
-        )
+        return is_admin_like(u)
 
     def _is_staff_or_read(self, u) -> bool:
         """
         Retourne True si l'utilisateur est staff ou staff_read.
         """
-        if not u:
-            return False
-        return getattr(u, "is_staff", False) or getattr(u, "role", "") == "staff_read"
+        return is_staff_or_staffread(u)
 
     def _user_centre_ids(self) -> Optional[list[int]]:
         """
