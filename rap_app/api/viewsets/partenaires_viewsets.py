@@ -24,6 +24,7 @@ from ...api.permissions import (
     UserVisibilityScopeMixin,
     is_staff_or_staffread,
 )
+from ...api.roles import is_admin_like, is_staff_read
 from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
 from ..serializers.partenaires_serializers import (
@@ -44,17 +45,28 @@ class PartenaireAccessPermission(BasePermission):
     message = "Accès restreint."
 
     def has_permission(self, request, view):
-        # Permet toutes les requêtes si utilisateur authentifié (y compris anonymous non acceptés)
-        return bool(request.user and request.user.is_authenticated)
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+
+        if request.method in SAFE_METHODS:
+            return True
+
+        # Ferme explicitement la création et les écritures globales aux profils
+        # non-staff et au rôle staff_read.
+        if getattr(view, "action", None) == "create":
+            return is_admin_like(user) or (is_staff_or_staffread(user) and not is_staff_read(user))
+
+        return True
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        # Accès total si superuser, staff, ou admin-like
-        if (
-            getattr(user, "is_superuser", False)
-            or is_staff_or_staffread(user)
-            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        ):
+        if is_admin_like(user):
+            return True
+
+        if is_staff_or_staffread(user):
+            if is_staff_read(user):
+                return request.method in SAFE_METHODS
             return True
 
         # Accès complet si créateur de ce partenaire

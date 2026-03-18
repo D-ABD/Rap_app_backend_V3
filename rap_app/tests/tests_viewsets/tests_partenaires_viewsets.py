@@ -129,3 +129,33 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         response = self.client.patch(url, {"city": "Lyon"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["city"], "Lyon")
+
+    def test_stagiaire_cannot_create_partenaire(self):
+        self.client.force_authenticate(user=UserFactory(role=CustomUser.ROLE_STAGIAIRE))
+
+        response = self.client.post(self.list_url, self.valid_data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_create_partenaire(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(self.centre)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.post(self.list_url, self.valid_data)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_can_read_but_cannot_update_partenaire(self):
+        partenaire = Partenaire.objects.create(**self.valid_data, created_by=self.user)
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(self.centre)
+        self.client.force_authenticate(user=staff_read)
+
+        detail_url = reverse("partenaire-detail", args=[partenaire.id])
+
+        response_get = self.client.get(detail_url)
+        self.assertEqual(response_get.status_code, status.HTTP_200_OK)
+
+        response_patch = self.client.patch(detail_url, {"city": "Lyon"})
+        self.assertEqual(response_patch.status_code, status.HTTP_403_FORBIDDEN)

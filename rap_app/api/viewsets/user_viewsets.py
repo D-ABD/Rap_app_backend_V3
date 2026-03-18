@@ -14,7 +14,7 @@ from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.logs import LogUtilisateur
 from ...utils.filters import UserFilterSet
-from ..permissions import ReadWriteAdminReadStaff
+from ..permissions import IsAdminLikeOnly, ReadWriteAdminReadStaff
 from ..serializers.user_profil_serializers import (
     CustomUserSerializer,
     CustomUserCreateSerializer,
@@ -144,7 +144,9 @@ class CustomUserViewSet(BaseApiViewSet):
         Retourne les utilisateurs actifs filtrés selon le périmètre de
         centres de l'utilisateur courant.
         """
-        base = super().get_queryset().filter(is_active=True)
+        base = super().get_queryset()
+        if self.action != "reactivate":
+            base = base.filter(is_active=True)
         return self._restrict_users_to_staff_centres(base)
 
     # -------------------------------------------------------
@@ -241,7 +243,7 @@ class CustomUserViewSet(BaseApiViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @action(detail=True, methods=["post"], url_path="reactivate", permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=["post"], url_path="reactivate", permission_classes=[IsAdminLikeOnly])
     def reactivate(self, request, pk=None):
         """
         Réactive un utilisateur désactivé (admin uniquement) et

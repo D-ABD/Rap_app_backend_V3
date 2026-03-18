@@ -94,3 +94,21 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("stagiaire", response.data["data"])
         self.assertTrue(response.data["success"])
+
+    def test_admin_can_reactivate_inactive_user(self):
+        inactive_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE, is_active=False)
+
+        response = self.client.post(reverse("user-reactivate", args=[inactive_user.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        inactive_user.refresh_from_db()
+        self.assertTrue(inactive_user.is_active)
+
+    def test_staff_cannot_reactivate_inactive_user(self):
+        inactive_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE, is_active=False)
+        staff_user = UserFactory(role=CustomUser.ROLE_STAFF)
+        self.client.force_authenticate(user=staff_user)
+
+        response = self.client.post(reverse("user-reactivate", args=[inactive_user.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
