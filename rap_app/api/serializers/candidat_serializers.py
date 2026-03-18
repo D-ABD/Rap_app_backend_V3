@@ -69,6 +69,44 @@ def _ateliers_counts_for(obj) -> dict[str, int]:
     return out
 
 
+def _get_last_prefetched_commentaire_body(obj) -> str | None:
+    annotated = getattr(obj, "last_commentaire", None)
+    if annotated not in (None, ""):
+        return annotated
+
+    prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("commentaires")
+    if prefetched is not None:
+        if not prefetched:
+            return None
+        last = max(
+            prefetched,
+            key=lambda c: (
+                getattr(c, "created_at", None),
+                getattr(c, "pk", None),
+            ),
+        )
+        return getattr(last, "body", None)
+
+    last = obj.commentaires.order_by("-created_at", "-pk").first()
+    return last.body if last else None
+
+
+def _get_last_prefetched_appairage(obj):
+    prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("appairages")
+    if prefetched is not None:
+        if not prefetched:
+            return None
+        return max(
+            prefetched,
+            key=lambda a: (
+                getattr(a, "date_appairage", None),
+                getattr(a, "pk", None),
+            ),
+        )
+
+    return obj.appairages.order_by("-date_appairage", "-pk").select_related("partenaire", "created_by").first()
+
+
 class FormationLiteSerializer(serializers.ModelSerializer):
     """Formation compacte : centre, type_offre, date_debut/date_fin (read_only)."""
 
@@ -148,13 +186,11 @@ class AppairageLiteSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(str)
     def get_commentaire(self, obj):
-        dernier = obj.commentaires.order_by("-created_at").first()
-        return dernier.body if dernier else None
+        return _get_last_prefetched_commentaire_body(obj)
 
     @extend_schema_field(str)
     def get_last_commentaire(self, obj):
-        dernier = obj.commentaires.order_by("-created_at").first()
-        return dernier.body if dernier else None
+        return _get_last_prefetched_commentaire_body(obj)
 
     @extend_schema_field(str)
     def get_created_by_nom(self, obj: "Appairage") -> str | None:
@@ -376,26 +412,7 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_last_appairage(self, obj):
-        prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("appairages")
-        if prefetched is not None:
-            last = None
-            try:
-                last = (
-                    max(
-                        prefetched,
-                        key=lambda a: (
-                            getattr(a, "date_appairage", None),
-                            getattr(a, "pk", None),
-                        ),
-                    )
-                    if prefetched
-                    else None
-                )
-            except Exception:
-                last = None
-        else:
-            last = obj.appairages.order_by("-date_appairage", "-pk").select_related("partenaire", "created_by").first()
-
+        last = _get_last_prefetched_appairage(obj)
         return AppairageLiteSerializer(last, context=self.context).data if last else None
 
     @extend_schema_field(str)
@@ -615,7 +632,7 @@ class CandidatListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(str)
     def get_last_appairage(self, obj):
-        last = obj.appairages.order_by("-date_appairage", "-pk").select_related("partenaire", "created_by").first()
+        last = _get_last_prefetched_appairage(obj)
         return AppairageLiteSerializer(last, context=self.context).data if last else None
 
     @extend_schema_field(str)

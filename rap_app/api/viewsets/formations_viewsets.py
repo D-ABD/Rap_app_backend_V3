@@ -7,7 +7,7 @@ from pathlib import Path
 import pytz
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -253,7 +253,12 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
     def get_queryset(self):
         """Retourne le queryset de base enrichi avec les relations FK utiles."""
-        return self._build_base_queryset().select_related("centre", "type_offre", "statut")
+        return self._build_base_queryset().annotate(
+            places_disponibles_calc=ExpressionWrapper(
+                (F("prevus_crif") + F("prevus_mp")) - (F("inscrits_crif") + F("inscrits_mp")),
+                output_field=IntegerField(),
+            )
+        ).select_related("centre", "type_offre", "statut")
 
     def get_object(self):
         """
@@ -317,7 +322,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         if params.get("date_fin"):
             qs = qs.filter(end_date__lte=params.get("date_fin"))
         if params.get("places_disponibles") == "true":
-            qs = qs.filter(places_disponibles__gt=0)
+            qs = qs.filter(places_disponibles_calc__gt=0)
 
         tri = params.get("tri")
         if tri:

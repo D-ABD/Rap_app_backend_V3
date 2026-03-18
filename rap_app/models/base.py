@@ -114,18 +114,28 @@ class BaseModel(models.Model):
             logger.debug(f"Erreur lors de la récupération de l'utilisateur: {str(e)}")
             return None
 
-    def get_changed_fields(self):
+    def get_changed_fields(self, field_names=None):
         """
         Retourne un dict des champs modifiés depuis la BDD, hors audit.
         """
         if not self.pk:
             return {}
         try:
-            old = type(self).objects.get(pk=self.pk)
+            selected_fields = None
+            if field_names:
+                selected_fields = [name for name in field_names if name not in ("created_at", "updated_at", "created_by", "updated_by")]
+                if not selected_fields:
+                    return {}
+            old_qs = type(self).objects
+            if selected_fields:
+                old_qs = old_qs.only(*selected_fields)
+            old = old_qs.get(pk=self.pk)
             changes = {}
             for field in self._meta.fields:
                 name = field.name
                 if name in ("created_at", "updated_at", "created_by", "updated_by"):
+                    continue
+                if selected_fields is not None and name not in selected_fields:
                     continue
                 old_val = getattr(old, name, None)
                 new_val = getattr(self, name, None)
@@ -149,7 +159,8 @@ class BaseModel(models.Model):
         user = kwargs.pop("user", None) or self.get_current_user()
         skip_validation = kwargs.pop("skip_validation", False)
         is_new = self.pk is None
-        changed_fields = {} if is_new else self.get_changed_fields()
+        update_fields = kwargs.get("update_fields")
+        changed_fields = {} if is_new else self.get_changed_fields(field_names=update_fields)
 
         if user and getattr(user, "is_authenticated", True):
             if is_new and not self.created_by:

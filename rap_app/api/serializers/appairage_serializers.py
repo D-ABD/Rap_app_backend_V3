@@ -11,6 +11,28 @@ from ...models.formations import Formation
 from ...models.partenaires import Partenaire
 
 
+def _get_last_commentaire_body(obj) -> str | None:
+    annotated = getattr(obj, "last_commentaire", None)
+    if annotated not in (None, ""):
+        return annotated
+
+    prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("commentaires")
+    if prefetched is not None:
+        if not prefetched:
+            return None
+        last = max(
+            prefetched,
+            key=lambda c: (
+                getattr(c, "created_at", None),
+                getattr(c, "pk", None),
+            ),
+        )
+        return getattr(last, "body", None)
+
+    last = obj.commentaires.order_by("-created_at", "-pk").first()
+    return last.body if last else None
+
+
 class CommentaireAppairageSerializer(serializers.ModelSerializer):
     """Sérialiseur en lecture seule pour les commentaires d’appairage (id, body, auteur_nom, dates)."""
 
@@ -210,8 +232,7 @@ class AppairageSerializer(AppairageBaseSerializer):
 
     @extend_schema_field(str)
     def get_last_commentaire(self, obj):
-        last = obj.commentaires.order_by("-created_at").first()
-        return last.body if last else None
+        return _get_last_commentaire_body(obj)
 
     class Meta:
         model = Appairage
@@ -332,8 +353,7 @@ class AppairageListSerializer(AppairageBaseSerializer):
 
     @extend_schema_field(str)
     def get_last_commentaire(self, obj):
-        last = obj.commentaires.order_by("-created_at").first()
-        return last.body if last else None
+        return _get_last_commentaire_body(obj)
 
 
 class AppairageCreateUpdateSerializer(serializers.ModelSerializer):
