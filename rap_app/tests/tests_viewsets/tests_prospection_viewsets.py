@@ -1,7 +1,5 @@
 # Tests corrigés pour correspondre aux ViewSets nettoyés et à la pagination enrichie
 import pytest
-
-import unittest
 from datetime import timedelta
 
 from django.contrib.contenttypes.models import ContentType
@@ -17,7 +15,7 @@ from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
-from ...models.prospection import HistoriqueProspection, Prospection, ProspectionChoices
+from ...models.prospection import Prospection, ProspectionChoices
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
 from ..factories import UserFactory
@@ -201,89 +199,7 @@ def test_candidate_create_prospection_infers_owner_formation_and_centre():
     assert prospection.formation_id == formation.id
     assert prospection.centre_id == centre.id
 
-
-@unittest.skip("HistoriqueProspection n'est pas exposé comme API list/detail.")
-class HistoriqueProspectionViewSetTestCase(AuthenticatedTestCase):
-    def setUp(self):
-        super().setUp()
-        self.user = UserFactory(role=CustomUser.ROLE_ADMIN)
-        self.client.force_authenticate(user=self.user)
-        centre = Centre.objects.create(nom="Centre Y", code_postal="75000")
-        statut = Statut.objects.create(nom="non_defini", couleur="#000000")
-        type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
-
-        formation = Formation.objects.create(
-            nom="Formation A",
-            centre=centre,
-            statut=statut,
-            type_offre=type_offre,
-            start_date=timezone.now().date(),
-            end_date=timezone.now().date() + timedelta(days=5),
-            created_by=self.user,
-        )
-
-        partenaire = Partenaire.objects.create(nom="Entreprise ABC", type="entreprise", created_by=self.user)
-
-        self.prospection = Prospection.objects.create(
-            partenaire=partenaire,
-            formation=formation,
-            date_prospection=timezone.now(),
-            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
-            motif=ProspectionChoices.MOTIF_PARTENARIAT,
-            statut=ProspectionChoices.STATUT_EN_COURS,
-            objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
-            commentaire="Initial",
-            created_by=self.user,
-        )
-
-        self.historique = HistoriqueProspection.objects.create(
-            prospection=self.prospection,
-            champ_modifie="statut",
-            ancien_statut=ProspectionChoices.STATUT_A_FAIRE,
-            nouveau_statut=ProspectionChoices.STATUT_EN_COURS,
-            type_prospection=self.prospection.type_prospection,
-            commentaire="Premier contact",
-            resultat="RDV fixé",
-            prochain_contact=timezone.now().date() + timedelta(days=7),
-            moyen_contact=ProspectionChoices.MOYEN_EMAIL,
-            created_by=self.user,
-        )
-
-        self.base_url = reverse("historiqueprospection-list")
-
-    def test_list_historiques(self):
-        response = self.client.get(self.base_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.data.get("data", {}).get("results", [])
-        self.assertGreaterEqual(len(data), 1)
-
-    def test_search_commentaire(self):
-        url = self.base_url + "?search=Premier"
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.data.get("data", {}).get("results", [])
-        self.assertGreaterEqual(len(data), 1)
-
-    def test_retrieve_historique(self):
-        url = reverse("historiqueprospection-detail", args=[self.historique.id])
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["id"], self.historique.id)
-
-    def test_ordering_by_date_modification(self):
-        url = self.base_url + "?ordering=date_modification"
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        data = response.data.get("data", {}).get("results", [])
-        self.assertIsInstance(data, list)
-        if len(data) >= 2:
-            self.assertLessEqual(data[0]["date_modification"], data[1]["date_modification"])
-
-    def test_filter_by_prospection_id(self):
-        url = self.base_url + f"?prospection={self.prospection.id}"
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        data = response.data.get("data", {}).get("results", [])
-        self.assertIsInstance(data, list)
-        for h in data:
-            self.assertEqual(h.get("prospection"), self.prospection.id)
+# HistoriqueProspection n'est plus exposé comme endpoint API list/detail.
+# Les anciens tests API associés ont été retirés de la suite active pour éviter
+# des skips permanents ; la couverture utile passe désormais par les tests
+# modèle/service autour de Prospection et de son historique.
