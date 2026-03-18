@@ -112,3 +112,38 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
         response = self.client.post(reverse("user-reactivate", args=[inactive_user.id]))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_create_user(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "email": "readonly.create@example.com",
+                "username": "readonlycreate",
+                "first_name": "Read",
+                "last_name": "Only",
+                "role": "stagiaire",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_update_user(self):
+        target_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE)
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.patch(reverse("user-detail", args=[target_user.id]), {"first_name": "Blocked"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_delete_user(self):
+        target_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE)
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.delete(reverse("user-detail", args=[target_user.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

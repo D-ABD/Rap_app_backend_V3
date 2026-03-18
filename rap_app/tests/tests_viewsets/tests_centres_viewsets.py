@@ -49,3 +49,29 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         # API fait une suppression réelle (hard delete)
         self.assertEqual(Centre.objects.filter(pk=centre.pk).count(), 0)
+
+    def test_staff_read_cannot_create_centre(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.post(self.list_url, {"nom": "Centre Interdit", "code_postal": "75015"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_update_centre(self):
+        centre = Centre.objects.create(nom="Centre A", code_postal="75001")
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.put(reverse("centre-detail", args=[centre.pk]), {"nom": "Modifie", "code_postal": "75002"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_delete_centre(self):
+        centre = Centre.objects.create(nom="Centre A", code_postal="75001")
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.delete(reverse("centre-detail", args=[centre.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

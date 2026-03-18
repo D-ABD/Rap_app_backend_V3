@@ -124,3 +124,40 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
 
         self.assertIn(self.document.id, returned_ids)
         self.assertNotIn(hidden_document.id, returned_ids)
+
+    def test_staff_read_cannot_create_document(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(self.centre)
+        self.client.force_authenticate(user=staff_read)
+
+        file = SimpleUploadedFile("read_only.pdf", b"%PDF-1.4...", content_type="application/pdf")
+        response = self.client.post(
+            reverse("document-list"),
+            {
+                "formation": self.formation.id,
+                "nom_fichier": "read_only.pdf",
+                "type_document": Document.PDF,
+                "fichier": file,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_update_document(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(self.centre)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.patch(reverse("document-detail", args=[self.document.id]), {"nom_fichier": "x.pdf"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_delete_document(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(self.centre)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.delete(reverse("document-detail", args=[self.document.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

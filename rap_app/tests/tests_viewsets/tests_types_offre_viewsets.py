@@ -72,3 +72,33 @@ class TypeOffreViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(url)
         self.assertIn(response.status_code, (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT))
         self.assertFalse(TypeOffre.objects.filter(pk=pk).exists())
+
+    def test_staff_read_cannot_create_typeoffre(self):
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.post(self.list_url, {"nom": "crif", "autre": "", "couleur": "#4e73df"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_update_typeoffre(self):
+        instance = TypeOffre.objects.create(nom="crif", couleur="#4e73df")
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.patch(
+            reverse("typeoffre-detail", args=[instance.id]),
+            {"couleur": "#000000"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_cannot_delete_typeoffre(self):
+        instance = TypeOffre.objects.create(nom="crif", couleur="#4e73df")
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.delete(reverse("typeoffre-detail", args=[instance.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
