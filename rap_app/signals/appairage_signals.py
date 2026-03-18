@@ -1,9 +1,9 @@
 """
-Signaux legacy d'observation autour de la synchronisation Appairage <-> Candidat.
+Signaux d'observation autour de la synchronisation Appairage <-> Candidat.
 
 Dans l'état actuel du code, ces handlers ne portent plus la synchronisation
-métière : ils émettent des warnings `SIGNAL_EXECUTION_DETECTED` pour repérer
-les flux résiduels hors API pendant la Phase 4.
+métier : ils émettent des warnings `SIGNAL_EXECUTION_DETECTED` pour repérer
+les flux résiduels qui contourneraient le service explicite.
 """
 
 import logging
@@ -37,14 +37,10 @@ def sync_appairage_to_candidat(sender, instance: Appairage, created: bool, **kwa
         getattr(instance, "statut", None),
     )
 
-    # Legacy logic intentionally disabled.
-    # Kept as comment reference during Phase 4 in case a non-API residual flow
-    # (shell, script, import) still depends on this handler.
-    #
-    # Previous behavior:
-    # - on accepted appairage, mirror partenaire/date/responsable/resultat on candidat
-    # - create HistoriquePlacement if needed
-    # - on non-accepted update, clear placement fields when they matched this partenaire
+    # Ancien comportement volontairement désactivé :
+    # - miroir partenaire/date/responsable/resultat sur le candidat
+    # - création éventuelle d'HistoriquePlacement
+    # - nettoyage des champs de placement quand l'appairage ne portait plus l'état accepté
     return
 
 
@@ -66,9 +62,8 @@ def unsync_appairage_from_candidat(sender, instance: Appairage, **kwargs):
         getattr(instance, "statut", None),
     )
 
-    # Legacy logic intentionally disabled.
-    # Previous behavior:
-    # - on appairage delete, clear candidat placement fields if they matched the deleted partenaire
+    # Ancien comportement volontairement désactivé :
+    # - nettoyage des champs de placement du candidat si l'appairage supprimé était la source courante
     return
 
 
@@ -89,8 +84,7 @@ def sync_candidat_to_appairage(sender, instance: Candidat, **kwargs):
         getattr(instance, "entreprise_placement_id", None),
     )
 
-    # Legacy logic intentionally disabled.
-    # Previous behavior:
-    # - if candidat.entreprise_placement changed manually,
-    #   find a matching transmitted/pending appairage and switch it to ACCEPTE
+    # Ancien comportement volontairement désactivé :
+    # - détection d'un changement manuel d'entreprise de placement puis
+    #   bascule d'un appairage compatible vers ACCEPTE
     return

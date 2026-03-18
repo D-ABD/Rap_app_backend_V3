@@ -30,7 +30,6 @@ class AtelierTRE(BaseModel):
         verbose_name=_("Type d’atelier"),
         help_text=_("Type d’atelier collectif"),
     )
-    # Type d’atelier collectif
 
     date_atelier = models.DateTimeField(
         _("Date de l'atelier"),
@@ -38,7 +37,6 @@ class AtelierTRE(BaseModel):
         blank=True,
         help_text=_("Date/heure de l’atelier"),
     )
-    # Date prévue de l’atelier
 
     centre = models.ForeignKey(
         Centre,
@@ -49,7 +47,6 @@ class AtelierTRE(BaseModel):
         verbose_name=_("Centre de formation"),
         help_text=_("Centre où se déroule la formation"),
     )
-    # Centre associé à l’atelier
 
     candidats = models.ManyToManyField(
         Candidat,
@@ -58,7 +55,6 @@ class AtelierTRE(BaseModel):
         verbose_name=_("Candidats inscrits"),
         help_text=_("Candidats liés à cet atelier"),
     )
-    # Candidats inscrits à l’atelier (relation m2m)
 
     class Meta:
         verbose_name = _("Atelier TRE")
@@ -69,7 +65,6 @@ class AtelierTRE(BaseModel):
             models.Index(fields=["centre"], name="idx_ateliertre_centre"),
             models.Index(fields=["date_atelier"], name="idx_ateliertre_date"),
         ]
-        # Index sur les axes principaux : type, centre, date
 
     def __str__(self):
         """
@@ -151,12 +146,10 @@ class AtelierTREPresence(BaseModel):
     atelier = models.ForeignKey(
         "AtelierTRE", on_delete=models.CASCADE, related_name="presences", verbose_name=_("Atelier")
     )
-    # Lien vers l’atelier
 
     candidat = models.ForeignKey(
         Candidat, on_delete=models.CASCADE, related_name="presences_ateliers", verbose_name=_("Candidat")
     )
-    # Lien vers le candidat
 
     statut = models.CharField(
         max_length=15,
@@ -164,10 +157,8 @@ class AtelierTREPresence(BaseModel):
         default=PresenceStatut.INCONNU,
         verbose_name=_("Statut de présence"),
     )
-    # Statut de présence
 
     commentaire = models.TextField(blank=True, null=True, verbose_name=_("Commentaire"))
-    # Commentaire libre
 
     class Meta:
         verbose_name = _("Présence à un atelier")
@@ -184,7 +175,3 @@ class AtelierTREPresence(BaseModel):
         Retourne une synthèse textuelle de la présence pour l’admin.
         """
         return f"{self.atelier_id} / {self.candidat_id} → {self.get_statut_display()}"
-
-
-# Compatibilité backward: monkey patch pour interface legacy (pas recommandé en usage moderne)
-AtelierTRE.set_presence = AtelierTRE.set_presence
