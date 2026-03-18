@@ -83,6 +83,10 @@ class ScopeMixin:
         if len(centre_ids) == 0:
             return qs.none()
 
+        model = getattr(qs, "model", None)
+        if model and getattr(getattr(model, "_meta", None), "model_name", None) == "centre":
+            return qs.filter(id__in=centre_ids)
+
         return qs.filter(centre_id__in=centre_ids)
 
 
@@ -146,7 +150,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         Réponse : JSON contenant "annees", "departements", "centres", "type_declic"
         (voir exemple dans docstring de la classe).
         """
-        annees = Declic.objects.order_by().values_list("date_declic__year", flat=True).distinct()
+        annees = self._scope_qs_to_user_centres(Declic.objects.all()).order_by().values_list("date_declic__year", flat=True).distinct()
         annees = sorted([a for a in annees if a], reverse=True)
 
         centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
@@ -248,8 +252,8 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         Ajoute la sauvegarde de l'utilisateur ayant effectué l'action via save(user=...).
         Permissions : soumises au décorateur classe (cf. IsDeclicStaffOrAbove et ScopeMixin).
         """
-        instance = serializer.save()
-        instance.save(user=self.request.user)
+        self._assert_user_can_use_centre(serializer.validated_data.get("centre"))
+        serializer.save()
 
     def perform_update(self, serializer):
         """
@@ -257,8 +261,20 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
 
         Ajoute la sauvegarde de l'utilisateur ayant effectué l'action via save(user=...).
         """
-        instance = serializer.save()
-        instance.save(user=self.request.user)
+        current = serializer.instance
+        new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
+        self._assert_user_can_use_centre(new_centre)
+        serializer.save()
+
+    def _assert_user_can_use_centre(self, centre):
+        if not centre:
+            return
+
+        allowed_ids = self._centre_ids_for_user(self.request.user)
+        if allowed_ids is None:
+            return
+        if getattr(centre, "id", None) not in set(allowed_ids):
+            raise PermissionDenied("Centre hors de votre périmètre d'accès.")
 
     # -------------------------------------------------------------------------
     # 📊 STATISTIQUES
@@ -276,7 +292,13 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         Aucun format JSON garanti visible ici.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        data = Declic.accueillis_par_centre(annee)
+        centres_qs = self._scope_qs_to_user_centres(Centre.objects.all()).order_by("nom")
+        sessions_qs = self._scope_qs_to_user_centres(Declic.objects.filter(date_declic__year=annee))
+        totals_by_centre = {
+            row["centre_id"]: row["total"] or 0
+            for row in sessions_qs.values("centre_id").annotate(total=Sum("nb_presents_declic"))
+        }
+        data = {centre.nom: totals_by_centre.get(centre.id, 0) for centre in centres_qs}
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="stats-departements")
@@ -288,7 +310,14 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         Restrictions et structure : idem.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        data = Declic.accueillis_par_departement(annee)
+        sessions_qs = self._scope_qs_to_user_centres(Declic.objects.filter(date_declic__year=annee).select_related("centre"))
+        data = {}
+        for session in sessions_qs:
+            centre = getattr(session, "centre", None)
+            dep = getattr(centre, "departement", None) or ((getattr(centre, "code_postal", "") or "")[:2] or None)
+            if dep:
+                data[dep] = data.get(dep, 0) + (session.nb_presents_declic or 0)
+        data = dict(sorted(data.items()))
         return Response(data)
 
     # -------------------------------------------------------------------------

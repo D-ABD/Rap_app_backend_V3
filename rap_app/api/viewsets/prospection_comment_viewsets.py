@@ -203,12 +203,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         filtre pour les commentaires (formations, partenaires, auteurs,
         centres et propriétaires).
         """
-        base_qs = ProspectionComment.objects.select_related(
-            "prospection__formation__centre",
-            "prospection__partenaire",
-            "prospection__owner",
-            "created_by",
-        )
+        base_qs = self.get_queryset()
 
         # Récup formations
         formations = (

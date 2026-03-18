@@ -79,6 +79,8 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
             centre_ids = staff_centre_ids(u) or []
             if centre_ids:
                 qs = qs.filter(appairage__formation__centre_id__in=centre_ids).distinct()
+            else:
+                return base.none()
 
         qp = self.request.query_params
         est_archive = qp.get("est_archive")

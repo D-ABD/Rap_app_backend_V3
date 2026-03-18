@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
 from django.utils.timezone import localdate
@@ -99,7 +99,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
 
         # (aucun changement fonctionnel, docstring uniquement)
         # Cf. code source pour détail total des valeurs retournées.
-        annees = Prepa.objects.order_by().values_list("date_prepa__year", flat=True).distinct()
+        annees = self._scope_qs_to_user_centres(Prepa.objects.all()).order_by().values_list("date_prepa__year", flat=True).distinct()
         annees = sorted([a for a in annees if a is not None], reverse=True)
 
         centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
@@ -236,13 +236,13 @@ class PrepaViewSet(viewsets.ModelViewSet):
         if is_prepa_staff(user):
             centres = getattr(user, "centres", None)
             if not centres or not centres.exists():
-                return None
+                return []
             return list(centres.values_list("id", flat=True))
 
         if is_staff_or_staffread(user):
             centres = getattr(user, "centres", None)
             if not centres or not centres.exists():
-                return None
+                return []
             return list(centres.values_list("id", flat=True))
 
         return []
@@ -288,7 +288,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
 
         allowed_ids = set(self._prepa_staff_centre_ids(user) or [])
 
-        if allowed_ids and getattr(centre, "id", None) not in allowed_ids:
+        if getattr(centre, "id", None) not in allowed_ids:
             raise PermissionDenied("Centre hors de votre périmètre d'accès.")
 
     # ---------------------------------------------------
@@ -299,12 +299,8 @@ class PrepaViewSet(viewsets.ModelViewSet):
         Crée une séance Prépa puis vérifie que le centre associé est
         autorisé pour l'utilisateur avant la sauvegarde finale.
         """
-        instance = serializer.save()
-        self._assert_user_can_use_centre(getattr(instance, "centre", None))
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        self._assert_user_can_use_centre(serializer.validated_data.get("centre"))
+        serializer.save()
 
     def perform_update(self, serializer):
         """
@@ -315,11 +311,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
         new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
         self._assert_user_can_use_centre(new_centre)
 
-        instance = serializer.save()
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        serializer.save()
 
     # ---------------------------------------------------
     # 🔹 Actions statistiques
@@ -331,7 +323,15 @@ class PrepaViewSet(viewsets.ModelViewSet):
         année donnée en s'appuyant sur Prepa.accueillis_par_centre.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        data = Prepa.accueillis_par_centre(annee)
+        centres_qs = self._scope_qs_to_user_centres(Centre.objects.all()).order_by("nom")
+        sessions_qs = self._scope_qs_to_user_centres(
+            Prepa.objects.filter(date_prepa__year=annee, type_prepa=Prepa.TypePrepa.ATELIER1)
+        )
+        totals_by_centre = {
+            row["centre_id"]: row["total"] or 0
+            for row in sessions_qs.values("centre_id").annotate(total=Sum("nb_presents_prepa"))
+        }
+        data = {centre.nom: totals_by_centre.get(centre.id, 0) for centre in centres_qs}
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="stats-departements")
@@ -341,7 +341,16 @@ class PrepaViewSet(viewsets.ModelViewSet):
         une année donnée en s'appuyant sur Prepa.accueillis_par_departement.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        data = Prepa.accueillis_par_departement(annee)
+        sessions_qs = self._scope_qs_to_user_centres(
+            Prepa.objects.filter(date_prepa__year=annee, type_prepa=Prepa.TypePrepa.ATELIER1).select_related("centre")
+        )
+        data = {}
+        for session in sessions_qs:
+            centre = getattr(session, "centre", None)
+            dep = getattr(centre, "departement", None) or ((getattr(centre, "code_postal", "") or "")[:2] or None)
+            if dep:
+                data[dep] = data.get(dep, 0) + (session.nb_presents_prepa or 0)
+        data = dict(sorted(data.items()))
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="reste-a-faire-total")
@@ -351,7 +360,13 @@ class PrepaViewSet(viewsets.ModelViewSet):
         sur une année donnée via Prepa.reste_a_faire_total.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        total = Prepa.reste_a_faire_total(annee)
+        objectifs_qs = self._scope_qs_to_user_centres(ObjectifPrepa.objects.filter(annee=annee))
+        realise_qs = self._scope_qs_to_user_centres(
+            Prepa.objects.filter(date_prepa__year=annee, type_prepa=Prepa.TypePrepa.ATELIER1)
+        )
+        objectif_total = objectifs_qs.aggregate(total=Sum("valeur_objectif"))["total"] or 0
+        realise_total = realise_qs.aggregate(total=Sum("nb_presents_prepa"))["total"] or 0
+        total = max(objectif_total - realise_total, 0)
         return Response({"annee": annee, "reste_total": total})
 
     # ---------------------------------------------------

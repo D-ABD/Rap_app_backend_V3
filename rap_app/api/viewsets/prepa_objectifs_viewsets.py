@@ -157,12 +157,8 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
         # Crée un objectif Prépa puis vérifie que le centre associé fait
         # partie du périmètre de l'utilisateur avant de sauvegarder avec
         # ou sans paramètre user selon la signature du modèle.
-        instance = serializer.save()
-        self._assert_user_can_use_centre(getattr(instance, "centre", None))
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        self._assert_user_can_use_centre(serializer.validated_data.get("centre"))
+        serializer.save()
 
     def perform_update(self, serializer):
         # Met à jour un objectif Prépa après contrôle de la portée sur
@@ -171,11 +167,7 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
         current = serializer.instance
         new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
         self._assert_user_can_use_centre(new_centre)
-        instance = serializer.save()
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        serializer.save()
 
     # -----------------------------------------------------------
     # 🔹 Filtres

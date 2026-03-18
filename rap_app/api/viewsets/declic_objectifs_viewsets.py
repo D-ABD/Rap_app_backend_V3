@@ -183,12 +183,8 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         Sécurise la création : interdit la création sur un centre non autorisé.
         Le format de la réponse dépend du serializer.
         """
-        instance = serializer.save()
-        self._assert_user_can_use_centre(getattr(instance, "centre", None))
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        self._assert_user_can_use_centre(serializer.validated_data.get("centre"))
+        serializer.save()
 
     def perform_update(self, serializer):
         """
@@ -198,11 +194,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         current = serializer.instance
         new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
         self._assert_user_can_use_centre(new_centre)
-        instance = serializer.save()
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        serializer.save()
 
     # -----------------------------------------------------------
     # 🔹 Filtres
