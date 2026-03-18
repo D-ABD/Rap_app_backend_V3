@@ -15,6 +15,7 @@ from ...models.formations import Formation
 from ...models.logs import LogUtilisateur
 from ...utils.filters import UserFilterSet
 from ..permissions import IsAdminLikeOnly, ReadWriteAdminReadStaff
+from ..roles import is_admin_like, is_staff_or_staffread
 from ..serializers.user_profil_serializers import (
     CustomUserSerializer,
     CustomUserCreateSerializer,
@@ -125,10 +126,10 @@ class CustomUserViewSet(BaseApiViewSet):
         pour les profils admin ou superuser.
         """
         u = self.request.user
-        if getattr(u, "is_superuser", False) or (hasattr(u, "is_admin") and u.is_admin()):
+        if is_admin_like(u):
             return qs
 
-        if getattr(u, "is_staff", False):
+        if is_staff_or_staffread(u):
             centre_ids = u.centres.values_list("id", flat=True)
             if not centre_ids:
                 return qs.none()
@@ -419,11 +420,7 @@ class CustomUserViewSet(BaseApiViewSet):
 
         formations_qs = Formation.objects.select_related("centre", "type_offre").order_by("nom")
         u = request.user
-        if (
-            getattr(u, "is_staff", False)
-            and not getattr(u, "is_superuser", False)
-            and not (hasattr(u, "is_admin") and u.is_admin())
-        ):
+        if is_staff_or_staffread(u) and not is_admin_like(u):
             centre_ids = u.centres.values_list("id", flat=True)
             formations_qs = formations_qs.filter(centre_id__in=centre_ids)
 

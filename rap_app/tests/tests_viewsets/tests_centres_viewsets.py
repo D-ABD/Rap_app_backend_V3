@@ -75,3 +75,18 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(reverse("centre-detail", args=[centre.pk]))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_list_is_scoped_to_assigned_centres(self):
+        visible = Centre.objects.create(nom="Centre Visible", code_postal="75001")
+        hidden = Centre.objects.create(nom="Centre Cache", code_postal="69001")
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(visible)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(hidden.id, returned_ids)

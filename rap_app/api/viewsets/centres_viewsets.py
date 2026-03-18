@@ -14,6 +14,7 @@ from ...models.centres import Centre
 from ...models.logs import LogUtilisateur
 from ..paginations import RapAppPagination
 from ..permissions import ReadWriteAdminReadStaff
+from ..roles import is_admin_like, is_staff_or_staffread
 from ..serializers.centres_serializers import CentreSerializer
 
 
@@ -65,14 +66,16 @@ class CentreViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Centre.objects.all().order_by("nom")
 
-        role = getattr(user, "role", "") or ""
-        if role.startswith("staff") and not user.is_superuser:
+        if is_admin_like(user):
+            return qs
+
+        if is_staff_or_staffread(user):
             try:
                 return qs.filter(id__in=user.centres.values_list("id", flat=True))
             except Exception:
                 return qs.none()
 
-        return qs
+        return qs.none()
 
     @action(detail=False, methods=["get"], url_path="liste-simple")
     def liste_simple(self, request):

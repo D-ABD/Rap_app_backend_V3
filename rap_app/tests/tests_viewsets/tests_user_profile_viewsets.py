@@ -2,6 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
+from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.logs import LogUtilisateur
 from ..factories import UserFactory
@@ -147,3 +148,23 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(reverse("user-detail", args=[target_user.id]))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_read_list_users_is_scoped_to_assigned_centres(self):
+        visible_centre = Centre.objects.create(nom="Centre Visible")
+        hidden_centre = Centre.objects.create(nom="Centre Cache")
+        visible_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE)
+        hidden_user = UserFactory(role=CustomUser.ROLE_STAGIAIRE)
+        visible_user.centres.add(visible_centre)
+        hidden_user.centres.add(hidden_centre)
+
+        staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
+        staff_read.centres.add(visible_centre)
+        self.client.force_authenticate(user=staff_read)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible_user.id, returned_ids)
+        self.assertNotIn(hidden_user.id, returned_ids)
