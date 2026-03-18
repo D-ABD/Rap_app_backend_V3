@@ -266,6 +266,18 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertIn("annees", response.data["data"])
         self.assertIn("centres", response.data["data"])
 
+    def test_prepa_objectifs_list_uses_success_envelope(self):
+        prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
+        prepa_staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=prepa_staff)
+
+        response = self.client.get(reverse("objectif-prepa-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertIsInstance(response.data["data"], dict)
+        self.assertIn("results", response.data["data"])
+
     def test_declic_filters_uses_success_envelope(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
         declic_staff.centres.add(self.centre_a)
@@ -277,6 +289,18 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertTrue(response.data["success"])
         self.assertIn("annees", response.data["data"])
         self.assertIn("centres", response.data["data"])
+
+    def test_declic_objectif_retrieve_uses_success_envelope(self):
+        declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
+        declic_staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=declic_staff)
+
+        objectif = ObjectifDeclic.objects.get(centre=self.centre_a, annee=2025)
+        response = self.client.get(reverse("objectifs-declic-detail", args=[objectif.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["data"]["id"], objectif.id)
 
     def test_declic_staff_cannot_create_objectif_outside_scope(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
