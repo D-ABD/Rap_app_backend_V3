@@ -14,6 +14,7 @@ from ....models.appairage import AppairageStatut
 from ....models.partenaires import Partenaire
 from ....models.prospection_choices import ProspectionChoices
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...roles import is_admin_like
 from ...serializers.base_serializers import EmptySerializer
 
 
@@ -41,10 +42,7 @@ class PartenaireStatsViewSet(viewsets.ViewSet):
         Détecte les utilisateurs ayant un rôle admin global (is_superuser ou méthode is_admin).
         Utilisé pour donner un accès sans restriction de périmètre métier.
         """
-        return bool(
-            getattr(user, "is_superuser", False)
-            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        )
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user) -> Optional[List[int]]:
         """

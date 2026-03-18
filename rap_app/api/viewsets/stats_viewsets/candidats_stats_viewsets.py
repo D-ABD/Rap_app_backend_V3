@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from ...permissions import IsStaffOrAbove, is_staff_or_staffread
+from ...roles import is_admin_like
 from ...serializers.base_serializers import EmptySerializer
 
 # rap_app/api/viewsets/stats_viewsets/candidats_stats_viewsets.py
@@ -108,10 +109,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         """
         Détermine si un utilisateur possède un rôle admin/superadmin global.
         """
-        return bool(
-            getattr(user, "is_superuser", False)
-            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        )
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user) -> Optional[list[int]]:
         """

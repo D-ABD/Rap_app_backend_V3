@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from ...permissions import is_staff_or_staffread
+from ...roles import is_admin_like
 
 try:
     # Si dispo, on réutilise vos permissions/mixins
@@ -79,10 +80,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         - Superuser (`is_superuser`)
         - Ou méthode locale custom `is_admin` si présente.
         """
-        return bool(
-            getattr(user, "is_superuser", False)
-            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        )
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user) -> Optional[list[int]]:
         """

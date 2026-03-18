@@ -14,6 +14,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from ....models.prospection_comments import ProspectionComment
 from ...permissions import is_staff_or_staffread
+from ...roles import is_admin_like
 from ...serializers.base_serializers import EmptySerializer
 
 try:
@@ -52,10 +53,7 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
     # ────────────────────────────────────────────────────────────
     def _is_admin_like(self, user) -> bool:
         # Détermine si l'utilisateur est superuser ou dispose d'une méthode is_admin (cas admin fonctionnel).
-        return bool(
-            getattr(user, "is_superuser", False)
-            or (hasattr(user, "is_admin") and callable(user.is_admin) and user.is_admin())
-        )
+        return is_admin_like(user)
 
     def _staff_centre_ids(self, user) -> Optional[list[int]]:
         # Pour un staff, retourne la liste des centres à laquelle il a accès.
