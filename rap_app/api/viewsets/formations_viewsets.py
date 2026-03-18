@@ -7,7 +7,7 @@ from pathlib import Path
 import pytz
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Prefetch, Q
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -37,6 +37,7 @@ from ...api.serializers.formations_serializers import (
     FormationUpdateSerializer,
 )
 from ...models.formations import Formation
+from ...models.commentaires import Commentaire
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
 from .scoped_viewset import ScopedModelViewSet
@@ -611,12 +612,17 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             inclure_archivees = bool(request.data.get("avec_archivees"))
 
         if inclure_archivees:
-            qs = self.scope_queryset(Formation.objects.all_including_archived()).select_related(
-                "centre", "type_offre", "statut"
-            )
+            qs = self.scope_queryset(Formation.objects.all_including_archived())
             logger.info(f"[EXPORT XLSX] {request.user} a demandé l’export avec formations archivées.")
         else:
-            qs = self.get_queryset().select_related("centre", "type_offre", "statut")
+            qs = self.get_queryset()
+
+        qs = qs.select_related("centre", "type_offre", "statut").prefetch_related(
+            Prefetch(
+                "commentaires",
+                queryset=Commentaire.objects.select_related("created_by").order_by("-created_at", "-pk"),
+            )
+        )
 
         if request.method == "POST":
             ids = request.data.get("ids", [])
@@ -740,20 +746,25 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
         for i, f in enumerate(qs, start=1):
             dernier_commentaire = ""
-            if hasattr(f, "get_commentaires"):
-                try:
-                    last_comment = f.get_commentaires(limit=1).first()
-                    if last_comment:
-                        contenu_html = getattr(last_comment, "contenu", "") or getattr(last_comment, "body", "")
-                        contenu_txt = strip_html_tags_pretty(contenu_html)
-                        auteur = getattr(last_comment.created_by, "username", "")
-                        date = last_comment.created_at.strftime("%d/%m/%Y %H:%M") if last_comment.created_at else ""
-                        texte_final = contenu_txt[:200].strip()
-                        if len(contenu_txt) > 200:
-                            texte_final += "…"
-                        dernier_commentaire = f"[{date}] {auteur} : {texte_final}"
-                except Exception:
-                    dernier_commentaire = ""
+            try:
+                prefetched_comments = getattr(f, "_prefetched_objects_cache", {}).get("commentaires")
+                if prefetched_comments is not None:
+                    last_comment = prefetched_comments[0] if prefetched_comments else None
+                elif hasattr(f, "get_commentaires"):
+                    last_comment = f.get_commentaires(limit=1).select_related("created_by").first()
+                else:
+                    last_comment = None
+                if last_comment:
+                    contenu_html = getattr(last_comment, "contenu", "") or getattr(last_comment, "body", "")
+                    contenu_txt = strip_html_tags_pretty(contenu_html)
+                    auteur = getattr(last_comment.created_by, "username", "")
+                    date = last_comment.created_at.strftime("%d/%m/%Y %H:%M") if last_comment.created_at else ""
+                    texte_final = contenu_txt[:200].strip()
+                    if len(contenu_txt) > 200:
+                        texte_final += "…"
+                    dernier_commentaire = f"[{date}] {auteur} : {texte_final}"
+            except Exception:
+                dernier_commentaire = ""
 
             raw_taux = getattr(f, "taux_saturation", 0) or 0
             taux_pct = (raw_taux * 100) if raw_taux <= 1 else float(raw_taux)

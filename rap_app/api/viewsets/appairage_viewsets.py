@@ -3,7 +3,7 @@ from pathlib import Path
 
 import django_filters
 from django.conf import settings
-from django.db.models import OuterRef, Q, Subquery
+from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as dj_timezone
@@ -73,7 +73,13 @@ class AppairageViewSet(ScopedModelViewSet):
             "created_by",
             "updated_by",
         )
-        .prefetch_related("historiques", "commentaires")
+        .prefetch_related(
+            "historiques",
+            Prefetch(
+                "commentaires",
+                queryset=CommentaireAppairage.objects.select_related("created_by").order_by("-created_at", "-pk"),
+            ),
+        )
     )
 
     permission_classes = [IsStaffOrAbove]
@@ -390,9 +396,6 @@ class AppairageViewSet(ScopedModelViewSet):
             "partenaire",
             "created_by",
             "updated_by",
-        ).prefetch_related(
-            "commentaires",
-            "commentaires__created_by",
         )
 
     @extend_schema(
@@ -557,8 +560,21 @@ class AppairageViewSet(ScopedModelViewSet):
         for i, a in enumerate(qs, start=1):
             commentaires_text = ""
             try:
-                if hasattr(a, "commentaires"):
-                    coms = a.commentaires.all().order_by("-created_at")
+                prefetched = getattr(a, "_prefetched_objects_cache", {}).get("commentaires")
+                if prefetched is not None:
+                    coms = sorted(
+                        prefetched,
+                        key=lambda c: (
+                            getattr(c, "created_at", None),
+                            getattr(c, "pk", None),
+                        ),
+                        reverse=True,
+                    )
+                elif hasattr(a, "commentaires"):
+                    coms = a.commentaires.select_related("created_by").order_by("-created_at", "-pk")
+                else:
+                    coms = []
+                if coms:
                     commentaires_text = "\n".join(
                         f"- {getattr(c.created_by, 'get_full_name', lambda: str(c.created_by))()}: {getattr(c, 'body', '')}"
                         for c in coms

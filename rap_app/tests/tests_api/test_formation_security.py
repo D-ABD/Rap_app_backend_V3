@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from rap_app.models.centres import Centre
+from rap_app.models.commentaires import Commentaire
 from rap_app.models.formations import Formation
 from rap_app.models.statut import Statut
 from rap_app.models.types_offre import TypeOffre
@@ -152,6 +153,11 @@ def test_export_xlsx_respects_centre_scope():
         start_date=today + timedelta(days=5),
         end_date=today + timedelta(days=30),
     )
+    Commentaire.objects.create(
+        formation=formation_visible,
+        contenu="Commentaire export visible",
+        created_by=user,
+    )
 
     formation_cachee = Formation.objects.create(
         nom="Formation Cachee",
@@ -182,6 +188,7 @@ def test_export_xlsx_respects_centre_scope():
 
     # La formation du centre visible doit apparaître
     assert "Formation Visible" in exported_values
+    assert any("Commentaire export visible" in value for value in exported_values)
 
     # La formation d'un autre centre ne doit PAS apparaître
     assert "Formation Cachee" not in exported_values

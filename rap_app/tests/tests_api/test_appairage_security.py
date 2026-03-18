@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from rap_app.models.appairage import Appairage
+from rap_app.models.commentaires_appairage import CommentaireAppairage
 from rap_app.models.candidat import Candidat
 from rap_app.models.centres import Centre
 from rap_app.models.formations import Formation
@@ -104,6 +105,15 @@ class AppairageSecurityTests(APITestCase):
             formation_nom="Formation Visible",
             partenaire_nom="Entreprise Visible",
         )
+        visible = Appairage.objects.filter(
+            formation__centre=centre_a,
+            partenaire__nom="Entreprise Visible",
+        ).first()
+        CommentaireAppairage.objects.create(
+            appairage=visible,
+            body="Commentaire visible export",
+            created_by=user,
+        )
 
         self._create_appairage(
             centre=centre_b,
@@ -138,6 +148,7 @@ class AppairageSecurityTests(APITestCase):
 
         self.assertIn("Formation Visible", exported_blob)
         self.assertIn("Entreprise Visible", exported_blob)
+        self.assertIn("Commentaire visible export", exported_blob)
 
         self.assertNotIn("Formation Cachee", exported_blob)
         self.assertNotIn("Entreprise Cachee", exported_blob)
