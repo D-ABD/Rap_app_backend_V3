@@ -25,6 +25,7 @@ from ...api.roles import (
 )
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
+from ..mixins import ApiResponseMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
 
@@ -45,7 +46,7 @@ from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
         responses={200: ObjectifPrepaSerializer(many=True)},
     ),
 )
-class ObjectifPrepaViewSet(viewsets.ModelViewSet):
+class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des objectifs annuels Prépa.
 
@@ -196,7 +197,7 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
             ],
             departement=[{"value": d, "label": f"Département {d}"} for d in departements],
         )
-        return Response(data)
+        return self.success_response(data=data, message="Filtres objectifs Prépa récupérés avec succès.")
 
     # -----------------------------------------------------------
     # 🔹 Synthèse
@@ -210,7 +211,7 @@ class ObjectifPrepaViewSet(viewsets.ModelViewSet):
         """
         qs = self.get_queryset()
         data = [obj.synthese_globale() for obj in qs]
-        return Response(data, status=status.HTTP_200_OK)
+        return self.success_response(data=data, message="Synthèse objectifs Prépa récupérée avec succès.")
 
     # -----------------------------------------------------------
     # 🔹 Export Excel

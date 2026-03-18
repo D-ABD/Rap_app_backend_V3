@@ -25,6 +25,7 @@ from rest_framework.response import Response
 
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
+from ..mixins import ApiResponseMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..roles import (
     is_admin_like,
@@ -63,7 +64,7 @@ from ..serializers.prepa_serializers import PrepaSerializer
         responses={200: PrepaSerializer},
     ),
 )
-class PrepaViewSet(viewsets.ModelViewSet):
+class PrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet principal du module Prépa.
 
@@ -123,13 +124,14 @@ class PrepaViewSet(viewsets.ModelViewSet):
         departements = [{"value": d, "label": f"Département {d}"} for d in sorted(departements_set)]
         types = [{"value": t[0], "label": t[1]} for t in Prepa.TypePrepa.choices]
 
-        return Response(
-            {
+        return self.success_response(
+            data={
                 "annees": annees,
                 "departements": departements,
                 "centres": centres_data,
                 "type_prepa": types,
-            }
+            },
+            message="Filtres Prépa récupérés avec succès.",
         )
 
     # ---------------------------------------------------
@@ -216,7 +218,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
             "type_prepa": types,
             "centres": centres,
         }
-        return Response(data)
+        return self.success_response(data=data, message="Métadonnées Prépa récupérées avec succès.")
 
     # ---------------------------------------------------
     # 🔹 Helpers centres / permissions
@@ -332,7 +334,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
             for row in sessions_qs.values("centre_id").annotate(total=Sum("nb_presents_prepa"))
         }
         data = {centre.nom: totals_by_centre.get(centre.id, 0) for centre in centres_qs}
-        return Response(data)
+        return self.success_response(data=data, message="Statistiques Prépa par centre récupérées avec succès.")
 
     @action(detail=False, methods=["get"], url_path="stats-departements")
     def stats_departements(self, request):
@@ -351,7 +353,7 @@ class PrepaViewSet(viewsets.ModelViewSet):
             if dep:
                 data[dep] = data.get(dep, 0) + (session.nb_presents_prepa or 0)
         data = dict(sorted(data.items()))
-        return Response(data)
+        return self.success_response(data=data, message="Statistiques Prépa par département récupérées avec succès.")
 
     @action(detail=False, methods=["get"], url_path="reste-a-faire-total")
     def reste_a_faire_total(self, request):
@@ -367,7 +369,10 @@ class PrepaViewSet(viewsets.ModelViewSet):
         objectif_total = objectifs_qs.aggregate(total=Sum("valeur_objectif"))["total"] or 0
         realise_total = realise_qs.aggregate(total=Sum("nb_presents_prepa"))["total"] or 0
         total = max(objectif_total - realise_total, 0)
-        return Response({"annee": annee, "reste_total": total})
+        return self.success_response(
+            data={"annee": annee, "reste_total": total},
+            message="Reste à faire Prépa récupéré avec succès.",
+        )
 
     # ---------------------------------------------------
     # 🔹 Export Excel complet PREPA

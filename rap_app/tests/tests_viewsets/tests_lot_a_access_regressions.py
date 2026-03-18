@@ -206,7 +206,8 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         response = self.client.get(reverse("prepa-stats-centres") + "?annee=2025")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"Centre A": 7})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["data"], {"Centre A": 7})
 
     def test_prepa_staff_cannot_create_objectif_outside_scope(self):
         prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
@@ -250,7 +251,32 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         response = self.client.get(reverse("declic-stats-centres") + "?annee=2025")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"Centre A": 6})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["data"], {"Centre A": 6})
+
+    def test_prepa_filters_uses_success_envelope(self):
+        prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
+        prepa_staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=prepa_staff)
+
+        response = self.client.get(reverse("prepa-filters"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertIn("annees", response.data["data"])
+        self.assertIn("centres", response.data["data"])
+
+    def test_declic_filters_uses_success_envelope(self):
+        declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
+        declic_staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=declic_staff)
+
+        response = self.client.get(reverse("declic-filters"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertIn("annees", response.data["data"])
+        self.assertIn("centres", response.data["data"])
 
     def test_declic_staff_cannot_create_objectif_outside_scope(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)

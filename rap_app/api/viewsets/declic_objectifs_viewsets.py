@@ -26,6 +26,7 @@ from ...api.roles import (
 )
 from ...models.centres import Centre
 from ...models.declic import Declic, ObjectifDeclic  # 🔁 on importe aussi Declic
+from ..mixins import ApiResponseMixin
 from ..permissions import IsDeclicStaffOrAbove
 from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
 
@@ -57,7 +58,7 @@ from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
         responses={200: ObjectifDeclicSerializer(many=True)},
     ),
 )
-class ObjectifDeclicViewSet(viewsets.ModelViewSet):
+class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des objectifs annuels Déclic.
 
@@ -229,7 +230,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
             ],
             departement=[{"value": d, "label": f"Département {d}"} for d in departements],
         )
-        return Response(data)
+        return self.success_response(data=data, message="Filtres objectifs Déclic récupérés avec succès.")
 
     # -----------------------------------------------------------
     # 🔹 Synthèse
@@ -245,7 +246,7 @@ class ObjectifDeclicViewSet(viewsets.ModelViewSet):
         """
         qs = self.get_queryset()
         data = [obj.synthese_globale() for obj in qs]
-        return Response(data, status=status.HTTP_200_OK)
+        return self.success_response(data=data, message="Synthèse objectifs Déclic récupérée avec succès.")
 
     # -----------------------------------------------------------
     # 🔹 Export Excel

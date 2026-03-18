@@ -26,6 +26,7 @@ from ...api.roles import (
 )
 from ...models.centres import Centre
 from ...models.declic import Declic, ObjectifDeclic
+from ..mixins import ApiResponseMixin
 from ..permissions import IsDeclicStaffOrAbove
 from ..serializers.declic_serializers import DeclicSerializer
 
@@ -111,7 +112,7 @@ class ScopeMixin:
         responses={200: DeclicSerializer},
     )
 )
-class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
+class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD du module Déclic.
 
@@ -176,13 +177,14 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
         # Liste des types atelier uniquement (tuple formaté value/label)
         types = [{"value": t[0], "label": t[1]} for t in Declic.TypeDeclic.choices]
 
-        return Response(
-            {
+        return self.success_response(
+            data={
                 "annees": annees,
                 "departements": [{"value": d, "label": f"Département {d}"} for d in sorted(deps)],
                 "centres": centres,
                 "type_declic": types,
-            }
+            },
+            message="Filtres Déclic récupérés avec succès.",
         )
 
     # -------------------------------------------------------------------------
@@ -299,7 +301,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
             for row in sessions_qs.values("centre_id").annotate(total=Sum("nb_presents_declic"))
         }
         data = {centre.nom: totals_by_centre.get(centre.id, 0) for centre in centres_qs}
-        return Response(data)
+        return self.success_response(data=data, message="Statistiques Déclic par centre récupérées avec succès.")
 
     @action(detail=False, methods=["get"], url_path="stats-departements")
     def stats_departements(self, request):
@@ -318,7 +320,7 @@ class DeclicViewSet(ScopeMixin, viewsets.ModelViewSet):
             if dep:
                 data[dep] = data.get(dep, 0) + (session.nb_presents_declic or 0)
         data = dict(sorted(data.items()))
-        return Response(data)
+        return self.success_response(data=data, message="Statistiques Déclic par département récupérées avec succès.")
 
     # -------------------------------------------------------------------------
     # 📤 EXPORT EXCEL ATELIERS UNIQUEMENT
