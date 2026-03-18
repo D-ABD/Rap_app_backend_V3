@@ -10,6 +10,8 @@ Sécuriser le backend pour un déploiement plus propre sans casser les contrats 
 - Les settings de sécurité HTTP ont des valeurs de durcissement explicites :
   `SESSION_COOKIE_SAMESITE`, `CSRF_COOKIE_SAMESITE`, `SECURE_CONTENT_TYPE_NOSNIFF`,
   `SECURE_REFERRER_POLICY`, `SECURE_CROSS_ORIGIN_OPENER_POLICY`.
+- Les settings Django dépréciés ont été remplacés par leurs équivalents modernes
+  (`STORAGES` au lieu de `STATICFILES_STORAGE`, suppression de `USE_L10N`).
 - `django_extensions` n'est plus chargé par défaut hors debug.
 - `Document.clean()` vérifie désormais la cohérence entre extension, MIME détecté et `type_document`.
 - L'échec JWT via `/api/token/` renvoie un message générique, pour ne pas exposer si un compte existe ou non.

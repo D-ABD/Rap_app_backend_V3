@@ -33,6 +33,8 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
             type_document=Document.PDF,
             created_by=self.user,
         )
+        self.addCleanup(self.document.fichier.close)
+        self.addCleanup(self.file.close)
 
     def test_list_documents(self):
         url = reverse("document-list")

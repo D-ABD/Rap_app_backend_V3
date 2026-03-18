@@ -37,8 +37,6 @@ from .vae import VAE, HistoriqueStatutVAE
 
 __all__ = ["CustomUser"]
 
-default_app_config = "rap_app.apps.RapAppConfig"
-
 
 # Import des sous-modules contenant des signaux (nécessaire pour leur enregistrement).
 from . import (
