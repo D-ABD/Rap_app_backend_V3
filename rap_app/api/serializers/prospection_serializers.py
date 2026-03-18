@@ -286,6 +286,35 @@ class ProspectionSerializer(BaseProspectionSerializer):
         return super().update(instance, validated_data)
 
 
+class ProspectionWriteSerializer(ProspectionSerializer):
+    """
+    Contrat d'écriture dédié aux créations et mises à jour de prospection.
+
+    Le serializer de lecture garde les champs enrichis utiles au front,
+    tandis que cette variante borne explicitement les champs attendus en
+    entrée pour create/update.
+    """
+
+    class Meta:
+        model = Prospection
+        fields = [
+            "id",
+            "partenaire",
+            "formation",
+            "date_prospection",
+            "type_prospection",
+            "motif",
+            "statut",
+            "objectif",
+            "commentaire",
+            "relance_prevue",
+            "moyen_contact",
+            "activite",
+            "owner",
+        ]
+        read_only_fields = ["id"]
+
+
 class ProspectionListSerializer(BaseProspectionSerializer):
     """
     Liste de prospections : mêmes champs que ProspectionSerializer (hérités de la base), lecture seule.

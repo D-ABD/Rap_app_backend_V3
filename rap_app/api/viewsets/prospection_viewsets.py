@@ -56,6 +56,7 @@ from ..serializers.prospection_serializers import (
     ProspectionDetailSerializer,
     ProspectionListSerializer,
     ProspectionSerializer,
+    ProspectionWriteSerializer,
 )
 
 
@@ -551,6 +552,8 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             return ProspectionListSerializer
         elif self.action == "retrieve":
             return ProspectionDetailSerializer
+        elif self.action in {"create", "update", "partial_update"}:
+            return ProspectionWriteSerializer
         elif self.action == "creer_partenaire":
             return PartenaireCreateFromProspectionSerializer
         elif self.action == "creer_candidat":
@@ -715,7 +718,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        output_serializer = self.get_serializer(serializer.instance, context={"request": request})
+        output_serializer = ProspectionDetailSerializer(serializer.instance, context={"request": request})
         return Response(
             {"success": True, "message": "Prospection créée avec succès.", "data": output_serializer.data},
             status=status.HTTP_201_CREATED,
@@ -731,7 +734,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial, context={"request": request})
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        output_serializer = self.get_serializer(serializer.instance, context={"request": request})
+        output_serializer = ProspectionDetailSerializer(serializer.instance, context={"request": request})
         return Response(
             {"success": True, "message": "Prospection mise à jour avec succès.", "data": output_serializer.data}
         )
