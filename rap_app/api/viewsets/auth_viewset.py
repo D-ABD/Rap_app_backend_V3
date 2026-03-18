@@ -11,6 +11,9 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """JWT via email : username_field=EMAIL_FIELD ; validate injecte email dans username pour le backend d'auth."""
 
     username_field = User.EMAIL_FIELD
+    default_error_messages = {
+        "no_active_account": "Identifiants invalides.",
+    }
 
     def validate(self, attrs):
         attrs["username"] = attrs.get("email")
@@ -41,7 +44,7 @@ class EmailTokenResponseSerializer(serializers.Serializer):
         "\n\n"
         "Réponses :\n"
         '- Succès (200): {"access": ..., "refresh": ...}\n'
-        '- Échec authentification (401): {"detail": ...}\n'
+        '- Échec authentification (401): {"success": false, "message": "...", "data": null}\n'
         "\n\n"
         "Permissions : Accessible sans authentification préalable (endpoint public).\n"
         "Action principale : POST."
@@ -59,7 +62,7 @@ class EmailTokenResponseSerializer(serializers.Serializer):
         ),
         OpenApiExample(
             name="Échec d'authentification",
-            value={"detail": "Aucun compte actif trouvé avec les identifiants fournis"},
+            value={"success": False, "message": "Identifiants invalides.", "data": None},
             response_only=True,
             status_codes=["401"],
         ),

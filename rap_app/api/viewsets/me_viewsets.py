@@ -27,6 +27,10 @@ class MeAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def _serialize_user(self, request, user):
+        """Construit la charge utile publique de /api/me/ via le serializer standard utilisateur."""
+        return CustomUserSerializer(user, context={"request": request}).data
+
     @extend_schema(
         summary="Afficher son profil",
         tags=["Utilisateur"],
@@ -38,7 +42,7 @@ class MeAPIView(APIView):
             {
                 "success": True,
                 "message": "Profil récupéré avec succès.",
-                "data": user.to_serializable_dict(include_sensitive=True),
+                "data": self._serialize_user(request, user),
             },
             status=status.HTTP_200_OK,
         )
@@ -66,7 +70,7 @@ class MeAPIView(APIView):
             {
                 "success": True,
                 "message": "Profil mis à jour avec succès.",
-                "data": user.to_serializable_dict(include_sensitive=True),
+                "data": self._serialize_user(request, user),
             },
             status=status.HTTP_200_OK,
         )
@@ -102,7 +106,7 @@ class MeAPIView(APIView):
             {
                 "success": True,
                 "message": "Votre compte a été réactivé avec succès.",
-                "data": user.to_serializable_dict(include_sensitive=True),
+                "data": self._serialize_user(request, user),
             },
             status=status.HTTP_200_OK,
         )

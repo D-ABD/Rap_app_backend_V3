@@ -50,7 +50,7 @@ ALLOWED_HOSTS = csv("ALLOWED_HOSTS", default="localhost,rap.adserv.fr")
 
 
 INSTALLED_APPS = [
-       "jazzmin",
+    "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -67,10 +67,14 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "drf_spectacular",
     "drf_spectacular_sidecar",
-
-    # À désactiver en prod si non utilisé
-    "django_extensions",
 ]
+
+ENABLE_DJANGO_EXTENSIONS = config(
+    "ENABLE_DJANGO_EXTENSIONS",
+    default="True" if DEBUG else "False",
+).lower() == "true"
+if ENABLE_DJANGO_EXTENSIONS:
+    INSTALLED_APPS.append("django_extensions")
 JAZZMIN_SETTINGS = {
     "site_title": "RAP_APP — Administration",
     "site_header": "RAP_APP Admin",
@@ -307,6 +311,11 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default="True").lower() == "true"
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default="True").lower() == "true"
 CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default="True").lower() == "true"
+SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="Lax")
+CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="Lax")
+SECURE_CONTENT_TYPE_NOSNIFF = config("SECURE_CONTENT_TYPE_NOSNIFF", default="True").lower() == "true"
+SECURE_REFERRER_POLICY = config("SECURE_REFERRER_POLICY", default="same-origin")
+SECURE_CROSS_ORIGIN_OPENER_POLICY = config("SECURE_CROSS_ORIGIN_OPENER_POLICY", default="same-origin")
 SECURE_HSTS_SECONDS = int(config("SECURE_HSTS_SECONDS", default="0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = (
     config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default="False").lower() == "true"

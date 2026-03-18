@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest.mock import patch
 
 from rap_app.models import Centre, Document, Formation, Statut, TypeOffre
 
@@ -55,6 +56,24 @@ class DocumentModelTest(BaseModelTestSetupMixin):
         )
         with self.assertRaises(ValidationError):
             doc.full_clean()
+
+    def test_mime_extension_mismatch_raises_error(self):
+        fake_png_named_pdf = SimpleUploadedFile(
+            "bad.pdf",
+            b"\x89PNG\r\n\x1a\n" + b"fakepngcontent" * 10,
+            content_type="application/pdf",
+        )
+        doc = Document(
+            formation=self.formation,
+            nom_fichier="PDF incoherent",
+            fichier=fake_png_named_pdf,
+            type_document=Document.PDF,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        with patch("rap_app.models.documents.magic.from_buffer", return_value="image/png"):
+            with self.assertRaises(ValidationError):
+                doc.full_clean()
 
     def test_large_file_raises_validation(self):
         large_file = SimpleUploadedFile("big.pdf", b"a" * (11 * 1024 * 1024), content_type="application/pdf")

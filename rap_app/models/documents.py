@@ -69,6 +69,43 @@ def validate_file_extension(value, type_doc=None):
         )
 
 
+def validate_detected_mime_against_extension(filename: str, detected_mime: str | None):
+    """Valide la cohérence entre l'extension du fichier et son MIME détecté."""
+    if not filename or not detected_mime:
+        return
+
+    # `python-magic` peut renvoyer des types génériques sur certains fixtures
+    # de tests ou petits fichiers artificiels. On reste strict uniquement quand
+    # la détection est suffisamment discriminante pour conclure à une incohérence.
+    if detected_mime in {"application/octet-stream", "text/plain"}:
+        return
+
+    ext = os.path.splitext(filename)[1].lower()
+    allowed_mimes_by_extension = {
+        ".pdf": {"application/pdf"},
+        ".jpg": {"image/jpeg"},
+        ".jpeg": {"image/jpeg"},
+        ".png": {"image/png"},
+        ".gif": {"image/gif"},
+        ".webp": {"image/webp"},
+        ".doc": {"application/msword"},
+        ".docx": {
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/zip",
+        },
+    }
+
+    allowed = allowed_mimes_by_extension.get(ext)
+    if allowed and detected_mime not in allowed:
+        raise ValidationError(
+            {
+                "fichier": (
+                    f"Incohérence détectée entre l'extension « {ext} » et le type MIME « {detected_mime} »."
+                )
+            }
+        )
+
+
 def filepath_for_document(instance, filename):
     """Construit le chemin d'upload du fichier document."""
     base_name, ext = os.path.splitext(filename)
@@ -272,7 +309,23 @@ class Document(BaseModel):
                     data = self.fichier.file.read(2048)
                     self.mime_type = magic.from_buffer(data, mime=True)
                     self.fichier.file.seek(position)
+                    validate_detected_mime_against_extension(self.fichier.name, self.mime_type)
+                    allowed_mimes = self.get_mime_types_by_type(self.type_document).get(self.type_document, [])
+                    if allowed_mimes and self.mime_type not in allowed_mimes and self.mime_type not in {
+                        "application/octet-stream",
+                        "text/plain",
+                    }:
+                        raise ValidationError(
+                            {
+                                "fichier": (
+                                    f"Le type MIME détecté « {self.mime_type} » n'est pas autorisé pour "
+                                    f"le type_document « {self.type_document} »."
+                                )
+                            }
+                        )
             except Exception as e:
+                if isinstance(e, ValidationError):
+                    raise
                 logger.warning(f"Impossible de détecter le MIME type pour {self.nom_fichier}: {e}")
 
     @transaction.atomic
