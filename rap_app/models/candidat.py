@@ -522,21 +522,21 @@ class Candidat(BaseModel):
         full = u.get_full_name()
         return full or getattr(u, "email", None) or getattr(u, "username", None)
 
-    def valider_comme_stagiaire(self):
+    def valider_comme_stagiaire(self, actor=None):
         """
         Garantit qu'un compte existe puis le passe au rôle 'stagiaire'.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
-        return CandidateAccountService.promote_to_stagiaire(self)
+        return CandidateAccountService.promote_to_stagiaire(self, actor=actor)
 
-    def valider_comme_candidatuser(self):
+    def valider_comme_candidatuser(self, actor=None):
         """
         Garantit qu'un compte existe puis le passe au rôle 'CANDIDAT_USER'.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
-        return CandidateAccountService.ensure_candidate_user(self)
+        return CandidateAccountService.ensure_candidate_user(self, actor=actor)
 
     @property
     def est_valide_comme_stagiaire(self) -> bool:
@@ -655,31 +655,21 @@ class Candidat(BaseModel):
         """
         return ", ".join(self.ateliers_labels)
 
-    def lier_utilisateur(self, mot_de_passe: str = "Temporaire123"):
+    def lier_utilisateur(self, mot_de_passe: str | None = None, actor=None):
         """
-        Crée et lie un utilisateur Django à ce candidat si non existant, avec les infos email/prénom/nom.
+        Alias legacy vers la source de vérité du service de compte candidat.
         """
-        User = get_user_model()
-        if self.compte_utilisateur:
-            raise ValueError("Ce candidat a déjà un compte utilisateur.")
-        if not self.email:
-            raise ValueError("Ce candidat n’a pas d’adresse email définie.")
-        if User.objects.filter(email=self.email).exists():
-            raise ValueError("Un utilisateur avec cette adresse email existe déjà.")
-        utilisateur = User.objects.create_user(
-            email=self.email, password=mot_de_passe, first_name=self.prenom, last_name=self.nom
-        )
-        self.compte_utilisateur = utilisateur
-        self.save()
-        return utilisateur
+        from ..services.candidate_account_service import CandidateAccountService
 
-    def creer_ou_lier_compte_utilisateur(self):
+        return CandidateAccountService.provision_candidate_account(self, actor=actor)
+
+    def creer_ou_lier_compte_utilisateur(self, actor=None):
         """
         Crée un nouveau compte utilisateur ou lie un compte existant basé sur l'email du candidat.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
-        return CandidateAccountService.provision_candidate_account(self)
+        return CandidateAccountService.provision_candidate_account(self, actor=actor)
 
 
 class HistoriquePlacement(BaseModel):

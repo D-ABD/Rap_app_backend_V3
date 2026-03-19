@@ -264,3 +264,39 @@ def test_valider_comme_candidatuser_cree_et_lie_un_compte_si_absent():
     assert user is not None
     assert cand.compte_utilisateur_id == user.id
     assert user.role == CustomUser.ROLE_CANDIDAT_USER
+
+
+@pytest.mark.django_db
+def test_lier_utilisateur_reutilise_la_source_de_verite_service():
+    """Le helper legacy lier_utilisateur doit rester un alias sûr vers le service central."""
+    centre = Centre.objects.create(nom="Centre Test 8", code_postal="75008")
+    formation = Formation.objects.create(
+        nom="Formation Test 8",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff8@example.com",
+        username="staff8",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+
+    cand = Candidat.objects.create(
+        nom="Legacy",
+        prenom="Helper",
+        email="legacy8@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    user = cand.lier_utilisateur(actor=staff)
+
+    cand.refresh_from_db()
+    assert user is not None
+    assert cand.compte_utilisateur_id == user.id
+    assert user.email.lower() == "legacy8@example.com"
+    assert not user.has_usable_password()
+    assert cand.updated_by_id == staff.id

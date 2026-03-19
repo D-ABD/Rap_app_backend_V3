@@ -301,7 +301,7 @@ class CandidatAdmin(admin.ModelAdmin):
         ok = ko = 0
         for c in queryset:
             try:
-                c.valider_comme_stagiaire()
+                c.valider_comme_stagiaire(actor=request.user)
                 ok += 1
             except Exception as e:
                 ko += 1
@@ -313,7 +313,7 @@ class CandidatAdmin(admin.ModelAdmin):
         ok = ko = 0
         for c in queryset:
             try:
-                c.valider_comme_candidatuser()
+                c.valider_comme_candidatuser(actor=request.user)
                 ok += 1
             except Exception as e:
                 ko += 1
