@@ -133,3 +133,44 @@ class AppairagePlacementServiceTests(TestCase):
         self.assertTrue(changes["current"])
         self.assertEqual(self.candidat.entreprise_placement, new_partenaire)
         self.assertEqual(self.candidat.placement_appairage, new_appairage)
+
+    def test_sync_candidate_snapshot_clears_candidate_without_active_appairage(self):
+        AppairagePlacementService.sync_after_save(self.appairage, actor=self.actor)
+        self.candidat.refresh_from_db()
+        self.assertEqual(self.candidat.placement_appairage_id, self.appairage.id)
+
+        with defer_appairage_snapshot_sync():
+            self.appairage.archiver(user=self.actor)
+
+        changes = AppairagePlacementService.sync_candidate_snapshot(self.candidat, actor=self.actor)
+        self.candidat.refresh_from_db()
+
+        self.assertTrue(changes)
+        self.assertIsNone(self.candidat.placement_appairage_id)
+        self.assertIsNone(self.candidat.entreprise_placement_id)
+        self.assertEqual(self.candidat.statut, Candidat.StatutCandidat.AUTRE)
+
+    def test_sync_candidate_snapshot_uses_latest_remaining_active_appairage(self):
+        backup_partenaire = Partenaire.objects.create(nom="Entreprise Placement Backup")
+        with defer_appairage_snapshot_sync():
+            backup_appairage = Appairage.objects.create(
+                candidat=self.candidat,
+                partenaire=backup_partenaire,
+                formation=self.formation,
+                statut=AppairageStatut.ACCEPTE,
+                date_appairage=timezone.now() + timedelta(days=1),
+            )
+
+        AppairagePlacementService.sync_after_save(backup_appairage, actor=self.actor)
+        self.candidat.refresh_from_db()
+        self.assertEqual(self.candidat.placement_appairage_id, backup_appairage.id)
+
+        with defer_appairage_snapshot_sync():
+            backup_appairage.archiver(user=self.actor)
+
+        changes = AppairagePlacementService.sync_candidate_snapshot(self.candidat, actor=self.actor)
+        self.candidat.refresh_from_db()
+
+        self.assertTrue(changes)
+        self.assertEqual(self.candidat.placement_appairage_id, self.appairage.id)
+        self.assertEqual(self.candidat.entreprise_placement_id, self.partenaire.id)

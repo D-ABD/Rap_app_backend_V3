@@ -541,17 +541,28 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
         partenaire = self.get_object()  # déjà scopé
         data = self.get_serializer(partenaire).data
 
-        # Harmonisation: renvoie des objets {count}
-        data["prospections"] = {"count": partenaire.prospections.count()}
-        data["appairages"] = {"count": partenaire.appairages.count()}
+        prospections_count = getattr(partenaire, "prospections_count", None)
+        if prospections_count is None:
+            prospections_count = partenaire.prospections.count()
 
-        # Formations distinctes via appairages + prospections
-        app_ids = set(partenaire.appairages.filter(formation__isnull=False).values_list("formation_id", flat=True))
-        pros_ids = set(partenaire.prospections.filter(formation__isnull=False).values_list("formation_id", flat=True))
-        data["formations"] = {"count": len(app_ids.union(pros_ids))}
+        appairages_count = getattr(partenaire, "appairages_count", None)
+        if appairages_count is None:
+            appairages_count = partenaire.appairages.count()
 
-        # Candidats distincts
-        data["candidats"] = {"count": partenaire.appairages.values("candidat_id").distinct().count()}
+        formations_count = getattr(partenaire, "formations_count", None)
+        if formations_count is None:
+            app_ids = set(partenaire.appairages.filter(formation__isnull=False).values_list("formation_id", flat=True))
+            pros_ids = set(partenaire.prospections.filter(formation__isnull=False).values_list("formation_id", flat=True))
+            formations_count = len(app_ids.union(pros_ids))
+
+        candidats_count = getattr(partenaire, "candidats_count", None)
+        if candidats_count is None:
+            candidats_count = partenaire.appairages.values("candidat_id").distinct().count()
+
+        data["prospections"] = {"count": prospections_count}
+        data["appairages"] = {"count": appairages_count}
+        data["formations"] = {"count": formations_count}
+        data["candidats"] = {"count": candidats_count}
         return self.success_response(data=data, message="Détail enrichi du partenaire récupéré avec succès.")
 
     # -------------------- Export Excel --------------------
