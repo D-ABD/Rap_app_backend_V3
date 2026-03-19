@@ -125,7 +125,9 @@ git push -u origin main
 
 python3 manage.py check       
 python3 manage.py makemigrations --check --dry-run
-python3 manage.py runserver 0.0.0.0:8000
+python3 manage.py runserver 0.0.0.0:8000 
+
+./env/bin/pytest rap_app/tests
 
 git branch -M main
 git remote add origin URL_DU_DEPOT.git

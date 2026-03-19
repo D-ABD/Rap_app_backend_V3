@@ -1,5 +1,6 @@
 import logging
 
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -57,6 +58,7 @@ logger = logging.getLogger("application.api.formation")
                 "taux_transformation": 45,
                 "transformation_badge": "badge-warning",
                 "nombre_candidats": 20,
+                "candidats_list_url": "/api/candidats/?formation=42",
                 "nombre_entretiens": 12,
             },
             response_only=True,
@@ -89,6 +91,7 @@ class FormationListSerializer(serializers.Serializer):
     prevus_mp = serializers.IntegerField()
     cap = serializers.IntegerField(allow_null=True)
     nombre_candidats = serializers.IntegerField()
+    candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField()
     intitule_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -148,6 +151,13 @@ class FormationListSerializer(serializers.Serializer):
     def get_centre(self, obj):
         """Dict {id, nom} du centre de la formation."""
         return {"id": obj.centre.id, "nom": obj.centre.nom} if obj.centre else None
+
+    @extend_schema_field(str)
+    def get_candidats_list_url(self, obj):
+        """URL prête à l'emploi vers la liste des candidats filtrée par formation."""
+        path = f"{reverse('candidat-list')}?formation={obj.id}"
+        request = self.context.get("request")
+        return request.build_absolute_uri(path) if request else path
 
     @extend_schema_field(str)
     def get_statut(self, obj):
@@ -212,6 +222,7 @@ class FormationListSerializer(serializers.Serializer):
                     "convocation_envoie": True,
                     "entree_formation": 1,
                     "nombre_candidats": 20,
+                    "candidats_list_url": "/api/candidats/?formation=42",
                     "nombre_entretiens": 12,
                     "dernier_commentaire": "Tout se passe bien.",
                     "created_at": "2025-06-20T10:15:00Z",
@@ -265,6 +276,7 @@ class FormationDetailSerializer(serializers.Serializer):
     convocation_envoie = serializers.BooleanField(default=False)
     entree_formation = serializers.IntegerField(required=False, default=0)
     nombre_candidats = serializers.IntegerField(required=False, default=0)
+    candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField(required=False, default=0)
     nombre_evenements = serializers.IntegerField(required=False, default=0)
     dernier_commentaire = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -351,6 +363,13 @@ class FormationDetailSerializer(serializers.Serializer):
     def get_centre(self, obj):
         """Dict {id, nom} du centre."""
         return {"id": obj.centre.id, "nom": obj.centre.nom} if obj.centre else None
+
+    @extend_schema_field(str)
+    def get_candidats_list_url(self, obj):
+        """URL prête à l'emploi vers la liste des candidats filtrée par formation."""
+        path = f"{reverse('candidat-list')}?formation={obj.id}"
+        request = self.context.get("request")
+        return request.build_absolute_uri(path) if request else path
 
     @extend_schema_field(dict)
     def get_statut(self, obj):

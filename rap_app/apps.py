@@ -15,6 +15,7 @@ class RapAppConfig(AppConfig):
         import rap_app.signals.commentaire_signals
         import rap_app.signals.documents_signals
         import rap_app.signals.evenements_signals
+        import rap_app.signals.formation_candidats_signals
         import rap_app.signals.formations_signals
         import rap_app.signals.logs_signals
         import rap_app.signals.partenaires_signals

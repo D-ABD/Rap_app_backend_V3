@@ -87,6 +87,10 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["data"]["id"], self.formation.id)
+        self.assertEqual(
+            response.data["data"]["candidats_list_url"],
+            f"http://testserver{reverse('candidat-list')}?formation={self.formation.id}",
+        )
 
     def test_documents_validation_error_uses_standard_envelope(self):
         response = self.client.post(

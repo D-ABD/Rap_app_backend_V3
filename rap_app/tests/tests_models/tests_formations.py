@@ -12,6 +12,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from ...models import (
+    Candidat,
     Centre,
     Evenement,
     Formation,
@@ -190,6 +191,71 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
         ).first()
         self.assertIsNotNone(historique)
         self.assertEqual(historique.created_by, self.user)
+
+    def test_nombre_candidats_updates_on_create(self):
+        Candidat.objects.create(
+            nom="Durand",
+            prenom="Alice",
+            email="alice.formation@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 1)
+
+        historique = HistoriqueFormation.objects.filter(
+            formation=self.formation,
+            champ_modifie="nombre_candidats",
+            nouvelle_valeur="1",
+        ).first()
+        self.assertIsNotNone(historique)
+
+    def test_nombre_candidats_updates_when_candidate_changes_formation(self):
+        other_formation = self.create_instance(
+            Formation,
+            nom="Autre Session",
+            centre=self.centre,
+            type_offre=self.type_offre,
+            statut=self.statut,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=10),
+        )
+        candidat = Candidat.objects.create(
+            nom="Martin",
+            prenom="Paul",
+            email="paul.formation@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+        self.formation.refresh_from_db()
+        other_formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 1)
+        self.assertEqual(other_formation.nombre_candidats, 0)
+
+        candidat.formation = other_formation
+        candidat.save(user=self.user)
+
+        self.formation.refresh_from_db()
+        other_formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 0)
+        self.assertEqual(other_formation.nombre_candidats, 1)
+
+    def test_nombre_candidats_updates_on_delete(self):
+        candidat = Candidat.objects.create(
+            nom="Bernard",
+            prenom="Lea",
+            email="lea.formation@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 1)
+
+        candidat.delete()
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 0)
 
     def test_get_partenaires(self):
         """✅ Vérifie que les partenaires sont correctement retournés via get_partenaires()."""

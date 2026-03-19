@@ -6,6 +6,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.urls import reverse
 
 from rap_app.api.serializers.formations_serializers import (
     CommentaireSerializer,
@@ -49,6 +50,7 @@ class FormationSerializerTest(TestCase):
         data = serializer.data
         self.assertIn("nom", data)
         self.assertEqual(data["nom"], "Test Formation")
+        self.assertEqual(data["candidats_list_url"], f"{reverse('candidat-list')}?formation={self.formation.id}")
 
     def test_creation_invalid_date(self):
         payload = {
