@@ -60,29 +60,6 @@ from ..serializers.prospection_serializers import (
 )
 
 
-# -----------------------------------------------------------------------------
-# Helpers formation
-# -----------------------------------------------------------------------------
-def get_candidate_formation(user):
-    """
-    Retourne la formation associée à un utilisateur candidat ou
-    assimilé, ou None si aucune formation n'est liée.
-    """
-    cand = getattr(user, "candidat_associe", None) or getattr(user, "candidat", None)
-    return getattr(cand, "formation", None)
-
-
-def get_owner_formation(owner):
-    """
-    Retourne la formation associée à l'utilisateur owner via son
-    profil candidat éventuel, ou None.
-    """
-    if not owner:
-        return None
-    cand = getattr(owner, "candidat_associe", None) or getattr(owner, "candidat", None)
-    return getattr(cand, "formation", None)
-
-
 def annotate_last_visible_comment(queryset, user):
     """
     Annote un queryset de prospections avec le dernier commentaire
