@@ -260,11 +260,6 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             | Q(created_by=user)
         ).distinct()
 
-        # 🧩 Option de debug pour connaître la part d'orphelins
-        if getattr(settings, "DEBUG", False):
-            orphaned = scoped.filter(default_centre__isnull=True)
-            (f"[DEBUG] User={user} voit {scoped.count()} partenaires, " f"dont {orphaned.count()} sans centre.")
-
         # 🔒 Exclut explicitement les partenaires sans centre,
         # sauf s’ils ont été créés par le staff lui-même
         return scoped.exclude(

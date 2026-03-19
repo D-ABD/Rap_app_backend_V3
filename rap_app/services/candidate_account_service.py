@@ -34,14 +34,14 @@ class CandidateAccountService:
     """
     Centralise la gestion explicite des comptes utilisateurs liés aux candidats.
 
-    Ce service remplace les anciens effets implicites des signaux pour :
+    Ce service est la source de vérité pour :
     - lier un utilisateur existant à un candidat
     - provisionner un compte candidat quand un email est disponible
     - promouvoir un candidat vers un compte stagiaire
 
     Toutes les méthodes publiques sont transactionnelles et utilisent
-    `defer_candidate_user_sync()` pour éviter de réactiver le vieux flux
-    de synchronisation signal -> candidat pendant les écritures contrôlées.
+    `defer_candidate_user_sync()` pour éviter de réinjecter le signal
+    d'observation pendant les écritures contrôlées.
     """
 
     @classmethod

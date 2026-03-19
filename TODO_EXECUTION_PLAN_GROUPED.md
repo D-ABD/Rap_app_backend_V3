@@ -81,6 +81,18 @@ Ce regroupement ne devrait pas casser le backend si on respecte trois regles:
 
 ## Nouveau Plan Regroupe
 
+## Statut Actuel
+
+- `Lot A`: termine
+- `Lot B`: termine
+- `Lot C`: termine
+- `Lot D`: termine
+- `Lot E`: en cours
+
+Etat au 2026-03-19:
+- les correctifs de securite, de contrat API, de sources de verite metier et de performance ciblee ont ete livres
+- la suite du chantier porte surtout sur la lisibilite, la documentation et le nettoyage des reliquats techniques
+
 ## Lot A - Garde-Fous D'Acces
 
 ### Perimetre

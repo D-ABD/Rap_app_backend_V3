@@ -1,8 +1,8 @@
 """Modèle d'appairage entre candidat, partenaire et formation.
 
-Le modèle conserve la donnée persistante et un filet d'observation legacy
-autour de l'ancien snapshot de placement. La source de vérité métier visée pour
-la synchronisation vers `Candidat` est désormais `AppairagePlacementService`.
+Le modèle porte la persistance et les validations locales.
+La synchronisation du snapshot de placement vers `Candidat` est pilotée
+explicitement par `AppairagePlacementService`.
 """
 
 import logging
@@ -71,8 +71,8 @@ class Appairage(BaseModel):
     Appairage entre un candidat, un partenaire et, optionnellement, une formation.
 
     Le modèle reste responsable de la cohérence des champs persistés et de
-    l'historisation locale, mais ne doit plus être considéré comme la source
-    principale de synchronisation métier vers `Candidat`.
+    l'historisation locale. Les resynchronisations métier vers `Candidat`
+    sont orchestrées au niveau service.
     """
 
     objects = AppairageManager()

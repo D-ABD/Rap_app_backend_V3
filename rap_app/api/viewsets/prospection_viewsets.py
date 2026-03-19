@@ -204,9 +204,9 @@ class ProspectionViewSet(viewsets.ModelViewSet):
     """
     ViewSet principal des prospections.
 
-    Source de vérité actuelle :
+    Source de vérité :
     - accès protégé par `IsOwnerOrStaffOrAbove`
-    - scoping hybride :
+    - scoping métier :
       - admins : accès global
       - staff : visibilité centre + certains liens owner/created_by
       - candidats : visibilité centrée sur leurs propres prospections
@@ -214,9 +214,8 @@ class ProspectionViewSet(viewsets.ModelViewSet):
       créations/mises à jour passe par `ProspectionOwnershipService`
     - le fichier reste dense et combine CRUD, filtres, actions métier,
       archivage, choix et export
-
-    La documentation de ce viewset doit être lue avec cette réalité hybride,
-    non comme un simple CRUD standard.
+    Ce viewset reste dense, mais son comportement d'écriture est désormais
+    centré sur `ProspectionOwnershipService`.
     """
 
     queryset = Prospection.objects.select_related(
@@ -338,8 +337,8 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         qs = annotate_last_visible_comment(base, user)
         qs = self._scoped_for_user(qs, user)
 
-        # 🆕 Gestion du filtre d'activité (active / archivée),
-        # via "activite", ou via "inclure_archives" et "avec_archivees"
+        # Gestion du filtre d'activité (active / archivée) via "activite",
+        # "inclure_archives" ou "avec_archivees".
         activite_param = self.request.query_params.get("activite")
         inclure_archivees = any(
             self.request.query_params.get(k) in ("1", "true", "True", "yes", "oui")
@@ -350,9 +349,6 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(activite=activite_param)
         elif not inclure_archivees:
             qs = qs.filter(activite=Prospection.ACTIVITE_ACTIVE)
-
-        # La ligne suivante n'a aucun effet (juste pour debug)
-        # (f"[DEBUG get_queryset] action={getattr(self, 'action', '?')} activite={activite_param} ids={ids}")
 
         return qs
 

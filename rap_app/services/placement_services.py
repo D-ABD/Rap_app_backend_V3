@@ -39,9 +39,8 @@ class AppairagePlacementService:
     Synchronise explicitement le snapshot de placement d'un candidat
     à partir de l'état courant des appairages.
 
-    Ce service est la source de vérité métier visée pour la synchronisation
-    Appairage -> Candidat, en remplacement progressif des anciens signaux et
-    hooks modèle.
+    Ce service est la source de vérité métier pour la synchronisation
+    Appairage -> Candidat.
     """
 
     @classmethod

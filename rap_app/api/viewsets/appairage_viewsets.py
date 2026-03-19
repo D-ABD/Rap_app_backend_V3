@@ -54,8 +54,8 @@ class AppairageViewSet(ScopedModelViewSet):
       - sauvegarde de l'appairage
       - appel explicite à `AppairagePlacementService.sync_after_save()`
 
-    Les anciens flux implicites modèle/signal restent seulement observés via
-    les warnings de transition Phase 4.
+    Les signaux résiduels sur ce domaine sont conservés en observation,
+    mais la synchronisation métier passe désormais par le service.
     """
 
     base_queryset = (
