@@ -97,3 +97,35 @@ class CandidateAccountServiceTests(TestCase):
         self.assertEqual(candidate.demande_compte_statut, Candidat.DemandeCompteStatut.ACCEPTEE)
         self.assertEqual(candidate.demande_compte_traitee_par_id, self.actor.id)
         self.assertIsNotNone(candidate.demande_compte_traitee_le)
+
+    def test_request_account_rejects_duplicate_pending_request(self):
+        candidate = Candidat.objects.create(
+            nom="PendingTwice",
+            prenom="Candidate",
+            email="pending-twice@example.com",
+            formation=self.formation,
+            demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        with self.assertRaises(ValidationError):
+            CandidateAccountService.request_account(candidate, requester=self.actor)
+
+    def test_reject_account_request_marks_candidate_refused(self):
+        candidate = Candidat.objects.create(
+            nom="Rejected",
+            prenom="Candidate",
+            email="rejected@example.com",
+            formation=self.formation,
+            demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateAccountService.reject_account_request(candidate, actor=self.actor)
+
+        candidate.refresh_from_db()
+        self.assertEqual(candidate.demande_compte_statut, Candidat.DemandeCompteStatut.REFUSEE)
+        self.assertEqual(candidate.demande_compte_traitee_par_id, self.actor.id)
+        self.assertIsNotNone(candidate.demande_compte_traitee_le)

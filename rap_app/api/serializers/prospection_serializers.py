@@ -8,7 +8,6 @@ from drf_spectacular.utils import (
 )
 from rest_framework import serializers
 
-from ...models.candidat import Candidat
 from ...models.formations import Formation
 from ...models.prospection import HistoriqueProspection, Prospection, ProspectionChoices
 from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
@@ -132,7 +131,11 @@ class BaseProspectionSerializer(serializers.ModelSerializer):
 )
 class ProspectionSerializer(BaseProspectionSerializer):
     """
-    Sérialiseur principal pour création/mise à jour des prospections. Hérite de BaseProspectionSerializer ; ajoute formation (FK) et relance_prevue. validate_activite : valeur dans ACTIVITE_CHOICES. validate : si statut refusée/annulée, commentaire obligatoire. validate_date_prospection : pas de date future. validate_relance_prevue : si renseignée, date future. create/update : si owner lié à un Candidat avec formation, force formation et centre à ceux du Candidat.
+    Sérialiseur principal pour création/mise à jour des prospections.
+
+    La résolution métier de `owner`, `formation` et `centre` relève
+    désormais de `ProspectionOwnershipService` côté viewset. Le serializer
+    se limite donc au contrat de validation DRF.
     """
 
     formation = serializers.PrimaryKeyRelatedField(
@@ -248,42 +251,6 @@ class ProspectionSerializer(BaseProspectionSerializer):
         if value and value < timezone.now().date():
             raise serializers.ValidationError(_("La date de relance prévue doit être dans le futur."))
         return value
-
-    def create(self, validated_data):
-        """Si owner a un Candidat avec formation, force formation et centre à ceux du Candidat ; puis super().create()."""
-        owner = validated_data.get("owner")
-        if owner:
-            try:
-                candidat = (
-                    Candidat.objects.select_related("formation", "formation__centre")
-                    .filter(compte_utilisateur=owner)
-                    .first()
-                )
-                if candidat and candidat.formation:
-                    validated_data["formation"] = candidat.formation
-                    validated_data["centre"] = candidat.formation.centre
-            except Exception:
-                pass
-
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        """Si owner (ou instance.owner) a un Candidat avec formation, force formation et centre ; puis super().update()."""
-        owner = validated_data.get("owner") or instance.owner
-        if owner:
-            try:
-                candidat = (
-                    Candidat.objects.select_related("formation", "formation__centre")
-                    .filter(compte_utilisateur=owner)
-                    .first()
-                )
-                if candidat and candidat.formation:
-                    validated_data["formation"] = candidat.formation
-                    validated_data["centre"] = candidat.formation.centre
-            except Exception:
-                pass
-
-        return super().update(instance, validated_data)
 
 
 class ProspectionWriteSerializer(ProspectionSerializer):

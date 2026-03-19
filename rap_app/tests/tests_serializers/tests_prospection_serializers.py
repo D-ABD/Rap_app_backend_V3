@@ -9,6 +9,7 @@ from ...api.serializers.prospection_serializers import (
     ProspectionSerializer,
 )
 from ...models.centres import Centre
+from ...models.candidat import Candidat
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.partenaires import Partenaire
@@ -95,6 +96,44 @@ class ProspectionSerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid())
         instance = serializer.save(created_by=self.user)
         self.assertIsInstance(instance, Prospection)
+
+    def test_serializer_does_not_override_formation_from_owner_relation(self):
+        owner = CustomUser.objects.create_user_with_role(
+            email="owner-prosp@example.com",
+            username="owner_prosp",
+            password="password123",
+            role=CustomUser.ROLE_CANDIDAT,
+        )
+        other_centre = Centre.objects.create(nom="Centre Other", code_postal="69000")
+        other_statut = Statut.objects.create(nom="formation_en_cours", couleur="#123456")
+        other_type_offre = TypeOffre.objects.create(nom=TypeOffre.CRIF, couleur="#00AAFF")
+        owner_formation = Formation.objects.create(
+            nom="Formation Owner",
+            centre=other_centre,
+            statut=other_statut,
+            type_offre=other_type_offre,
+            start_date=timezone.now().date(),
+            end_date=timezone.now().date() + timedelta(days=10),
+            created_by=self.user,
+        )
+        Candidat.objects.create(
+            nom="Owner",
+            prenom="Candidate",
+            email="owner-prosp@example.com",
+            formation=owner_formation,
+            compte_utilisateur=owner,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
+        data = self.valid_data.copy()
+        data["owner"] = owner.id
+        serializer = ProspectionSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save(created_by=self.user)
+
+        self.assertEqual(instance.owner_id, owner.id)
+        self.assertEqual(instance.formation_id, self.formation.id)
 
     def test_invalid_partial_update(self):
         prospection = Prospection.objects.create(

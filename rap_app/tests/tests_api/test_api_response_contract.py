@@ -233,6 +233,19 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
         self.assertTrue(response.data["success"])
 
+    def test_appairage_comment_create_validation_error_uses_standard_envelope(self):
+        response = self.client.post(
+            reverse("appairage-commentaires", args=[self.appairage.id]),
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertFalse(response.data["success"])
+        self.assertIsNone(response.data["data"])
+        self.assertIsInstance(response.data["errors"], dict)
+
     def test_atelier_meta_uses_standard_envelope(self):
         response = self.client.get(reverse("ateliers-tre-meta"))
 

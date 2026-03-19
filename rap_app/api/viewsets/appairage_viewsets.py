@@ -255,7 +255,11 @@ class AppairageViewSet(ScopedModelViewSet):
                     message="Commentaire d'appairage créé avec succès.",
                     status_code=status.HTTP_201_CREATED,
                 )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(
+                message="Impossible de créer le commentaire d'appairage.",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
     def get_queryset(self):
         """
