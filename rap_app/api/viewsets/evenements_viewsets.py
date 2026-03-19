@@ -1,9 +1,11 @@
 import csv
 import logging
 
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from ...api.paginations import RapAppPagination
@@ -14,13 +16,14 @@ from ...api.serializers.evenements_serializers import (
 )
 from ...models.evenements import Evenement
 from ...services.evenements_export import csv_export_evenements
+from ..mixins import ApiResponseMixin
 from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 
 logger = logging.getLogger("application.api")
 
 
 @extend_schema(tags=["Événements"])
-class EvenementViewSet(viewsets.ModelViewSet):
+class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """
     CRUD des événements rattachés aux formations.
 
@@ -103,13 +106,43 @@ class EvenementViewSet(viewsets.ModelViewSet):
 
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page or queryset, many=True)
-        return self.get_paginated_response(serializer.data) if page else Response(serializer.data)
+        return (
+            self.get_paginated_response(serializer.data)
+            if page
+            else self.success_response(data=serializer.data, message="Liste des événements récupérée avec succès.")
+        )
+
+    def _assert_staff_can_use_formation(self, formation):
+        if not formation:
+            return
+        user = self.request.user
+        if is_admin_like(user):
+            return
+        if is_staff_or_staffread(user):
+            allowed = set(user.centres.values_list("id", flat=True))
+            if getattr(formation, "centre_id", None) not in allowed:
+                raise PermissionDenied("Formation hors de votre périmètre (centre).")
+
+    def _requested_formation(self, serializer):
+        formation = serializer.validated_data.get("formation")
+        if formation is not None:
+            return formation
+
+        formation_id = self.request.data.get("formation_id")
+        if formation_id in (None, ""):
+            return None
+        return get_object_or_404(Evenement._meta.get_field("formation").remote_field.model, pk=formation_id)
 
     def perform_create(self, serializer):
         """
         Associe systématiquement l'événement créé à l'utilisateur courant.
         """
-        serializer.save(user=self.request.user)
+        self._assert_staff_can_use_formation(self._requested_formation(serializer))
+        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        self._assert_staff_can_use_formation(serializer.validated_data.get("formation", serializer.instance.formation))
+        serializer.save(updated_by=self.request.user)
 
     @extend_schema(
         summary="🧾 Exporter les événements au format CSV",
@@ -157,7 +190,7 @@ class EvenementViewSet(viewsets.ModelViewSet):
         start_date = request.query_params.get("start")
         end_date = request.query_params.get("end")
         stats = Evenement.get_stats_by_type(start_date=start_date, end_date=end_date)
-        return Response({"success": True, "data": stats})
+        return self.success_response(data=stats, message="Statistiques événements par type récupérées avec succès.")
 
     @action(detail=False, methods=["get"])
     @extend_schema(
@@ -184,6 +217,4 @@ class EvenementViewSet(viewsets.ModelViewSet):
         - Pas de filtrage/pagination ; tous les types sont retournés.
         """
         data = [{"value": key, "label": label} for key, label in Evenement.TypeEvenement.choices]
-        return Response(
-            {"success": True, "message": "Liste des types d’événements récupérée avec succès.", "data": data}
-        )
+        return self.success_response(data=data, message="Liste des types d’événements récupérée avec succès.")

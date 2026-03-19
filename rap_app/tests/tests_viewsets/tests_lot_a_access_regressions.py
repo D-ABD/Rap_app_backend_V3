@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from ...models.appairage import Appairage, AppairageStatut
+from ...models.atelier_tre import AtelierTRE
 from ...models.candidat import Candidat
 from ...models.centres import Centre
 from ...models.commentaires_appairage import CommentaireAppairage
@@ -198,6 +199,24 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(Prepa.objects.filter(centre=self.centre_b, date_prepa="2025-05-10").exists())
 
+    def test_staff_cannot_create_atelier_tre_outside_scope(self):
+        staff = UserFactory(role=CustomUser.ROLE_STAFF)
+        staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=staff)
+
+        response = self.client.post(
+            reverse("ateliers-tre-list"),
+            {
+                "type_atelier": AtelierTRE.TypeAtelier.ATELIER_1,
+                "date_atelier": "2025-05-10T09:00:00Z",
+                "centre": self.centre_b.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(AtelierTRE.objects.filter(centre=self.centre_b).exists())
+
     def test_prepa_stats_centres_are_scoped(self):
         prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
         prepa_staff.centres.add(self.centre_a)
@@ -242,6 +261,24 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(Declic.objects.filter(centre=self.centre_b, date_declic="2025-05-10").exists())
+
+    def test_staff_cannot_create_evenement_outside_scope(self):
+        staff = UserFactory(role=CustomUser.ROLE_STAFF)
+        staff.centres.add(self.centre_a)
+        self.client.force_authenticate(user=staff)
+
+        response = self.client.post(
+            reverse("evenement-list"),
+            {
+                "formation_id": self.formation_b.id,
+                "type_evenement": "forum",
+                "event_date": "2025-05-10",
+                "lieu": "Centre B",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_declic_stats_centres_are_scoped(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)

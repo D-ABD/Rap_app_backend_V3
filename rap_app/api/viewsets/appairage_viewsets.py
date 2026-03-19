@@ -235,7 +235,7 @@ class AppairageViewSet(ScopedModelViewSet):
         d'appairage pour l'utilisateur courant.
         """
         serializer = AppairageMetaSerializer(instance={}, context={"request": request})
-        return Response(serializer.data)
+        return self.success_response(data=serializer.data, message="Métadonnées appairage récupérées avec succès.")
 
     @action(detail=True, methods=["get", "post"], url_path="commentaires")
     def commentaires(self, request, pk=None):
@@ -244,13 +244,17 @@ class AppairageViewSet(ScopedModelViewSet):
         if request.method == "GET":
             qs = appairage.commentaires.select_related("created_by").order_by("-created_at")
             serializer = CommentaireAppairageSerializer(qs, many=True)
-            return Response(serializer.data)
+            return self.success_response(data=serializer.data, message="Commentaires d'appairage récupérés avec succès.")
 
         if request.method == "POST":
             serializer = CommentaireAppairageSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(created_by=request.user, appairage=appairage)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return self.success_response(
+                    data=serializer.data,
+                    message="Commentaire d'appairage créé avec succès.",
+                    status_code=status.HTTP_201_CREATED,
+                )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
@@ -300,7 +304,7 @@ class AppairageViewSet(ScopedModelViewSet):
         """
         obj = self._get_object_including_archived_scoped(kwargs.get("pk"))
         serializer = self.get_serializer(obj)
-        return Response(serializer.data)
+        return self.success_response(data=serializer.data, message="Appairage récupéré avec succès.")
 
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
@@ -319,7 +323,7 @@ class AppairageViewSet(ScopedModelViewSet):
             appairage.activite = AppairageActivite.ARCHIVE
             appairage.save(user=request.user, update_fields=["activite"])
 
-        return Response({"status": "archived"}, status=status.HTTP_200_OK)
+        return self.success_response(data={"status": "archived"}, message="Appairage archivé avec succès.")
 
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
@@ -341,7 +345,7 @@ class AppairageViewSet(ScopedModelViewSet):
             appairage.activite = AppairageActivite.ACTIF
             appairage.save(user=request.user, update_fields=["activite"])
 
-        return Response({"status": "unarchived"}, status=status.HTTP_200_OK)
+        return self.success_response(data={"status": "unarchived"}, message="Appairage désarchivé avec succès.")
 
     def _get_object_including_archived_scoped(self, pk):
         """

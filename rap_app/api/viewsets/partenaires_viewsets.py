@@ -27,6 +27,7 @@ from ...api.permissions import (
 from ...api.roles import is_admin_like, is_staff_read
 from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
+from ..mixins import ApiResponseMixin
 from ..serializers.partenaires_serializers import (
     PartenaireChoicesResponseSerializer,
     PartenaireSerializer,
@@ -179,7 +180,7 @@ class InlinePartenaireFilter(FilterSet):
         responses={204: OpenApiResponse(description="Suppression réussie")},
     ),
 )
-class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
+class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.ModelViewSet):
     """
     ViewSet gérant les partenaires avec opérations CRUD, filtrage,
     permissions de périmètre et actions utilitaires (métadonnées,
@@ -351,7 +352,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         types = [{"value": k, "label": v} for k, v in Partenaire.TYPE_CHOICES]
         actions = [{"value": k, "label": v} for k, v in Partenaire.CHOICES_TYPE_OF_ACTION]
         ser = PartenaireChoicesResponseSerializer(instance={"types": types, "actions": actions})
-        return Response(ser.data)
+        return self.success_response(data=ser.data, message="Choix partenaires récupérés avec succès.")
 
     @extend_schema(summary="🔽 Filtres disponibles pour les partenaires", tags=["Partenaires"])
     @action(detail=False, methods=["get"], url_path="filter-options")
@@ -384,8 +385,8 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
         # ✅ centres par défaut disponibles
         centres = qs.filter(default_centre__isnull=False).values("default_centre_id", "default_centre__nom").distinct()
 
-        return Response(
-            {
+        return self.success_response(
+            data={
                 "cities": [{"value": v, "label": v} for v in villes],
                 "secteurs": [{"value": s, "label": s} for s in secteurs],
                 "users": [
@@ -399,7 +400,8 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
                     if u["created_by"]
                 ],
                 "centres": [{"id": c["default_centre_id"], "nom": c["default_centre__nom"]} for c in centres],
-            }
+            },
+            message="Filtres partenaires récupérés avec succès.",
         )
 
     # -------------------- CRUD --------------------
@@ -550,7 +552,7 @@ class PartenaireViewSet(UserVisibilityScopeMixin, viewsets.ModelViewSet):
 
         # Candidats distincts
         data["candidats"] = {"count": partenaire.appairages.values("candidat_id").distinct().count()}
-        return Response(data)
+        return self.success_response(data=data, message="Détail enrichi du partenaire récupéré avec succès.")
 
     # -------------------- Export Excel --------------------
 

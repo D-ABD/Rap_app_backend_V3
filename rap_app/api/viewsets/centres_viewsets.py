@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from ...models.centres import Centre
 from ...models.logs import LogUtilisateur
+from ..mixins import ApiResponseMixin
 from ..paginations import RapAppPagination
 from ..permissions import ReadWriteAdminReadStaff
 from ..roles import is_admin_like, is_staff_or_staffread
@@ -26,7 +27,7 @@ from ..serializers.centres_serializers import CentreSerializer
     partial_update=extend_schema(summary="Mettre à jour partiellement un centre", tags=["Centres"]),
     destroy=extend_schema(summary="Supprimer un centre", tags=["Centres"]),
 )
-class CentreViewSet(viewsets.ModelViewSet):
+class CentreViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """ViewSet CRUD pour Centre. Permission ReadWriteAdminReadStaff ; staff limité à user.centres. Filtres, search, ordering. Action liste-simple (GET) pour id/label."""
 
     serializer_class = CentreSerializer
@@ -92,7 +93,7 @@ class CentreViewSet(viewsets.ModelViewSet):
 
         qs = qs.order_by("nom")[:page_size]
         data = [{"id": c.id, "label": c.nom} for c in qs]
-        return Response({"results": data})
+        return self.success_response(data={"results": data}, message="Liste simple des centres récupérée avec succès.")
 
     def create(self, request, *args, **kwargs):
         """Crée un centre (CentreSerializer), save(user), LogUtilisateur.log_action CREATE, retourne success/message/data."""

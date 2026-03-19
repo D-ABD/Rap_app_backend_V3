@@ -34,6 +34,7 @@ from ...models.atelier_tre import (
     PresenceStatut,
 )
 from ...models.candidat import Candidat
+from ..mixins import ApiResponseMixin
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove, is_staff_or_staffread
 from ..roles import is_admin_like
@@ -45,7 +46,7 @@ from ..serializers.atelier_tre_serializers import (
 logger = logging.getLogger(__name__)
 
 
-class AtelierTREViewSet(viewsets.ModelViewSet):
+class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet des ateliers TRE.
 
@@ -145,12 +146,8 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
 
         Réponse DRF standard : { ...atelier... }
         """
-        instance = serializer.save()
-        self._assert_staff_can_use_centre(getattr(instance, "centre", None))
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        self._assert_staff_can_use_centre(serializer.validated_data.get("centre"))
+        serializer.save()
 
     def perform_update(self, serializer):
         """
@@ -164,18 +161,14 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         new_centre = serializer.validated_data.get("centre", getattr(current, "centre", None))
         self._assert_staff_can_use_centre(new_centre)
 
-        instance = serializer.save()
-        try:
-            instance.save(user=self.request.user)
-        except TypeError:
-            instance.save()
+        serializer.save()
 
     @extend_schema(responses=AtelierTREMetaSerializer)
     @action(detail=False, methods=["get"], url_path="meta", url_name="meta", permission_classes=[IsStaffOrAbove])
     def meta(self, request):
         """GET : métadonnées (AtelierTREMetaSerializer) pour le front."""
         ser = AtelierTREMetaSerializer(instance={}, context={"request": request})
-        return Response(ser.data)
+        return self.success_response(data=ser.data, message="Métadonnées ateliers TRE récupérées avec succès.")
 
     # --- Actions candidats (ajout/retrait sans remplacer toute la liste) ------
 
@@ -204,7 +197,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not ids:
-            return Response(self.get_serializer(atelier).data)
+            return self.success_response(
+                data=self.get_serializer(atelier).data,
+                message="Aucun candidat ajouté, atelier inchangé.",
+            )
 
         qs = Candidat.objects.filter(id__in=ids)
 
@@ -225,7 +221,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
             )
 
         atelier.candidats.add(*qs)
-        return Response(self.get_serializer(atelier).data)
+        return self.success_response(
+            data=self.get_serializer(atelier).data,
+            message="Candidats ajoutés à l'atelier avec succès.",
+        )
 
     @extend_schema(
         request={
@@ -249,7 +248,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not ids:
-            return Response(self.get_serializer(atelier).data)
+            return self.success_response(
+                data=self.get_serializer(atelier).data,
+                message="Aucun candidat retiré, atelier inchangé.",
+            )
 
         qs = Candidat.objects.filter(id__in=ids)
         if not qs.exists():
@@ -258,7 +260,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         atelier.candidats.remove(*qs)
-        return Response(self.get_serializer(atelier).data)
+        return self.success_response(
+            data=self.get_serializer(atelier).data,
+            message="Candidats retirés de l'atelier avec succès.",
+        )
 
     # --- Présences ------------------------------------------------------------
 
@@ -311,7 +316,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
             pairs[cid] = {"statut": st, "commentaire": com}
 
         if not pairs:
-            return Response(self.get_serializer(atelier).data)
+            return self.success_response(
+                data=self.get_serializer(atelier).data,
+                message="Aucune présence modifiée, atelier inchangé.",
+            )
 
         wanted_ids = set(pairs.keys())
         existing_ids = set(Candidat.objects.filter(id__in=wanted_ids).values_list("id", flat=True))
@@ -348,7 +356,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
                 candidat=c, statut=data["statut"], commentaire=data.get("commentaire"), user=request.user
             )
 
-        return Response(self.get_serializer(atelier).data)
+        return self.success_response(
+            data=self.get_serializer(atelier).data,
+            message="Présences mises à jour avec succès.",
+        )
 
     @extend_schema(
         request={
@@ -380,7 +391,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         qs = atelier.candidats.filter(id__in=ids)
         for c in qs:
             atelier.set_presence(c, PresenceStatut.PRESENT, user=request.user)
-        return Response(self.get_serializer(atelier).data)
+        return self.success_response(
+            data=self.get_serializer(atelier).data,
+            message="Présences marquées comme présentes avec succès.",
+        )
 
     @extend_schema(
         request={
@@ -405,7 +419,10 @@ class AtelierTREViewSet(viewsets.ModelViewSet):
         qs = atelier.candidats.filter(id__in=ids)
         for c in qs:
             atelier.set_presence(c, PresenceStatut.ABSENT, user=request.user)
-        return Response(self.get_serializer(atelier).data)
+        return self.success_response(
+            data=self.get_serializer(atelier).data,
+            message="Présences marquées comme absentes avec succès.",
+        )
 
     @extend_schema(
         summary="Exporter les ateliers TRE (Excel)",

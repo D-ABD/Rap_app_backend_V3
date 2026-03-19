@@ -11,6 +11,8 @@ from rap_app.models.centres import Centre
 from rap_app.models.cvtheque import CVTheque
 from rap_app.models.custom_user import CustomUser
 from rap_app.models.formations import Formation
+from rap_app.models.appairage import Appairage
+from rap_app.models.atelier_tre import AtelierTRE
 from rap_app.models.partenaires import Partenaire
 from rap_app.models.prospection import Prospection, ProspectionChoices
 from rap_app.models.statut import Statut
@@ -65,6 +67,17 @@ class ApiResponseContractTests(APITestCase):
             commentaire="Prospection contract",
             created_by=self.user,
             owner=self.user,
+        )
+        self.appairage = Appairage.objects.create(
+            candidat=self.candidat,
+            partenaire=self.partenaire,
+            formation=self.formation,
+            created_by=self.user,
+        )
+        self.atelier = AtelierTRE.objects.create(
+            type_atelier=AtelierTRE.TypeAtelier.ATELIER_1,
+            centre=self.centre,
+            created_by=self.user,
         )
 
     def test_formations_retrieve_uses_standard_envelope(self):
@@ -212,3 +225,42 @@ class ApiResponseContractTests(APITestCase):
         self.assertTrue(response.data["success"])
         self.assertIn("formations", response.data["data"])
         self.assertIn("commentaires", response.data["data"])
+
+    def test_appairage_meta_uses_standard_envelope(self):
+        response = self.client.get(reverse("appairage-meta"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+
+    def test_atelier_meta_uses_standard_envelope(self):
+        response = self.client.get(reverse("ateliers-tre-meta"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIn("type_atelier_choices", response.data["data"])
+
+    def test_partenaires_filter_options_uses_standard_envelope(self):
+        response = self.client.get(reverse("partenaire-filter-options"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIn("cities", response.data["data"])
+
+    def test_centres_liste_simple_uses_standard_envelope(self):
+        response = self.client.get(reverse("centre-liste-simple"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIn("results", response.data["data"])
+
+    def test_evenements_choices_uses_standard_envelope(self):
+        response = self.client.get(reverse("evenement-choices"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIsInstance(response.data["data"], list)
