@@ -153,6 +153,28 @@ class CandidateAccountService:
 
         return user
 
+    @classmethod
+    @transaction.atomic
+    def ensure_candidate_user(
+        cls,
+        candidate: Candidat,
+        actor: CustomUser | None = None,
+    ) -> CustomUser:
+        """
+        Garantit qu'un candidat possède un compte au rôle `candidatuser`.
+        """
+        user = candidate.compte_utilisateur or cls.provision_candidate_account(candidate, actor=actor)
+
+        if user.role != CustomUser.ROLE_CANDIDAT_USER:
+            with defer_candidate_user_sync():
+                user.role = CustomUser.ROLE_CANDIDAT_USER
+                user.save(_skip_candidate_sync=True)
+
+        if candidate.compte_utilisateur_id != user.id:
+            cls.link_user_to_candidate(user=user, candidate=candidate, actor=actor)
+
+        return user
+
     @staticmethod
     def _build_unique_username(base: str) -> str:
         base = (base or "").strip().lower().replace(" ", "").strip(".") or "user"

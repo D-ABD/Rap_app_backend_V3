@@ -230,3 +230,37 @@ def test_valider_comme_stagiaire_cree_et_lie_un_compte_si_absent():
     assert user is not None
     assert cand.compte_utilisateur_id == user.id
     assert user.role == CustomUser.ROLE_STAGIAIRE
+
+
+@pytest.mark.django_db
+def test_valider_comme_candidatuser_cree_et_lie_un_compte_si_absent():
+    """La validation candidat-user via le modèle doit provisionner un compte si aucun lien n'existe encore."""
+    centre = Centre.objects.create(nom="Centre Test 7", code_postal="75007")
+    formation = Formation.objects.create(
+        nom="Formation Test 7",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff7@example.com",
+        username="staff7",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+
+    cand = Candidat.objects.create(
+        nom="Validable",
+        prenom="CandidatUser",
+        email="candidatuser7@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    user = cand.valider_comme_candidatuser()
+
+    cand.refresh_from_db()
+    assert user is not None
+    assert cand.compte_utilisateur_id == user.id
+    assert user.role == CustomUser.ROLE_CANDIDAT_USER

@@ -391,6 +391,7 @@ class CandidatViewSet(ScopedModelViewSet):
         candidat.demande_compte_traitee_par = request.user
         candidat.demande_compte_traitee_le = dj_timezone.now()
         candidat.save(
+            user=request.user,
             update_fields=[
                 "demande_compte_statut",
                 "demande_compte_traitee_par",
@@ -419,6 +420,7 @@ class CandidatViewSet(ScopedModelViewSet):
         candidat.demande_compte_traitee_par = request.user
         candidat.demande_compte_traitee_le = dj_timezone.now()
         candidat.save(
+            user=request.user,
             update_fields=[
                 "demande_compte_statut",
                 "demande_compte_traitee_par",

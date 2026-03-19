@@ -532,14 +532,11 @@ class Candidat(BaseModel):
 
     def valider_comme_candidatuser(self):
         """
-        Modifie le compte utilisateur lié pour passer au rôle 'CANDIDAT_USER'.
+        Garantit qu'un compte existe puis le passe au rôle 'CANDIDAT_USER'.
         """
-        if not self.compte_utilisateur:
-            raise ValidationError(_("Impossible de valider comme candidat : aucun compte utilisateur n'est associé."))
-        user = self.compte_utilisateur
-        user.role = CustomUser.ROLE_CANDIDAT_USER
-        user.save()
-        return user
+        from ..services.candidate_account_service import CandidateAccountService
+
+        return CandidateAccountService.ensure_candidate_user(self)
 
     @property
     def est_valide_comme_stagiaire(self) -> bool:
