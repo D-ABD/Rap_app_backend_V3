@@ -12,6 +12,7 @@ from rap_app.models.formations import Formation
 from rap_app.models.partenaires import Partenaire
 from rap_app.models.statut import Statut
 from rap_app.models.types_offre import TypeOffre
+from rap_app.services.placement_services import AppairagePlacementService, defer_appairage_snapshot_sync
 from rap_app.tests.factories import UserFactory
 
 
@@ -152,3 +153,41 @@ class AppairageSecurityTests(APITestCase):
 
         self.assertNotIn("Formation Cachee", exported_blob)
         self.assertNotIn("Entreprise Cachee", exported_blob)
+
+    def test_archiving_appairage_refreshes_candidate_snapshot(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        appairage = self._create_appairage(centre)
+        AppairagePlacementService.sync_after_save(appairage, actor=user)
+        candidat = appairage.candidat
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.placement_appairage_id, appairage.id)
+
+        self.client.force_authenticate(user=user)
+        response = self.client.post(f"/api/appairages/{appairage.id}/archiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        candidat.refresh_from_db()
+        self.assertIsNone(candidat.placement_appairage_id)
+        self.assertIsNone(candidat.entreprise_placement_id)
+
+    def test_deleting_last_appairage_clears_candidate_snapshot(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        appairage = self._create_appairage(centre)
+        AppairagePlacementService.sync_after_save(appairage, actor=user)
+        candidat = appairage.candidat
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.placement_appairage_id, appairage.id)
+
+        self.client.force_authenticate(user=user)
+        response = self.client.delete(f"/api/appairages/{appairage.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        candidat.refresh_from_db()
+        self.assertIsNone(candidat.placement_appairage_id)
+        self.assertIsNone(candidat.entreprise_placement_id)

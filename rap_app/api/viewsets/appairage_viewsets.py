@@ -323,6 +323,8 @@ class AppairageViewSet(ScopedModelViewSet):
             appairage.activite = AppairageActivite.ARCHIVE
             appairage.save(user=request.user, update_fields=["activite"])
 
+        AppairagePlacementService.sync_candidate_snapshot(appairage.candidat, actor=request.user)
+
         return self.success_response(data={"status": "archived"}, message="Appairage archivé avec succès.")
 
     @action(detail=True, methods=["post"], url_path="desarchiver")
@@ -345,7 +347,23 @@ class AppairageViewSet(ScopedModelViewSet):
             appairage.activite = AppairageActivite.ACTIF
             appairage.save(user=request.user, update_fields=["activite"])
 
+        AppairagePlacementService.sync_candidate_snapshot(appairage.candidat, actor=request.user)
+
         return self.success_response(data={"status": "unarchived"}, message="Appairage désarchivé avec succès.")
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Supprime un appairage puis resynchronise le snapshot de placement du
+        candidat concerné à partir du dernier appairage actif restant.
+        """
+        appairage = self._get_object_including_archived_scoped(kwargs.get("pk"))
+        candidat = appairage.candidat
+
+        with defer_appairage_snapshot_sync():
+            appairage.delete(user=request.user)
+
+        AppairagePlacementService.sync_candidate_snapshot(candidat, actor=request.user)
+        return self.success_response(data=None, message="Appairage supprimé avec succès.")
 
     def _get_object_including_archived_scoped(self, pk):
         """

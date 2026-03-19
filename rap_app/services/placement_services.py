@@ -101,6 +101,19 @@ class AppairagePlacementService:
         return changed_fields
 
     @classmethod
+    @transaction.atomic
+    def sync_candidate_snapshot(
+        cls,
+        candidat: Candidat | None,
+        actor: CustomUser | None = None,
+    ) -> list[str]:
+        """
+        Resynchronise explicitement le snapshot de placement d'un candidat
+        à partir de son dernier appairage actif.
+        """
+        return cls._sync_candidate_from_latest_appairage(candidat=candidat, actor=actor, appairage=None)
+
+    @classmethod
     def _get_reference_appairage(
         cls,
         candidat: Candidat,
@@ -183,7 +196,14 @@ class AppairagePlacementService:
         changed_fields: list[str] = []
 
         for field, value in snapshot.items():
-            if getattr(candidat, field) != value:
+            if hasattr(candidat, f"{field}_id") and (value is None or hasattr(value, "pk")):
+                current_value = getattr(candidat, f"{field}_id")
+                target_value = None if value is None else value.pk
+            else:
+                current_value = getattr(candidat, field)
+                target_value = value
+
+            if current_value != target_value:
                 setattr(candidat, field, value)
                 changed_fields.append(field)
 
