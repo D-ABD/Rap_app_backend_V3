@@ -34,6 +34,7 @@ from ...models.candidat import (
     HistoriquePlacement,
     ResultatPlacementChoices,
 )
+from ...models.commentaires_appairage import CommentaireAppairage
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
@@ -249,9 +250,50 @@ class CandidatViewSet(ScopedModelViewSet):
                 queryset=Appairage.objects.select_related(
                     "partenaire",
                     "created_by",
-                ).prefetch_related(
-                    "commentaires",
-                    "commentaires__created_by",
+                    "updated_by",
+                )
+                .only(
+                    "id",
+                    "candidat_id",
+                    "partenaire_id",
+                    "date_appairage",
+                    "statut",
+                    "retour_partenaire",
+                    "date_retour",
+                    "created_at",
+                    "updated_at",
+                    "created_by_id",
+                    "updated_by_id",
+                    "partenaire__id",
+                    "partenaire__nom",
+                    "created_by__id",
+                    "created_by__first_name",
+                    "created_by__last_name",
+                    "created_by__email",
+                    "created_by__username",
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "commentaires",
+                        queryset=CommentaireAppairage.objects.select_related("created_by")
+                        .only(
+                            "id",
+                            "appairage_id",
+                            "body",
+                            "created_at",
+                            "updated_at",
+                            "created_by_id",
+                            "updated_by_id",
+                            "is_active",
+                            "statut_snapshot",
+                            "created_by__id",
+                            "created_by__first_name",
+                            "created_by__last_name",
+                            "created_by__email",
+                            "created_by__username",
+                        )
+                        .order_by("-created_at", "-pk"),
+                    ),
                 ),
             ),
             Prefetch(
