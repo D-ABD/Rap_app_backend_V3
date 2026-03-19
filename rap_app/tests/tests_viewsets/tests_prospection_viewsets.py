@@ -199,6 +199,152 @@ def test_candidate_create_prospection_infers_owner_formation_and_centre():
     assert prospection.formation_id == formation.id
     assert prospection.centre_id == centre.id
 
+
+@pytest.mark.django_db
+def test_candidate_cannot_change_prospection_owner_or_formation_on_update():
+    client = APIClient()
+
+    centre = Centre.objects.create(nom="Centre Candidate Update", code_postal="75888")
+    statut = Statut.objects.create(nom="non_defini", couleur="#000000")
+    type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
+    formation_a = Formation.objects.create(
+        nom="Formation Candidate Update A",
+        centre=centre,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=5),
+    )
+    formation_b = Formation.objects.create(
+        nom="Formation Candidate Update B",
+        centre=centre,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=7),
+    )
+    partenaire = Partenaire.objects.create(nom="Partenaire Candidate Update", type="entreprise")
+
+    candidate_user = CustomUser.objects.create_user_with_role(
+        email="candidate-update@example.com",
+        username="candidate_update",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    other_user = CustomUser.objects.create_user_with_role(
+        email="other-owner@example.com",
+        username="other_owner",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    Candidat.objects.create(
+        nom="Candidate",
+        prenom="Update",
+        email="candidate-update@example.com",
+        formation=formation_a,
+        compte_utilisateur=candidate_user,
+    )
+
+    prospection = Prospection.objects.create(
+        partenaire=partenaire,
+        formation=formation_a,
+        centre=centre,
+        owner=candidate_user,
+        created_by=candidate_user,
+        date_prospection=timezone.now(),
+        type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+        motif=ProspectionChoices.MOTIF_PARTENARIAT,
+        statut=ProspectionChoices.STATUT_EN_COURS,
+        objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
+        commentaire="Prospection candidat",
+    )
+
+    client.force_authenticate(user=candidate_user)
+
+    response = client.patch(
+        reverse("prospection-detail", args=[prospection.id]),
+        data={"owner": other_user.id, "formation": formation_b.id},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    prospection.refresh_from_db()
+    assert prospection.owner_id == candidate_user.id
+    assert prospection.formation_id == formation_a.id
+
+
+@pytest.mark.django_db
+def test_staff_create_prospection_with_candidate_owner_uses_owner_formation():
+    client = APIClient()
+
+    centre_a = Centre.objects.create(nom="Centre Staff Owner A", code_postal="75111")
+    centre_b = Centre.objects.create(nom="Centre Staff Owner B", code_postal="75222")
+    statut = Statut.objects.create(nom="non_defini", couleur="#000000")
+    type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
+    formation_owner = Formation.objects.create(
+        nom="Formation Owner",
+        centre=centre_a,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=5),
+    )
+    formation_payload = Formation.objects.create(
+        nom="Formation Payload",
+        centre=centre_b,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=6),
+    )
+    partenaire = Partenaire.objects.create(nom="Partenaire Staff Owner", type="entreprise")
+
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff-owner@example.com",
+        username="staff_owner",
+        password="password123",
+        role=CustomUser.ROLE_ADMIN,
+    )
+    candidate_user = CustomUser.objects.create_user_with_role(
+        email="candidate-owner@example.com",
+        username="candidate_owner",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    Candidat.objects.create(
+        nom="Candidate",
+        prenom="Owner",
+        email="candidate-owner@example.com",
+        formation=formation_owner,
+        compte_utilisateur=candidate_user,
+    )
+
+    client.force_authenticate(user=staff)
+
+    response = client.post(
+        reverse("prospection-list"),
+        data={
+            "owner": candidate_user.id,
+            "formation": formation_payload.id,
+            "partenaire": partenaire.id,
+            "date_prospection": timezone.now().isoformat(),
+            "type_prospection": ProspectionChoices.TYPE_PREMIER_CONTACT,
+            "motif": ProspectionChoices.MOTIF_PARTENARIAT,
+            "statut": ProspectionChoices.STATUT_EN_COURS,
+            "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
+            "commentaire": "Prospection staff avec owner candidat",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    prospection_id = response.data["data"]["id"]
+    prospection = Prospection.objects.get(pk=prospection_id)
+
+    assert prospection.owner_id == candidate_user.id
+    assert prospection.formation_id == formation_owner.id
+    assert prospection.centre_id == centre_a.id
+
 # HistoriqueProspection n'est plus exposé comme endpoint API list/detail.
 # Les anciens tests API associés ont été retirés de la suite active pour éviter
 # des skips permanents ; la couverture utile passe désormais par les tests
