@@ -4,7 +4,9 @@ from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from rap_app.models.appairage import Appairage
+from django.utils import timezone
+
+from rap_app.models.appairage import Appairage, AppairageStatut
 from rap_app.models.commentaires_appairage import CommentaireAppairage
 from rap_app.models.candidat import Candidat
 from rap_app.models.centres import Centre
@@ -191,3 +193,52 @@ class AppairageSecurityTests(APITestCase):
         candidat.refresh_from_db()
         self.assertIsNone(candidat.placement_appairage_id)
         self.assertIsNone(candidat.entreprise_placement_id)
+
+    def test_unarchiving_appairage_restores_candidate_snapshot(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        appairage = self._create_appairage(centre)
+        AppairagePlacementService.sync_after_save(appairage, actor=user)
+
+        self.client.force_authenticate(user=user)
+        archive_response = self.client.post(f"/api/appairages/{appairage.id}/archiver/")
+        self.assertEqual(archive_response.status_code, status.HTTP_200_OK)
+
+        unarchive_response = self.client.post(f"/api/appairages/{appairage.id}/desarchiver/")
+        self.assertEqual(unarchive_response.status_code, status.HTTP_200_OK)
+
+        candidat = appairage.candidat
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.placement_appairage_id, appairage.id)
+        self.assertEqual(candidat.entreprise_placement_id, appairage.partenaire_id)
+
+    def test_deleting_active_appairage_falls_back_to_other_active_one(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        appairage = self._create_appairage(centre, formation_nom="Formation A", partenaire_nom="Entreprise A")
+        candidat = appairage.candidat
+        other_partenaire = Partenaire.objects.create(nom="Entreprise B")
+        with defer_appairage_snapshot_sync():
+            fallback_appairage = Appairage.objects.create(
+                candidat=candidat,
+                partenaire=other_partenaire,
+                formation=appairage.formation,
+                statut=AppairageStatut.ACCEPTE,
+                date_appairage=timezone.now(),
+            )
+
+        AppairagePlacementService.sync_after_save(fallback_appairage, actor=user)
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.placement_appairage_id, fallback_appairage.id)
+
+        self.client.force_authenticate(user=user)
+        response = self.client.delete(f"/api/appairages/{fallback_appairage.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.placement_appairage_id, appairage.id)
+        self.assertEqual(candidat.entreprise_placement_id, appairage.partenaire_id)
