@@ -696,6 +696,9 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             return str(val)
 
         for p in qs:
+            prospections_count = getattr(p, "prospections_count", p.nb_prospections)
+            formations_count = getattr(p, "formations_count", p.nb_formations)
+            appairages_count = getattr(p, "appairages_count", p.nb_appairages)
             ws.append(
                 [
                     # Identité
@@ -754,9 +757,9 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
                     getattr(p.created_by, "username", ""),
                     _fmt(p.created_at),
                     # Stats
-                    p.nb_prospections,
-                    p.nb_formations,
-                    p.nb_appairages,
+                    prospections_count,
+                    formations_count,
+                    appairages_count,
                 ]
             )
 

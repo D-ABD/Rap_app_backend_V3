@@ -402,8 +402,8 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         """
         qs = self._apply_common_filters(self.get_queryset())
 
-        # KPI candidats
-        kpis = qs.aggregate(
+        # KPI candidats + appairages en une seule agrégation SQL.
+        stats = qs.aggregate(
             total=Count("id", distinct=True),
             entretien_ok=Count("id", filter=Q(entretien_done=True), distinct=True),
             test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
@@ -427,10 +427,6 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             contrat_sans=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.SANS_CONTRAT), distinct=True),
             contrat_crif=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.CRIF), distinct=True),
             contrat_autre=Count("id", filter=Q(type_contrat=Candidat.TypeContrat.AUTRE), distinct=True),
-        )
-
-        # KPI appairages (via relation inverse)
-        app = qs.aggregate(
             appairages_total=Count("appairages", distinct=True),
             app_transmis=Count("appairages", filter=Q(appairages__statut="transmis"), distinct=True),
             app_en_attente=Count("appairages", filter=Q(appairages__statut="en_attente"), distinct=True),
@@ -444,6 +440,28 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             ),
             app_appairage_ok=Count("appairages", filter=Q(appairages__statut="appairage ok"), distinct=True),
         )
+        kpi_keys = {
+            "total",
+            "entretien_ok",
+            "test_ok",
+            "gespers",
+            "admissibles",
+            "en_formation",
+            "en_appairage",
+            "en_accompagnement",
+            "osia_count",
+            "cv_renseigne",
+            "courrier_rentree_count",
+            "ateliers_tre_total",
+            "contrat_apprentissage",
+            "contrat_professionnalisation",
+            "contrat_poei_poec",
+            "contrat_sans",
+            "contrat_crif",
+            "contrat_autre",
+        }
+        kpis = {key: stats[key] for key in kpi_keys}
+        app = {key: value for key, value in stats.items() if key not in kpi_keys}
 
         # Répartitions principales
         rep_statut = list(qs.values("statut").annotate(count=Count("id", distinct=True)).order_by("statut"))

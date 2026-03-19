@@ -5,7 +5,6 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q, Subquery
 from django.http import HttpResponse
@@ -304,6 +303,22 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             if formation.centre_id not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centres).")
 
+    def _get_scoped_filter_sources(self, user):
+        """
+        Retourne les sources relationnelles visibles pour l'utilisateur
+        sans recalculer plusieurs listes d'identifiants intermédiaires.
+        """
+        scoped_qs = self._scoped_for_user(Prospection.objects.all(), user).order_by()
+        formations_qs = (
+            Formation.objects.filter(prospections__in=scoped_qs)
+            .select_related("type_offre", "statut", "centre")
+            .distinct()
+            .order_by("nom", "id")
+        )
+        partenaires_qs = Partenaire.objects.filter(prospections__in=scoped_qs).distinct().order_by("nom", "id")
+        owners_qs = CustomUser.objects.filter(prospections_attribuees__in=scoped_qs).distinct().order_by("username", "id")
+        return scoped_qs, formations_qs, partenaires_qs, owners_qs
+
     # -------------------------------------------------------------------------
     # Queryset & visibilité métier/filtre
     # -------------------------------------------------------------------------
@@ -375,15 +390,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         def to_choice(queryset, label_attr="nom"):
             return [{"value": obj.id, "label": getattr(obj, label_attr)} for obj in queryset]
 
-        qs = self._scoped_for_user(Prospection.objects.all(), request.user)
-
-        formation_ids = qs.values_list("formation_id", flat=True).distinct()
-        partenaire_ids = qs.values_list("partenaire_id", flat=True).distinct()
-        owner_ids = qs.values_list("owner_id", flat=True).distinct()
-
-        formations_qs = Formation.objects.filter(id__in=formation_ids).only("id", "nom", "num_offre", "centre_id")
-        partenaires = Partenaire.objects.filter(id__in=partenaire_ids)
-        owners = CustomUser.objects.filter(id__in=owner_ids)
+        _, formations_qs, partenaires, owners = self._get_scoped_filter_sources(request.user)
 
         formations = [
             {
@@ -857,23 +864,14 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         def fmt(choices):
             return [{"value": k, "label": str(l)} for k, l in choices]
 
-        User = get_user_model()
         user_role = getattr(request.user, "role", None)
 
-        # ✅ restreint aux owners visibles dans le périmètre de l'utilisateur
-        scoped_qs = self._scoped_for_user(Prospection.objects.all(), request.user)
-        owner_ids = scoped_qs.values_list("owner_id", flat=True).distinct()
-        users = User.objects.filter(id__in=owner_ids)
-        sorted_users = sorted(users, key=lambda u: (u.get_full_name() or u.username).lower())
+        # ✅ restreint aux owners et partenaires visibles dans le périmètre de l'utilisateur
+        _, _, partenaires_qs, owners_qs = self._get_scoped_filter_sources(request.user)
+        sorted_users = sorted(owners_qs, key=lambda u: (u.get_full_name() or u.username).lower())
         owners = [{"value": u.id, "label": u.get_full_name() or u.username} for u in sorted_users]
 
-        partenaire_ids = scoped_qs.values_list("partenaire_id", flat=True).distinct()
-        partenaires = [
-            {"value": p.id, "label": p.nom}
-            for p in Partenaire.objects.filter(
-                id__in=partenaire_ids,
-            ).order_by("nom")
-        ]
+        partenaires = [{"value": p.id, "label": p.nom} for p in partenaires_qs]
 
         return Response(
             {

@@ -88,22 +88,26 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         User = get_user_model()
         user = request.user
 
-        qs = self.get_queryset()
+        qs = self.get_queryset().order_by()
+        formations = (
+            Formation.objects.filter(commentaires__in=qs)
+            .select_related("centre", "type_offre")
+            .distinct()
+            .order_by("nom", "id")
+        )
 
-        formation_ids = qs.values_list("formation_id", flat=True).distinct()
-        formations = Formation.objects.filter(id__in=formation_ids)
-
-        centre_ids = formations.values_list("centre_id", flat=True).distinct()
         if is_admin_like(user):
-            centres = Centre.objects.filter(id__in=centre_ids)
+            centres = Centre.objects.filter(formations__commentaires__in=qs).distinct().order_by("nom", "id")
         elif is_staff_or_staffread(user):
-            allowed_ids = set(centre_ids).intersection(staff_centre_ids(user))
-            centres = Centre.objects.filter(id__in=allowed_ids)
+            centres = (
+                Centre.objects.filter(id__in=staff_centre_ids(user), formations__commentaires__in=qs)
+                .distinct()
+                .order_by("nom", "id")
+            )
         else:
             centres = Centre.objects.none()
 
-        type_offre_ids = formations.values_list("type_offre_id", flat=True).distinct()
-        type_offres = TypeOffre.objects.filter(id__in=type_offre_ids)
+        type_offres = TypeOffre.objects.filter(formations__commentaires__in=qs).distinct().order_by("nom", "id")
 
         formation_etats = []
         if hasattr(Formation, "etat"):

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, IntegerField, OuterRef, Prefetch, Q, Subquery, Value
+from django.db.models import Count, IntegerField, Prefetch, Q, Value
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -304,15 +304,9 @@ class CandidatViewSet(ScopedModelViewSet):
 
         qs = qs.annotate(nb_appairages_calc=Count("appairages", distinct=True))
 
-        prospection_cnt = (
-            Prospection.objects.filter(owner_id=OuterRef("compte_utilisateur_id"))
-            .values("owner_id")
-            .annotate(c=Count("id"))
-            .values("c")[:1]
-        )
         qs = qs.annotate(
             nb_prospections_calc=Coalesce(
-                Subquery(prospection_cnt, output_field=IntegerField()),
+                Count("compte_utilisateur__prospections_attribuees", distinct=True),
                 Value(0),
                 output_field=IntegerField(),
             )

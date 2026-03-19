@@ -3,6 +3,7 @@ from pathlib import Path
 
 import django_filters
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import OuterRef, Prefetch, Q, Subquery
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -249,7 +250,14 @@ class AppairageViewSet(ScopedModelViewSet):
         if request.method == "POST":
             serializer = CommentaireAppairageSerializer(data=request.data)
             if serializer.is_valid():
-                serializer.save(created_by=request.user, appairage=appairage)
+                try:
+                    serializer.save(created_by=request.user, appairage=appairage)
+                except DjangoValidationError as exc:
+                    return self.error_response(
+                        message="Impossible de créer le commentaire d'appairage.",
+                        errors=getattr(exc, "message_dict", None) or {"non_field_errors": list(exc.messages)},
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
                 return self.success_response(
                     data=serializer.data,
                     message="Commentaire d'appairage créé avec succès.",

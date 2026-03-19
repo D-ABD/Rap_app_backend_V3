@@ -190,6 +190,32 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("formations", response.data["data"])
         self.assertIn("partenaires", response.data["data"])
 
+    def test_prospections_filtres_include_visible_related_choices(self):
+        response = self.client.get(reverse("prospection-get-filters"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data["data"]
+        self.assertIn(
+            {"value": self.formation.id, "label": self.formation.nom},
+            data["formations"],
+        )
+        self.assertIn(
+            {"value": self.partenaire.id, "label": self.partenaire.nom},
+            data["partenaires"],
+        )
+        self.assertTrue(any(owner["value"] == self.user.id for owner in data["owners"]))
+
+    def test_prospections_choices_include_visible_related_choices(self):
+        response = self.client.get(reverse("prospection-get-choices"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.data["data"]
+        self.assertIn(
+            {"value": self.partenaire.id, "label": self.partenaire.nom},
+            data["partenaires"],
+        )
+        self.assertTrue(any(owner["value"] == self.user.id for owner in data["owners"]))
+
     def test_cvtheque_list_uses_standard_paginated_envelope_with_filters(self):
         response = self.client.get(reverse("cvtheque-list"))
 
