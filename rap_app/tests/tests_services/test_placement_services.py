@@ -52,6 +52,7 @@ class AppairagePlacementServiceTests(TestCase):
         self.assertEqual(self.candidat.entreprise_placement, self.partenaire)
         self.assertEqual(self.candidat.resultat_placement, ResultatPlacementChoices.ADMIS)
         self.assertEqual(self.candidat.responsable_placement, self.actor)
+        self.assertEqual(self.candidat.placement_appairage, self.appairage)
         self.assertEqual(self.candidat.statut, Candidat.StatutCandidat.EN_APPAIRAGE)
         self.assertEqual(HistoriquePlacement.objects.filter(candidat=self.candidat).count(), 1)
 
@@ -66,3 +67,69 @@ class AppairagePlacementServiceTests(TestCase):
         self.assertEqual(self.appairage.historiques.count(), 1)
         historique = self.appairage.historiques.first()
         self.assertEqual(historique.auteur, self.appairage.created_by)
+
+    def test_sync_after_save_clears_previous_candidate_when_appairage_reassigned(self):
+        other_candidat = Candidat.objects.create(
+            nom="Martin",
+            prenom="Luc",
+            formation=self.formation,
+        )
+        other_partenaire = Partenaire.objects.create(nom="Entreprise Placement Reaffectee")
+        with defer_appairage_snapshot_sync():
+            other_appairage = Appairage.objects.create(
+                candidat=other_candidat,
+                partenaire=other_partenaire,
+                formation=self.formation,
+                statut=AppairageStatut.ACCEPTE,
+            )
+
+        AppairagePlacementService.sync_after_save(other_appairage, actor=self.actor)
+        other_candidat.refresh_from_db()
+        self.assertEqual(other_candidat.entreprise_placement, other_partenaire)
+
+        with defer_appairage_snapshot_sync():
+            other_appairage.candidat = self.candidat
+            other_appairage.save(update_fields=["candidat"])
+
+        changes = AppairagePlacementService.sync_after_save(
+            other_appairage,
+            actor=self.actor,
+            previous_candidat=other_candidat,
+        )
+
+        other_candidat.refresh_from_db()
+        self.assertTrue(changes["previous"])
+        self.assertIsNone(other_candidat.entreprise_placement)
+        self.assertIsNone(other_candidat.responsable_placement)
+        self.assertIsNone(other_candidat.resultat_placement)
+        self.assertIsNone(other_candidat.date_placement)
+        self.assertIsNone(other_candidat.placement_appairage)
+
+    def test_sync_after_save_uses_latest_active_appairage_for_snapshot(self):
+        older_date = timezone.now() + timedelta(days=1)
+        newer_date = timezone.now() + timedelta(days=2)
+        old_partenaire = Partenaire.objects.create(nom="Entreprise Placement Ancienne")
+        new_partenaire = Partenaire.objects.create(nom="Entreprise Placement Nouvelle")
+
+        with defer_appairage_snapshot_sync():
+            old_appairage = Appairage.objects.create(
+                candidat=self.candidat,
+                partenaire=old_partenaire,
+                formation=self.formation,
+                statut=AppairageStatut.ACCEPTE,
+                date_appairage=older_date,
+            )
+            new_appairage = Appairage.objects.create(
+                candidat=self.candidat,
+                partenaire=new_partenaire,
+                formation=self.formation,
+                statut=AppairageStatut.ACCEPTE,
+                date_appairage=newer_date,
+            )
+
+        changes = AppairagePlacementService.sync_after_save(old_appairage, actor=self.actor)
+        self.candidat.refresh_from_db()
+
+        self.assertTrue(changes["current"])
+        self.assertEqual(self.candidat.entreprise_placement, new_partenaire)
+        self.assertEqual(self.candidat.placement_appairage, new_appairage)

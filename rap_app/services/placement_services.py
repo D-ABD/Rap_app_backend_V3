@@ -143,6 +143,7 @@ class AppairagePlacementService:
                 "date_placement": None,
                 "entreprise_validee": None,
                 "contrat_signe": None,
+                "placement_appairage": None,
                 "statut": Candidat.StatutCandidat.AUTRE,
             }
 
@@ -164,6 +165,7 @@ class AppairagePlacementService:
             "date_placement": date_placement,
             "entreprise_validee": entreprise_validee,
             "contrat_signe": contrat,
+            "placement_appairage": appairage,
             "statut": Candidat.StatutCandidat.EN_APPAIRAGE,
         }
 
