@@ -9,6 +9,8 @@ En local :
 cp .env.local .env
 python3 manage.py runserver
 
+./env/bin/pytest rap_app/tests
+
 python3 manage.py runserver 0.0.0.0:8000
 python3 manage.py spectacular --file schema.yaml
 
@@ -117,8 +119,13 @@ Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourr
 # Configuration initiale
 git init
 git add .
-git commit -m "Fix(Signals): Sécurisation du signal sync_candidat_for_user via réconciliation et ajout des tests de validation"
+git commit -m "Lock partner write access and fix inactive user reactivation"
 git push -u origin main
+
+
+python3 manage.py check       
+python3 manage.py makemigrations --check --dry-run
+python3 manage.py runserver 0.0.0.0:8000
 
 git branch -M main
 git remote add origin URL_DU_DEPOT.git
