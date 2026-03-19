@@ -195,3 +195,38 @@ def test_candidat_delete_does_not_delete_user():
 
     assert not Candidat.objects.filter(id=cand_id).exists()
     assert CustomUser.objects.filter(id=user_id).exists()
+
+
+@pytest.mark.django_db
+def test_valider_comme_stagiaire_cree_et_lie_un_compte_si_absent():
+    """La validation stagiaire via le modèle doit suivre le service explicite et provisionner un compte si besoin."""
+    centre = Centre.objects.create(nom="Centre Test 6", code_postal="75006")
+    formation = Formation.objects.create(
+        nom="Formation Test 6",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff6@example.com",
+        username="staff6",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+
+    cand = Candidat.objects.create(
+        nom="Validable",
+        prenom="Stagiaire",
+        email="stagiaire6@example.com",
+        formation=formation,
+        admissible=True,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    user = cand.valider_comme_stagiaire()
+
+    cand.refresh_from_db()
+    assert user is not None
+    assert cand.compte_utilisateur_id == user.id
+    assert user.role == CustomUser.ROLE_STAGIAIRE
