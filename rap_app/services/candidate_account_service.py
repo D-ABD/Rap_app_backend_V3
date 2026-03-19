@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from ..models.candidat import Candidat
 from ..models.custom_user import CustomUser
@@ -174,6 +175,92 @@ class CandidateAccountService:
             cls.link_user_to_candidate(user=user, candidate=candidate, actor=actor)
 
         return user
+
+    @classmethod
+    @transaction.atomic
+    def request_account(
+        cls,
+        candidate: Candidat,
+        requester: CustomUser,
+    ) -> Candidat:
+        """
+        Place une demande de compte en attente pour un candidat.
+        """
+        if candidate.compte_utilisateur_id and candidate.compte_utilisateur_id != requester.id:
+            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
+
+        if candidate.demande_compte_statut == candidate.DemandeCompteStatut.EN_ATTENTE:
+            raise ValidationError({"detail": "Une demande de compte est déjà en attente."})
+
+        candidate.demande_compte_statut = candidate.DemandeCompteStatut.EN_ATTENTE
+        candidate.demande_compte_date = timezone.now()
+        candidate.demande_compte_traitee_par = None
+        candidate.demande_compte_traitee_le = None
+        candidate.save(
+            user=requester,
+            update_fields=[
+                "demande_compte_statut",
+                "demande_compte_date",
+                "demande_compte_traitee_par",
+                "demande_compte_traitee_le",
+            ],
+        )
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def approve_account_request(
+        cls,
+        candidate: Candidat,
+        actor: CustomUser,
+    ) -> CustomUser:
+        """
+        Approuve une demande de compte en attente puis crée ou lie le compte.
+        """
+        if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
+            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
+        if candidate.compte_utilisateur_id:
+            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
+
+        user = cls.provision_candidate_account(candidate, actor=actor)
+        candidate.demande_compte_statut = Candidat.DemandeCompteStatut.ACCEPTEE
+        candidate.demande_compte_traitee_par = actor
+        candidate.demande_compte_traitee_le = timezone.now()
+        candidate.save(
+            user=actor,
+            update_fields=[
+                "demande_compte_statut",
+                "demande_compte_traitee_par",
+                "demande_compte_traitee_le",
+            ],
+        )
+        return user
+
+    @classmethod
+    @transaction.atomic
+    def reject_account_request(
+        cls,
+        candidate: Candidat,
+        actor: CustomUser,
+    ) -> Candidat:
+        """
+        Refuse une demande de compte en attente.
+        """
+        if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
+            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
+
+        candidate.demande_compte_statut = Candidat.DemandeCompteStatut.REFUSEE
+        candidate.demande_compte_traitee_par = actor
+        candidate.demande_compte_traitee_le = timezone.now()
+        candidate.save(
+            user=actor,
+            update_fields=[
+                "demande_compte_statut",
+                "demande_compte_traitee_par",
+                "demande_compte_traitee_le",
+            ],
+        )
+        return candidate
 
     @staticmethod
     def _build_unique_username(base: str) -> str:

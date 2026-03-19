@@ -377,27 +377,10 @@ class CandidatViewSet(ScopedModelViewSet):
         """POST : demande_compte en_attente et pas de compte lié ; creer_ou_lier_compte_utilisateur puis statut acceptee."""
         candidat = self.get_object()
 
-        if candidat.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
-        if candidat.compte_utilisateur_id:
-            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
-
         try:
-            user = CandidateAccountService.provision_candidate_account(candidat, actor=request.user)
+            user = CandidateAccountService.approve_account_request(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
-
-        candidat.demande_compte_statut = Candidat.DemandeCompteStatut.ACCEPTEE
-        candidat.demande_compte_traitee_par = request.user
-        candidat.demande_compte_traitee_le = dj_timezone.now()
-        candidat.save(
-            user=request.user,
-            update_fields=[
-                "demande_compte_statut",
-                "demande_compte_traitee_par",
-                "demande_compte_traitee_le",
-            ]
-        )
 
         return Response(
             {
@@ -413,20 +396,10 @@ class CandidatViewSet(ScopedModelViewSet):
         """POST : demande_compte en_attente ; passe statut à refusee."""
         candidat = self.get_object()
 
-        if candidat.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
-
-        candidat.demande_compte_statut = Candidat.DemandeCompteStatut.REFUSEE
-        candidat.demande_compte_traitee_par = request.user
-        candidat.demande_compte_traitee_le = dj_timezone.now()
-        candidat.save(
-            user=request.user,
-            update_fields=[
-                "demande_compte_statut",
-                "demande_compte_traitee_par",
-                "demande_compte_traitee_le",
-            ]
-        )
+        try:
+            CandidateAccountService.reject_account_request(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
 
         return Response(
             {

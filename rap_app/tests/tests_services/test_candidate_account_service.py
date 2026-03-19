@@ -59,3 +59,41 @@ class CandidateAccountServiceTests(TestCase):
 
         with self.assertRaises(ValidationError):
             CandidateAccountService.provision_candidate_account(candidate, actor=self.actor)
+
+    def test_request_account_marks_candidate_pending(self):
+        candidate = Candidat.objects.create(
+            nom="Pending",
+            prenom="Candidate",
+            email="pending@example.com",
+            formation=self.formation,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateAccountService.request_account(candidate, requester=self.actor)
+
+        candidate.refresh_from_db()
+        self.assertEqual(candidate.demande_compte_statut, Candidat.DemandeCompteStatut.EN_ATTENTE)
+        self.assertIsNotNone(candidate.demande_compte_date)
+        self.assertIsNone(candidate.demande_compte_traitee_par)
+        self.assertIsNone(candidate.demande_compte_traitee_le)
+
+    def test_approve_account_request_creates_user_and_marks_candidate_accepted(self):
+        candidate = Candidat.objects.create(
+            nom="Approved",
+            prenom="Candidate",
+            email="approved@example.com",
+            formation=self.formation,
+            demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        user = CandidateAccountService.approve_account_request(candidate, actor=self.actor)
+
+        candidate.refresh_from_db()
+        self.assertIsNotNone(user)
+        self.assertEqual(candidate.compte_utilisateur_id, user.id)
+        self.assertEqual(candidate.demande_compte_statut, Candidat.DemandeCompteStatut.ACCEPTEE)
+        self.assertEqual(candidate.demande_compte_traitee_par_id, self.actor.id)
+        self.assertIsNotNone(candidate.demande_compte_traitee_le)

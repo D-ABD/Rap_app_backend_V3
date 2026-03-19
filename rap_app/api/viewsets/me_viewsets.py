@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ...models.custom_user import CustomUser
+from ...services.candidate_account_service import CandidateAccountService
 from ...models.logs import LogUtilisateur
 from ..serializers.base_serializers import EmptySerializer
 from ..serializers.candidat_serializers import CandidatCreateUpdateSerializer
@@ -185,39 +186,18 @@ class DemandeCompteCandidatView(ApiResponseMixin, APIView):
         if not candidat:
             raise exceptions.NotFound("Aucun profil candidat associé à cet utilisateur.")
 
-        if candidat.compte_utilisateur_id and candidat.compte_utilisateur_id != user.id:
+        try:
+            CandidateAccountService.request_account(candidat, requester=user)
+        except ValidationError as e:
+            detail = e.message_dict.get("detail", [str(e)])[0] if hasattr(e, "message_dict") else str(e)
             return Response(
                 {
                     "success": False,
-                    "message": "Un compte utilisateur est déjà lié à ce candidat.",
+                    "message": detail,
                     "data": None,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if candidat.demande_compte_statut == candidat.DemandeCompteStatut.EN_ATTENTE:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Une demande de compte est déjà en attente.",
-                    "data": None,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        candidat.demande_compte_statut = candidat.DemandeCompteStatut.EN_ATTENTE
-        candidat.demande_compte_date = dj_timezone.now()
-        candidat.demande_compte_traitee_par = None
-        candidat.demande_compte_traitee_le = None
-        candidat.save(
-            user=request.user,
-            update_fields=[
-                "demande_compte_statut",
-                "demande_compte_date",
-                "demande_compte_traitee_par",
-                "demande_compte_traitee_le",
-            ]
-        )
 
         return self.success_response(
             data=None,
