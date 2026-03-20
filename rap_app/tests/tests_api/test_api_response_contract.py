@@ -196,6 +196,9 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(response.data["data"]["phase_contract"]["legacy_status_field"], "statut")
         self.assertEqual(response.data["data"]["phase_contract"]["recommended_phase_field"], "parcours_phase")
         self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_supported"])
+        self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_deprecated"])
+        self.assertEqual(response.data["data"]["phase_contract"]["legacy_status_removal_stage"], "post_front_migration")
+        self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_write_locked"])
         self.assertEqual(
             response.data["data"]["phase_filter_aliases"]["parcours_phase"],
             ["parcours_phase", "parcoursPhase"],

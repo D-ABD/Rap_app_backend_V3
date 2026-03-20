@@ -146,3 +146,5 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         self.assertIn("parcours_phase", response.data)
         self.assertIn("reporting_contract", response.data)
         self.assertEqual(response.data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")
+        self.assertTrue(response.data["reporting_contract"]["legacy_status_deprecated"])
+        self.assertEqual(response.data["reporting_contract"]["legacy_status_removal_stage"], "post_front_migration")

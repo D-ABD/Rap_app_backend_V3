@@ -106,6 +106,9 @@ def _build_candidat_meta(user=None) -> dict:
             "recommended_phase_field": "parcours_phase",
             "derived_phase_field": "parcours_phase_calculee",
             "legacy_status_supported": True,
+            "legacy_status_deprecated": True,
+            "legacy_status_removal_stage": "post_front_migration",
+            "legacy_status_write_locked": True,
         },
         "phase_filter_aliases": {
             "parcours_phase": ["parcours_phase", "parcoursPhase"],

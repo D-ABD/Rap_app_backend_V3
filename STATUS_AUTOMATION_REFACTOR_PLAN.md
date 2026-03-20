@@ -1063,6 +1063,12 @@ Pré-requis :
 - outils d'exploitation migrés
 - validation métier complète
 
+Etat compatible recommandé avant retrait effectif :
+
+- exposer explicitement dans les contrats backend que `statut` est désormais déprécié
+- conserver la lecture legacy tant que le front et les exports ne sont pas migrés
+- ne retirer les filtres/agrégats legacy qu'après validation conjointe front + métier
+
 ### 19.4.2 Ordre recommandé
 
 Ordre d'exécution le plus sûr :

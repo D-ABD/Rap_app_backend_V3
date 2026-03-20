@@ -82,3 +82,4 @@ class RapportSerializerTestCase(TestCase):
         self.assertEqual(data["formation_nom"], "Formation X")
         self.assertIn("reporting_contract", data)
         self.assertEqual(data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")
+        self.assertTrue(data["reporting_contract"]["legacy_status_deprecated"])

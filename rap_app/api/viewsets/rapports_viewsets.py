@@ -256,6 +256,8 @@ class RapportChoicesView(APIView):
                     "recommended_candidate_phase_field": "parcours_phase",
                     "derived_candidate_phase_field": "parcours_phase_calculee",
                     "legacy_status_supported": True,
+                    "legacy_status_deprecated": True,
+                    "legacy_status_removal_stage": "post_front_migration",
                     "phase_compatible_report_types": sorted(Rapport.PHASE_COMPATIBLE_REPORT_TYPES),
                 },
             }
