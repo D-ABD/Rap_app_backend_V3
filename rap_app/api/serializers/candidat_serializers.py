@@ -6,6 +6,7 @@ from drf_spectacular.utils import (
     extend_schema_serializer,
 )
 from rest_framework import exceptions, serializers
+import unicodedata
 
 from ...models.appairage import Appairage
 from ...models.atelier_tre import AtelierTRE
@@ -830,13 +831,29 @@ class LabelOrValueChoiceField(serializers.ChoiceField):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._label2value = {str(label).lower(): value for value, label in self.choices.items()}
+        self._label2value = self.build_label_map(self.choices)
+
+    @staticmethod
+    def _normalize_token(value):
+        normalized = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+        normalized = normalized.lower().replace("/", " ").replace("-", " ")
+        return " ".join(normalized.split())
+
+    @classmethod
+    def build_label_map(cls, choices):
+        return {cls._normalize_token(label): value for value, label in choices.items()}
+
+    @classmethod
+    def resolve_choice(cls, raw_value, choices):
+        if raw_value in choices:
+            return raw_value
+        return cls.build_label_map(choices).get(cls._normalize_token(raw_value), raw_value)
 
     def to_internal_value(self, data):
         s = str(data)
         if s in self.choices:
             return s
-        v = self._label2value.get(s.lower())
+        v = self._label2value.get(self._normalize_token(s))
         if v is not None:
             return v
         return super().to_internal_value(data)
@@ -863,14 +880,13 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
     cvStatut = serializers.CharField(required=False)
 
     def _labels_to_values(self, values, choices_dict):
-        label2value = {str(lbl).lower(): val for val, lbl in choices_dict.items()}
         out = []
         for item in values:
             s = str(item)
             if s in choices_dict:
                 out.append(s)
             else:
-                out.append(label2value.get(s.lower(), s))
+                out.append(LabelOrValueChoiceField.resolve_choice(s, choices_dict))
         return out
 
     def validate(self, attrs):
@@ -879,7 +895,11 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
         if "cvStatut" in attrs and "cv_statut" not in attrs:
             attrs["cv_statut"] = attrs.pop("cvStatut")
         if "parcoursPhase" in attrs and "parcours_phase" not in attrs:
-            attrs["parcours_phase"] = attrs.pop("parcoursPhase")
+            raw_phase = attrs.pop("parcoursPhase")
+            attrs["parcours_phase"] = LabelOrValueChoiceField.resolve_choice(
+                raw_phase,
+                dict(Candidat.ParcoursPhase.choices),
+            )
         if "contratSigne" in attrs and "contrat_signe" not in attrs:
             attrs["contrat_signe"] = attrs.pop("contratSigne")
 

@@ -1,4 +1,5 @@
 import django_filters
+import unicodedata
 from django.db.models import Q
 
 from ..models.appairage import Appairage
@@ -8,6 +9,12 @@ from ..models.custom_user import CustomUser
 from ..models.formations import HistoriqueFormation
 from ..models.prospection import Prospection
 from ..models.prospection_comments import ProspectionComment
+
+
+def _normalize_choice_token(value):
+    normalized = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+    normalized = normalized.lower().replace("/", " ").replace("-", " ")
+    return " ".join(normalized.split())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -205,11 +212,9 @@ class CandidatFilter(django_filters.FilterSet):
     statut = django_filters.ChoiceFilter(field_name="statut", choices=Candidat.StatutCandidat.choices)
     statut__in = SafeCharInFilter(field_name="statut", lookup_expr="in")
     statut_i = django_filters.CharFilter(field_name="statut", lookup_expr="iexact")
-    parcours_phase = django_filters.ChoiceFilter(
-        field_name="parcours_phase",
-        choices=Candidat.ParcoursPhase.choices,
-    )
-    parcours_phase__in = SafeCharInFilter(field_name="parcours_phase", lookup_expr="in")
+    parcours_phase = django_filters.CharFilter(method="filter_parcours_phase")
+    parcoursPhase = django_filters.CharFilter(method="filter_parcours_phase")
+    parcours_phase__in = django_filters.CharFilter(method="filter_parcours_phase_in")
     parcours_phase_i = django_filters.CharFilter(field_name="parcours_phase", lookup_expr="iexact")
 
     type_contrat = django_filters.ChoiceFilter(field_name="type_contrat", choices=Candidat.TypeContrat.choices)
@@ -248,6 +253,14 @@ class CandidatFilter(django_filters.FilterSet):
     # 🆕 a-t-il un OSIA ?
     has_osia = django_filters.BooleanFilter(method="filter_has_osia")
 
+    def _parcours_phase_label_map(self):
+        return {_normalize_choice_token(label): value for value, label in Candidat.ParcoursPhase.choices}
+
+    def _resolve_parcours_phase_value(self, raw_value):
+        if raw_value in dict(Candidat.ParcoursPhase.choices):
+            return raw_value
+        return self._parcours_phase_label_map().get(_normalize_choice_token(raw_value), raw_value)
+
     def filter_has_osia(self, qs, name, value):
         """
         Filtre les candidats ayant ou non un numéro OSIA.
@@ -275,6 +288,24 @@ class CandidatFilter(django_filters.FilterSet):
         if value:
             return qs.exclude(numero_osia__isnull=True).exclude(numero_osia__exact="")
         return qs.filter(Q(numero_osia__isnull=True) | Q(numero_osia__exact=""))
+
+    def filter_parcours_phase(self, qs, name, value):
+        if value in (None, ""):
+            return qs
+        return qs.filter(parcours_phase=self._resolve_parcours_phase_value(value))
+
+    def filter_parcours_phase_in(self, qs, name, value):
+        if value in (None, ""):
+            return qs
+        raw_values = value if isinstance(value, (list, tuple)) else str(value).split(",")
+        resolved = [
+            self._resolve_parcours_phase_value(item.strip())
+            for item in raw_values
+            if str(item).strip()
+        ]
+        if not resolved:
+            return qs
+        return qs.filter(parcours_phase__in=resolved)
 
     class Meta:
         model = Candidat
