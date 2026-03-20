@@ -80,3 +80,5 @@ class RapportSerializerTestCase(TestCase):
         self.assertEqual(data["format_display"], "PDF")
         self.assertEqual(data["centre_nom"], "Centre Test")
         self.assertEqual(data["formation_nom"], "Formation X")
+        self.assertIn("reporting_contract", data)
+        self.assertEqual(data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")

@@ -57,6 +57,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["id"], self.rapport.id)
         self.assertEqual(response.data["data"]["nom"], self.rapport.nom)
+        self.assertIn("reporting_contract", response.data["data"])
 
     def test_create_rapport(self):
         data = {
@@ -136,3 +137,10 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         self.client.logout()
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_choices_expose_phase_reporting_contract(self):
+        response = self.client.get(reverse("rapport-choices"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("parcours_phase", response.data)
+        self.assertIn("reporting_contract", response.data)
+        self.assertEqual(response.data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")

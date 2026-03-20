@@ -10,6 +10,7 @@ from ...api.serializers.rapports_serializers import (
 )
 from ...models.logs import LogUtilisateur
 from ...models.rapports import Rapport
+from ...models.candidat import Candidat
 from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 
 
@@ -240,5 +241,13 @@ class RapportChoicesView(APIView):
                 "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
                 "periode": serialize_choices(Rapport.PERIODE_CHOICES),
                 "format": serialize_choices(Rapport.FORMAT_CHOICES),
+                "parcours_phase": serialize_choices(Candidat.ParcoursPhase.choices),
+                "reporting_contract": {
+                    "legacy_candidate_status_field": "statut",
+                    "recommended_candidate_phase_field": "parcours_phase",
+                    "derived_candidate_phase_field": "parcours_phase_calculee",
+                    "legacy_status_supported": True,
+                    "phase_compatible_report_types": sorted(Rapport.PHASE_COMPATIBLE_REPORT_TYPES),
+                },
             }
         )

@@ -163,3 +163,5 @@ class RapportChoiceGroupSerializer(serializers.Serializer):
     type_rapport = RapportChoiceSerializer(many=True)
     periode = RapportChoiceSerializer(many=True)
     format = RapportChoiceSerializer(many=True)
+    parcours_phase = RapportChoiceSerializer(many=True)
+    reporting_contract = serializers.DictField()

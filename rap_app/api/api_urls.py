@@ -35,6 +35,7 @@ from .viewsets.prepa_viewset import PrepaViewSet
 from .viewsets.prospection_comment_viewsets import ProspectionCommentViewSet
 from .viewsets.prospection_viewsets import ProspectionViewSet
 from .viewsets.rapports_viewsets import RapportViewSet
+from .viewsets.rapports_viewsets import RapportChoicesView
 from .viewsets.search_viewset import SearchView
 from .viewsets.stats_viewsets.appairage_comment_stats_viewset import (
     AppairageCommentaireStatsViewSet,
@@ -113,6 +114,7 @@ urlpatterns = [
     path("me/", MeAPIView.as_view(), name="me"),
     path("roles/", RoleChoicesView.as_view(), name="roles"),
     path("me/demande-compte/", DemandeCompteCandidatView.as_view(), name="demande_compte_candidat"),
+    path("rapports/choices/", RapportChoicesView.as_view(), name="rapport-choices"),
 ]
 
 # Ajout des routes générées par le router DRF

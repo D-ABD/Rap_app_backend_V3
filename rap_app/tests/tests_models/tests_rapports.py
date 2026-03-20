@@ -101,6 +101,9 @@ class RapportModelTest(BaseModelTestSetupMixin, TestCase):
         self.assertEqual(data["type_rapport_display"], rapport.get_type_rapport_display())
         self.assertEqual(data["periode_display"], rapport.get_periode_display())
         self.assertEqual(data["format_display"], rapport.get_format_display())
+        self.assertIn("reporting_contract", data)
+        self.assertEqual(data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")
+        self.assertTrue(data["reporting_contract"]["legacy_status_supported"])
 
     def test_invalidate_caches_efface_cles(self):
         rapport = self.create_valid_rapport()

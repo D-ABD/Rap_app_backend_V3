@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .base import BaseModel
+from .candidat import Candidat
 
 
 class Rapport(BaseModel):
@@ -37,6 +38,15 @@ class Rapport(BaseModel):
         (TYPE_ANNUEL, "Rapport annuel consolidé"),
         (TYPE_UTILISATEUR, "Rapport d'activité utilisateurs"),
     ]
+
+    PHASE_COMPATIBLE_REPORT_TYPES = {
+        TYPE_OCCUPATION,
+        TYPE_CENTRE,
+        TYPE_STATUT,
+        TYPE_RECRUTEMENT,
+        TYPE_PERIODIQUE,
+        TYPE_ANNUEL,
+    }
 
     PERIODE_QUOTIDIEN = "quotidien"
     PERIODE_HEBDOMADAIRE = "hebdomadaire"
@@ -226,10 +236,25 @@ class Rapport(BaseModel):
                 "type_offre_nom": self.type_offre.nom if self.type_offre else None,
                 "statut_nom": self.statut.nom if self.statut else None,
                 "formation_nom": self.formation.nom if self.formation else None,
+                "reporting_contract": self.get_reporting_contract(),
             }
         )
 
         return data
+
+    def get_reporting_contract(self):
+        """
+        Décrit la source de vérité reporting pour les rapports orientés
+        candidats/formations, en mode compatible pendant la migration.
+        """
+        return {
+            "legacy_candidate_status_field": "statut",
+            "recommended_candidate_phase_field": "parcours_phase",
+            "derived_candidate_phase_field": "parcours_phase_calculee",
+            "legacy_status_supported": True,
+            "phase_compatible": self.type_rapport in self.PHASE_COMPATIBLE_REPORT_TYPES,
+            "candidate_phase_choices": [{"value": k, "label": v} for k, v in Candidat.ParcoursPhase.choices],
+        }
 
     def invalidate_caches(self):
         """
