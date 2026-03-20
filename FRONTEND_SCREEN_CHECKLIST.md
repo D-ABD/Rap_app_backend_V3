@@ -118,6 +118,7 @@ Pour chaque ecran:
 - pagination
 - filtre formation
 - filtre centre
+- presence de `parcours_phase_choices`
 - acces `staff_read`
 
 ## 6. Detail Candidat
@@ -126,6 +127,10 @@ Pour chaque ecran:
 
 - `GET /api/candidats/{id}/`
 - `POST /api/candidats/{id}/creer-compte/`
+- `POST /api/candidats/{id}/validate-inscription/`
+- `POST /api/candidats/{id}/start-formation/`
+- `POST /api/candidats/{id}/complete-formation/`
+- `POST /api/candidats/{id}/abandon/`
 - `POST /api/candidats/{id}/valider-demande-compte/`
 - `POST /api/candidats/{id}/refuser-demande-compte/`
 
@@ -134,10 +139,15 @@ Pour chaque ecran:
 - detail charge
 - actions staff visibles
 - actions masquees pour lecture seule
+- coexistence `statut` / `parcours_phase`
 
 ### Cas a tester
 
 - creer compte reussi
+- validation inscription reussie
+- entree en formation enregistree
+- sortie de formation enregistree
+- abandon enregistre
 - validation demande reussie
 - refus demande reussi
 - erreur metier affichee sur action

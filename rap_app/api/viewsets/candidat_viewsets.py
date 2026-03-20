@@ -92,6 +92,7 @@ def _build_candidat_meta(user=None) -> dict:
 
     return {
         "statut_choices": [{"value": k, "label": v} for k, v in Candidat.StatutCandidat.choices],
+        "parcours_phase_choices": [{"value": k, "label": v} for k, v in Candidat.ParcoursPhase.choices],
         "cv_statut_choices": [{"value": k, "label": v} for k, v in Candidat.CVStatut.choices],
         "type_contrat_choices": [{"value": k, "label": v} for k, v in Candidat.TypeContrat.choices],
         "disponibilite_choices": [{"value": k, "label": v} for k, v in Candidat.Disponibilite.choices],

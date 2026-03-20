@@ -158,6 +158,10 @@ Usage:
 - `GET /api/candidats/{id}/`
 - `GET /api/candidats/meta/`
 - `POST /api/candidats/{id}/creer-compte/`
+- `POST /api/candidats/{id}/validate-inscription/`
+- `POST /api/candidats/{id}/start-formation/`
+- `POST /api/candidats/{id}/complete-formation/`
+- `POST /api/candidats/{id}/abandon/`
 - `POST /api/candidats/{id}/valider-demande-compte/`
 - `POST /api/candidats/{id}/refuser-demande-compte/`
 
@@ -165,6 +169,35 @@ Usage:
 - liste staff
 - detail candidat
 - actions metier staff
+
+### Migration Statut Vers Parcours Phase
+
+Le backend expose maintenant deux niveaux de lecture pour les candidats :
+
+- `statut`
+  - champ legacy encore supporté
+  - ne doit plus être considéré comme la future source de vérité métier
+- `parcours_phase`
+  - nouvelle phase persistée
+- `parcours_phase_calculee`
+  - lecture dérivée du backend
+
+Pour le front :
+
+1. ne pas supprimer immédiatement l'usage de `statut`
+2. commencer à lire `parcours_phase` si présent
+3. utiliser `parcours_phase_choices` depuis `GET /api/candidats/meta/`
+4. préférer les nouveaux endpoints de transition plutôt qu'une édition directe
+
+Champs utiles désormais disponibles sur le détail candidat :
+
+- `parcours_phase`
+- `parcours_phase_display`
+- `parcours_phase_calculee`
+- `is_inscrit_valide`
+- `is_en_formation_now`
+- `is_stagiaire_role_aligned`
+- `has_compte_utilisateur`
 
 ## 5. Prospections
 
