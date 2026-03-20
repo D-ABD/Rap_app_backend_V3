@@ -253,7 +253,7 @@ class Rapport(BaseModel):
             "derived_candidate_phase_field": "parcours_phase_calculee",
             "legacy_status_supported": True,
             "phase_compatible": self.type_rapport in self.PHASE_COMPATIBLE_REPORT_TYPES,
-            "candidate_phase_choices": [{"value": k, "label": v} for k, v in Candidat.ParcoursPhase.choices],
+            "candidate_phase_choices": [{"value": k, "label": str(v)} for k, v in Candidat.ParcoursPhase.choices],
         }
 
     def invalidate_caches(self):

@@ -11,6 +11,7 @@ from ...api.serializers.rapports_serializers import (
 from ...models.logs import LogUtilisateur
 from ...models.rapports import Rapport
 from ...models.candidat import Candidat
+from ...services.report_builders import RapportDataBuilderService
 from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 
 
@@ -95,6 +96,10 @@ class RapportViewSet(viewsets.ModelViewSet):
         courant et journalise l'action.
         """
         instance = serializer.save(created_by=self.request.user)
+        generated = RapportDataBuilderService.build_for_rapport(instance)
+        if generated:
+            instance.donnees = {**(instance.donnees or {}), **generated}
+            instance.save(update_fields=["donnees"])
         LogUtilisateur.log_action(
             instance=instance,
             action=LogUtilisateur.ACTION_CREATE,
@@ -108,6 +113,10 @@ class RapportViewSet(viewsets.ModelViewSet):
         l'utilisateur courant et journalise l'action.
         """
         instance = serializer.save(updated_by=self.request.user)
+        generated = RapportDataBuilderService.build_for_rapport(instance)
+        if generated:
+            instance.donnees = {**(instance.donnees or {}), **generated}
+            instance.save(update_fields=["donnees"])
         LogUtilisateur.log_action(
             instance=instance,
             action=LogUtilisateur.ACTION_UPDATE,

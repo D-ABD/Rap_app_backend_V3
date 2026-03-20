@@ -62,7 +62,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
     def test_create_rapport(self):
         data = {
             "nom": "Rapport Créé",
-            "type_rapport": Rapport.TYPE_UTILISATEUR,
+            "type_rapport": Rapport.TYPE_STATUT,
             "periode": Rapport.PERIODE_HEBDOMADAIRE,
             "date_debut": date.today() - timedelta(days=6),
             "date_fin": date.today(),
@@ -77,6 +77,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         response = self.client.post(self.list_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["success"])
+        self.assertIn("phase_summary", response.data["data"]["donnees"])
 
         rapport_id = response.data["data"]["id"]
         log = LogUtilisateur.objects.filter(
@@ -93,6 +94,7 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
         response = self.client.patch(url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["nom"], "Rapport Modifié")
+        self.assertIn("phase_summary", response.data["data"]["donnees"])
 
         log = LogUtilisateur.objects.filter(
             content_type=ContentType.objects.get_for_model(Rapport),
