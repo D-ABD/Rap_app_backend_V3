@@ -867,6 +867,11 @@ A faire :
 - ajouter de nouveaux agrégats basés sur `parcours_phase`
 - conserver temporairement les agrégats historiques
 - comparer les résultats avant bascule complète
+- traiter ensemble :
+  - stats candidats
+  - stats formations
+  - rapports candidats / sessions / abandons
+- éviter de mélanger ce lot avec le durcissement des écritures
 
 Impact attendu :
 
@@ -883,6 +888,12 @@ A faire :
 - rendre read-only les champs désormais calculés
 - empêcher l'écriture directe de `statut` si remplacé par la phase
 - retirer les actions admin dangereuses
+- traiter ensemble :
+  - serializers d'écriture
+  - viewsets candidats
+  - admin candidat
+  - garde-fous service
+- ne pas mélanger ce lot avec stats/reporting ni avec les bulk actions
 
 Impact attendu :
 
@@ -900,10 +911,173 @@ A faire :
 - marquer les anciens champs/valeurs comme dépréciés
 - supprimer les usages résiduels
 - nettoyer les serializers, filtres et stats
+- exécuter ce lot seul, seulement après migration complète du front et des usages d'exploitation
 
 Impact attendu :
 
 - à faire seulement quand le front et les outils d'exploitation sont déjà migrés
+
+### 19.4.1 Plan d'exécution regroupé recommandé
+
+Pour la suite, certaines modifications doivent être regroupées parce qu'elles partagent
+la même source de vérité métier. D'autres doivent rester séparées pour limiter
+le risque de casse.
+
+#### Lot R1. M4 stats et rapports
+
+Regrouper ensemble :
+
+- `candidats_stats_viewsets.py`
+- `formation_stats_viewsets.py`
+- builders ou viewsets de rapports candidats / sessions / abandons
+
+Pourquoi :
+
+- ces briques doivent lire la même vérité `parcours_phase`
+- les migrer séparément créerait des KPI contradictoires
+
+Ne pas fusionner avec :
+
+- le durcissement des écritures
+- les bulk actions
+
+#### Lot R2. M5 durcissement des écritures
+
+Regrouper ensemble :
+
+- serializers create/update candidat
+- endpoints d'écriture candidat
+- admin candidat
+- règles service de transition
+
+Pourquoi :
+
+- si un seul canal reste éditable, l'incohérence revient immédiatement
+
+Ne pas fusionner avec :
+
+- stats/reporting
+- bulk actions
+
+#### Lot R3. Bulk actions candidats
+
+Regrouper ensemble :
+
+- `assign-formation`
+- `assign-atelier-tre`
+- `create-prospections`
+- `validate-inscription`
+- `start-formation`
+- `abandon`
+
+Pourquoi :
+
+- elles doivent partager un service bulk commun
+- elles ont besoin du même format de retour par ligne et des mêmes garde-fous
+
+Pré-requis :
+
+- `R2` terminé
+
+#### Lot R4. Reporting enrichi
+
+Regrouper ensemble :
+
+- report builders
+- exports métier
+- impressions
+
+Pourquoi :
+
+- ce lot doit consommer la nouvelle logique déjà stabilisée dans `R1`
+
+Pré-requis :
+
+- `R1` terminé
+
+#### Lot R5. RGPD candidat
+
+Regrouper ensemble :
+
+- flux de création admin de fiches candidats
+- modèle de consentement candidat
+- audit trail / traçabilité
+- minimisation des données
+
+Pourquoi :
+
+- ce lot est cohérent fonctionnellement et juridiquement
+- il ne doit pas être dilué dans la migration statutaire
+
+#### Lot R6. Normalisation texte
+
+Regrouper ensemble :
+
+- service de normalisation
+- corrections suggérées
+- journalisation des corrections appliquées
+
+Pourquoi :
+
+- la normalisation sans traçabilité serait trop opaque
+
+Ne pas fusionner avec :
+
+- RGPD
+- transitions métier
+
+#### Lot R7. M6 dépréciation finale
+
+Ce lot doit rester isolé.
+
+Il comprend :
+
+- déprécation explicite des anciens usages
+- nettoyage des serializers
+- nettoyage des filtres
+- nettoyage des stats legacy
+
+Pré-requis :
+
+- front migré
+- outils d'exploitation migrés
+- validation métier complète
+
+### 19.4.2 Ordre recommandé
+
+Ordre d'exécution le plus sûr :
+
+1. `R1` stats et rapports
+2. `R2` durcissement des écritures
+3. `R3` bulk actions candidats
+4. `R4` reporting enrichi
+5. `R5` RGPD candidat
+6. `R6` normalisation texte
+7. `R7` dépréciation finale
+
+### 19.4.3 Regroupements à éviter
+
+Ne pas faire dans le même lot :
+
+- stats/reporting + durcissement des écritures
+- durcissement des écritures + bulk actions
+- normalisation texte + RGPD
+- dépréciation finale + n'importe quel autre lot
+
+### 19.4.4 Conclusion opérationnelle
+
+Le meilleur regroupement pour la suite n'est pas "tout ce qui reste".
+
+Le bon découpage est :
+
+- fusionner ce qui partage la même source de vérité
+- séparer ce qui combine plusieurs risques en même temps
+
+Concrètement :
+
+- `M4` doit être exécuté comme un lot cohérent stats + rapports
+- `M5` doit être exécuté comme un lot cohérent d'écritures
+- `M6` doit rester seul en fin de migration
 
 ### 19.5 Regles de sécurité de migration
 

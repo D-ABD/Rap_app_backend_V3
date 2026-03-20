@@ -61,6 +61,7 @@ GroupKey = Literal[
     "departement",
     "formation",
     "statut",
+    "parcours_phase",
     "type_contrat",
     "cv_statut",
     "resultat_placement",
@@ -81,6 +82,21 @@ def _poei_poec_values() -> list[str]:
         "poe_c",
         getattr(Candidat.TypeContrat, "POEI_POEC", "poei_poec"),
     ]
+
+
+def _candidate_phase_equals(value: str) -> Q:
+    return Q(parcours_phase=value)
+
+
+def _candidate_en_formation_q() -> Q:
+    return (
+        Q(parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
+        | Q(statut=Candidat.StatutCandidat.EN_FORMATION)
+    )
+
+
+def _candidate_inscrit_valide_q() -> Q:
+    return Q(parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE)
 
 
 # =============================================================================
@@ -409,9 +425,17 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
             gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
             admissibles=Count("id", filter=Q(admissible=True), distinct=True),
-            en_formation=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_FORMATION), distinct=True),
+            en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
             en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
             en_accompagnement=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_ACCOMPAGNEMENT), distinct=True),
+            inscrits_valides=Count("id", filter=_candidate_inscrit_valide_q(), distinct=True),
+            stagiaires_en_formation=Count(
+                "id",
+                filter=_candidate_phase_equals(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION),
+                distinct=True,
+            ),
+            sortis=Count("id", filter=_candidate_phase_equals(Candidat.ParcoursPhase.SORTI), distinct=True),
+            abandons_phase=Count("id", filter=_candidate_phase_equals(Candidat.ParcoursPhase.ABANDON), distinct=True),
             # ⭐️ nouveaux compteurs
             osia_count=Count("id", filter=Q(numero_osia__isnull=False) & ~Q(numero_osia=""), distinct=True),
             cv_renseigne=Count("id", filter=Q(cv_statut__isnull=False) & ~Q(cv_statut=""), distinct=True),
@@ -449,6 +473,10 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "en_formation",
             "en_appairage",
             "en_accompagnement",
+            "inscrits_valides",
+            "stagiaires_en_formation",
+            "sortis",
+            "abandons_phase",
             "osia_count",
             "cv_renseigne",
             "courrier_rentree_count",
@@ -465,6 +493,9 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         # Répartitions principales
         rep_statut = list(qs.values("statut").annotate(count=Count("id", distinct=True)).order_by("statut"))
+        rep_parcours_phase = list(
+            qs.values("parcours_phase").annotate(count=Count("id", distinct=True)).order_by("parcours_phase")
+        )
         rep_type_contrat = list(
             qs.values("type_contrat").annotate(count=Count("id", distinct=True)).order_by("type_contrat")
         )
@@ -478,6 +509,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "appairages": {k: int(v or 0) for k, v in app.items()},
             "repartition": {
                 "par_statut": rep_statut,
+                "par_parcours_phase": rep_parcours_phase,
                 "par_type_contrat": rep_type_contrat,
                 "par_cv": rep_cv,
                 "par_resultat": rep_resultat,
@@ -536,6 +568,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "departement",
             "formation",
             "statut",
+            "parcours_phase",
             "type_contrat",
             "cv_statut",
             "resultat_placement",
@@ -555,6 +588,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "departement": ["departement"],
             "formation": ["formation_id", "formation__nom", "formation__num_offre"],
             "statut": ["statut"],
+            "parcours_phase": ["parcours_phase"],
             "type_contrat": ["type_contrat"],
             "cv_statut": ["cv_statut"],
             "resultat_placement": ["resultat_placement"],
@@ -573,8 +607,20 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
                 gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
                 admissibles=Count("id", filter=Q(admissible=True), distinct=True),
-                en_formation=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_FORMATION), distinct=True),
+                en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
                 en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
+                inscrits_valides=Count("id", filter=_candidate_inscrit_valide_q(), distinct=True),
+                stagiaires_en_formation=Count(
+                    "id",
+                    filter=_candidate_phase_equals(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION),
+                    distinct=True,
+                ),
+                sortis=Count("id", filter=_candidate_phase_equals(Candidat.ParcoursPhase.SORTI), distinct=True),
+                abandons_phase=Count(
+                    "id",
+                    filter=_candidate_phase_equals(Candidat.ParcoursPhase.ABANDON),
+                    distinct=True,
+                ),
                 # ⭐️ nouveaux compteurs (groupés)
                 rqth_count=Count("id", filter=Q(rqth=True), distinct=True),
                 osia_count=Count("id", filter=Q(numero_osia__isnull=False) & ~Q(numero_osia=""), distinct=True),
@@ -635,7 +681,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                         f"Formation #{r.get('formation_id')}" if r.get("formation_id") is not None else "—"
                     )
 
-        elif by in {"statut", "type_contrat", "cv_statut", "resultat_placement", "contrat_signe"}:
+        elif by in {"statut", "parcours_phase", "type_contrat", "cv_statut", "resultat_placement", "contrat_signe"}:
             key = fields[0]
             for r in rows:
                 gid = r.get(key)

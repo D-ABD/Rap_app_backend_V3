@@ -44,6 +44,18 @@ from ....models.formations import Formation
 GroupKey = Literal["formation", "centre", "departement", "type_offre", "statut"]
 
 
+def _candidate_en_formation_q(prefix: str = "") -> Q:
+    field = lambda name: f"{prefix}{name}"
+    return (
+        Q(**{field("parcours_phase"): Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION})
+        | Q(**{field("statut"): Candidat.StatutCandidat.EN_FORMATION})
+    )
+
+
+def _candidate_phase_q(phase: str, prefix: str = "") -> Q:
+    return Q(**{f"{prefix}parcours_phase": phase})
+
+
 class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
     Reporting agrégé sur les formations visibles par l'utilisateur courant.
@@ -342,9 +354,21 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             nb_inscrits_gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
             nb_entrees_formation=Count(
                 "id",
-                filter=Q(statut=Candidat.StatutCandidat.EN_FORMATION) | Q(date_rentree__isnull=False),
+                filter=_candidate_en_formation_q() | Q(date_rentree__isnull=False),
                 distinct=True,
             ),
+            nb_inscrits_valides=Count(
+                "id",
+                filter=_candidate_phase_q(Candidat.ParcoursPhase.INSCRIT_VALIDE),
+                distinct=True,
+            ),
+            nb_stagiaires_en_formation=Count(
+                "id",
+                filter=_candidate_phase_q(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION),
+                distinct=True,
+            ),
+            nb_sortis=Count("id", filter=_candidate_phase_q(Candidat.ParcoursPhase.SORTI), distinct=True),
+            nb_abandons_phase=Count("id", filter=_candidate_phase_q(Candidat.ParcoursPhase.ABANDON), distinct=True),
             # ── Contrats par type
             nb_contrats_apprentissage=Count(
                 "id",
@@ -491,8 +515,27 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 nb_inscrits_gespers=Count("candidats", filter=Q(candidats__inscrit_gespers=True), distinct=True),
                 nb_entrees_formation=Count(
                     "candidats",
-                    filter=Q(candidats__statut=Candidat.StatutCandidat.EN_FORMATION)
-                    | Q(candidats__date_rentree__isnull=False),
+                    filter=_candidate_en_formation_q("candidats__") | Q(candidats__date_rentree__isnull=False),
+                    distinct=True,
+                ),
+                nb_inscrits_valides=Count(
+                    "candidats",
+                    filter=_candidate_phase_q(Candidat.ParcoursPhase.INSCRIT_VALIDE, "candidats__"),
+                    distinct=True,
+                ),
+                nb_stagiaires_en_formation=Count(
+                    "candidats",
+                    filter=_candidate_phase_q(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION, "candidats__"),
+                    distinct=True,
+                ),
+                nb_sortis=Count(
+                    "candidats",
+                    filter=_candidate_phase_q(Candidat.ParcoursPhase.SORTI, "candidats__"),
+                    distinct=True,
+                ),
+                nb_abandons_phase=Count(
+                    "candidats",
+                    filter=_candidate_phase_q(Candidat.ParcoursPhase.ABANDON, "candidats__"),
                     distinct=True,
                 ),
                 # ── Contrats par type (groupés)
