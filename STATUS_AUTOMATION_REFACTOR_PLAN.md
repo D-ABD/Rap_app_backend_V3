@@ -1009,6 +1009,13 @@ Pourquoi :
 - ce lot est cohérent fonctionnellement et juridiquement
 - il ne doit pas être dilué dans la migration statutaire
 
+Etat d'avancement recommandé :
+
+- ajouter base légale, notification et revue de minimisation sur `Candidat`
+- ajouter un consentement explicite tracé quand la base légale retenue est `consentement`
+- exposer les métadonnées RGPD utiles dans `GET /api/candidats/meta/`
+- appliquer les garde-fous à la fois sur l'API et sur l'admin
+
 #### Lot R6. Normalisation texte
 
 Regrouper ensemble :
@@ -1020,6 +1027,19 @@ Regrouper ensemble :
 Pourquoi :
 
 - la normalisation sans traçabilité serait trop opaque
+
+Périmètre prudent recommandé :
+
+- normaliser seulement les champs peu ambigus :
+  - nom
+  - prénom
+  - email
+  - téléphone
+  - ville
+  - code postal
+  - quelques champs représentant légal
+- éviter les champs libres longs (`notes`, commentaires, contenus riches) dans ce lot
+- journaliser les corrections appliquées côté backend pour audit
 
 Ne pas fusionner avec :
 

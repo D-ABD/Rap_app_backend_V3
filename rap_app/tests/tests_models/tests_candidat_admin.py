@@ -124,3 +124,22 @@ class CandidatAdminLifecycleActionsTests(TestCase):
         self.assertEqual(candidat.rgpd_notice_status, Candidat.RgpdNoticeStatus.A_NOTIFIER)
         self.assertEqual(candidat.rgpd_data_reviewed_by, self.actor)
         self.assertIsNotNone(candidat.rgpd_data_reviewed_at)
+
+    def test_admin_save_model_tracks_rgpd_consent(self):
+        candidat = Candidat(
+            nom="Admin",
+            prenom="Consent",
+            email="admin.consent@example.com",
+            formation=self.formation,
+            rgpd_legal_basis=Candidat.RgpdLegalBasis.CONSENTEMENT,
+            rgpd_consent_obtained=True,
+        )
+
+        form = Mock()
+        form.changed_data = ["rgpd_consent_obtained"]
+        self.admin.save_model(self._request(), candidat, form, change=False)
+
+        candidat.refresh_from_db()
+        self.assertTrue(candidat.rgpd_consent_obtained)
+        self.assertIsNotNone(candidat.rgpd_consent_obtained_at)
+        self.assertEqual(candidat.rgpd_consent_recorded_by, self.actor)

@@ -157,3 +157,48 @@ class CandidatSerializerTest(TestCase):
         self.assertEqual(candidat.rgpd_notice_status, Candidat.RgpdNoticeStatus.A_NOTIFIER)
         self.assertIsNotNone(candidat.rgpd_data_reviewed_at)
         self.assertEqual(candidat.rgpd_data_reviewed_by, self.user)
+
+    def test_create_update_serializer_tracks_rgpd_consent_when_required(self):
+        serializer = CandidatCreateUpdateSerializer(
+            data={
+                "nom": "Consent",
+                "prenom": "Tracked",
+                "email": "consent.tracked@example.com",
+                "formation": self.formation.id,
+                "rgpd_legal_basis": Candidat.RgpdLegalBasis.CONSENTEMENT,
+                "rgpd_consent_obtained": True,
+            },
+            context={"request": self._request()},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        candidat = serializer.save(created_by=self.user, updated_by=self.user)
+
+        self.assertTrue(candidat.rgpd_consent_obtained)
+        self.assertIsNotNone(candidat.rgpd_consent_obtained_at)
+        self.assertEqual(candidat.rgpd_consent_recorded_by, self.user)
+
+    def test_create_update_serializer_normalizes_safe_text_fields(self):
+        serializer = CandidatCreateUpdateSerializer(
+            data={
+                "nom": "  dUPONT  ",
+                "prenom": "  jEAN-pAUL ",
+                "email": "  Jp.Dupont@Example.COM ",
+                "telephone": "06 12-34.56 78",
+                "ville": "  sAINT-denis ",
+                "code_postal": " 75 008 ",
+                "formation": self.formation.id,
+                "rgpd_legal_basis": Candidat.RgpdLegalBasis.INTERET_LEGITIME,
+            },
+            context={"request": self._request()},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        candidat = serializer.save(created_by=self.user, updated_by=self.user)
+
+        self.assertEqual(candidat.nom, "Dupont")
+        self.assertEqual(candidat.prenom, "Jean-Paul")
+        self.assertEqual(candidat.email, "jp.dupont@example.com")
+        self.assertEqual(candidat.telephone, "0612345678")
+        self.assertEqual(candidat.ville, "Saint-Denis")
+        self.assertEqual(candidat.code_postal, "75008")

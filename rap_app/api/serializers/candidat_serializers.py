@@ -19,6 +19,7 @@ from ...models.candidat import (
 )
 from ...models.centres import Centre
 from ...models.formations import Formation
+from ...services.french_text_normalizer import normalize_candidate_payload
 from ..mixins import FieldMaskingMixin
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
@@ -738,6 +739,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
     def run_validation(self, data=...):
         allowed = set(self.fields.keys())
         cleaned = {k: v for k, v in data.items() if k in allowed}
+        cleaned = normalize_candidate_payload(cleaned)
         return super().run_validation(cleaned)
 
     class Meta:
@@ -759,6 +761,8 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "date_entree_formation_effective",
             "date_sortie_formation",
             "rgpd_creation_source",
+            "rgpd_consent_obtained_at",
+            "rgpd_consent_recorded_by",
             "rgpd_notice_sent_at",
             "rgpd_notice_sent_by",
             "rgpd_data_reviewed_at",
@@ -823,6 +827,13 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"rgpd_legal_basis": "Ce champ est requis pour une création manuelle de fiche candidat."}
                 )
+            if (
+                data.get("rgpd_legal_basis") == Candidat.RgpdLegalBasis.CONSENTEMENT
+                and not data.get("rgpd_consent_obtained")
+            ):
+                raise serializers.ValidationError(
+                    {"rgpd_consent_obtained": "Le consentement explicite est requis avec cette base légale."}
+                )
 
         return data
 
@@ -850,6 +861,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         if actor:
             validated_data.setdefault("rgpd_data_reviewed_by", actor)
 
+        self._apply_rgpd_consent_tracking(validated_data, actor=actor)
         self._apply_rgpd_notice_tracking(validated_data, actor=actor)
 
     def _apply_rgpd_notice_tracking(self, validated_data, actor=None):
@@ -862,6 +874,16 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             validated_data.setdefault("rgpd_notice_sent_at", timezone.now())
             if actor:
                 validated_data.setdefault("rgpd_notice_sent_by", actor)
+
+    def _apply_rgpd_consent_tracking(self, validated_data, actor=None):
+        request = self.context.get("request")
+        if actor is None and request and request.user.is_authenticated:
+            actor = request.user
+
+        if validated_data.get("rgpd_consent_obtained"):
+            validated_data.setdefault("rgpd_consent_obtained_at", timezone.now())
+            if actor:
+                validated_data.setdefault("rgpd_consent_recorded_by", actor)
 
 
 class LabelOrValueChoiceField(serializers.ChoiceField):

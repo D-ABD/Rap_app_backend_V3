@@ -481,6 +481,24 @@ class Candidat(BaseModel):
         verbose_name=_("Base légale RGPD"),
         help_text=_("Base légale principale justifiant le traitement des données personnelles."),
     )
+    rgpd_consent_obtained = models.BooleanField(
+        default=False,
+        verbose_name=_("Consentement RGPD obtenu"),
+        help_text=_("À utiliser quand la base légale principale retenue est le consentement."),
+    )
+    rgpd_consent_obtained_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Consentement RGPD obtenu le"),
+    )
+    rgpd_consent_recorded_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="consentements_rgpd_candidat_enregistres",
+        verbose_name=_("Consentement RGPD enregistré par"),
+    )
     rgpd_notice_status = models.CharField(
         max_length=20,
         choices=RgpdNoticeStatus.choices,
@@ -783,14 +801,11 @@ class Candidat(BaseModel):
         """
         Valide l'intégrité métier du candidat et normalise les champs sensibles.
         """
+        from ..services.french_text_normalizer import normalize_candidate_text_fields
+
         super().clean()
         errors = {}
-
-        self.nom = (self.nom or "").strip()
-        self.prenom = (self.prenom or "").strip()
-
-        if self.email:
-            self.email = self.email.strip().lower()
+        changes = normalize_candidate_text_fields(self)
 
         if self.nir:
             normalized_nir = re.sub(r"\s+", "", str(self.nir))
@@ -803,12 +818,26 @@ class Candidat(BaseModel):
             logger.warning(f"Candidat incomplet : nom ou prénom manquant (id={self.pk})")
         if self.statut == self.StatutCandidat.AUTRE:
             logger.info(f"Candidat #{self.pk} a un statut 'autre'")
+        if self.rgpd_legal_basis == self.RgpdLegalBasis.CONSENTEMENT and not self.rgpd_consent_obtained:
+            errors["rgpd_consent_obtained"] = _(
+                "Le consentement explicite est requis lorsque la base légale retenue est le consentement."
+            )
+        if self.rgpd_consent_obtained and not self.rgpd_consent_obtained_at:
+            errors["rgpd_consent_obtained_at"] = _(
+                "La date d'obtention du consentement est requise quand le consentement est indiqué comme obtenu."
+            )
+        if self.rgpd_consent_obtained_at and not self.rgpd_consent_obtained:
+            errors["rgpd_consent_obtained"] = _(
+                "Le consentement RGPD doit être marqué comme obtenu lorsque sa date est renseignée."
+            )
         if self.rgpd_notice_status == self.RgpdNoticeStatus.NOTIFIEE and not self.rgpd_notice_sent_at:
             errors["rgpd_notice_sent_at"] = _("La date d'envoi est requise quand la notification RGPD est marquée comme envoyée.")
         if self.rgpd_notice_sent_at and self.rgpd_notice_status != self.RgpdNoticeStatus.NOTIFIEE:
             errors["rgpd_notice_status"] = _(
                 "Le statut de notification RGPD doit être 'notifiée' lorsque la date d'envoi est renseignée."
             )
+        if changes:
+            logger.info("Normalisation texte candidat #%s : %s", self.pk or "new", ", ".join(changes))
         if errors:
             raise ValidationError(errors)
 
@@ -859,6 +888,16 @@ class Candidat(BaseModel):
             self.rgpd_data_reviewed_at = now
         if actor and not self.rgpd_data_reviewed_by_id:
             self.rgpd_data_reviewed_by = actor
+
+    def apply_rgpd_consent_tracking(self, actor=None):
+        """
+        Aligne les métadonnées d'horodatage/auteur quand un consentement
+        explicite est saisi sur la fiche candidat.
+        """
+        if self.rgpd_consent_obtained and not self.rgpd_consent_obtained_at:
+            self.rgpd_consent_obtained_at = timezone.now()
+        if actor and self.rgpd_consent_obtained and not self.rgpd_consent_recorded_by_id:
+            self.rgpd_consent_recorded_by = actor
 
     def _log_changes(self):
         """

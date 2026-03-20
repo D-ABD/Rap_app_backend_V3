@@ -192,6 +192,7 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("rgpd_legal_basis_choices", response.data["data"])
         self.assertIn("rgpd_notice_status_choices", response.data["data"])
         self.assertIn("rgpd_creation_source_choices", response.data["data"])
+        self.assertIn("rgpd_consent_fields", response.data["data"])
         self.assertEqual(response.data["data"]["phase_contract"]["legacy_status_field"], "statut")
         self.assertEqual(response.data["data"]["phase_contract"]["recommended_phase_field"], "parcours_phase")
         self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_supported"])

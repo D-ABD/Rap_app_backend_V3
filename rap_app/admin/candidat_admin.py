@@ -131,6 +131,8 @@ class CandidatAdmin(admin.ModelAdmin):
         "updated_at",
         "nb_appairages",
         "rgpd_creation_source",
+        "rgpd_consent_obtained_at",
+        "rgpd_consent_recorded_by",
         "rgpd_notice_sent_at",
         "rgpd_notice_sent_by",
         "rgpd_data_reviewed_at",
@@ -214,6 +216,9 @@ class CandidatAdmin(admin.ModelAdmin):
                 "fields": (
                     "rgpd_creation_source",
                     "rgpd_legal_basis",
+                    "rgpd_consent_obtained",
+                    "rgpd_consent_obtained_at",
+                    "rgpd_consent_recorded_by",
                     "rgpd_notice_status",
                     "rgpd_notice_sent_at",
                     "rgpd_notice_sent_by",
@@ -255,6 +260,10 @@ class CandidatAdmin(admin.ModelAdmin):
         ):
             obj.rgpd_notice_sent_at = timezone.now()
             obj.rgpd_notice_sent_by = request.user
+        if "rgpd_consent_obtained" in getattr(form, "changed_data", []) and obj.rgpd_consent_obtained:
+            obj.apply_rgpd_consent_tracking(actor=request.user)
+        elif not change and obj.rgpd_consent_obtained:
+            obj.apply_rgpd_consent_tracking(actor=request.user)
         obj.save(user=request.user)
         logger.info("💾 Candidat #%s sauvegardé par %s", obj.pk, request.user)
 

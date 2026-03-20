@@ -262,6 +262,84 @@ def test_staff_create_candidate_sets_rgpd_manual_defaults():
 
 
 @pytest.mark.django_db
+def test_staff_create_candidate_with_consent_basis_requires_consent_flag():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre RGPD 3", code_postal="75152")
+    formation = Formation.objects.create(
+        nom="Formation RGPD 3",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_rgpd3@example.com",
+        username="staff_rgpd3",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    resp = client.post(
+        reverse("candidat-list"),
+        {
+            "nom": "Consent",
+            "prenom": "Required",
+            "email": "consent.required@example.com",
+            "formation": formation.id,
+            "rgpd_legal_basis": Candidat.RgpdLegalBasis.CONSENTEMENT,
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "rgpd_consent_obtained" in resp.json()["errors"]
+
+
+@pytest.mark.django_db
+def test_staff_create_candidate_normalizes_safe_text_fields():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre RGPD 4", code_postal="75153")
+    formation = Formation.objects.create(
+        nom="Formation RGPD 4",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_rgpd4@example.com",
+        username="staff_rgpd4",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    resp = client.post(
+        reverse("candidat-list"),
+        {
+            "nom": "  dUPONT ",
+            "prenom": "  jEAN-pAUL ",
+            "email": "  RGPD.Normalize@Example.COM ",
+            "telephone": "06 12-34.56 78",
+            "ville": "  sAINT-denis ",
+            "code_postal": " 75 008 ",
+            "formation": formation.id,
+            "rgpd_legal_basis": Candidat.RgpdLegalBasis.INTERET_LEGITIME,
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    created = Candidat.objects.get(email="rgpd.normalize@example.com")
+    assert created.nom == "Dupont"
+    assert created.prenom == "Jean-Paul"
+    assert created.telephone == "0612345678"
+    assert created.ville == "Saint-Denis"
+    assert created.code_postal == "75008"
+
+
+@pytest.mark.django_db
 def test_staff_can_validate_inscription_without_changing_legacy_status():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2A", code_postal="75128")

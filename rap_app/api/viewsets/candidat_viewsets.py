@@ -128,6 +128,11 @@ def _build_candidat_meta(user=None) -> dict:
         "rgpd_legal_basis_choices": [{"value": k, "label": v} for k, v in Candidat.RgpdLegalBasis.choices],
         "rgpd_notice_status_choices": [{"value": k, "label": v} for k, v in Candidat.RgpdNoticeStatus.choices],
         "rgpd_creation_source_choices": [{"value": k, "label": v} for k, v in Candidat.RgpdCreationSource.choices],
+        "rgpd_consent_fields": [
+            "rgpd_consent_obtained",
+            "rgpd_consent_obtained_at",
+            "rgpd_consent_recorded_by",
+        ],
         "cv_statut_choices": [{"value": k, "label": v} for k, v in Candidat.CVStatut.choices],
         "type_contrat_choices": [{"value": k, "label": v} for k, v in Candidat.TypeContrat.choices],
         "disponibilite_choices": [{"value": k, "label": v} for k, v in Candidat.Disponibilite.choices],
