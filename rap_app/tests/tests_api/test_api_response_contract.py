@@ -186,10 +186,17 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("formation_choices", response.data["data"])
         self.assertIn("parcours_phase_choices", response.data["data"])
         self.assertIn("phase_contract", response.data["data"])
+        self.assertIn("phase_filter_aliases", response.data["data"])
+        self.assertIn("phase_ordering_fields", response.data["data"])
         self.assertIn("phase_transition_actions", response.data["data"])
         self.assertEqual(response.data["data"]["phase_contract"]["legacy_status_field"], "statut")
         self.assertEqual(response.data["data"]["phase_contract"]["recommended_phase_field"], "parcours_phase")
         self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_supported"])
+        self.assertEqual(
+            response.data["data"]["phase_filter_aliases"]["parcours_phase"],
+            ["parcours_phase", "parcoursPhase"],
+        )
+        self.assertIn("parcours_phase", response.data["data"]["phase_ordering_fields"])
 
     def test_candidat_detail_exposes_phase_fields_without_breaking_envelope(self):
         response = self.client.get(reverse("candidat-detail", args=[self.candidat.id]))

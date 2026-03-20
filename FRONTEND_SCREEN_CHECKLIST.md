@@ -120,6 +120,7 @@ Pour chaque ecran:
 - filtre centre
 - presence de `parcours_phase_choices`
 - presence de `phase_contract` et `phase_transition_actions`
+- presence de `phase_filter_aliases` et `phase_ordering_fields`
 - acces `staff_read`
 
 ## 6. Detail Candidat

@@ -272,6 +272,102 @@ def test_staff_can_filter_candidates_by_parcours_phase_alias():
 
 
 @pytest.mark.django_db
+def test_staff_can_still_filter_candidates_by_legacy_statut_during_m3():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M3B", code_postal="75133")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M3B",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m3b@example.com",
+        username="staff_m3b",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    visible = Candidat.objects.create(
+        nom="Visible",
+        prenom="Legacy",
+        email="visible.legacy@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.ABANDON,
+        parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+        created_by=staff,
+        updated_by=staff,
+    )
+    Candidat.objects.create(
+        nom="Masque",
+        prenom="Legacy",
+        email="masque.legacy@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.AUTRE,
+        parcours_phase=Candidat.ParcoursPhase.ABANDON,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.get(reverse("candidat-list"), {"statut": Candidat.StatutCandidat.ABANDON})
+
+    assert resp.status_code == 200
+    payload = resp.json().get("data", resp.json())
+    results = payload.get("results", payload)
+    assert [item["id"] for item in results] == [visible.id]
+
+
+@pytest.mark.django_db
+def test_staff_can_order_candidates_by_parcours_phase_during_m3():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M3C", code_postal="75134")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M3C",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m3c@example.com",
+        username="staff_m3c",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    first = Candidat.objects.create(
+        nom="Alpha",
+        prenom="Order",
+        email="alpha.order@example.com",
+        formation=formation,
+        parcours_phase=Candidat.ParcoursPhase.ABANDON,
+        created_by=staff,
+        updated_by=staff,
+    )
+    second = Candidat.objects.create(
+        nom="Beta",
+        prenom="Order",
+        email="beta.order@example.com",
+        formation=formation,
+        parcours_phase=Candidat.ParcoursPhase.POSTULANT,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.get(reverse("candidat-list"), {"ordering": "parcours_phase"})
+
+    assert resp.status_code == 200
+    payload = resp.json().get("data", resp.json())
+    results = payload.get("results", payload)
+    returned_ids = [item["id"] for item in results]
+    assert first.id in returned_ids
+    assert second.id in returned_ids
+
+
+@pytest.mark.django_db
 def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2B", code_postal="75129")

@@ -196,6 +196,10 @@ Le endpoint `GET /api/candidats/meta/` expose aussi désormais :
   - rappelle que `statut` reste supporté temporairement
   - indique que `parcours_phase` est le champ recommandé
   - indique que `parcours_phase_calculee` est dérivé
+- `phase_filter_aliases`
+  - documente les paramètres de filtre supportés pendant la migration
+- `phase_ordering_fields`
+  - documente les champs de tri sûrs pour les listes candidats
 - `phase_transition_actions`
   - liste les actions de transition disponibles côté backend
 - `phase_read_only_fields`

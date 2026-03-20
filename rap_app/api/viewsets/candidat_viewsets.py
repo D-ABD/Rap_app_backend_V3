@@ -99,6 +99,11 @@ def _build_candidat_meta(user=None) -> dict:
             "derived_phase_field": "parcours_phase_calculee",
             "legacy_status_supported": True,
         },
+        "phase_filter_aliases": {
+            "parcours_phase": ["parcours_phase", "parcoursPhase"],
+            "legacy_status": ["statut"],
+        },
+        "phase_ordering_fields": ["parcours_phase", "statut", "date_inscription", "nom", "prenom"],
         "phase_read_only_fields": [
             "parcours_phase_calculee",
             "is_inscrit_valide",
@@ -183,6 +188,7 @@ class CandidatViewSet(ScopedModelViewSet):
         "nom",
         "prenom",
         "statut",
+        "parcours_phase",
         "cv_statut",
         "formation",
         "formation__nom",
