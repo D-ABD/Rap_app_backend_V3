@@ -453,6 +453,49 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @action(detail=True, methods=["post"], url_path="complete-formation")
+    def complete_formation(self, request, pk=None):
+        """POST : positionne la phase métier sur `sorti` sans casser le contrat legacy."""
+        candidat = self.get_object()
+        try:
+            candidat = CandidateLifecycleService.complete_formation(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+
+        return Response(
+            {
+                "success": True,
+                "message": "Sortie de formation enregistrée.",
+                "data": {
+                    "candidat_id": candidat.id,
+                    "parcours_phase": candidat.parcours_phase,
+                    "date_sortie_formation": candidat.date_sortie_formation,
+                },
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="abandon")
+    def abandon(self, request, pk=None):
+        """POST : enregistre un abandon sur la nouvelle phase et le statut legacy."""
+        candidat = self.get_object()
+        try:
+            candidat = CandidateLifecycleService.abandon(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+
+        return Response(
+            {
+                "success": True,
+                "message": "Abandon enregistré.",
+                "data": {
+                    "candidat_id": candidat.id,
+                    "parcours_phase": candidat.parcours_phase,
+                    "statut": candidat.statut,
+                    "date_sortie_formation": candidat.date_sortie_formation,
+                },
+            }
+        )
+
     @action(detail=True, methods=["post"], url_path="valider-demande-compte")
     def valider_demande_compte(self, request, pk=None):
         """POST : demande_compte en_attente et pas de compte lié ; creer_ou_lier_compte_utilisateur puis statut acceptee."""

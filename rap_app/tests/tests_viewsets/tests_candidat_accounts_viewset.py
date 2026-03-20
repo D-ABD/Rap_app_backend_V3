@@ -273,6 +273,83 @@ def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
 
 
 @pytest.mark.django_db
+def test_staff_can_complete_formation_without_touching_legacy_status():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M2C", code_postal="75130")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M2C",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m2c@example.com",
+        username="staff_m2c",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Sortie",
+        prenom="Session",
+        email="sortie.session@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.EN_FORMATION,
+        parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-complete-formation", args=[cand.id]))
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.SORTI
+    assert cand.date_sortie_formation is not None
+    assert cand.statut == Candidat.StatutCandidat.EN_FORMATION
+
+
+@pytest.mark.django_db
+def test_staff_can_abandon_candidate_and_keep_legacy_status_compatible():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M2D", code_postal="75131")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M2D",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m2d@example.com",
+        username="staff_m2d",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Abandon",
+        prenom="Session",
+        email="abandon.session@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.EN_FORMATION,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-abandon", args=[cand.id]))
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.ABANDON
+    assert cand.statut == Candidat.StatutCandidat.ABANDON
+    assert cand.date_sortie_formation is not None
+
+
+@pytest.mark.django_db
 def test_valider_demande_compte_refuse_collision_email_avec_autre_candidat_reel():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet 6B", code_postal="75118")

@@ -69,3 +69,58 @@ class CandidateLifecycleService:
             CandidateAccountService.promote_to_stagiaire(candidate, actor=actor)
 
         return candidate
+
+    @classmethod
+    @transaction.atomic
+    def complete_formation(cls, candidate: Candidat, actor=None) -> Candidat:
+        if not candidate.formation_id:
+            raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
+
+        now = timezone.now()
+        updates = []
+
+        if candidate.parcours_phase != Candidat.ParcoursPhase.SORTI:
+            candidate.parcours_phase = Candidat.ParcoursPhase.SORTI
+            updates.append("parcours_phase")
+
+        if candidate.date_validation_inscription is None:
+            candidate.date_validation_inscription = now
+            updates.append("date_validation_inscription")
+
+        if candidate.date_entree_formation_effective is None:
+            candidate.date_entree_formation_effective = now
+            updates.append("date_entree_formation_effective")
+
+        if candidate.date_sortie_formation is None:
+            candidate.date_sortie_formation = now
+            updates.append("date_sortie_formation")
+
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def abandon(cls, candidate: Candidat, actor=None) -> Candidat:
+        now = timezone.now()
+        updates = []
+
+        if candidate.parcours_phase != Candidat.ParcoursPhase.ABANDON:
+            candidate.parcours_phase = Candidat.ParcoursPhase.ABANDON
+            updates.append("parcours_phase")
+
+        # Compatibilité descendante : le statut legacy doit rester cohérent
+        # pour les écrans/outils qui ne lisent pas encore `parcours_phase`.
+        if candidate.statut != Candidat.StatutCandidat.ABANDON:
+            candidate.statut = Candidat.StatutCandidat.ABANDON
+            updates.append("statut")
+
+        if candidate.date_sortie_formation is None:
+            candidate.date_sortie_formation = now
+            updates.append("date_sortie_formation")
+
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+
+        return candidate

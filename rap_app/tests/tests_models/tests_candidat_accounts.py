@@ -1,11 +1,13 @@
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.utils import timezone
 
 from ...models.candidat import Candidat
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
+from ...services.candidate_lifecycle_service import CandidateLifecycleService
 
 
 @pytest.mark.django_db
@@ -300,3 +302,72 @@ def test_lier_utilisateur_reutilise_la_source_de_verite_service():
     assert user.email.lower() == "legacy8@example.com"
     assert not user.has_usable_password()
     assert cand.updated_by_id == staff.id
+
+
+@pytest.mark.django_db
+def test_candidate_lifecycle_complete_formation_sets_sortie_phase():
+    centre = Centre.objects.create(nom="Centre Test 9", code_postal="75009")
+    formation = Formation.objects.create(
+        nom="Formation Test 9",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff9@example.com",
+        username="staff9",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+
+    cand = Candidat.objects.create(
+        nom="Sortie",
+        prenom="Formation",
+        email="sortie9@example.com",
+        formation=formation,
+        parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    CandidateLifecycleService.complete_formation(cand, actor=staff)
+
+    cand.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.SORTI
+    assert cand.date_sortie_formation is not None
+
+
+@pytest.mark.django_db
+def test_candidate_lifecycle_abandon_keeps_legacy_status_compatible():
+    centre = Centre.objects.create(nom="Centre Test 10", code_postal="75010")
+    formation = Formation.objects.create(
+        nom="Formation Test 10",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff10@example.com",
+        username="staff10",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+
+    cand = Candidat.objects.create(
+        nom="Abandon",
+        prenom="Compat",
+        email="abandon10@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.EN_FORMATION,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    before = timezone.now()
+    CandidateLifecycleService.abandon(cand, actor=staff)
+
+    cand.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.ABANDON
+    assert cand.statut == Candidat.StatutCandidat.ABANDON
+    assert cand.date_sortie_formation is not None
+    assert cand.date_sortie_formation >= before

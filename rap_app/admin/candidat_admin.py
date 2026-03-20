@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from ..models.candidat import Candidat as CandidatModel
 from ..models.candidat import HistoriquePlacement
+from ..services.candidate_lifecycle_service import CandidateLifecycleService
 
 logger = logging.getLogger("application.candidats")
 
@@ -250,11 +251,35 @@ class CandidatAdmin(admin.ModelAdmin):
 
     @admin.action(description="Statut → En formation")
     def act_statut_formation(self, request, queryset):
-        self._bulk_set(request, queryset, "statut", CandidatModel.StatutCandidat.EN_FORMATION)
+        ok = ko = 0
+        for c in queryset:
+            try:
+                CandidateLifecycleService.start_formation(c, actor=request.user)
+                ok += 1
+            except Exception as e:
+                ko += 1
+                self.message_user(request, f"#{c.id} {c.nom_complet} : {e}", level=messages.ERROR)
+        self.message_user(
+            request,
+            f"Transitions 'entrée en formation' : {ok} OK, {ko} erreur(s).",
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description="Statut → Abandon")
     def act_statut_abandon(self, request, queryset):
-        self._bulk_set(request, queryset, "statut", CandidatModel.StatutCandidat.ABANDON)
+        ok = ko = 0
+        for c in queryset:
+            try:
+                CandidateLifecycleService.abandon(c, actor=request.user)
+                ok += 1
+            except Exception as e:
+                ko += 1
+                self.message_user(request, f"#{c.id} {c.nom_complet} : {e}", level=messages.ERROR)
+        self.message_user(
+            request,
+            f"Transitions 'abandon' : {ok} OK, {ko} erreur(s).",
+            level=messages.SUCCESS,
+        )
 
     # ---- CV ----
     @admin.action(description="CV → Oui")
