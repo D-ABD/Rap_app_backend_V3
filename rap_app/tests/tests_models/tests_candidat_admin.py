@@ -101,3 +101,26 @@ class CandidatAdminLifecycleActionsTests(TestCase):
 
     def test_admin_no_longer_exposes_direct_legacy_status_bulk_action(self):
         self.assertNotIn("act_statut_appairage", self.admin.actions)
+
+    def test_admin_requires_rgpd_legal_basis_on_create_form(self):
+        form = self.admin.get_form(self._request(), obj=None)
+        self.assertTrue(form.base_fields["rgpd_legal_basis"].required)
+
+    def test_admin_save_model_applies_rgpd_defaults_for_manual_creation(self):
+        candidat = Candidat(
+            nom="Admin",
+            prenom="Rgpd",
+            email="admin.rgpd@example.com",
+            formation=self.formation,
+            rgpd_legal_basis=Candidat.RgpdLegalBasis.INTERET_LEGITIME,
+        )
+
+        form = Mock()
+        form.changed_data = []
+        self.admin.save_model(self._request(), candidat, form, change=False)
+
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.rgpd_creation_source, Candidat.RgpdCreationSource.MANUAL_ADMIN)
+        self.assertEqual(candidat.rgpd_notice_status, Candidat.RgpdNoticeStatus.A_NOTIFIER)
+        self.assertEqual(candidat.rgpd_data_reviewed_by, self.actor)
+        self.assertIsNotNone(candidat.rgpd_data_reviewed_at)

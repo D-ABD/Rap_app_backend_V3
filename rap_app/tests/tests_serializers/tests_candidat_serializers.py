@@ -123,3 +123,37 @@ class CandidatSerializerTest(TestCase):
                 Candidat.ParcoursPhase.ABANDON,
             ],
         )
+
+    def test_create_update_serializer_requires_rgpd_legal_basis_on_manual_create(self):
+        serializer = CandidatCreateUpdateSerializer(
+            data={
+                "nom": "Rgpd",
+                "prenom": "Missing",
+                "email": "rgpd.missing@example.com",
+                "formation": self.formation.id,
+            },
+            context={"request": self._request()},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("rgpd_legal_basis", serializer.errors)
+
+    def test_create_update_serializer_applies_rgpd_defaults_on_manual_create(self):
+        serializer = CandidatCreateUpdateSerializer(
+            data={
+                "nom": "Rgpd",
+                "prenom": "Safe",
+                "email": "rgpd.safe@example.com",
+                "formation": self.formation.id,
+                "rgpd_legal_basis": Candidat.RgpdLegalBasis.INTERET_LEGITIME,
+            },
+            context={"request": self._request()},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        candidat = serializer.save(created_by=self.user, updated_by=self.user)
+
+        self.assertEqual(candidat.rgpd_creation_source, Candidat.RgpdCreationSource.MANUAL_ADMIN)
+        self.assertEqual(candidat.rgpd_notice_status, Candidat.RgpdNoticeStatus.A_NOTIFIER)
+        self.assertIsNotNone(candidat.rgpd_data_reviewed_at)
+        self.assertEqual(candidat.rgpd_data_reviewed_by, self.user)

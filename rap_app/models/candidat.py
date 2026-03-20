@@ -129,6 +129,37 @@ class Candidat(BaseModel):
         DEUX_TROIS_MOIS = "2_3_mois", _("2-3 mois")
         SIX_MOIS = "6_mois", _("6 mois")
 
+    class RgpdLegalBasis(models.TextChoices):
+        """
+        Base légale principale associée à la création/gestion de la fiche
+        candidat lorsqu'elle est initiée par l'organisation.
+        """
+
+        CONSENTEMENT = "consentement", _("Consentement")
+        MESURES_PRECONTRACTUELLES = "mesures_precontractuelles", _("Mesures précontractuelles")
+        INTERET_LEGITIME = "interet_legitime", _("Intérêt légitime")
+        OBLIGATION_LEGALE = "obligation_legale", _("Obligation légale")
+        MISSION_INTERET_PUBLIC = "mission_interet_public", _("Mission d'intérêt public")
+        INTERETS_VITAUX = "interets_vitaux", _("Intérêts vitaux")
+
+    class RgpdCreationSource(models.TextChoices):
+        """
+        Origine déclarée de création de la fiche candidat.
+        """
+
+        MANUAL_ADMIN = "manual_admin", _("Création manuelle staff/admin")
+        SELF_SERVICE = "self_service", _("Création par la personne concernée")
+        IMPORT = "import", _("Import")
+
+    class RgpdNoticeStatus(models.TextChoices):
+        """
+        Statut de notification/information RGPD associé à la fiche candidat.
+        """
+
+        NON_REQUISE = "non_requise", _("Notification non requise")
+        A_NOTIFIER = "a_notifier", _("Notification à envoyer")
+        NOTIFIEE = "notifiee", _("Notification envoyée")
+
     class ContratSigne(models.TextChoices):
         """
         Etat de signature du contrat.
@@ -434,6 +465,56 @@ class Candidat(BaseModel):
         verbose_name=_("Demande de compte traitée le"),
         help_text=_("Horodatage de la validation ou du refus de la demande de compte."),
     )
+    rgpd_creation_source = models.CharField(
+        max_length=32,
+        choices=RgpdCreationSource.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("Origine RGPD de création"),
+        help_text=_("Permet de distinguer une fiche créée manuellement, en self-service ou via import."),
+    )
+    rgpd_legal_basis = models.CharField(
+        max_length=40,
+        choices=RgpdLegalBasis.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("Base légale RGPD"),
+        help_text=_("Base légale principale justifiant le traitement des données personnelles."),
+    )
+    rgpd_notice_status = models.CharField(
+        max_length=20,
+        choices=RgpdNoticeStatus.choices,
+        null=True,
+        blank=True,
+        verbose_name=_("Statut de notification RGPD"),
+        help_text=_("Suivi de l'information transmise à la personne concernée lorsque nécessaire."),
+    )
+    rgpd_notice_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Notification RGPD envoyée le"),
+    )
+    rgpd_notice_sent_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications_rgpd_candidat_envoyees",
+        verbose_name=_("Notification RGPD envoyée par"),
+    )
+    rgpd_data_reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Revue de minimisation RGPD le"),
+    )
+    rgpd_data_reviewed_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revues_rgpd_candidat_effectuees",
+        verbose_name=_("Revue de minimisation RGPD par"),
+    )
 
     class Meta:
         verbose_name = _("Candidat")
@@ -722,6 +803,12 @@ class Candidat(BaseModel):
             logger.warning(f"Candidat incomplet : nom ou prénom manquant (id={self.pk})")
         if self.statut == self.StatutCandidat.AUTRE:
             logger.info(f"Candidat #{self.pk} a un statut 'autre'")
+        if self.rgpd_notice_status == self.RgpdNoticeStatus.NOTIFIEE and not self.rgpd_notice_sent_at:
+            errors["rgpd_notice_sent_at"] = _("La date d'envoi est requise quand la notification RGPD est marquée comme envoyée.")
+        if self.rgpd_notice_sent_at and self.rgpd_notice_status != self.RgpdNoticeStatus.NOTIFIEE:
+            errors["rgpd_notice_status"] = _(
+                "Le statut de notification RGPD doit être 'notifiée' lorsque la date d'envoi est renseignée."
+            )
         if errors:
             raise ValidationError(errors)
 
@@ -757,6 +844,21 @@ class Candidat(BaseModel):
         """
         logger.warning(f"Suppression du candidat : {self} (id={self.pk})")
         super().delete(*args, **kwargs)
+
+    def apply_manual_rgpd_defaults(self, actor=None):
+        """
+        Applique les métadonnées RGPD minimales pour une création manuelle
+        staff/admin, sans écraser une saisie déjà plus précise.
+        """
+        now = timezone.now()
+        if not self.rgpd_creation_source:
+            self.rgpd_creation_source = self.RgpdCreationSource.MANUAL_ADMIN
+        if not self.rgpd_notice_status:
+            self.rgpd_notice_status = self.RgpdNoticeStatus.A_NOTIFIER
+        if not self.rgpd_data_reviewed_at:
+            self.rgpd_data_reviewed_at = now
+        if actor and not self.rgpd_data_reviewed_by_id:
+            self.rgpd_data_reviewed_by = actor
 
     def _log_changes(self):
         """

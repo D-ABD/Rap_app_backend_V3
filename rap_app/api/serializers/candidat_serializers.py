@@ -7,6 +7,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import exceptions, serializers
 import unicodedata
+from django.utils import timezone
 
 from ...models.appairage import Appairage
 from ...models.atelier_tre import AtelierTRE
@@ -757,10 +758,16 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "date_validation_inscription",
             "date_entree_formation_effective",
             "date_sortie_formation",
+            "rgpd_creation_source",
+            "rgpd_notice_sent_at",
+            "rgpd_notice_sent_by",
+            "rgpd_data_reviewed_at",
+            "rgpd_data_reviewed_by",
         ]
 
     def create(self, validated_data):
         validated_data.pop("compte_utilisateur", None)
+        self._apply_rgpd_defaults(validated_data)
         return super().create(validated_data)
 
     def validate(self, data):
@@ -811,10 +818,17 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         if cu and not email:
             raise serializers.ValidationError({"email": "Un compte utilisateur nécessite une adresse email."})
 
+        if self.instance is None and user.role in ["admin", "superadmin", "staff"]:
+            if not data.get("rgpd_legal_basis"):
+                raise serializers.ValidationError(
+                    {"rgpd_legal_basis": "Ce champ est requis pour une création manuelle de fiche candidat."}
+                )
+
         return data
 
     def update(self, instance, validated_data):
         validated_data.pop("compte_utilisateur", None)
+        self._apply_rgpd_notice_tracking(validated_data)
         return super().update(instance, validated_data)
 
     def validate_formation(self, value):
@@ -825,6 +839,29 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Seul le staff peut créer/modifier la formation d’un candidat.")
 
         return value
+
+    def _apply_rgpd_defaults(self, validated_data):
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+
+        validated_data.setdefault("rgpd_creation_source", Candidat.RgpdCreationSource.MANUAL_ADMIN)
+        validated_data.setdefault("rgpd_notice_status", Candidat.RgpdNoticeStatus.A_NOTIFIER)
+        validated_data.setdefault("rgpd_data_reviewed_at", timezone.now())
+        if actor:
+            validated_data.setdefault("rgpd_data_reviewed_by", actor)
+
+        self._apply_rgpd_notice_tracking(validated_data, actor=actor)
+
+    def _apply_rgpd_notice_tracking(self, validated_data, actor=None):
+        request = self.context.get("request")
+        if actor is None and request and request.user.is_authenticated:
+            actor = request.user
+
+        notice_status = validated_data.get("rgpd_notice_status")
+        if notice_status == Candidat.RgpdNoticeStatus.NOTIFIEE:
+            validated_data.setdefault("rgpd_notice_sent_at", timezone.now())
+            if actor:
+                validated_data.setdefault("rgpd_notice_sent_by", actor)
 
 
 class LabelOrValueChoiceField(serializers.ChoiceField):

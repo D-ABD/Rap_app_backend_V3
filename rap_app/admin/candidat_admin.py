@@ -2,6 +2,7 @@ import logging
 
 from django.contrib import admin, messages
 from django.contrib.admin.sites import NotRegistered
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ..models.candidat import Candidat as CandidatModel
@@ -129,6 +130,11 @@ class CandidatAdmin(admin.ModelAdmin):
         "updated_by",
         "updated_at",
         "nb_appairages",
+        "rgpd_creation_source",
+        "rgpd_notice_sent_at",
+        "rgpd_notice_sent_by",
+        "rgpd_data_reviewed_at",
+        "rgpd_data_reviewed_by",
     )
 
     fieldsets = (
@@ -202,6 +208,20 @@ class CandidatAdmin(admin.ModelAdmin):
                 )
             },
         ),
+        (
+            _("RGPD"),
+            {
+                "fields": (
+                    "rgpd_creation_source",
+                    "rgpd_legal_basis",
+                    "rgpd_notice_status",
+                    "rgpd_notice_sent_at",
+                    "rgpd_notice_sent_by",
+                    "rgpd_data_reviewed_at",
+                    "rgpd_data_reviewed_by",
+                )
+            },
+        ),
     )
 
     inlines = [HistoriquePlacementInline]
@@ -228,8 +248,21 @@ class CandidatAdmin(admin.ModelAdmin):
     # Sauvegarde avec traçabilité
     # ───────────────────────────────
     def save_model(self, request, obj, form, change):
+        if not change:
+            obj.apply_manual_rgpd_defaults(actor=request.user)
+        elif "rgpd_notice_status" in getattr(form, "changed_data", []) and (
+            obj.rgpd_notice_status == obj.RgpdNoticeStatus.NOTIFIEE and not obj.rgpd_notice_sent_at
+        ):
+            obj.rgpd_notice_sent_at = timezone.now()
+            obj.rgpd_notice_sent_by = request.user
         obj.save(user=request.user)
         logger.info("💾 Candidat #%s sauvegardé par %s", obj.pk, request.user)
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change, **kwargs)
+        if obj is None and "rgpd_legal_basis" in form.base_fields:
+            form.base_fields["rgpd_legal_basis"].required = True
+        return form
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
