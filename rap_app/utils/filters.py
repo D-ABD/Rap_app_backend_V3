@@ -205,6 +205,12 @@ class CandidatFilter(django_filters.FilterSet):
     statut = django_filters.ChoiceFilter(field_name="statut", choices=Candidat.StatutCandidat.choices)
     statut__in = SafeCharInFilter(field_name="statut", lookup_expr="in")
     statut_i = django_filters.CharFilter(field_name="statut", lookup_expr="iexact")
+    parcours_phase = django_filters.ChoiceFilter(
+        field_name="parcours_phase",
+        choices=Candidat.ParcoursPhase.choices,
+    )
+    parcours_phase__in = SafeCharInFilter(field_name="parcours_phase", lookup_expr="in")
+    parcours_phase_i = django_filters.CharFilter(field_name="parcours_phase", lookup_expr="iexact")
 
     type_contrat = django_filters.ChoiceFilter(field_name="type_contrat", choices=Candidat.TypeContrat.choices)
     type_contrat__in = SafeCharInFilter(field_name="type_contrat", lookup_expr="in")
@@ -276,6 +282,9 @@ class CandidatFilter(django_filters.FilterSet):
             "statut",
             "statut__in",
             "statut_i",
+            "parcours_phase",
+            "parcours_phase__in",
+            "parcours_phase_i",
             "type_contrat",
             "type_contrat__in",
             "type_contrat_i",

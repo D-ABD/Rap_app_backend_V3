@@ -187,7 +187,8 @@ Pour le front :
 1. ne pas supprimer immédiatement l'usage de `statut`
 2. commencer à lire `parcours_phase` si présent
 3. utiliser `parcours_phase_choices` depuis `GET /api/candidats/meta/`
-4. préférer les nouveaux endpoints de transition plutôt qu'une édition directe
+4. filtrer les listes avec `parcours_phase=value` ou l'alias `parcoursPhase=value`
+5. préférer les nouveaux endpoints de transition plutôt qu'une édition directe
 
 Champs utiles désormais disponibles sur le détail candidat :
 

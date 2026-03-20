@@ -6,6 +6,7 @@ from django.utils import timezone
 from rap_app.api.serializers.candidat_serializers import (
     CandidatCreateUpdateSerializer,
     CandidatListSerializer,
+    CandidatQueryParamsSerializer,
     CandidatSerializer,
 )
 from rap_app.models.candidat import Candidat
@@ -102,3 +103,21 @@ class CandidatSerializerTest(TestCase):
 
         self.assertEqual(updated.parcours_phase, Candidat.ParcoursPhase.INSCRIT_VALIDE)
         self.assertIsNone(updated.date_validation_inscription)
+
+    def test_query_params_serializer_accepts_parcours_phase_labels_and_aliases(self):
+        serializer = CandidatQueryParamsSerializer(
+            data={
+                "parcoursPhase": "Inscrit valide",
+                "parcours_phase__in": "Stagiaire / en cours de formation,abandon",
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(serializer.validated_data["parcours_phase"], Candidat.ParcoursPhase.INSCRIT_VALIDE)
+        self.assertEqual(
+            serializer.validated_data["parcours_phase__in"],
+            [
+                Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+                Candidat.ParcoursPhase.ABANDON,
+            ],
+        )

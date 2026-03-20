@@ -846,11 +846,14 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
     """Query params filtrage candidats : value ou label, __in en CSV, alias camelCase."""
 
     statut = LabelOrValueChoiceField(choices=dict(Candidat.StatutCandidat.choices), required=False)
+    parcours_phase = LabelOrValueChoiceField(choices=dict(Candidat.ParcoursPhase.choices), required=False)
     type_contrat = LabelOrValueChoiceField(choices=dict(Candidat.TypeContrat.choices), required=False)
     cv_statut = LabelOrValueChoiceField(choices=dict(Candidat.CVStatut.choices), required=False)
 
     contrat_signe = LabelOrValueChoiceField(choices=dict(Candidat.ContratSigne.choices), required=False)
 
+    parcours_phase__in = serializers.CharField(required=False)
+    parcoursPhase = serializers.CharField(required=False)
     contrat_signe__in = serializers.CharField(required=False)
     contratSigne = serializers.CharField(required=False)
     statut__in = serializers.CharField(required=False)
@@ -875,11 +878,14 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
             attrs["type_contrat"] = attrs.pop("typeContrat")
         if "cvStatut" in attrs and "cv_statut" not in attrs:
             attrs["cv_statut"] = attrs.pop("cvStatut")
+        if "parcoursPhase" in attrs and "parcours_phase" not in attrs:
+            attrs["parcours_phase"] = attrs.pop("parcoursPhase")
         if "contratSigne" in attrs and "contrat_signe" not in attrs:
             attrs["contrat_signe"] = attrs.pop("contratSigne")
 
         for key, choices in (
             ("statut__in", dict(Candidat.StatutCandidat.choices)),
+            ("parcours_phase__in", dict(Candidat.ParcoursPhase.choices)),
             ("type_contrat__in", dict(Candidat.TypeContrat.choices)),
             ("cv_statut__in", dict(Candidat.CVStatut.choices)),
             ("contrat_signe__in", dict(Candidat.ContratSigne.choices)),

@@ -226,6 +226,52 @@ def test_staff_can_validate_inscription_without_changing_legacy_status():
 
 
 @pytest.mark.django_db
+def test_staff_can_filter_candidates_by_parcours_phase_alias():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M3A", code_postal="75132")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M3A",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m3a@example.com",
+        username="staff_m3a",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    visible = Candidat.objects.create(
+        nom="Visible",
+        prenom="Phase",
+        email="visible.phase@example.com",
+        formation=formation,
+        parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+        created_by=staff,
+        updated_by=staff,
+    )
+    Candidat.objects.create(
+        nom="Masque",
+        prenom="Phase",
+        email="masque.phase@example.com",
+        formation=formation,
+        parcours_phase=Candidat.ParcoursPhase.ABANDON,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.get(reverse("candidat-list"), {"parcoursPhase": "Inscrit validé"})
+
+    assert resp.status_code == 200
+    payload = resp.json().get("data", resp.json())
+    results = payload.get("results", payload)
+    assert [item["id"] for item in results] == [visible.id]
+
+
+@pytest.mark.django_db
 def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2B", code_postal="75129")
