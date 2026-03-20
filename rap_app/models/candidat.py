@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
@@ -91,6 +92,21 @@ class Candidat(BaseModel):
         EN_FORMATION = "formation", _("En formation")
         ABANDON = "abandon", _("Abandon")
         AUTRE = "autre", _("Autre")
+
+    class ParcoursPhase(models.TextChoices):
+        """
+        Phase métier cible du parcours candidat.
+
+        Cette phase est introduite en mode compatible : elle n'écrase pas
+        encore le champ legacy `statut`, mais prépare la future source de
+        vérité du cycle candidat -> inscrit -> stagiaire.
+        """
+
+        POSTULANT = "postulant", _("Candidat postulant")
+        INSCRIT_VALIDE = "inscrit_valide", _("Inscrit validé")
+        STAGIAIRE_EN_FORMATION = "stagiaire_en_formation", _("Stagiaire / en cours de formation")
+        SORTI = "sorti", _("Sorti de formation")
+        ABANDON = "abandon", _("Abandon")
 
     class TypeContrat(models.TextChoices):
         """
@@ -186,6 +202,30 @@ class Candidat(BaseModel):
         default=StatutCandidat.AUTRE,
         verbose_name=_("Statut"),
         db_index=True,
+    )
+    parcours_phase = models.CharField(
+        max_length=32,
+        choices=ParcoursPhase.choices,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Phase de parcours"),
+        help_text=_("Nouvelle phase métier cible. Ajoutée en compatibilité sans remplacer immédiatement le statut legacy."),
+    )
+    date_validation_inscription = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de validation d'inscription"),
+    )
+    date_entree_formation_effective = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date d'entrée en formation effective"),
+    )
+    date_sortie_formation = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date de sortie de formation"),
     )
     formation = models.ForeignKey(
         "Formation",
@@ -560,6 +600,103 @@ class Candidat(BaseModel):
         if self.compte_utilisateur:
             return self.compte_utilisateur.get_role_display()
         return "-"
+
+    @property
+    def has_compte_utilisateur(self) -> bool:
+        """
+        Indique si un compte utilisateur est lié au candidat.
+        """
+        return bool(self.compte_utilisateur_id)
+
+    @property
+    def parcours_phase_display(self):
+        """
+        Retourne le libellé de la phase persistée, si elle existe.
+        """
+        return self.get_parcours_phase_display() if self.parcours_phase else None
+
+    @property
+    def is_en_formation_now(self) -> bool:
+        """
+        Indique si la session liée est actuellement en cours selon ses dates.
+        """
+        formation = getattr(self, "formation", None)
+        if not formation:
+            return False
+
+        today = timezone.localdate()
+        start_date = getattr(formation, "start_date", None)
+        end_date = getattr(formation, "end_date", None)
+
+        if start_date and end_date:
+            return start_date <= today <= end_date
+        if start_date:
+            return start_date <= today
+        return False
+
+    @property
+    def parcours_phase_calculee(self):
+        """
+        Dérive une phase métier lisible à partir des données déjà présentes.
+
+        Cette propriété reste volontairement conservatrice pendant la phase M1 :
+        elle n'écrit rien et ne remplace pas encore `statut`.
+        """
+        if self.statut == self.StatutCandidat.ABANDON:
+            return self.ParcoursPhase.ABANDON
+
+        formation = getattr(self, "formation", None)
+        today = timezone.localdate()
+        formation_end = getattr(formation, "end_date", None) if formation else None
+        has_stagiaire_role = bool(
+            self.compte_utilisateur and self.compte_utilisateur.role == CustomUser.ROLE_STAGIAIRE
+        )
+
+        if formation and formation_end and formation_end < today and (
+            has_stagiaire_role
+            or bool(self.date_entree_formation_effective)
+            or self.statut == self.StatutCandidat.EN_FORMATION
+        ):
+            return self.ParcoursPhase.SORTI
+
+        if formation and self.is_en_formation_now and (
+            has_stagiaire_role
+            or bool(self.date_entree_formation_effective)
+            or self.statut == self.StatutCandidat.EN_FORMATION
+        ):
+            return self.ParcoursPhase.STAGIAIRE_EN_FORMATION
+
+        if formation and (
+            self.admissible
+            or bool(self.date_validation_inscription)
+            or self.inscrit_gespers
+            or self.statut in {self.StatutCandidat.EN_ATTENTE_RENTREE, self.StatutCandidat.EN_FORMATION}
+        ):
+            return self.ParcoursPhase.INSCRIT_VALIDE
+
+        return self.ParcoursPhase.POSTULANT
+
+    @property
+    def is_inscrit_valide(self) -> bool:
+        """
+        Indique si le candidat a dépassé la phase postulant.
+        """
+        return self.parcours_phase_calculee in {
+            self.ParcoursPhase.INSCRIT_VALIDE,
+            self.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            self.ParcoursPhase.SORTI,
+        }
+
+    @property
+    def is_stagiaire_role_aligned(self) -> bool:
+        """
+        Vérifie si le rôle utilisateur `stagiaire` est cohérent avec la phase calculée.
+        """
+        expects_stagiaire_role = self.parcours_phase_calculee == self.ParcoursPhase.STAGIAIRE_EN_FORMATION
+        has_stagiaire_role = bool(
+            self.compte_utilisateur and self.compte_utilisateur.role == CustomUser.ROLE_STAGIAIRE
+        )
+        return expects_stagiaire_role == has_stagiaire_role
 
     def clean(self):
         """

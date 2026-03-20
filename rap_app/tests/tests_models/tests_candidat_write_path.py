@@ -49,3 +49,49 @@ class CandidatWritePathTests(TestCase):
 
         self.assertEqual(candidat._initial["prenom"], "Julie")
         self.assertEqual(candidat._initial["nom"], "Martin")
+
+    def test_parcours_phase_calculee_defaults_to_postulant_when_no_reliable_signal(self):
+        candidat = Candidat.objects.create(
+            nom="Martin",
+            prenom="Luc",
+            email="luc.phase@example.com",
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        self.assertEqual(candidat.parcours_phase_calculee, Candidat.ParcoursPhase.POSTULANT)
+        self.assertFalse(candidat.is_inscrit_valide)
+        self.assertFalse(candidat.is_en_formation_now)
+        self.assertFalse(candidat.has_compte_utilisateur)
+
+    def test_parcours_phase_calculee_detects_active_stagiaire_session(self):
+        compte = CustomUser.objects.create_user_with_role(
+            email="stagiaire.phase@example.com",
+            username="stagiaire_phase",
+            password="Password123!",
+            role=CustomUser.ROLE_STAGIAIRE,
+        )
+        candidat = Candidat.objects.create(
+            nom="Durand",
+            prenom="Alice",
+            email="alice.phase@example.com",
+            formation=self.formation,
+            statut=Candidat.StatutCandidat.EN_FORMATION,
+            admissible=True,
+            compte_utilisateur=compte,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        self.assertEqual(candidat.parcours_phase_calculee, Candidat.ParcoursPhase.INSCRIT_VALIDE)
+        self.assertFalse(candidat.is_en_formation_now)
+
+        self.formation.start_date = timezone.localdate() - timedelta(days=1)
+        self.formation.end_date = timezone.localdate() + timedelta(days=5)
+        self.formation.save()
+
+        candidat.refresh_from_db()
+        self.assertEqual(candidat.parcours_phase_calculee, Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
+        self.assertTrue(candidat.is_inscrit_valide)
+        self.assertTrue(candidat.is_en_formation_now)
+        self.assertTrue(candidat.is_stagiaire_role_aligned)

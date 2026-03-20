@@ -185,6 +185,19 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("centre_choices", response.data["data"])
         self.assertIn("formation_choices", response.data["data"])
 
+    def test_candidat_detail_exposes_phase_fields_without_breaking_envelope(self):
+        response = self.client.get(reverse("candidat-detail", args=[self.candidat.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data.get("data", response.data)
+
+        self.assertEqual(payload["id"], self.candidat.id)
+        self.assertIn("parcours_phase", payload)
+        self.assertIn("parcours_phase_calculee", payload)
+        self.assertIn("is_inscrit_valide", payload)
+        self.assertIn("is_en_formation_now", payload)
+        self.assertIn("has_compte_utilisateur", payload)
+
     def test_prospections_filtres_uses_standard_envelope(self):
         response = self.client.get(reverse("prospection-get-filters"))
 

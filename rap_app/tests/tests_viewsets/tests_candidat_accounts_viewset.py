@@ -188,6 +188,91 @@ def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
 
 
 @pytest.mark.django_db
+def test_staff_can_validate_inscription_without_changing_legacy_status():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M2A", code_postal="75128")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M2A",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m2a@example.com",
+        username="staff_m2a",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Inscription",
+        prenom="Validee",
+        email="inscription.validee@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.AUTRE,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-validate-inscription", args=[cand.id]))
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert cand.date_validation_inscription is not None
+    assert cand.statut == Candidat.StatutCandidat.AUTRE
+
+
+@pytest.mark.django_db
+def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M2B", code_postal="75129")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M2B",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m2b@example.com",
+        username="staff_m2b",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    compte = CustomUser.objects.create_user_with_role(
+        email="candidate_m2b@example.com",
+        username="candidate_m2b",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    cand = Candidat.objects.create(
+        nom="Entree",
+        prenom="Formation",
+        email="candidate_m2b@example.com",
+        formation=formation,
+        admissible=True,
+        compte_utilisateur=compte,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-start-formation", args=[cand.id]))
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    compte.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION
+    assert cand.date_validation_inscription is not None
+    assert cand.date_entree_formation_effective is not None
+    assert compte.role == CustomUser.ROLE_STAGIAIRE
+
+
+@pytest.mark.django_db
 def test_valider_demande_compte_refuse_collision_email_avec_autre_candidat_reel():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet 6B", code_postal="75118")

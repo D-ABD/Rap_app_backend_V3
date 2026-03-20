@@ -40,6 +40,7 @@ from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.prospection import Prospection
 from ...services.candidate_account_service import CandidateAccountService
+from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
@@ -405,6 +406,50 @@ class CandidatViewSet(ScopedModelViewSet):
                 "message": "Candidat validé comme stagiaire.",
                 "user_id": user.id,
                 "user_role": user.role,
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="validate-inscription")
+    def validate_inscription(self, request, pk=None):
+        """POST : positionne la nouvelle phase métier sur `inscrit_valide` sans casser le statut legacy."""
+        candidat = self.get_object()
+        try:
+            candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+
+        return Response(
+            {
+                "success": True,
+                "message": "Inscription validée.",
+                "data": {
+                    "candidat_id": candidat.id,
+                    "parcours_phase": candidat.parcours_phase,
+                    "date_validation_inscription": candidat.date_validation_inscription,
+                },
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="start-formation")
+    def start_formation(self, request, pk=None):
+        """POST : positionne la phase métier sur `stagiaire_en_formation` et aligne le rôle si possible."""
+        candidat = self.get_object()
+        try:
+            candidat = CandidateLifecycleService.start_formation(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+
+        compte = getattr(candidat, "compte_utilisateur", None)
+        return Response(
+            {
+                "success": True,
+                "message": "Entrée en formation enregistrée.",
+                "data": {
+                    "candidat_id": candidat.id,
+                    "parcours_phase": candidat.parcours_phase,
+                    "date_entree_formation_effective": candidat.date_entree_formation_effective,
+                    "user_role": getattr(compte, "role", None),
+                },
             }
         )
 

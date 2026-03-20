@@ -228,6 +228,12 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
     ateliers_resume = serializers.CharField(read_only=True)
     peut_modifier = serializers.SerializerMethodField()
     cv_statut_display = serializers.CharField(read_only=True)
+    parcours_phase_display = serializers.CharField(read_only=True)
+    parcours_phase_calculee = serializers.CharField(read_only=True)
+    is_inscrit_valide = serializers.BooleanField(read_only=True)
+    is_en_formation_now = serializers.BooleanField(read_only=True)
+    is_stagiaire_role_aligned = serializers.BooleanField(read_only=True)
+    has_compte_utilisateur = serializers.BooleanField(read_only=True)
 
     ateliers_counts = serializers.SerializerMethodField()
 
@@ -279,6 +285,16 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "cv_statut",
             "cv_statut_display",
             "statut",
+            "parcours_phase",
+            "parcours_phase_display",
+            "parcours_phase_calculee",
+            "is_inscrit_valide",
+            "is_en_formation_now",
+            "is_stagiaire_role_aligned",
+            "has_compte_utilisateur",
+            "date_validation_inscription",
+            "date_entree_formation_effective",
+            "date_sortie_formation",
             "formation",
             "formation_info",
             "formation_nom",
@@ -365,6 +381,16 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "ateliers_resume",
             "peut_modifier",
             "cv_statut_display",
+            "parcours_phase",
+            "parcours_phase_display",
+            "parcours_phase_calculee",
+            "is_inscrit_valide",
+            "is_en_formation_now",
+            "is_stagiaire_role_aligned",
+            "has_compte_utilisateur",
+            "date_validation_inscription",
+            "date_entree_formation_effective",
+            "date_sortie_formation",
             "formation_info",
             "centre_nom",
             "centre_id",
@@ -505,6 +531,11 @@ class CandidatListSerializer(serializers.ModelSerializer):
     ateliers_resume = serializers.CharField(read_only=True)
     peut_modifier = serializers.SerializerMethodField()
     cv_statut_display = serializers.CharField(read_only=True)
+    parcours_phase_display = serializers.CharField(read_only=True)
+    parcours_phase_calculee = serializers.CharField(read_only=True)
+    is_inscrit_valide = serializers.BooleanField(read_only=True)
+    is_en_formation_now = serializers.BooleanField(read_only=True)
+    has_compte_utilisateur = serializers.BooleanField(read_only=True)
     ateliers_counts = serializers.SerializerMethodField()
     centre_id = serializers.IntegerField(source="formation.centre_id", read_only=True)
     centre_nom = serializers.CharField(source="formation.centre.nom", read_only=True)
@@ -540,6 +571,12 @@ class CandidatListSerializer(serializers.ModelSerializer):
             "compte_utilisateur",
             "role_utilisateur",
             "statut",
+            "parcours_phase",
+            "parcours_phase_display",
+            "parcours_phase_calculee",
+            "is_inscrit_valide",
+            "is_en_formation_now",
+            "has_compte_utilisateur",
             "cv_statut",
             "cv_statut_display",
             "entretien_done",
@@ -714,6 +751,10 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "created_by",
             "updated_by",
             "compte_utilisateur",
+            "parcours_phase",
+            "date_validation_inscription",
+            "date_entree_formation_effective",
+            "date_sortie_formation",
         ]
 
     def create(self, validated_data):
