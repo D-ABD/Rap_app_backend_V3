@@ -40,6 +40,7 @@ from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.prospection import Prospection
 from ...services.candidate_account_service import CandidateAccountService
+from ...services.candidate_bulk_service import CandidateBulkService
 from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
@@ -57,6 +58,13 @@ from ..serializers.candidat_serializers import (
 logger = logging.getLogger("rap_app.candidats")
 
 SENSITIVE_KEYS = {"password", "token", "secret", "api_key", "auth", "credential", "authorization"}
+
+
+def _parse_candidate_ids(payload) -> list[int]:
+    ids = payload.get("candidate_ids") or payload.get("candidats") or []
+    if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
+        raise ValidationError({"candidate_ids": ["Ce champ doit être une liste d'identifiants entiers."]})
+    return ids
 
 
 def _sanitize_dict(d: dict) -> dict:
@@ -608,6 +616,59 @@ class CandidatViewSet(ScopedModelViewSet):
                 "message": "Métadonnées candidats récupérées avec succès.",
                 "data": data,
             }
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/validate-inscription")
+    def bulk_validate_inscription(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_validate_inscription(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'inscription validée' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/start-formation")
+    def bulk_start_formation(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_start_formation(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'entrée en formation' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/abandon")
+    def bulk_abandon(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_abandon(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'abandon' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/assign-atelier-tre")
+    def bulk_assign_atelier_tre(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        atelier_id = request.data.get("atelier_tre_id")
+        if not isinstance(atelier_id, int):
+            raise ValidationError({"atelier_tre_id": ["Ce champ est obligatoire et doit être un entier."]})
+
+        atelier_qs = atelier_tre.AtelierTRE.objects.select_related("centre")
+        user = request.user
+        if not is_admin_like(user):
+            centre_ids = staff_centre_ids(user) or []
+            atelier_qs = atelier_qs.filter(centre_id__in=centre_ids)
+        atelier = atelier_qs.filter(id=atelier_id).first()
+        if not atelier:
+            raise PermissionDenied("Atelier TRE hors de votre périmètre.")
+
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_assign_atelier_tre(qs, atelier=atelier)
+        return self.success_response(
+            data=result,
+            message="Affectation bulk à l'atelier TRE exécutée.",
         )
 
     @action(detail=False, methods=["get"], url_path="export-xlsx")

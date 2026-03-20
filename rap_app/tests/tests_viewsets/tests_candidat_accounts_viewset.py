@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from ...models.atelier_tre import AtelierTRE
 from ...models.candidat import Candidat
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
@@ -536,6 +537,168 @@ def test_staff_can_abandon_candidate_and_keep_legacy_status_compatible():
     assert cand.parcours_phase == Candidat.ParcoursPhase.ABANDON
     assert cand.statut == Candidat.StatutCandidat.ABANDON
     assert cand.date_sortie_formation is not None
+
+
+@pytest.mark.django_db
+def test_staff_can_bulk_validate_inscription_in_scope():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet R3A", code_postal="75136")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet R3A",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_r3a@example.com",
+        username="staff_r3a",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    c1 = Candidat.objects.create(
+        nom="Bulk",
+        prenom="One",
+        email="bulk.one@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+    c2 = Candidat.objects.create(
+        nom="Bulk",
+        prenom="Two",
+        email="bulk.two@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(
+        reverse("candidat-bulk-validate-inscription"),
+        {"candidate_ids": [c1.id, c2.id]},
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["summary"]["requested"] == 2
+    assert sorted(data["succeeded_ids"]) == sorted([c1.id, c2.id])
+
+    c1.refresh_from_db()
+    c2.refresh_from_db()
+    assert c1.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert c2.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+
+
+@pytest.mark.django_db
+def test_staff_bulk_start_formation_reports_out_of_scope_candidates_as_failed():
+    client = APIClient()
+    centre_a = Centre.objects.create(nom="Centre ViewSet R3B-A", code_postal="75137")
+    centre_b = Centre.objects.create(nom="Centre ViewSet R3B-B", code_postal="75138")
+    formation_a = Formation.objects.create(
+        nom="Formation ViewSet R3B-A",
+        centre=centre_a,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    formation_b = Formation.objects.create(
+        nom="Formation ViewSet R3B-B",
+        centre=centre_b,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_r3b@example.com",
+        username="staff_r3b",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre_a)
+
+    in_scope = Candidat.objects.create(
+        nom="Scope",
+        prenom="In",
+        email="scope.in@example.com",
+        formation=formation_a,
+        admissible=True,
+        created_by=staff,
+        updated_by=staff,
+    )
+    out_scope = Candidat.objects.create(
+        nom="Scope",
+        prenom="Out",
+        email="scope.out@example.com",
+        formation=formation_b,
+        admissible=True,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(
+        reverse("candidat-bulk-start-formation"),
+        {"candidate_ids": [in_scope.id, out_scope.id]},
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["summary"]["requested"] == 1
+    assert data["succeeded_ids"] == [in_scope.id]
+    assert data["failed"] == []
+
+    in_scope.refresh_from_db()
+    out_scope.refresh_from_db()
+    assert in_scope.parcours_phase == Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION
+    assert out_scope.parcours_phase != Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION
+
+
+@pytest.mark.django_db
+def test_staff_can_bulk_assign_atelier_tre_in_scope():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet R3C", code_postal="75139")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet R3C",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_r3c@example.com",
+        username="staff_r3c",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    atelier = AtelierTRE.objects.create(
+        type_atelier=AtelierTRE.TypeAtelier.ATELIER_1,
+        centre=centre,
+        created_by=staff,
+    )
+    cand = Candidat.objects.create(
+        nom="TRE",
+        prenom="Bulk",
+        email="tre.bulk@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(
+        reverse("candidat-bulk-assign-atelier-tre"),
+        {"candidate_ids": [cand.id], "atelier_tre_id": atelier.id},
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["succeeded_ids"] == [cand.id]
+    atelier.refresh_from_db()
+    assert atelier.candidats.filter(id=cand.id).exists()
 
 
 @pytest.mark.django_db
