@@ -89,3 +89,15 @@ class CandidatAdminLifecycleActionsTests(TestCase):
         self.assertEqual(candidat.parcours_phase, Candidat.ParcoursPhase.ABANDON)
         self.assertEqual(candidat.statut, Candidat.StatutCandidat.ABANDON)
         self.assertIsNotNone(candidat.date_sortie_formation)
+
+    def test_admin_declares_phase_and_legacy_status_as_read_only(self):
+        readonly = self.admin.get_readonly_fields(self._request())
+
+        self.assertIn("statut", readonly)
+        self.assertIn("parcours_phase", readonly)
+        self.assertIn("date_validation_inscription", readonly)
+        self.assertIn("date_entree_formation_effective", readonly)
+        self.assertIn("date_sortie_formation", readonly)
+
+    def test_admin_no_longer_exposes_direct_legacy_status_bulk_action(self):
+        self.assertNotIn("act_statut_appairage", self.admin.actions)

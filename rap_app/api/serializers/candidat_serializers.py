@@ -752,6 +752,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "created_by",
             "updated_by",
             "compte_utilisateur",
+            "statut",
             "parcours_phase",
             "date_validation_inscription",
             "date_entree_formation_effective",

@@ -119,6 +119,11 @@ class CandidatAdmin(admin.ModelAdmin):
     readonly_fields = (
         "id",
         "date_inscription",
+        "statut",
+        "parcours_phase",
+        "date_validation_inscription",
+        "date_entree_formation_effective",
+        "date_sortie_formation",
         "created_by",
         "created_at",
         "updated_by",
@@ -146,6 +151,10 @@ class CandidatAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "statut",
+                    "parcours_phase",
+                    "date_validation_inscription",
+                    "date_entree_formation_effective",
+                    "date_sortie_formation",
                     "formation",
                     "evenement",
                     "cv_statut",
@@ -245,10 +254,6 @@ class CandidatAdmin(admin.ModelAdmin):
         logger.info(msg)
 
     # ---- Statut ----
-    @admin.action(description="Statut → En appairage")
-    def act_statut_appairage(self, request, queryset):
-        self._bulk_set(request, queryset, "statut", CandidatModel.StatutCandidat.EN_APPAIRAGE)
-
     @admin.action(description="Statut → En formation")
     def act_statut_formation(self, request, queryset):
         ok = ko = 0
@@ -346,7 +351,6 @@ class CandidatAdmin(admin.ModelAdmin):
         self.message_user(request, f"Comptes Candidat-User : {ok} OK, {ko} erreur(s).", level=messages.SUCCESS)
 
     actions = (
-        "act_statut_appairage",
         "act_statut_formation",
         "act_statut_abandon",
         "act_cv_oui",

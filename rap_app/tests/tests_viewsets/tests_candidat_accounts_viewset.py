@@ -368,6 +368,53 @@ def test_staff_can_order_candidates_by_parcours_phase_during_m3():
 
 
 @pytest.mark.django_db
+def test_staff_cannot_directly_patch_legacy_status_or_phase_fields():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet R2A", code_postal="75135")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet R2A",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_r2a@example.com",
+        username="staff_r2a",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Patch",
+        prenom="Direct",
+        email="patch.direct@example.com",
+        formation=formation,
+        statut=Candidat.StatutCandidat.AUTRE,
+        parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.patch(
+        reverse("candidat-detail", args=[cand.id]),
+        {
+            "statut": Candidat.StatutCandidat.ABANDON,
+            "parcours_phase": Candidat.ParcoursPhase.ABANDON,
+            "date_sortie_formation": "2026-03-20",
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    assert cand.statut == Candidat.StatutCandidat.AUTRE
+    assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert cand.date_sortie_formation is None
+
+
+@pytest.mark.django_db
 def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2B", code_postal="75129")

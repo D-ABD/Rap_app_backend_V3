@@ -90,6 +90,7 @@ class CandidatSerializerTest(TestCase):
         serializer = CandidatCreateUpdateSerializer(
             instance=self.candidat,
             data={
+                "statut": Candidat.StatutCandidat.ABANDON,
                 "parcours_phase": Candidat.ParcoursPhase.ABANDON,
                 "date_validation_inscription": timezone.now().isoformat(),
             },
@@ -101,6 +102,7 @@ class CandidatSerializerTest(TestCase):
         updated = serializer.save()
         updated.refresh_from_db()
 
+        self.assertEqual(updated.statut, Candidat.StatutCandidat.EN_FORMATION)
         self.assertEqual(updated.parcours_phase, Candidat.ParcoursPhase.INSCRIT_VALIDE)
         self.assertIsNone(updated.date_validation_inscription)
 
