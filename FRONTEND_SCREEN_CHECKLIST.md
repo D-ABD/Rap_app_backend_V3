@@ -119,6 +119,7 @@ Pour chaque ecran:
 - filtre formation
 - filtre centre
 - presence de `parcours_phase_choices`
+- presence de `phase_contract` et `phase_transition_actions`
 - acces `staff_read`
 
 ## 6. Detail Candidat

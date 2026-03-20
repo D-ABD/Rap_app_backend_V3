@@ -185,6 +185,11 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("centre_choices", response.data["data"])
         self.assertIn("formation_choices", response.data["data"])
         self.assertIn("parcours_phase_choices", response.data["data"])
+        self.assertIn("phase_contract", response.data["data"])
+        self.assertIn("phase_transition_actions", response.data["data"])
+        self.assertEqual(response.data["data"]["phase_contract"]["legacy_status_field"], "statut")
+        self.assertEqual(response.data["data"]["phase_contract"]["recommended_phase_field"], "parcours_phase")
+        self.assertTrue(response.data["data"]["phase_contract"]["legacy_status_supported"])
 
     def test_candidat_detail_exposes_phase_fields_without_breaking_envelope(self):
         response = self.client.get(reverse("candidat-detail", args=[self.candidat.id]))

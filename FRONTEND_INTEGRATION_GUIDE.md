@@ -190,6 +190,17 @@ Pour le front :
 4. filtrer les listes avec `parcours_phase=value` ou l'alias `parcoursPhase=value`
 5. préférer les nouveaux endpoints de transition plutôt qu'une édition directe
 
+Le endpoint `GET /api/candidats/meta/` expose aussi désormais :
+
+- `phase_contract`
+  - rappelle que `statut` reste supporté temporairement
+  - indique que `parcours_phase` est le champ recommandé
+  - indique que `parcours_phase_calculee` est dérivé
+- `phase_transition_actions`
+  - liste les actions de transition disponibles côté backend
+- `phase_read_only_fields`
+  - liste les champs de phase à considérer comme non éditables côté front
+
 Champs utiles désormais disponibles sur le détail candidat :
 
 - `parcours_phase`

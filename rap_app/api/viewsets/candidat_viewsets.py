@@ -93,6 +93,25 @@ def _build_candidat_meta(user=None) -> dict:
     return {
         "statut_choices": [{"value": k, "label": v} for k, v in Candidat.StatutCandidat.choices],
         "parcours_phase_choices": [{"value": k, "label": v} for k, v in Candidat.ParcoursPhase.choices],
+        "phase_contract": {
+            "legacy_status_field": "statut",
+            "recommended_phase_field": "parcours_phase",
+            "derived_phase_field": "parcours_phase_calculee",
+            "legacy_status_supported": True,
+        },
+        "phase_read_only_fields": [
+            "parcours_phase_calculee",
+            "is_inscrit_valide",
+            "is_en_formation_now",
+            "is_stagiaire_role_aligned",
+            "has_compte_utilisateur",
+        ],
+        "phase_transition_actions": [
+            {"key": "validate_inscription", "url_name": "candidat-validate-inscription", "method": "POST"},
+            {"key": "start_formation", "url_name": "candidat-start-formation", "method": "POST"},
+            {"key": "complete_formation", "url_name": "candidat-complete-formation", "method": "POST"},
+            {"key": "abandon", "url_name": "candidat-abandon", "method": "POST"},
+        ],
         "cv_statut_choices": [{"value": k, "label": v} for k, v in Candidat.CVStatut.choices],
         "type_contrat_choices": [{"value": k, "label": v} for k, v in Candidat.TypeContrat.choices],
         "disponibilite_choices": [{"value": k, "label": v} for k, v in Candidat.Disponibilite.choices],
