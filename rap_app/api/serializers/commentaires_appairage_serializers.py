@@ -1,3 +1,6 @@
+import bleach
+from bleach.css_sanitizer import CSSSanitizer
+from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -7,6 +10,21 @@ from drf_spectacular.utils import (
 from rest_framework import serializers
 
 from ...models.commentaires_appairage import CommentaireAppairage
+
+ALLOWED_TAGS = ["a", "b", "i", "strong", "em", "u", "strike", "span", "p", "br", "ul", "ol", "li"]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title", "target", "rel"],
+    "span": ["style"],
+}
+css_sanitizer = CSSSanitizer(
+    allowed_css_properties=[
+        "color",
+        "background-color",
+        "font-weight",
+        "font-style",
+        "text-decoration",
+    ]
+)
 
 
 @extend_schema_serializer(
@@ -132,9 +150,34 @@ class CommentaireAppairageSerializer(serializers.ModelSerializer):
 class CommentaireAppairageWriteSerializer(serializers.ModelSerializer):
     """
     Sérialiseur d'écriture pour la création et la mise à jour des commentaires d'appairage.
-    Champs acceptés en entrée : appairage, body, statut_commentaire. Pas de validation personnalisée dans ce sérialiseur.
+    Champs acceptés en entrée : appairage, body, statut_commentaire.
+    Le champ `body` accepte un HTML enrichi assaini, aligné sur les autres
+    modules de commentaires.
     """
+
+    body = serializers.CharField(
+        allow_blank=False,
+        trim_whitespace=False,
+        help_text=_("Contenu HTML enrichi du commentaire"),
+    )
 
     class Meta:
         model = CommentaireAppairage
         fields = ["appairage", "body", "statut_commentaire"]
+        extra_kwargs = {
+            "appairage": {"required": False},
+        }
+
+    def validate_body(self, value: str) -> str:
+        cleaned = bleach.clean(
+            value or "",
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            css_sanitizer=css_sanitizer,
+            strip=True,
+            strip_comments=True,
+        )
+        cleaned = bleach.linkify(cleaned)
+        if not strip_tags(cleaned).strip():
+            raise serializers.ValidationError(_("Le commentaire ne peut pas être vide."))
+        return cleaned

@@ -309,6 +309,23 @@ class ApiResponseContractTests(APITestCase):
         self.assertIsNone(response.data["data"])
         self.assertIsInstance(response.data["errors"], dict)
 
+    def test_appairage_comment_create_supports_rich_text_like_other_comment_modules(self):
+        response = self.client.post(
+            reverse("appairage-commentaires", args=[self.appairage.id]),
+            {
+                "body": '<p><strong>Bonjour</strong> <script>alert(1)</script><a href="https://example.com">lien</a></p>'
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(
+            response.data["data"]["body"],
+            '<p><strong>Bonjour</strong> alert(1)<a href="https://example.com" rel="nofollow">lien</a></p>',
+        )
+
     def test_atelier_meta_uses_standard_envelope(self):
         response = self.client.get(reverse("ateliers-tre-meta"))
 

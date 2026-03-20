@@ -34,6 +34,7 @@ from ..serializers.appairage_serializers import (
     AppairageSerializer,
     CommentaireAppairageSerializer,
 )
+from ..serializers.commentaires_appairage_serializers import CommentaireAppairageWriteSerializer
 from .scoped_viewset import ScopedModelViewSet
 
 
@@ -248,16 +249,17 @@ class AppairageViewSet(ScopedModelViewSet):
             return self.success_response(data=serializer.data, message="Commentaires d'appairage récupérés avec succès.")
 
         if request.method == "POST":
-            serializer = CommentaireAppairageSerializer(data=request.data)
-            if serializer.is_valid():
+            write_serializer = CommentaireAppairageWriteSerializer(data=request.data)
+            if write_serializer.is_valid():
                 try:
-                    serializer.save(created_by=request.user, appairage=appairage)
+                    commentaire = write_serializer.save(created_by=request.user, appairage=appairage)
                 except DjangoValidationError as exc:
                     return self.error_response(
                         message="Impossible de créer le commentaire d'appairage.",
                         errors=getattr(exc, "message_dict", None) or {"non_field_errors": list(exc.messages)},
                         status_code=status.HTTP_400_BAD_REQUEST,
                     )
+                serializer = CommentaireAppairageSerializer(commentaire)
                 return self.success_response(
                     data=serializer.data,
                     message="Commentaire d'appairage créé avec succès.",
@@ -265,7 +267,7 @@ class AppairageViewSet(ScopedModelViewSet):
                 )
             return self.error_response(
                 message="Impossible de créer le commentaire d'appairage.",
-                errors=serializer.errors,
+                errors=write_serializer.errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
