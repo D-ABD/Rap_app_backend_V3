@@ -361,7 +361,10 @@ class CommentaireStatsViewSet(viewsets.ViewSet):
         by = (request.query_params.get("by") or "departement").lower()
         allowed = {"centre", "departement", "formation", "auteur"}
         if by not in allowed:
-            return Response({"detail": f"'by' doit être dans {sorted(allowed)}"}, status=400)
+            return Response(
+                {"success": False, "message": f"'by' doit être dans {sorted(allowed)}", "data": None},
+                status=400,
+            )
 
         base = self._apply_filters(self._base_qs(request), request)
 

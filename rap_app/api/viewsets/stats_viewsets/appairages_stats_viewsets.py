@@ -362,7 +362,10 @@ class AppairageStatsViewSet(GenericViewSet):
         by: GroupKey = (request.query_params.get("by") or "centre").lower()  # défaut utile
         allowed = {"centre", "departement", "statut", "formation", "partenaire"}
         if by not in allowed:
-            return Response({"detail": f"'by' doit être dans {sorted(allowed)}"}, status=400)
+            return Response(
+                {"success": False, "message": f"'by' doit être dans {sorted(allowed)}", "data": None},
+                status=400,
+            )
 
         qs = self._apply_common_filters(self.get_queryset())
 

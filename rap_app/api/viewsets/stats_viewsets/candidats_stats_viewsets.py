@@ -576,7 +576,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "responsable",
             "entreprise",
         }:
-            return Response({"detail": "Paramètre 'by' invalide."}, status=400)
+            return Response({"success": False, "message": "Paramètre 'by' invalide.", "data": None}, status=400)
 
         qs = self._apply_common_filters(self.get_queryset()).annotate(
             departement=Coalesce(Substr("formation__centre__code_postal", 1, 2), Value("NA"))

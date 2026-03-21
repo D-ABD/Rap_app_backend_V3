@@ -414,7 +414,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         allowed = {"centre", "departement", "owner", "formation", "partenaire", "statut", "objectif", "motif", "type"}
         if by not in allowed:
             # Structure de retour sur erreur d'argument "by"
-            return Response({"detail": "Paramètre 'by' invalide."}, status=400)
+            return Response({"success": False, "message": "Paramètre 'by' invalide.", "data": None}, status=400)
 
         qs = self._apply_common_filters(self.get_queryset())
         today = timezone.now().date()

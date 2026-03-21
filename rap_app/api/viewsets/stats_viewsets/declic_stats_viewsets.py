@@ -135,7 +135,7 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
             group_fields = ["group_key"]
 
         else:
-            return Response({"detail": "Paramètre 'by' invalide"}, status=400)
+            return Response({"success": False, "message": "Paramètre 'by' invalide", "data": None}, status=400)
 
         data = (
             qs.values(*group_fields)

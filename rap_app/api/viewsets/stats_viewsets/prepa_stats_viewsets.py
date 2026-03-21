@@ -331,7 +331,11 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
         else:
             return Response(
-                {"detail": "Paramètre 'by' invalide. Valeurs possibles : centre, departement, type_prepa."},
+                {
+                    "success": False,
+                    "message": "Paramètre 'by' invalide. Valeurs possibles : centre, departement, type_prepa.",
+                    "data": None,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -377,7 +377,7 @@ class AppairageCommentaireStatsViewSet(RestrictToUserOwnedQueryset, GenericViewS
         by: GroupKey = (request.query_params.get("by") or "departement").lower()
         allowed = {"centre", "departement", "formation", "partenaire", "statut_snapshot", "appairage"}
         if by not in allowed:
-            return Response({"detail": "Paramètre 'by' invalide."}, status=400)
+            return Response({"success": False, "message": "Paramètre 'by' invalide.", "data": None}, status=400)
 
         qs = self._apply_common_filters(self.get_queryset())
         qs = qs.annotate(departement=Coalesce(Substr("appairage__formation__centre__code_postal", 1, 2), Value("NA")))

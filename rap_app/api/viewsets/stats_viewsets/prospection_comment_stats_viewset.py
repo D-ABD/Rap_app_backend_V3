@@ -311,7 +311,10 @@ class ProspectionCommentStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet
         by = (request.query_params.get("by") or "centre").lower()
         allowed = {"centre", "departement", "formation"}
         if by not in allowed:
-            return Response({"detail": f"'by' doit être dans {sorted(allowed)}"}, status=400)
+            return Response(
+                {"success": False, "message": f"'by' doit être dans {sorted(allowed)}", "data": None},
+                status=400,
+            )
 
         params = request.query_params.copy()
         params.pop(by, None)  # on supprime le filtre correspondant

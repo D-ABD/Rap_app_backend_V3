@@ -271,7 +271,7 @@ class AtelierTREStatsViewSet(viewsets.ViewSet):
         """
         by = request.query_params.get("by") or "centre"
         if by not in ("centre", "departement", "type_atelier"):
-            return Response({"detail": "Paramètre 'by' invalide."}, status=400)
+            return Response({"success": False, "message": "Paramètre 'by' invalide.", "data": None}, status=400)
 
         qs = self._apply_filters(self.get_base_queryset(), request)
 
