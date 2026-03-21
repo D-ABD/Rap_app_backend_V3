@@ -97,6 +97,10 @@ def test_staff_creer_compte_refuse_si_deja_compte():
     url = reverse("candidat-creer-compte", args=[cand.id])
     resp = client.post(url)
     assert resp.status_code == 400
+    payload = resp.json()
+    assert payload["success"] is False
+    assert payload["message"] == "Ce candidat n'est pas admissible."
+    assert payload["errors"]["non_field_errors"] == ["Ce candidat n'est pas admissible."]
 
 
 @pytest.mark.django_db
@@ -222,6 +226,43 @@ def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
     cand.refresh_from_db()
     assert cand.demande_compte_statut == Candidat.DemandeCompteStatut.ACCEPTEE
     assert cand.compte_utilisateur is not None
+
+
+@pytest.mark.django_db
+def test_staff_valider_demande_compte_without_pending_request_uses_non_field_errors():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet No Pending", code_postal="75109")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet No Pending",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_viewset_no_pending@example.com",
+        username="staff_viewset_no_pending",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    cand = Candidat.objects.create(
+        nom="No",
+        prenom="Pending",
+        email="no.pending@example.com",
+        formation=formation,
+        demande_compte_statut=Candidat.DemandeCompteStatut.AUCUNE,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-valider-demande-compte", args=[cand.id]))
+
+    assert resp.status_code == 400
+    payload = resp.json()
+    assert payload["success"] is False
+    assert payload["message"] == "Aucune demande de compte en attente pour ce candidat."
+    assert payload["errors"]["non_field_errors"] == ["Aucune demande de compte en attente pour ce candidat."]
 
 
 @pytest.mark.django_db

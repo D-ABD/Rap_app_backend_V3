@@ -77,6 +77,30 @@ def _sanitize_dict(d: dict) -> dict:
     return out
 
 
+def _extract_validation_payload(exc) -> tuple[str, dict]:
+    if hasattr(exc, "message_dict"):
+        errors = exc.message_dict
+    elif isinstance(getattr(exc, "detail", None), dict):
+        errors = exc.detail
+    else:
+        errors = {"non_field_errors": [str(exc)]}
+
+    if isinstance(errors, dict):
+        if errors.get("non_field_errors"):
+            message = errors["non_field_errors"][0]
+        else:
+            first_value = next(iter(errors.values()), [str(exc)])
+            if isinstance(first_value, list) and first_value:
+                message = str(first_value[0])
+            else:
+                message = str(first_value)
+    else:
+        message = str(exc)
+        errors = {"non_field_errors": [message]}
+
+    return str(message), errors
+
+
 def _build_candidat_meta(user=None) -> dict:
     """Construit les métadonnées pour /candidats/meta en respectant le scope de l’utilisateur."""
 
@@ -443,7 +467,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             user = CandidateAccountService.promote_to_stagiaire(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
@@ -461,7 +486,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
@@ -482,7 +508,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             candidat = CandidateLifecycleService.start_formation(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         compte = getattr(candidat, "compte_utilisateur", None)
         return Response(
@@ -505,7 +532,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             candidat = CandidateLifecycleService.complete_formation(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
@@ -526,7 +554,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             candidat = CandidateLifecycleService.abandon(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
@@ -549,7 +578,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             user = CandidateAccountService.approve_account_request(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
@@ -568,7 +598,8 @@ class CandidatViewSet(ScopedModelViewSet):
         try:
             CandidateAccountService.reject_account_request(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
-            raise ValidationError({"detail": e.message if hasattr(e, "message") else str(e)})
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(message=message, errors=errors, status_code=400)
 
         return Response(
             {
