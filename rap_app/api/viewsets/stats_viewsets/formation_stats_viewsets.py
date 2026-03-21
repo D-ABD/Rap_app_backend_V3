@@ -9,6 +9,7 @@ from django.forms import CharField
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -73,6 +74,16 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
     serializer_class = EmptySerializer
     permission_classes = [IsStaffOrAbove]
+
+    def _error_response(self, message, status_code=status.HTTP_400_BAD_REQUEST, errors=None):
+        payload = {
+            "success": False,
+            "message": message,
+            "data": None,
+        }
+        if errors is not None:
+            payload["errors"] = errors
+        return Response(payload, status=status_code)
 
     # ────────────────────────────────────────────────────────────
     # Helpers périmètre user
@@ -473,7 +484,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         """
         by: GroupKey = (request.query_params.get("by") or "departement").lower()
         if by not in {"formation", "centre", "departement", "type_offre", "statut"}:
-            return Response({"detail": "Paramètre 'by' invalide."}, status=400)
+            return self._error_response("Paramètre 'by' invalide.", status_code=status.HTTP_400_BAD_REQUEST)
 
         qs = self._apply_common_filters(self.get_queryset())
         today = timezone.now().date()
@@ -817,4 +828,4 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             import traceback
 
             traceback.print_exc()
-            return Response({"error": str(e)}, status=500)
+            return self._error_response(str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

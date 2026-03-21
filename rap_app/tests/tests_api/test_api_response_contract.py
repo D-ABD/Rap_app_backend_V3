@@ -112,6 +112,24 @@ class ApiResponseContractTests(APITestCase):
         self.assertIsNone(response.data["data"])
         self.assertIsInstance(response.data["errors"], dict)
 
+    def test_documents_par_formation_missing_param_uses_standard_envelope(self):
+        response = self.client.get(reverse("document-par-formation"))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Paramètre 'formation' requis.")
+        self.assertIsNone(response.data["data"])
+
+    def test_documents_par_formation_success_uses_standard_envelope(self):
+        response = self.client.get(reverse("document-par-formation"), {"formation": self.formation.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Documents de la formation récupérés avec succès.")
+        self.assertIsInstance(response.data["data"], list)
+
     def test_users_validation_error_uses_standard_envelope(self):
         response = self.client.post(
             reverse("user-list"),

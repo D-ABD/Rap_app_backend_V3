@@ -264,12 +264,12 @@ class DocumentViewSet(ScopedModelViewSet):
         """
         formation_id = request.query_params.get("formation")
         if not formation_id:
-            return Response({"success": False, "message": "Paramètre 'formation' requis."}, status=400)
+            return self.error_response(message="Paramètre 'formation' requis.", status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
             formation_id = int(formation_id)
         except ValueError:
-            return Response({"success": False, "message": "ID de formation invalide."}, status=400)
+            return self.error_response(message="ID de formation invalide.", status_code=status.HTTP_400_BAD_REQUEST)
 
         queryset = self.get_queryset().filter(formation_id=formation_id)
         page = self.paginate_queryset(queryset)
@@ -277,7 +277,7 @@ class DocumentViewSet(ScopedModelViewSet):
         return (
             self.get_paginated_response(serializer.data)
             if page
-            else Response({"success": True, "data": serializer.data})
+            else self.success_response(data=serializer.data, message="Documents de la formation récupérés avec succès.")
         )
 
     @extend_schema(

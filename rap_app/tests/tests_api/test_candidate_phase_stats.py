@@ -116,3 +116,12 @@ class CandidatePhaseStatsTests(APITestCase):
         self.assertEqual(candidats["nb_inscrits_valides"], 1)
         self.assertEqual(candidats["nb_stagiaires_en_formation"], 1)
         self.assertEqual(candidats["nb_entrees_formation"], 2)
+
+    def test_formation_stats_grouped_invalid_by_uses_standard_error_envelope(self):
+        response = self.client.get(reverse("formation-stats-grouped"), {"by": "invalide"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Paramètre 'by' invalide.")
+        self.assertIsNone(response.data["data"])
