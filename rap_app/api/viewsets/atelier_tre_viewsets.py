@@ -192,9 +192,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response(
-                {"detail": "'candidats' doit être une liste d'entiers."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message="'candidats' doit être une liste d'entiers.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
         if not ids:
             return self.success_response(
@@ -205,9 +205,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         qs = Candidat.objects.filter(id__in=ids)
 
         if not qs.exists():
-            return Response(
-                {"detail": "Aucun candidat trouvé pour les IDs fournis."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message="Aucun candidat trouvé pour les IDs fournis.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         atelier_centre_id = getattr(atelier.centre, "id", None)
@@ -215,9 +215,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
             c.id for c in qs if getattr(getattr(c, "formation", None), "centre_id", None) != atelier_centre_id
         ]
         if mismatched:
-            return Response(
-                {"detail": f"Candidats hors centre de l'atelier: {sorted(mismatched)}"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message=f"Candidats hors centre de l'atelier: {sorted(mismatched)}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         atelier.candidats.add(*qs)
@@ -243,9 +243,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response(
-                {"detail": "'candidats' doit être une liste d'entiers."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message="'candidats' doit être une liste d'entiers.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
         if not ids:
             return self.success_response(
@@ -255,9 +255,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
 
         qs = Candidat.objects.filter(id__in=ids)
         if not qs.exists():
-            return Response(
-                {"detail": "Aucun candidat trouvé pour les IDs fournis."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message="Aucun candidat trouvé pour les IDs fournis.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
         atelier.candidats.remove(*qs)
         return self.success_response(
@@ -298,21 +298,27 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         atelier = self.get_object()
         items = request.data.get("items", [])
         if not isinstance(items, list):
-            return Response(
-                {"detail": "'items' doit être une liste d'objets {candidat, statut, commentaire?}."},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message="'items' doit être une liste d'objets {candidat, statut, commentaire?}.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         allowed = {code for code, _ in PresenceStatut.choices}
         pairs = {}
         for it in items:
             if not isinstance(it, dict):
-                return Response({"detail": "Chaque item doit être un objet."}, status=status.HTTP_400_BAD_REQUEST)
+                return self.error_response(
+                    message="Chaque item doit être un objet.",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
             cid = it.get("candidat")
             st = it.get("statut")
             com = it.get("commentaire", None)
             if not isinstance(cid, int) or st not in allowed:
-                return Response({"detail": f"Item invalide: {it!r}"}, status=status.HTTP_400_BAD_REQUEST)
+                return self.error_response(
+                    message=f"Item invalide: {it!r}",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
             pairs[cid] = {"statut": st, "commentaire": com}
 
         if not pairs:
@@ -325,8 +331,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         existing_ids = set(Candidat.objects.filter(id__in=wanted_ids).values_list("id", flat=True))
         unknown = wanted_ids - existing_ids
         if unknown:
-            return Response(
-                {"detail": f"Candidats introuvables: {sorted(unknown)}"}, status=status.HTTP_400_BAD_REQUEST
+            return self.error_response(
+                message=f"Candidats introuvables: {sorted(unknown)}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         atelier_centre_id = getattr(atelier.centre, "id", None)
@@ -336,17 +343,17 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
             if getattr(getattr(Candidat.objects.get(id=cid), "formation", None), "centre_id", None) != atelier_centre_id
         ]
         if mismatch:
-            return Response(
-                {"detail": f"Candidats hors centre de l'atelier: {sorted(mismatch)}"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message=f"Candidats hors centre de l'atelier: {sorted(mismatch)}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         inscrits_ids = set(atelier.candidats.values_list("id", flat=True))
         not_enrolled = wanted_ids - inscrits_ids
         if not_enrolled:
-            return Response(
-                {"detail": f"Candidats non inscrits à l'atelier: {sorted(not_enrolled)}"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return self.error_response(
+                message=f"Candidats non inscrits à l'atelier: {sorted(not_enrolled)}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         for cid in wanted_ids:
@@ -384,8 +391,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response(
-                {"detail": "'candidats' doit être une liste d'entiers."}, status=status.HTTP_400_BAD_REQUEST
+            return self.error_response(
+                message="'candidats' doit être une liste d'entiers.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         qs = atelier.candidats.filter(id__in=ids)
@@ -412,8 +420,9 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         atelier = self.get_object()
         ids = request.data.get("candidats", [])
         if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-            return Response(
-                {"detail": "'candidats' doit être une liste d'entiers."}, status=status.HTTP_400_BAD_REQUEST
+            return self.error_response(
+                message="'candidats' doit être une liste d'entiers.",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         qs = atelier.candidats.filter(id__in=ids)

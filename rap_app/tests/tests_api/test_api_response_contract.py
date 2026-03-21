@@ -407,6 +407,32 @@ class ApiResponseContractTests(APITestCase):
         self.assertTrue(response.data["success"])
         self.assertIn("type_atelier_choices", response.data["data"])
 
+    def test_atelier_add_candidats_invalid_payload_uses_standard_envelope(self):
+        response = self.client.post(
+            f"/api/ateliers-tre/{self.atelier.id}/add-candidats/",
+            {"candidats": "pas-une-liste"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "'candidats' doit être une liste d'entiers.")
+        self.assertIsNone(response.data["data"])
+
+    def test_atelier_set_presences_invalid_payload_uses_standard_envelope(self):
+        response = self.client.post(
+            f"/api/ateliers-tre/{self.atelier.id}/set-presences/",
+            {"items": "pas-une-liste"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "'items' doit être une liste d'objets {candidat, statut, commentaire?}.")
+        self.assertIsNone(response.data["data"])
+
     def test_partenaires_filter_options_uses_standard_envelope(self):
         response = self.client.get(reverse("partenaire-filter-options"))
 
