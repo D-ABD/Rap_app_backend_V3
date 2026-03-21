@@ -474,6 +474,19 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         """
         instance = self.get_object()
         resultat = request.data.get("resultat")
+
+        if instance.activite == Prospection.ACTIVITE_ARCHIVEE:
+            message = "La prospection est déjà archivée."
+            return Response(
+                {
+                    "success": False,
+                    "message": message,
+                    "data": None,
+                    "errors": {"non_field_errors": [message]},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         instance.archiver(user=request.user, resultat=resultat)
         LogUtilisateur.log_action(
             instance, LogUtilisateur.ACTION_UPDATE, request.user, f"Archivée ({resultat or 'sans résultat'})"
