@@ -449,6 +449,24 @@ class ApiResponseContractTests(APITestCase):
         self.assertTrue(response.data["success"])
         self.assertIn("results", response.data["data"])
 
+    def test_users_liste_simple_uses_standard_envelope(self):
+        response = self.client.get(reverse("user-liste-simple"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Liste simple des utilisateurs récupérée avec succès.")
+        self.assertIsInstance(response.data["data"], list)
+
+    def test_users_filtres_uses_standard_envelope(self):
+        response = self.client.get(reverse("user-get-user-filtres"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Filtres utilisateurs récupérés avec succès.")
+        self.assertIn("role", response.data["data"])
+
     def test_evenements_choices_uses_standard_envelope(self):
         response = self.client.get(reverse("evenement-choices"))
 

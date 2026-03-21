@@ -407,7 +407,10 @@ class CustomUserViewSet(BaseApiViewSet):
         """
         users = self.get_queryset().only("id", "first_name", "last_name", "email").order_by("first_name")
         data = [{"id": u.id, "nom": f"{u.first_name} {u.last_name}".strip() or u.email} for u in users]
-        return Response({"success": True, "data": data})
+        return self.success_response(
+            data=data,
+            message="Liste simple des utilisateurs récupérée avec succès.",
+        )
 
     @action(detail=False, methods=["get"], url_path="filtres")
     def get_user_filtres(self, request):
@@ -446,17 +449,15 @@ class CustomUserViewSet(BaseApiViewSet):
                     out.append(i)
             return out
 
-        return Response(
-            {
-                "success": True,
-                "data": {
-                    "role": roles,
-                    "is_active": [{"value": "true", "label": "Actif"}, {"value": "false", "label": "Inactif"}],
-                    "formation": [{"value": f["value"], "label": f["label"]} for f in formation_options],
-                    "centre": unique(centres),
-                    "type_offre": unique(types_offre),
-                },
-            }
+        return self.success_response(
+            data={
+                "role": roles,
+                "is_active": [{"value": "true", "label": "Actif"}, {"value": "false", "label": "Inactif"}],
+                "formation": [{"value": f["value"], "label": f["label"]} for f in formation_options],
+                "centre": unique(centres),
+                "type_offre": unique(types_offre),
+            },
+            message="Filtres utilisateurs récupérés avec succès.",
         )
 
 
