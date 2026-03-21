@@ -398,10 +398,28 @@ class ApiResponseContractTests(APITestCase):
         response = self.client.post(f"/api/appairage-commentaires/{comment.id}/desarchiver/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
         self.assertFalse(response.data["success"])
         self.assertEqual(response.data["message"], "Déjà actif.")
         self.assertIsNone(response.data["data"])
+        self.assertEqual(response.data["errors"]["non_field_errors"], ["Déjà actif."])
+
+    def test_appairage_comment_archive_already_archived_uses_standard_envelope(self):
+        comment = CommentaireAppairage.objects.create(
+            appairage=self.appairage,
+            body="Commentaire déjà archivé",
+            created_by=self.user,
+            statut_commentaire="archive",
+        )
+
+        response = self.client.post(f"/api/appairage-commentaires/{comment.id}/archiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Déjà archivé.")
+        self.assertIsNone(response.data["data"])
+        self.assertEqual(response.data["errors"]["non_field_errors"], ["Déjà archivé."])
 
     def test_prospection_unarchive_already_active_uses_standard_envelope(self):
         response = self.client.post(f"/api/prospections/{self.prospection.id}/desarchiver/")

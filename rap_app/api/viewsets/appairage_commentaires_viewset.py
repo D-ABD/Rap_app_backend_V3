@@ -157,7 +157,13 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
         """POST : archive le commentaire (statut_commentaire=archive). Retourne détail déjà archivé ou archivé."""
         comment = self.get_object()
         if comment.est_archive:
-            return self._json_message_response(False, "Déjà archivé.", status_code=status.HTTP_200_OK)
+            message = "Déjà archivé."
+            return self._json_message_response(
+                False,
+                message,
+                status_code=status.HTTP_200_OK,
+                errors={"non_field_errors": [message]},
+            )
         comment.archiver(save=True)
         logger.info("CommentaireAppairage #%s archivé par %s", comment.pk, request.user)
         return self._json_message_response(True, "Commentaire archivé.", status_code=status.HTTP_200_OK)
@@ -167,7 +173,13 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
         """POST : désarchive le commentaire (statut_commentaire=actif). Retourne détail déjà actif ou désarchivé."""
         comment = self.get_object()
         if not comment.est_archive:
-            return self._json_message_response(False, "Déjà actif.", status_code=status.HTTP_200_OK)
+            message = "Déjà actif."
+            return self._json_message_response(
+                False,
+                message,
+                status_code=status.HTTP_200_OK,
+                errors={"non_field_errors": [message]},
+            )
         comment.desarchiver(save=True)
         logger.info("CommentaireAppairage #%s désarchivé par %s", comment.pk, request.user)
         return self._json_message_response(True, "Commentaire désarchivé.", status_code=status.HTTP_200_OK)
