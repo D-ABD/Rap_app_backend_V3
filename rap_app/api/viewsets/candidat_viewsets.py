@@ -46,6 +46,7 @@ from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 from .scoped_viewset import ScopedModelViewSet
 from ..serializers.candidat_serializers import (
     CandidatCreateUpdateSerializer,
@@ -99,6 +100,12 @@ def _extract_validation_payload(exc) -> tuple[str, dict]:
         errors = {"non_field_errors": [message]}
 
     return str(message), errors
+
+
+def _resolve_error_code(message: str | None) -> str | None:
+    if not message:
+        return None
+    return MESSAGE_ERROR_CODE_MAP.get(message)
 
 
 def _build_candidat_meta(user=None) -> dict:
@@ -468,7 +475,12 @@ class CandidatViewSet(ScopedModelViewSet):
             user = CandidateAccountService.promote_to_stagiaire(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {
@@ -487,7 +499,12 @@ class CandidatViewSet(ScopedModelViewSet):
             candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {
@@ -509,7 +526,12 @@ class CandidatViewSet(ScopedModelViewSet):
             candidat = CandidateLifecycleService.start_formation(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         compte = getattr(candidat, "compte_utilisateur", None)
         return Response(
@@ -533,7 +555,12 @@ class CandidatViewSet(ScopedModelViewSet):
             candidat = CandidateLifecycleService.complete_formation(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {
@@ -555,7 +582,12 @@ class CandidatViewSet(ScopedModelViewSet):
             candidat = CandidateLifecycleService.abandon(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {
@@ -579,7 +611,12 @@ class CandidatViewSet(ScopedModelViewSet):
             user = CandidateAccountService.approve_account_request(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {
@@ -599,7 +636,12 @@ class CandidatViewSet(ScopedModelViewSet):
             CandidateAccountService.reject_account_request(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
-            return self.error_response(message=message, errors=errors, status_code=400)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
 
         return Response(
             {

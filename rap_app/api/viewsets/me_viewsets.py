@@ -17,6 +17,7 @@ from ..serializers.user_profil_serializers import (
     RoleChoiceSerializer,
 )
 from ..mixins import ApiResponseMixin
+from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 
 
 class MeAPIView(APIView):
@@ -195,6 +196,7 @@ class DemandeCompteCandidatView(ApiResponseMixin, APIView):
             return self.error_response(
                 message=message,
                 errors=errors,
+                error_code=MESSAGE_ERROR_CODE_MAP.get(message),
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 

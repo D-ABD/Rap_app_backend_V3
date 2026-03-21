@@ -186,6 +186,7 @@ def test_demande_compte_candidat_duplicate_pending_uses_non_field_errors():
     assert payload["message"] == "Une demande de compte est déjà en attente."
     assert payload["data"] is None
     assert payload["errors"]["non_field_errors"] == ["Une demande de compte est déjà en attente."]
+    assert payload["error_code"] == "candidate_account_request_already_pending"
 
 
 @pytest.mark.django_db
@@ -263,6 +264,7 @@ def test_staff_valider_demande_compte_without_pending_request_uses_non_field_err
     assert payload["success"] is False
     assert payload["message"] == "Aucune demande de compte en attente pour ce candidat."
     assert payload["errors"]["non_field_errors"] == ["Aucune demande de compte en attente pour ce candidat."]
+    assert payload["error_code"] == "candidate_account_request_missing"
 
 
 @pytest.mark.django_db

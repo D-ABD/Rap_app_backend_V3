@@ -426,11 +426,12 @@ class ApiResponseContractTests(APITestCase):
         response = self.client.post(f"/api/prospections/{self.prospection.id}/desarchiver/")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors", "error_code"})
         self.assertFalse(response.data["success"])
         self.assertEqual(response.data["message"], "La prospection n’est pas archivée.")
         self.assertIsNone(response.data["data"])
         self.assertEqual(response.data["errors"]["non_field_errors"], ["La prospection n’est pas archivée."])
+        self.assertEqual(response.data["error_code"], "prospection_not_archived")
 
     def test_prospection_archive_already_archived_uses_standard_envelope(self):
         self.prospection.activite = "archivee"
@@ -439,11 +440,12 @@ class ApiResponseContractTests(APITestCase):
         response = self.client.post(f"/api/prospections/{self.prospection.id}/archiver/")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors", "error_code"})
         self.assertFalse(response.data["success"])
         self.assertEqual(response.data["message"], "La prospection est déjà archivée.")
         self.assertIsNone(response.data["data"])
         self.assertEqual(response.data["errors"]["non_field_errors"], ["La prospection est déjà archivée."])
+        self.assertEqual(response.data["error_code"], "prospection_already_archived")
 
     def test_appairage_archive_already_archived_uses_standard_envelope(self):
         self.appairage.activite = "archive"

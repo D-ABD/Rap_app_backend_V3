@@ -48,6 +48,7 @@ from ...services.prospection_ownership_service import (
     ProspectionOwnershipService,
     defer_prospection_owner_sync,
 )
+from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 from ...utils.filters import ProspectionFilterSet
 from ..permissions import CanAccessProspectionComment, IsOwnerOrStaffOrAbove
 from ..serializers.prospection_serializers import (
@@ -483,6 +484,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                     "message": message,
                     "data": None,
                     "errors": {"non_field_errors": [message]},
+                    "error_code": MESSAGE_ERROR_CODE_MAP.get(message),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -518,6 +520,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
                     "message": message,
                     "data": None,
                     "errors": {"non_field_errors": [message]},
+                    "error_code": MESSAGE_ERROR_CODE_MAP.get(message),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
