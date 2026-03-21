@@ -328,6 +328,8 @@ class ApiResponseContractTests(APITestCase):
         self.assertFalse(response.data["success"])
         self.assertIsNone(response.data["data"])
         self.assertIsInstance(response.data["errors"], dict)
+        self.assertEqual(response.data["message"], "Ce champ est obligatoire.")
+        self.assertEqual(response.data["errors"]["body"], ["Ce champ est obligatoire."])
 
     def test_appairage_create_duplicate_business_error_uses_non_field_errors(self):
         response = self.client.post(

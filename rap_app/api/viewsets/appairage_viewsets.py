@@ -278,9 +278,10 @@ class AppairageViewSet(ScopedModelViewSet):
                 try:
                     commentaire = write_serializer.save(created_by=request.user, appairage=appairage)
                 except DjangoValidationError as exc:
+                    message, errors = _extract_validation_payload(exc)
                     return self.error_response(
-                        message="Impossible de créer le commentaire d'appairage.",
-                        errors=getattr(exc, "message_dict", None) or {"non_field_errors": list(exc.messages)},
+                        message=message,
+                        errors=errors,
                         status_code=status.HTTP_400_BAD_REQUEST,
                     )
                 serializer = CommentaireAppairageSerializer(commentaire)
@@ -289,9 +290,12 @@ class AppairageViewSet(ScopedModelViewSet):
                     message="Commentaire d'appairage créé avec succès.",
                     status_code=status.HTTP_201_CREATED,
                 )
+            message, errors = _extract_validation_payload(
+                ValidationError(write_serializer.errors)
+            )
             return self.error_response(
-                message="Impossible de créer le commentaire d'appairage.",
-                errors=write_serializer.errors,
+                message=message,
+                errors=errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
