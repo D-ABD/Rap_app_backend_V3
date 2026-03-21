@@ -5,6 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils import timezone as dj_timezone
@@ -115,6 +116,33 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
 
         return qs.order_by("-created_at", "-id").distinct()
 
+    def _get_base_visible_queryset(self):
+        """
+        Retourne le queryset visible pour l'utilisateur courant sans appliquer
+        le filtre implicite actif/archivé utilisé par la liste.
+        """
+        u = getattr(self.request, "user", None)
+        base = super().get_queryset()
+
+        if not getattr(u, "is_authenticated", False):
+            return base.none()
+
+        qs = base
+
+        if is_candidate(u):
+            qs = qs.filter(appairage__candidat__user_id=u.id)
+        elif is_staff_like(u) and not is_admin_like(u):
+            centre_ids = staff_centre_ids(u) or []
+            if centre_ids:
+                qs = qs.filter(appairage__formation__centre_id__in=centre_ids).distinct()
+            else:
+                return base.none()
+
+        return qs.order_by("-created_at", "-id").distinct()
+
+    def _get_object_including_archived_visible(self, pk):
+        return get_object_or_404(self._get_base_visible_queryset(), pk=pk)
+
     def get_serializer_class(self):
         """CommentaireAppairageWriteSerializer pour create/update/partial_update, sinon CommentaireAppairageSerializer."""
         if self.action in ["create", "update", "partial_update"]:
@@ -155,7 +183,7 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """POST : archive le commentaire (statut_commentaire=archive). Retourne détail déjà archivé ou archivé."""
-        comment = self.get_object()
+        comment = self._get_object_including_archived_visible(pk)
         if comment.est_archive:
             message = "Déjà archivé."
             return self._json_message_response(
@@ -171,7 +199,7 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """POST : désarchive le commentaire (statut_commentaire=actif). Retourne détail déjà actif ou désarchivé."""
-        comment = self.get_object()
+        comment = self._get_object_including_archived_visible(pk)
         if not comment.est_archive:
             message = "Déjà actif."
             return self._json_message_response(
