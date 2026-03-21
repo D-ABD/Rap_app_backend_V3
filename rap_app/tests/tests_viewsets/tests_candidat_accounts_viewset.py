@@ -149,6 +149,42 @@ def test_demande_compte_candidat_flow():
 
 
 @pytest.mark.django_db
+def test_demande_compte_candidat_duplicate_pending_uses_non_field_errors():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet Duplicate Pending", code_postal="75107")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet Duplicate Pending",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    user_cand = CustomUser.objects.create_user_with_role(
+        email="duplicate.pending@example.com",
+        username="duplicatepending",
+        password=None,
+        role=CustomUser.ROLE_CANDIDAT,
+    )
+    cand = Candidat.objects.create(
+        nom="Demande",
+        prenom="Double",
+        email="duplicate.pending@example.com",
+        formation=formation,
+        compte_utilisateur=user_cand,
+        demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
+    )
+
+    client.force_authenticate(user=user_cand)
+    response = client.post(reverse("demande_compte_candidat"))
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["success"] is False
+    assert payload["message"] == "Une demande de compte est déjà en attente."
+    assert payload["data"] is None
+    assert payload["errors"]["non_field_errors"] == ["Une demande de compte est déjà en attente."]
+
+
+@pytest.mark.django_db
 def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
     """Un staff peut valider une demande de compte pour un candidat sans compte lié."""
     client = APIClient()

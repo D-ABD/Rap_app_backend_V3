@@ -112,6 +112,12 @@ class CandidateAccountServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             CandidateAccountService.request_account(candidate, requester=self.actor)
 
+        try:
+            CandidateAccountService.request_account(candidate, requester=self.actor)
+        except ValidationError as exc:
+            self.assertIn("non_field_errors", exc.message_dict)
+            self.assertEqual(exc.message_dict["non_field_errors"], ["Une demande de compte est déjà en attente."])
+
     def test_reject_account_request_marks_candidate_refused(self):
         candidate = Candidat.objects.create(
             nom="Rejected",

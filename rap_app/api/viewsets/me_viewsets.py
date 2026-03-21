@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.utils import timezone as dj_timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import exceptions, status
@@ -189,14 +190,12 @@ class DemandeCompteCandidatView(ApiResponseMixin, APIView):
         try:
             CandidateAccountService.request_account(candidat, requester=user)
         except ValidationError as e:
-            detail = e.message_dict.get("detail", [str(e)])[0] if hasattr(e, "message_dict") else str(e)
-            return Response(
-                {
-                    "success": False,
-                    "message": detail,
-                    "data": None,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+            errors = e.message_dict if hasattr(e, "message_dict") else {"non_field_errors": [str(e)]}
+            message = errors.get("non_field_errors", [str(e)])[0]
+            return self.error_response(
+                message=message,
+                errors=errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         return self.success_response(

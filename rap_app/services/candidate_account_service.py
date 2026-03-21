@@ -44,6 +44,10 @@ class CandidateAccountService:
     d'observation pendant les écritures contrôlées.
     """
 
+    @staticmethod
+    def _global_error(message: str) -> ValidationError:
+        return ValidationError({"non_field_errors": [message]})
+
     @classmethod
     @transaction.atomic
     def link_user_to_candidate(
@@ -140,7 +144,7 @@ class CandidateAccountService:
         compte vers le rôle `stagiaire`.
         """
         if not candidate.admissible:
-            raise ValidationError({"detail": "Ce candidat n'est pas admissible."})
+            raise cls._global_error("Ce candidat n'est pas admissible.")
 
         user = candidate.compte_utilisateur or cls.provision_candidate_account(candidate, actor=actor)
 
@@ -187,10 +191,10 @@ class CandidateAccountService:
         Place une demande de compte en attente pour un candidat.
         """
         if candidate.compte_utilisateur_id and candidate.compte_utilisateur_id != requester.id:
-            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
+            raise cls._global_error("Un compte utilisateur est déjà lié à ce candidat.")
 
         if candidate.demande_compte_statut == candidate.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError({"detail": "Une demande de compte est déjà en attente."})
+            raise cls._global_error("Une demande de compte est déjà en attente.")
 
         candidate.demande_compte_statut = candidate.DemandeCompteStatut.EN_ATTENTE
         candidate.demande_compte_date = timezone.now()
@@ -218,9 +222,9 @@ class CandidateAccountService:
         Approuve une demande de compte en attente puis crée ou lie le compte.
         """
         if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
+            raise cls._global_error("Aucune demande de compte en attente pour ce candidat.")
         if candidate.compte_utilisateur_id:
-            raise ValidationError({"detail": "Un compte utilisateur est déjà lié à ce candidat."})
+            raise cls._global_error("Un compte utilisateur est déjà lié à ce candidat.")
 
         user = cls.provision_candidate_account(candidate, actor=actor)
         candidate.demande_compte_statut = Candidat.DemandeCompteStatut.ACCEPTEE
@@ -247,7 +251,7 @@ class CandidateAccountService:
         Refuse une demande de compte en attente.
         """
         if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise ValidationError({"detail": "Aucune demande de compte en attente pour ce candidat."})
+            raise cls._global_error("Aucune demande de compte en attente pour ce candidat.")
 
         candidate.demande_compte_statut = Candidat.DemandeCompteStatut.REFUSEE
         candidate.demande_compte_traitee_par = actor
