@@ -368,7 +368,12 @@ class AppairageViewSet(ScopedModelViewSet):
         appairage = self._get_object_including_archived_scoped(pk)
 
         if appairage.activite == AppairageActivite.ARCHIVE:
-            return self.error_response(message="Déjà archivé.", status_code=status.HTTP_400_BAD_REQUEST)
+            message = "Déjà archivé."
+            return self.error_response(
+                message=message,
+                errors={"non_field_errors": [message]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         if hasattr(appairage, "archiver"):
             appairage.archiver(user=request.user)
@@ -389,8 +394,10 @@ class AppairageViewSet(ScopedModelViewSet):
         appairage = self._get_object_including_archived_scoped(pk)
 
         if appairage.activite != AppairageActivite.ARCHIVE:
+            message = "Cet appairage n’est pas archivé."
             return self.error_response(
-                message="Cet appairage n’est pas archivé.",
+                message=message,
+                errors={"non_field_errors": [message]},
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 

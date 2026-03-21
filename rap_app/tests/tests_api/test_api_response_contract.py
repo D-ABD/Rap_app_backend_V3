@@ -431,10 +431,21 @@ class ApiResponseContractTests(APITestCase):
         response = self.client.post(f"/api/appairages/{self.appairage.id}/archiver/")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
         self.assertFalse(response.data["success"])
         self.assertEqual(response.data["message"], "Déjà archivé.")
         self.assertIsNone(response.data["data"])
+        self.assertEqual(response.data["errors"]["non_field_errors"], ["Déjà archivé."])
+
+    def test_appairage_unarchive_already_active_uses_standard_envelope(self):
+        response = self.client.post(f"/api/appairages/{self.appairage.id}/desarchiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Cet appairage n’est pas archivé.")
+        self.assertIsNone(response.data["data"])
+        self.assertEqual(response.data["errors"]["non_field_errors"], ["Cet appairage n’est pas archivé."])
 
     def test_formation_archive_already_archived_uses_standard_envelope(self):
         self.formation.archiver(user=self.user, commentaire="Préparation test")
