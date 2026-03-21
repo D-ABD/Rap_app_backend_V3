@@ -144,7 +144,7 @@ Avant les ecrans metier, livrer :
 - base URL centralisee
 - ajout automatique du bearer token
 - refresh token automatique
-- parsing du format `success / message / data / errors`
+- parsing du format `success / message / data / errors / error_code?`
 - gestion des blobs pour exports et downloads
 
 ### Gestion De Session
@@ -930,6 +930,45 @@ Le front doit avoir des handlers communs pour :
 - `400` avec `errors`
 - erreur reseau
 - timeout
+
+### Contrat D'Erreur Backend
+
+Format cible a parser cote front :
+
+```json
+{
+  "success": false,
+  "message": "Texte affichable",
+  "data": null,
+  "errors": {
+    "field_name": ["Message lisible"],
+    "non_field_errors": ["Message global"]
+  },
+  "error_code": "optional_stable_code"
+}
+```
+
+Regles pratiques :
+
+- toujours afficher `message`
+- utiliser `errors[field]` pour les formulaires
+- utiliser `errors.non_field_errors` pour les refus metier globaux
+- utiliser `error_code` pour les comportements UI specifiques quand il existe
+- ne plus parser `detail` comme contrat front principal
+
+Exemples de `error_code` deja presents sur les flux critiques :
+
+- `candidate_account_request_already_pending`
+- `candidate_account_request_missing`
+- `candidate_account_already_linked`
+- `candidate_not_admissible`
+- `candidate_requires_formation`
+- `duplicate_appairage`
+- `already_archived`
+- `already_active`
+- `appairage_not_archived`
+- `prospection_not_archived`
+- `prospection_already_archived`
 
 ## 12. Checklist Finale Avant Livraison D'Un Ecran
 

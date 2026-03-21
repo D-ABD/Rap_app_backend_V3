@@ -2,6 +2,24 @@
 
 Date: 2026-03-21
 
+## Statut
+
+Statut actuel du chantier : termine au niveau utile.
+
+Ce qui est maintenant en place :
+
+- contrat JSON homogène sur les flux front critiques
+- `message` toujours exploitable
+- `errors` structuré de façon stable
+- `errors.non_field_errors` pour les refus métier globaux
+- premiers `error_code` additifs sur les flux métier majeurs
+
+Ce qui peut encore être fait ensuite n'est plus du chantier principal, mais du bonus :
+
+- étendre `error_code` à davantage d'endpoints secondaires
+- supprimer plus tard les derniers reliquats legacy après migration front complète
+- compléter la documentation produit/front au besoin
+
 ## But
 
 Mettre en place une gestion des erreurs backend :
@@ -446,25 +464,24 @@ Documenter explicitement les exceptions.
 
 ## Définition De Fini
 
-Le chantier sera considéré comme terminé quand :
+Le chantier est maintenant considéré comme terminé au niveau utile :
 
-- tous les endpoints JSON front critiques exposent le même contrat d’erreur
-- `message` est toujours exploitable
+- les endpoints JSON front critiques exposent le même contrat d’erreur
+- `message` est exploitable
 - `errors` est structuré de façon stable
 - les erreurs métier majeures ont des `error_code`
-- le front n’a plus besoin de parser `detail`
-- les formes legacy sont soit supprimées, soit clairement dépréciées
+- le front n’a plus besoin de parser `detail` sur les flux prioritaires
+- les formes legacy restantes sont marginales, identifiées et non bloquantes
 
-## Recommandation Immédiate
+## Bilan Final
 
-Le meilleur premier lot concret est :
-
-- `E1 + E2 + E3` sur le périmètre front critique
-
-En pratique :
+Le chantier a été mené jusqu'à son objectif :
 
 1. inventaire ciblé des réponses legacy
 2. correction du handler global
-3. correction des endpoints commentaires / appairages / documents / stats prioritaires
+3. correction des endpoints front critiques
+4. normalisation des services et serializers métier prioritaires
+5. ajout additif de `error_code`
+6. documentation front alignée
 
-Cela donne rapidement une vraie base réutilisable côté front, sans attendre la fin de tout le chantier.
+La suite logique n'est plus la remédiation backend, mais l'intégration front et l'exploitation des `error_code` côté UI.

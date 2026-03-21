@@ -2,6 +2,23 @@
 
 Date: 2026-03-21
 
+## Statut
+
+Ce document sert désormais d'historique de l'audit initial.
+
+Les lots prioritaires identifiés ici ont été traités sur le périmètre front critique :
+
+- commentaires prospection
+- commentaires appairage
+- appairages
+- formations
+- documents
+- stats critiques
+- flux candidat compte / lifecycle
+- premiers `error_code` additifs
+
+Les écarts qui peuvent encore subsister sont secondaires ou volontairement laissés pour une future passe de polish, après besoins front réels.
+
 ## But
 
 Recenser les écarts réels entre le contrat d'erreur cible et le code actuel, pour lancer des lots de correction sans casse.
@@ -133,25 +150,11 @@ Pourquoi :
 
 Uniformiser les services et serializers métier.
 
-## Décision Recommandée
+## Résultat
 
-Le premier lot à implémenter maintenant est :
+La recommandation a été exécutée puis étendue.
 
-- `E2 + E3 / Lot 1`
+Le référentiel vivant n'est plus ce document d'inventaire, mais :
 
-Périmètre précis :
-
-- [prospection_comment_viewsets.py](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/prospection_comment_viewsets.py)
-- [appairage_commentaires_viewset.py](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/appairage_commentaires_viewset.py)
-- [appairage_viewsets.py](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/appairage_viewsets.py)
-- [formations_viewsets.py](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app/api/viewsets/formations_viewsets.py)
-
-## Tests À Prévoir Pour Le Premier Lot
-
-- tests de contrat d’erreur standard sur :
-  - déjà archivé
-  - déjà actif
-  - paramètre invalide
-  - validation simple
-- tests de non-régression sur les statuts HTTP
-- tests sur les messages toujours exploitables côté front
+- [ERROR_HANDLING_FRONT_REUSE_PLAN.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/ERROR_HANDLING_FRONT_REUSE_PLAN.md)
+- [FRONTEND_MASTER_GUIDE.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/FRONTEND_MASTER_GUIDE.md)
