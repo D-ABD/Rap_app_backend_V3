@@ -424,13 +424,19 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             qs = qs.filter(id__in=id_list)
 
         if not export_all and not ids:
-            return Response({"detail": "Aucun commentaire sélectionné"}, status=400)
+            return Response(
+                {"success": False, "message": "Aucun commentaire sélectionné", "data": None},
+                status=400,
+            )
 
         if fmt == "pdf":
             return self._export_pdf(qs)
         elif fmt == "xlsx":
             return self._export_xlsx(qs)
-        return Response({"detail": "Format non supporté (seuls pdf, xlsx)"}, status=400)
+        return Response(
+            {"success": False, "message": "Format non supporté (seuls pdf, xlsx)", "data": None},
+            status=400,
+        )
 
     def _export_pdf(self, qs):
         """Génère PDF via template commentaires_pdf.html, logo, items, user, now."""

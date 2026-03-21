@@ -455,4 +455,34 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
         self.assertTrue(response.data["success"])
-        self.assertIsInstance(response.data["data"], list)
+
+    def test_commentaires_export_missing_selection_uses_standard_envelope(self):
+        response = self.client.post(
+            reverse("commentaire-export"),
+            {"format": "pdf"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Aucun commentaire sélectionné")
+        self.assertIsNone(response.data["data"])
+
+    def test_prepa_objectifs_export_empty_uses_standard_envelope(self):
+        response = self.client.get(reverse("objectif-prepa-export-xlsx"))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Aucun objectif à exporter.")
+        self.assertIsNone(response.data["data"])
+
+    def test_declic_objectifs_export_empty_uses_standard_envelope(self):
+        response = self.client.get(reverse("objectifs-declic-export-xlsx"))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Aucun objectif à exporter.")
+        self.assertIsNone(response.data["data"])

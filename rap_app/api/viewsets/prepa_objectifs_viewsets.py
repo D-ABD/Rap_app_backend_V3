@@ -260,7 +260,10 @@ class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         """
         qs = self.get_queryset()
         if not qs.exists():
-            return Response({"detail": "Aucun objectif à exporter."}, status=404)
+            return Response(
+                {"success": False, "message": "Aucun objectif à exporter.", "data": None},
+                status=404,
+            )
 
         wb = Workbook()
         ws = wb.active

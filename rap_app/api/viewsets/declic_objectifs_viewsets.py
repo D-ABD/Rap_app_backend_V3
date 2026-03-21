@@ -307,7 +307,10 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         """
         qs = self.get_queryset()
         if not qs.exists():
-            return Response({"detail": "Aucun objectif à exporter."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"success": False, "message": "Aucun objectif à exporter.", "data": None},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         wb = Workbook()
         ws = wb.active
