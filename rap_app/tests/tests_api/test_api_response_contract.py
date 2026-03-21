@@ -15,6 +15,8 @@ from rap_app.models.appairage import Appairage
 from rap_app.models.atelier_tre import AtelierTRE
 from rap_app.models.partenaires import Partenaire
 from rap_app.models.prospection import Prospection, ProspectionChoices
+from rap_app.models.prospection_comments import ProspectionComment
+from rap_app.models.commentaires_appairage import CommentaireAppairage
 from rap_app.models.statut import Statut
 from rap_app.models.types_offre import TypeOffre
 from rap_app.tests.factories import UserFactory
@@ -325,6 +327,59 @@ class ApiResponseContractTests(APITestCase):
             response.data["data"]["body"],
             '<p><strong>Bonjour</strong> alert(1)<a href="https://example.com" rel="nofollow">lien</a></p>',
         )
+
+    def test_prospection_comment_unarchive_already_active_uses_standard_envelope(self):
+        comment = ProspectionComment.objects.create(
+            prospection=self.prospection,
+            body="Commentaire déjà actif",
+            created_by=self.user,
+        )
+
+        response = self.client.post(f"/api/prospection-comments/{comment.id}/desarchiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Déjà actif.")
+        self.assertIsNone(response.data["data"])
+
+    def test_appairage_comment_unarchive_already_active_uses_standard_envelope(self):
+        comment = CommentaireAppairage.objects.create(
+            appairage=self.appairage,
+            body="Commentaire déjà actif",
+            created_by=self.user,
+        )
+
+        response = self.client.post(f"/api/appairage-commentaires/{comment.id}/desarchiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Déjà actif.")
+        self.assertIsNone(response.data["data"])
+
+    def test_appairage_archive_already_archived_uses_standard_envelope(self):
+        self.appairage.activite = "archive"
+        self.appairage.save(update_fields=["activite"])
+
+        response = self.client.post(f"/api/appairages/{self.appairage.id}/archiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Déjà archivé.")
+        self.assertIsNone(response.data["data"])
+
+    def test_formation_archive_already_archived_uses_standard_envelope(self):
+        self.formation.archiver(user=self.user, commentaire="Préparation test")
+
+        response = self.client.post(f"/api/formations/{self.formation.id}/archiver/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], "Déjà archivée.")
+        self.assertIsNone(response.data["data"])
 
     def test_atelier_meta_uses_standard_envelope(self):
         response = self.client.get(reverse("ateliers-tre-meta"))

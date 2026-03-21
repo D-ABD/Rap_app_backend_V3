@@ -109,6 +109,16 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
     ordering_fields = ["created_at", "updated_at", "id"]
     ordering = ["-updated_at", "-created_at"]
 
+    def _json_message_response(self, success, message, status_code=status.HTTP_200_OK, data=None, errors=None):
+        payload = {
+            "success": success,
+            "message": message,
+            "data": data,
+        }
+        if errors is not None:
+            payload["errors"] = errors
+        return Response(payload, status=status_code)
+
     def get_queryset(self):
         """
         Retourne les commentaires visibles pour l'utilisateur courant en
@@ -405,11 +415,11 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         """
         comment = self.get_object()
         if comment.est_archive:
-            return Response({"detail": "Déjà archivé."}, status=status.HTTP_200_OK)
+            return self._json_message_response(False, "Déjà archivé.", status_code=status.HTTP_200_OK)
 
         comment.archiver(save=True)
         logger.info("Commentaire #%s archivé par %s", comment.pk, request.user)
-        return Response({"detail": "Commentaire archivé."}, status=status.HTTP_200_OK)
+        return self._json_message_response(True, "Commentaire archivé.", status_code=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
@@ -418,11 +428,11 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         """
         comment = self.get_object()
         if not comment.est_archive:
-            return Response({"detail": "Déjà actif."}, status=status.HTTP_200_OK)
+            return self._json_message_response(False, "Déjà actif.", status_code=status.HTTP_200_OK)
 
         comment.desarchiver(save=True)
         logger.info("Commentaire #%s désarchivé par %s", comment.pk, request.user)
-        return Response({"detail": "Commentaire désarchivé."}, status=status.HTTP_200_OK)
+        return self._json_message_response(True, "Commentaire désarchivé.", status_code=status.HTTP_200_OK)
 
     # ------------------------------------------------------------------
     # 📊 EXPORT EXCEL — Commentaires de prospection

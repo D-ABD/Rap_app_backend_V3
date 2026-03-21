@@ -577,7 +577,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         formation = self.get_object()
 
         if formation.est_archivee:
-            return Response({"detail": "Déjà archivée."}, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(message="Déjà archivée.", status_code=status.HTTP_400_BAD_REQUEST)
 
         formation.archiver(user=request.user, commentaire="Archivage manuel via API")
         return Response({"status": "archived"}, status=status.HTTP_200_OK)
@@ -589,7 +589,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         formation = self.get_object()
 
         if not formation.est_archivee:
-            return Response({"detail": "Déjà active."}, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(message="Déjà active.", status_code=status.HTTP_400_BAD_REQUEST)
 
         formation.desarchiver(user=request.user, commentaire="Restauration manuelle via API")
         return Response({"status": "unarchived"}, status=status.HTTP_200_OK)
