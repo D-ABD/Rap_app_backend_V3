@@ -329,6 +329,31 @@ class ApiResponseContractTests(APITestCase):
         self.assertIsNone(response.data["data"])
         self.assertIsInstance(response.data["errors"], dict)
 
+    def test_appairage_create_duplicate_business_error_uses_non_field_errors(self):
+        response = self.client.post(
+            reverse("appairage-list"),
+            {
+                "candidat": self.candidat.id,
+                "partenaire": self.partenaire.id,
+                "formation": self.formation.id,
+                "statut": "transmis",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data", "errors"})
+        self.assertFalse(response.data["success"])
+        self.assertIsNone(response.data["data"])
+        self.assertEqual(
+            response.data["message"],
+            "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation.",
+        )
+        self.assertEqual(
+            response.data["errors"]["non_field_errors"],
+            ["Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."],
+        )
+
     def test_appairage_comment_create_supports_rich_text_like_other_comment_modules(self):
         response = self.client.post(
             reverse("appairage-commentaires", args=[self.appairage.id]),

@@ -410,7 +410,7 @@ class AppairageCreateUpdateSerializer(serializers.ModelSerializer):
             message = "Un appairage sans formation existe déjà pour ce candidat et ce partenaire."
         else:
             qs = qs.filter(formation=formation)
-            message = "Un appairage pour ce candidat, ce partenaire et cette formation existe déjà."
+            message = "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."
 
         if self.instance is not None:
             qs = qs.exclude(pk=self.instance.pk)

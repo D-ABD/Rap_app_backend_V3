@@ -12,18 +12,48 @@ def _normalize_error_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _normalize_error_value(subvalue) for key, subvalue in value.items()}
     if isinstance(value, list):
-        return [_normalize_error_value(item) for item in value]
+        normalized_items = []
+        for item in value:
+            normalized = _normalize_error_value(item)
+            if isinstance(normalized, list):
+                normalized_items.extend(normalized)
+            else:
+                normalized_items.append(normalized)
+        return normalized_items
     if isinstance(value, ErrorDetail):
-        return [str(value)]
+        return str(value)
     if isinstance(value, str):
-        return [value]
+        return value
     return value
 
 
 def _normalize_errors(detail: Any) -> dict[str, Any]:
     if isinstance(detail, dict):
         return {str(key): _normalize_error_value(value) for key, value in detail.items()}
-    return {"non_field_errors": _normalize_error_value(detail)}
+    normalized = _normalize_error_value(detail)
+    if isinstance(normalized, list):
+        return {"non_field_errors": normalized}
+    return {"non_field_errors": [normalized]}
+
+
+def _extract_first_error_message(value: Any) -> str | None:
+    if isinstance(value, list):
+        for item in value:
+            extracted = _extract_first_error_message(item)
+            if extracted:
+                return extracted
+        return None
+    if isinstance(value, dict):
+        for item in value.values():
+            extracted = _extract_first_error_message(item)
+            if extracted:
+                return extracted
+        return None
+    if isinstance(value, ErrorDetail):
+        return str(value)
+    if isinstance(value, str):
+        return value
+    return str(value) if value is not None else None
 
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
@@ -32,8 +62,10 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         return None
 
     if isinstance(exc, ValidationError):
-        message = "Erreur de validation."
         errors = _normalize_errors(getattr(exc, "detail", response.data))
+        message = _extract_first_error_message(errors.get("non_field_errors")) if isinstance(errors, dict) else None
+        if not message:
+            message = "Erreur de validation."
     else:
         data = response.data
         if isinstance(data, dict) and "detail" in data and isinstance(data["detail"], (str, ErrorDetail)):

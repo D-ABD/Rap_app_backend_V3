@@ -38,6 +38,26 @@ from ..serializers.commentaires_appairage_serializers import CommentaireAppairag
 from .scoped_viewset import ScopedModelViewSet
 
 
+def _extract_validation_payload(exc) -> tuple[str, dict]:
+    if hasattr(exc, "message_dict"):
+        errors = exc.message_dict
+    elif isinstance(getattr(exc, "detail", None), dict):
+        errors = exc.detail
+    else:
+        errors = {"non_field_errors": [str(exc)]}
+
+    if errors.get("non_field_errors"):
+        message = errors["non_field_errors"][0]
+    else:
+        first_value = next(iter(errors.values()), [str(exc)])
+        if isinstance(first_value, list) and first_value:
+            message = str(first_value[0])
+        else:
+            message = str(first_value)
+
+    return str(message), errors
+
+
 class AppairageViewSet(ScopedModelViewSet):
     """
     ViewSet principal des appairages.
@@ -198,7 +218,11 @@ class AppairageViewSet(ScopedModelViewSet):
             candidat=candidat_payload, partenaire=partenaire_payload, formation=formation
         ).exists():
             raise ValidationError(
-                {"detail": "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."}
+                {
+                    "non_field_errors": [
+                        "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation."
+                    ]
+                }
             )
 
         with defer_appairage_snapshot_sync():
@@ -319,6 +343,21 @@ class AppairageViewSet(ScopedModelViewSet):
         obj = self._get_object_including_archived_scoped(kwargs.get("pk"))
         serializer = self.get_serializer(obj)
         return self.success_response(data=serializer.data, message="Appairage récupéré avec succès.")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+        except (ValidationError, DjangoValidationError) as exc:
+            message, errors = _extract_validation_payload(exc)
+            return self.error_response(message=message, errors=errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+        output = AppairageSerializer(serializer.instance, context={"request": request})
+        return self.created_response(
+            data=output.data,
+            message="Appairage créé avec succès.",
+        )
 
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
