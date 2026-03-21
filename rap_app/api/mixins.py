@@ -208,6 +208,7 @@ class ApiResponseMixin:
         self,
         message: str | None = None,
         errors: Mapping[str, Any] | list[Any] | None = None,
+        error_code: str | None = None,
         status_code: int = status.HTTP_400_BAD_REQUEST,
     ) -> Response:
         payload: dict[str, Any] = {
@@ -217,4 +218,6 @@ class ApiResponseMixin:
         }
         if errors is not None:
             payload["errors"] = errors
+        if error_code is not None:
+            payload["error_code"] = error_code
         return Response(payload, status=status_code)

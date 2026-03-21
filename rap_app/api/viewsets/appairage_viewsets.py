@@ -376,6 +376,7 @@ class AppairageViewSet(ScopedModelViewSet):
             return self.error_response(
                 message=message,
                 errors={"non_field_errors": [message]},
+                error_code="already_archived",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -402,6 +403,7 @@ class AppairageViewSet(ScopedModelViewSet):
             return self.error_response(
                 message=message,
                 errors={"non_field_errors": [message]},
+                error_code="appairage_not_archived",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 

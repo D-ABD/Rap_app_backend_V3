@@ -8,6 +8,21 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
 
+MESSAGE_ERROR_CODE_MAP = {
+    "Une demande de compte est déjà en attente.": "candidate_account_request_already_pending",
+    "Aucune demande de compte en attente pour ce candidat.": "candidate_account_request_missing",
+    "Un compte utilisateur est déjà lié à ce candidat.": "candidate_account_already_linked",
+    "Ce candidat n'est pas admissible.": "candidate_not_admissible",
+    "Le candidat doit être affecté à une formation.": "candidate_requires_formation",
+    "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation.": "duplicate_appairage",
+    "Déjà archivé.": "already_archived",
+    "Déjà actif.": "already_active",
+    "Cet appairage n’est pas archivé.": "appairage_not_archived",
+    "La prospection n’est pas archivée.": "prospection_not_archived",
+    "La prospection est déjà archivée.": "prospection_already_archived",
+}
+
+
 def _normalize_error_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _normalize_error_value(subvalue) for key, subvalue in value.items()}
@@ -56,6 +71,12 @@ def _extract_first_error_message(value: Any) -> str | None:
     return str(value) if value is not None else None
 
 
+def _resolve_error_code(message: str | None) -> str | None:
+    if not message:
+        return None
+    return MESSAGE_ERROR_CODE_MAP.get(message)
+
+
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
     response = drf_exception_handler(exc, context)
     if response is None:
@@ -82,6 +103,9 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
     }
     if errors is not None:
         payload["errors"] = errors
+    error_code = _resolve_error_code(message)
+    if error_code is not None:
+        payload["error_code"] = error_code
 
     response.data = payload
     return response
