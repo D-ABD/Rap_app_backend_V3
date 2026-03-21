@@ -498,8 +498,14 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
 
         if instance.activite != Prospection.ACTIVITE_ARCHIVEE:
+            message = "La prospection n’est pas archivée."
             return Response(
-                {"success": False, "message": "La prospection n’est pas archivée."},
+                {
+                    "success": False,
+                    "message": message,
+                    "data": None,
+                    "errors": {"non_field_errors": [message]},
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
