@@ -6,6 +6,7 @@ import ProspectionGroupedWidget from "./ProspectionGroupedWidget";
 import AppairageGroupedTableWidget from "./AppairageGroupedTableWidget";
 import CandidatGroupedTableWidget from "./CandidatGroupedTableWidget";
 import AteliersTREGroupedWidget from "./AteliersTREGroupedWidget";
+import EvenementGroupedWidget from "./EvenementGroupedWidget";
 
 export default function GroupedDashboard() {
   return (
@@ -21,6 +22,9 @@ export default function GroupedDashboard() {
 
       {/* 🎯 Prospection */}
       <ProspectionGroupedWidget />
+
+      {/* 🎯 Événements */}
+      <EvenementGroupedWidget />
 
       {/* 🎯 Appairage */}
       <AppairageGroupedTableWidget />

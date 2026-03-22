@@ -41,6 +41,8 @@ const COLUMNS = [
   "Dispo",
   "Saturation",
   "Entrées (formations)",
+  "Événements",
+  "Prospections",
   "Candidats",
   "Sans statut métier",
   "Admissibles",
@@ -101,6 +103,8 @@ export default function FormationGroupedWidget({
       totalDispo: sum("total_disponibles"),
       moyenneSaturation,
       totalEntrees: sum("entrees_formation"),
+      totalEvenements: sum("nb_evenements"),
+      totalProspections: sum("nb_prospections"),
       totalCandidats: sum("nb_candidats"),
       totalSansStatut: data.results.reduce(
         (acc, row) => acc + getFormationCandidateSansStatutCount(row),
@@ -346,6 +350,8 @@ export default function FormationGroupedWidget({
                       {Math.round(saturation)}%
                     </TableCell>
                     <TableCell align="right">{toFixed0(r.entrees_formation)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_evenements)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_prospections)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats)}</TableCell>
                     <TableCell align="right">
                       {toFixed0(getFormationCandidateSansStatutCount(r))}
@@ -387,8 +393,10 @@ export default function FormationGroupedWidget({
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
                     {Math.round(totals.moyenneSaturation)}%
                   </TableCell>
-                  <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
-                  <TableCell align="right">{toFixed0(totals.totalCandidats)}</TableCell>
+                <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
+                <TableCell align="right">{toFixed0(totals.totalEvenements)}</TableCell>
+                <TableCell align="right">{toFixed0(totals.totalProspections)}</TableCell>
+                <TableCell align="right">{toFixed0(totals.totalCandidats)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalSansStatut)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAdmissibles)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalNonAdmissibles)}</TableCell>

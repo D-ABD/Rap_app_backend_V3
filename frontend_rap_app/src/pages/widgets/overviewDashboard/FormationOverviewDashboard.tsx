@@ -227,6 +227,18 @@ export default function FormationOverviewDashboard({ filters }: { filters?: Filt
               Places dispo
             </Typography>
           </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6">{toFixed0(k.nb_evenements)}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Événements
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography variant="h6">{toFixed0(k.nb_prospections)}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Prospections
+            </Typography>
+          </Box>
         </Box>
       )}
 

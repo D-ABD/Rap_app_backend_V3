@@ -40,6 +40,8 @@
 - hooks evenements
 - pages evenements
 - creation / edition evenement avec formation conservee et pre-remplissage fiable
+- stats prospections enrichies avec liens candidat / formation
+- stats evenements backend et frontend
 - dependances frontend assainies
 - build frontend validee
 

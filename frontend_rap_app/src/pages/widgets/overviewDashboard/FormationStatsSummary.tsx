@@ -42,8 +42,10 @@ export default function FormationStatsSummary({
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
-  // 🔘 Inclut les archivées par défaut
-  const [includeArchived] = React.useState(true);
+  // 🔘 Inclut les archivées à la demande
+  const [includeArchived, setIncludeArchived] = React.useState<boolean>(
+    Boolean(filters?.avec_archivees)
+  );
 
   // 🔎 Filtres locaux
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
@@ -109,6 +111,8 @@ export default function FormationStatsSummary({
     { label: "Actives", value: k.nb_actives ?? 0, color: theme.palette.primary.main },
     { label: "À venir", value: k.nb_a_venir ?? 0, color: theme.palette.info.main },
     { label: "Terminées", value: k.nb_terminees ?? 0, color: theme.palette.success.main },
+    { label: "Événements", value: k.nb_evenements ?? 0, color: theme.palette.warning.main },
+    { label: "Prospections", value: k.nb_prospections ?? 0, color: theme.palette.secondary.main },
     { label: "Annulées", value: k.nb_annulees ?? 0, color: theme.palette.error.main },
     {
       label: "Archivées",
@@ -142,16 +146,24 @@ export default function FormationStatsSummary({
 
         <Chip
           icon={<ArchiveIcon fontSize="small" />}
-          label="Avec archivées"
+          label={includeArchived ? "Archivées visibles" : "Archivées masquées"}
           size="small"
-          variant="outlined"
+          variant={includeArchived ? "filled" : "outlined"}
+          onClick={() => setIncludeArchived((prev) => !prev)}
           sx={{
             borderRadius: 2,
             fontSize: 12,
             fontWeight: 500,
             color: isDark ? theme.palette.grey[400] : theme.palette.text.secondary,
             borderColor: isDark ? theme.palette.grey[700] : theme.palette.grey[300],
-            bgcolor: isDark ? "rgba(255,255,255,0.05)" : "transparent",
+            bgcolor: includeArchived
+              ? isDark
+                ? "rgba(255,255,255,0.12)"
+                : "rgba(25,118,210,0.12)"
+              : isDark
+                ? "rgba(255,255,255,0.05)"
+                : "transparent",
+            cursor: "pointer",
           }}
         />
       </Box>
@@ -228,6 +240,7 @@ export default function FormationStatsSummary({
         {stats.map((s) => (
           <Grid item xs={6} sm={4} md={2.4} key={s.label}>
             <Box
+              onClick={s.label === "Archivées" ? () => setIncludeArchived((prev) => !prev) : undefined}
               sx={{
                 p: 2.5,
                 borderRadius: 2.5,
@@ -235,6 +248,11 @@ export default function FormationStatsSummary({
                 bgcolor: statBoxBg,
                 boxShadow: statShadow,
                 transition: "all 0.2s ease",
+                cursor: s.label === "Archivées" ? "pointer" : "default",
+                outline:
+                  s.label === "Archivées" && includeArchived
+                    ? `2px solid ${theme.palette.secondary.main}`
+                    : "none",
                 "&:hover": {
                   boxShadow: isDark ? "0 4px 14px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.08)",
                   transform: "translateY(-2px)",

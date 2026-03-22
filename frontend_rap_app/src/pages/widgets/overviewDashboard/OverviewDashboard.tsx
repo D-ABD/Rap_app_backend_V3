@@ -9,6 +9,7 @@ import CandidatContratOverviewWidget from "./CandidatContratOverviewWidget";
 import ProspectionOverviewWidget from "./ProspectionOverviewWidget";
 import AppairageOverviewWidget from "./AppairageOverviewWidget";
 import AteliersTREOverviewWidget from "./AteliersTREOverviewWidget";
+import EvenementOverviewWidget from "./EvenementOverviewWidget";
 
 export default function OverviewDashboard() {
   return (
@@ -47,6 +48,10 @@ export default function OverviewDashboard() {
 
         <Grid item xs={12} md={4}>
           <AteliersTREOverviewWidget />
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <EvenementOverviewWidget title="Overview Événements" />
         </Grid>
       </Grid>
     </Box>

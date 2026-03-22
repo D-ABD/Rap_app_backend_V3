@@ -10,6 +10,8 @@ import {
   Alert,
   Divider,
   Button,
+  Chip,
+  Stack,
 } from "@mui/material";
 
 import {
@@ -123,14 +125,39 @@ export default function ProspectionOverviewWidget({
 
       {/* Total prospections */}
       {!isLoading && !error && (
-        <Box textAlign="center">
-          <Typography variant="h6" fontWeight="bold" color="primary">
-            {overview?.kpis.total ?? 0}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            prospections au total
-          </Typography>
-        </Box>
+        <Stack spacing={1.25}>
+          <Box textAlign="center">
+            <Typography variant="h6" fontWeight="bold" color="primary">
+              {overview?.kpis.total ?? 0}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              prospections au total
+            </Typography>
+          </Box>
+
+          <Box display="flex" justifyContent="center" flexWrap="wrap" gap={1}>
+            <Chip
+              size="small"
+              color="info"
+              label={`Avec candidat : ${overview?.kpis.avec_candidat ?? 0}`}
+            />
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`Sans candidat : ${overview?.kpis.sans_candidat ?? 0}`}
+            />
+            <Chip
+              size="small"
+              color="success"
+              label={`Avec formation : ${overview?.kpis.avec_formation ?? 0}`}
+            />
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`Sans formation : ${overview?.kpis.sans_formation ?? 0}`}
+            />
+          </Box>
+        </Stack>
       )}
 
       {/* Filtres */}

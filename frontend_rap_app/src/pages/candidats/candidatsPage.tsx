@@ -100,8 +100,11 @@ export default function CandidatsPage() {
 
   const [showFilters, setShowFilters] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-return false; 
+    return false;
   });
+
+  // Pagination
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -113,9 +116,6 @@ return false;
     setFilters(urlFilters);
     setPage(1);
   }, [setPage, urlFilters]);
-
-  // Pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
 
   type EffectiveFilters = CandidatFiltresValues & {
     page: number;

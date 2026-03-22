@@ -84,6 +84,10 @@ function normalizeRow(u: unknown): ProspectionGroupRow {
     refusees: n(r["refusees"]),
     annulees: n(r["annulees"]),
     non_renseigne: n(r["non_renseigne"]),
+    avec_candidat: n(r["avec_candidat"]),
+    sans_candidat: n(r["sans_candidat"]),
+    avec_formation: n(r["avec_formation"]),
+    sans_formation: n(r["sans_formation"]),
     taux_acceptation: tauxFromApi ?? tauxFallback,
   };
 }
@@ -131,6 +135,10 @@ export default function ProspectionGroupedWidget({
       refusees: rows.reduce((a, r) => a + (r.refusees ?? 0), 0),
       annulees: rows.reduce((a, r) => a + (r.annulees ?? 0), 0),
       non_renseigne: rows.reduce((a, r) => a + (r.non_renseigne ?? 0), 0),
+      avec_candidat: rows.reduce((a, r) => a + (r.avec_candidat ?? 0), 0),
+      sans_candidat: rows.reduce((a, r) => a + (r.sans_candidat ?? 0), 0),
+      avec_formation: rows.reduce((a, r) => a + (r.avec_formation ?? 0), 0),
+      sans_formation: rows.reduce((a, r) => a + (r.sans_formation ?? 0), 0),
       taux_acceptation:
         (rows.reduce((a, r) => a + (r.acceptees ?? 0), 0) /
           Math.max(
@@ -243,6 +251,10 @@ export default function ProspectionGroupedWidget({
                 <TableCell>Refusées</TableCell>
                 <TableCell>Annulées</TableCell>
                 <TableCell>Non renseigné</TableCell>
+                <TableCell>Avec candidat</TableCell>
+                <TableCell>Sans candidat</TableCell>
+                <TableCell>Avec formation</TableCell>
+                <TableCell>Sans formation</TableCell>
                 <TableCell>Taux transfo</TableCell>
               </TableRow>
             </TableHead>
@@ -286,6 +298,10 @@ export default function ProspectionGroupedWidget({
                       {toFixed0(r.annulees)}
                     </TableCell>
                     <TableCell>{toFixed0(r.non_renseigne)}</TableCell>
+                    <TableCell>{toFixed0(r.avec_candidat)}</TableCell>
+                    <TableCell>{toFixed0(r.sans_candidat)}</TableCell>
+                    <TableCell>{toFixed0(r.avec_formation)}</TableCell>
+                    <TableCell>{toFixed0(r.sans_formation)}</TableCell>
                     <TableCell sx={{ color: tauxColor, fontWeight: 600 }}>
                       {Math.round(taux)}%
                     </TableCell>

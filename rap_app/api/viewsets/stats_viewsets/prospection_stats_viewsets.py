@@ -337,6 +337,10 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             a_faire=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_FAIRE)),
             a_relancer_statut=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_RELANCER)),
             non_renseigne=Count("id", filter=Q(statut=ProspectionChoices.STATUT_NON_RENSEIGNE)),
+            avec_candidat=Count("id", filter=Q(owner_id__isnull=False)),
+            sans_candidat=Count("id", filter=Q(owner_id__isnull=True)),
+            avec_formation=Count("id", filter=Q(formation_id__isnull=False)),
+            sans_formation=Count("id", filter=Q(formation_id__isnull=True)),
         )
 
         taux_acceptation = self._pct(agg.get("acceptees"), agg.get("total"))
@@ -454,6 +458,10 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 a_faire=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_FAIRE)),
                 a_relancer_statut=Count("id", filter=Q(statut=ProspectionChoices.STATUT_A_RELANCER)),
                 non_renseigne=Count("id", filter=Q(statut=ProspectionChoices.STATUT_NON_RENSEIGNE)),
+                avec_candidat=Count("id", filter=Q(owner_id__isnull=False)),
+                sans_candidat=Count("id", filter=Q(owner_id__isnull=True)),
+                avec_formation=Count("id", filter=Q(formation_id__isnull=False)),
+                sans_formation=Count("id", filter=Q(formation_id__isnull=True)),
             )
             .order_by(*group_fields)
         )

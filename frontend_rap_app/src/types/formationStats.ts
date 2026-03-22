@@ -69,6 +69,8 @@ export type OverviewKpis = {
   total_dispo_mp: number;
   total_disponibles: number;
   taux_saturation: number;
+  nb_evenements: number;
+  nb_prospections: number;
   repartition_financeur: {
     crif: number;
     mp: number;
@@ -127,6 +129,8 @@ export type GroupRow = {
   total_dispo_mp: number;
   total_disponibles: number;
   entrees_formation: number;
+  nb_evenements: number;
+  nb_prospections: number;
   taux_saturation: number;
   repartition_financeur: {
     crif: number;

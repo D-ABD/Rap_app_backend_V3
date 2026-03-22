@@ -467,6 +467,11 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             },
         }
 
+        activite_qs = qs.aggregate(
+            nb_evenements=Count("evenements", distinct=True),
+            nb_prospections=Count("prospections", distinct=True),
+        )
+
         payload = {
             "kpis": {
                 **{
@@ -477,6 +482,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 "taux_saturation": base["taux_saturation"],
                 "repartition_financeur": base["repartition_financeur"],
                 "entrees_formation": int(entree_total or 0),
+                "nb_evenements": int(activite_qs.get("nb_evenements") or 0),
+                "nb_prospections": int(activite_qs.get("nb_prospections") or 0),
                 "candidats": cand,
                 "appairages": appairages,
             },
@@ -642,6 +649,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 app_appairage_ok=Count(
                     "appairages", filter=Q(appairages__statut=AppairageStatut.APPAIRAGE_OK), distinct=True
                 ),
+                nb_evenements=Count("evenements", distinct=True),
+                nb_prospections=Count("prospections", distinct=True),
             )
             .order_by(*group_fields)
         )

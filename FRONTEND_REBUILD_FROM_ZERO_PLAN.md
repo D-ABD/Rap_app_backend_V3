@@ -103,6 +103,13 @@ Etat courant :
   - liste / detail / creation / edition
   - integration dans navbar et sidebar
   - pre-remplissage et conservation fiables de la formation
+- stats `prospections` maintenant enrichies pour mieux refleter :
+  - les prospections avec ou sans candidat
+  - les prospections avec ou sans formation
+- stats `evenements` maintenant branchees comme vrai module dashboard avec :
+  - KPI globaux
+  - repartition par type et statut temporel
+  - tableaux groupes par centre / formation / type / statut
 - prochaine cible : poursuivre l'alignement des modules CRM autour de formations
 
 ## 3. Modules metier principaux
@@ -165,7 +172,7 @@ Etat courant :
 3. remettre a niveau partenaires / documents / commentaires / cvtheque
 4. remettre a niveau ateliers TRE
 5. remettre a niveau prepa / declic
-6. finaliser stats / dashboards
+6. finaliser les derniers ecarts stats / dashboards
 7. remettre a niveau rapports / logs
 
 ---
@@ -187,8 +194,8 @@ Le chantier sera termine quand :
 
 Reprendre les modules metier dans cet ordre :
 
-1. formations
-2. prospections
-3. appairages
+1. prospections
+2. appairages
+3. partenaires / documents / commentaires / cvtheque
 
 Ensuite seulement, remettre a niveau les autres modules.

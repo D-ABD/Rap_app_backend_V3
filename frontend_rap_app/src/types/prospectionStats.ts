@@ -35,6 +35,10 @@ export type ProspectionOverviewKpis = {
   a_faire: number;
   a_relancer_statut: number;
   non_renseigne: number;
+  avec_candidat: number;
+  sans_candidat: number;
+  avec_formation: number;
+  sans_formation: number;
 
   /** Taux de transformation (% acceptées / total), calculé côté API */
   taux_acceptation: number;
@@ -121,6 +125,10 @@ export type ProspectionGroupRow = {
   a_faire: number;
   a_relancer_statut: number;
   non_renseigne: number;
+  avec_candidat: number;
+  sans_candidat: number;
+  avec_formation: number;
+  sans_formation: number;
 
   /** Taux de transformation par groupe (% acceptées / total), calculé côté API */
   taux_acceptation?: number;
@@ -180,6 +188,10 @@ export async function getProspectionOverview(filters: ProspectionFilters) {
       a_faire: 0,
       a_relancer_statut: 0,
       non_renseigne: 0,
+      avec_candidat: 0,
+      sans_candidat: 0,
+      avec_formation: 0,
+      sans_formation: 0,
       taux_acceptation: 0,
     },
     repartition: {

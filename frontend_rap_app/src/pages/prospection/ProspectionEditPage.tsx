@@ -24,6 +24,7 @@ import CreatePartenaireButton from "./CreatePartenaireButton";
 
 import type { ProspectionDetailDTO, ProspectionFormData } from "../../types/prospection";
 import api from "../../api/axios";
+import { toApiError } from "../../api/httpClient";
 import {
   useProspection,
   useUpdateProspection,
@@ -55,6 +56,15 @@ export default function ProspectionEditPage() {
     const n = Number(id);
     return Number.isFinite(n) ? n : null;
   }, [id]);
+
+  const buildReturnUrl = () => {
+    const params = new URLSearchParams();
+    if (localDetail?.formation) params.set("formation", String(localDetail.formation));
+    if (localDetail?.partenaire) params.set("partenaire", String(localDetail.partenaire));
+    if (localDetail?.owner) params.set("owner", String(localDetail.owner));
+    const query = params.toString();
+    return query ? `/prospections?${query}` : "/prospections";
+  };
 
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
@@ -104,13 +114,11 @@ export default function ProspectionEditPage() {
       const updated = await update(data);
       setLocalDetail(updated as ProspectionDetailDTO);
       toast.success("✅ Prospection mise à jour");
-
-      // 🔁 Redirection après un court délai (optionnel)
       setTimeout(() => {
-        navigate("/prospections");
+        navigate(buildReturnUrl());
       }, 400);
-    } catch {
-      toast.error("❌ Échec de la mise à jour");
+    } catch (err) {
+      toast.error(toApiError(err).message || "❌ Échec de la mise à jour");
     }
   };
 
@@ -119,9 +127,9 @@ export default function ProspectionEditPage() {
     try {
       await remove();
       toast.success("🗑️ Prospection supprimée");
-      navigate("/prospections");
-    } catch {
-      toast.error("❌ Échec de la suppression");
+      navigate(buildReturnUrl());
+    } catch (err) {
+      toast.error(toApiError(err).message || "❌ Échec de la suppression");
     }
   };
 
@@ -146,8 +154,8 @@ export default function ProspectionEditPage() {
           activite_display: "Archivée",
         });
       }
-    } catch {
-      toast.error("❌ Échec de l’opération d’archivage");
+    } catch (err) {
+      toast.error(toApiError(err).message || "❌ Échec de l’opération d’archivage");
     }
   };
 

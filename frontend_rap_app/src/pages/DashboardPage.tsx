@@ -37,12 +37,14 @@ import CandidatContratOverviewWidget from "./widgets/overviewDashboard/CandidatC
 import ProspectionOverviewWidget from "./widgets/overviewDashboard/ProspectionOverviewWidget";
 import AppairageOverviewWidget from "./widgets/overviewDashboard/AppairageOverviewWidget";
 import AteliersTREOverviewWidget from "./widgets/overviewDashboard/AteliersTREOverviewWidget";
+import EvenementOverviewWidget from "./widgets/overviewDashboard/EvenementOverviewWidget";
 
 import ProspectionGroupedWidget from "./widgets/groupeddashboard/ProspectionGroupedWidget";
 import FormationGroupedWidget from "./widgets/groupeddashboard/FormationGroupedWidget";
 import AppairageGroupedTableWidget from "./widgets/groupeddashboard/AppairageGroupedTableWidget";
 import CandidatGroupedTableWidget from "./widgets/groupeddashboard/CandidatGroupedTableWidget";
 import AteliersTREGroupedWidget from "./widgets/groupeddashboard/AteliersTREGroupedWidget";
+import EvenementGroupedWidget from "./widgets/groupeddashboard/EvenementGroupedWidget";
 
 import FormationStatsSummary from "./widgets/overviewDashboard/FormationStatsSummary";
 import DeclicStatsSummary from "./declic/DeclicStatsSummary";
@@ -241,7 +243,7 @@ export default function DashboardPage() {
           "warning"
         )}
 
-        {/* SUIVI PROSPECTION / APPAIRAGE / TRE */}
+        {/* SUIVI PROSPECTION / APPAIRAGE / TRE / ÉVÉNEMENTS */}
         {styledAccordion(
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={4}>
@@ -253,8 +255,11 @@ export default function DashboardPage() {
             <Grid item xs={12} sm={6} md={4}>
               <AteliersTREOverviewWidget />
             </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <EvenementOverviewWidget title="Overview Événements" />
+            </Grid>
           </Grid>,
-          "Suivi Prospection / Appairage / TRE",
+          "Suivi Prospection / Appairage / TRE / Événements",
           "info"
         )}
 
@@ -265,6 +270,7 @@ export default function DashboardPage() {
             <CandidatGroupedTableWidget />
             <AppairageGroupedTableWidget />
             <ProspectionGroupedWidget />
+            <EvenementGroupedWidget />
             <AteliersTREGroupedWidget />
             <PrepaGroupedWidget />
             <DeclicGroupedWidget />

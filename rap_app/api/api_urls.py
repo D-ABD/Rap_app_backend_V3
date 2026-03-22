@@ -45,6 +45,7 @@ from .viewsets.stats_viewsets.atelier_tre_stats_viewset import AtelierTREStatsVi
 from .viewsets.stats_viewsets.candidats_stats_viewsets import CandidatStatsViewSet
 from .viewsets.stats_viewsets.commentaires_stats_viewsets import CommentaireStatsViewSet
 from .viewsets.stats_viewsets.declic_stats_viewsets import DeclicStatsViewSet
+from .viewsets.stats_viewsets.evenements_stats_viewsets import EvenementStatsViewSet
 from .viewsets.stats_viewsets.formation_stats_viewsets import FormationStatsViewSet
 from .viewsets.stats_viewsets.partenaires_stats_viewsets import PartenaireStatsViewSet
 from .viewsets.stats_viewsets.prepa_stats_viewsets import PrepaStatsViewSet
@@ -93,6 +94,7 @@ router.register(r"cvtheque", CVThequeViewSet, basename="cvtheque")
 router.register(r"logs", LogUtilisateurViewSet, basename="logutilisateur")
 router.register(r"rapports", RapportViewSet, basename="rapport")
 router.register(r"formation-stats", FormationStatsViewSet, basename="formation-stats")
+router.register(r"evenement-stats", EvenementStatsViewSet, basename="evenement-stats")
 router.register(r"prospection-stats", ProspectionStatsViewSet, basename="prospection-stats")
 router.register(r"candidat-stats", CandidatStatsViewSet, basename="candidat-stats")
 router.register(r"partenaire-stats", PartenaireStatsViewSet, basename="partenaire-stats")

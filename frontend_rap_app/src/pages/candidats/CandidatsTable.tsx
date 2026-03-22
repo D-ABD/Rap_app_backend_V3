@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
 import type { Candidat } from "../../types/candidat";
 import {
   getCandidatBusinessStatusColor,
@@ -84,6 +85,24 @@ function getLinkedAccountId(c: Candidat): number | null {
   if (typeof account === "number") return account;
   if (account && typeof account === "object" && typeof account.id === "number") return account.id;
   return null;
+}
+function buildCandidateProspectionCreateUrl(c: Candidat): string | null {
+  const ownerId = getLinkedAccountId(c);
+  if (!ownerId) return null;
+
+  const params = new URLSearchParams();
+  params.set("owner", String(ownerId));
+  params.set("owner_username", fullName(c));
+
+  if (typeof c.formation === "number") {
+    params.set("formation", String(c.formation));
+  }
+  const formationName = c.formation_info?.nom;
+  if (formationName) {
+    params.set("formation_nom", formationName);
+  }
+
+  return `/prospections/create?${params.toString()}`;
 }
 type AppairageLite = {
   partenaire_nom?: string | null;
@@ -272,6 +291,13 @@ export default function CandidatsTable({
   );
   const goCandidateProspections = useCallback(
     (ownerId: number) => navigate(`/prospections?owner=${ownerId}`),
+    [navigate]
+  );
+  const goCreateCandidateProspection = useCallback(
+    (candidate: Candidat) => {
+      const url = buildCandidateProspectionCreateUrl(candidate);
+      if (url) navigate(url);
+    },
     [navigate]
   );
 
@@ -574,6 +600,13 @@ export default function CandidatsTable({
                       <EditIcon fontSize="inherit" />
                     </IconButton>
                   </Tooltip>
+                  {getLinkedAccountId(c) && (
+                    <Tooltip title="Créer une prospection">
+                      <IconButton size="small" color="primary" onClick={() => goCreateCandidateProspection(c)}>
+                        <AddIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   {onDelete && (
                     <Tooltip title="Supprimer">
                       <IconButton size="small" color="error" onClick={() => onDelete(c.id)}>

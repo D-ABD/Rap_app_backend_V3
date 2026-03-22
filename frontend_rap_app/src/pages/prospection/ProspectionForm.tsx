@@ -1,5 +1,6 @@
-import { useMemo, useState, FormEvent } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import {
+  Alert,
   Box,
   Button,
   Grid,
@@ -21,6 +22,7 @@ import {
 } from "@mui/icons-material";
 import type { SelectChangeEvent } from "@mui/material";
 import { toast } from "react-toastify";
+import { toApiError } from "../../api/httpClient";
 
 import { useProspectionChoices } from "../../hooks/useProspection";
 import type {
@@ -124,13 +126,41 @@ export default function ProspectionForm({
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
   const [showFormationModal, setShowFormationModal] = useState(false);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [generalError, setGeneralError] = useState("");
 
   const { choices, loading: loadingChoices, error } = useProspectionChoices();
 
   const hasCandidateOwner = !!form.owner;
 
+  useEffect(() => {
+    setForm({
+      partenaire: initialValues?.partenaire ?? null,
+      formation: fixedFormationId ?? initialValues?.formation ?? undefined,
+      date_prospection: initialValues?.date_prospection
+        ? initialValues.date_prospection.slice(0, 10)
+        : todayStr,
+      type_prospection: initialValues?.type_prospection ?? "nouveau_prospect",
+      motif: initialValues?.motif ?? "autre",
+      statut: initialValues?.statut ?? "a_faire",
+      objectif: initialValues?.objectif ?? "prise_contact",
+      moyen_contact: initialValues?.moyen_contact ?? null,
+      relance_prevue: initialValues?.relance_prevue ?? undefined,
+      owner: initialValues?.owner ?? null,
+      owner_username: initialValues?.owner_username ?? null,
+      partenaire_nom: initialValues?.partenaire_nom ?? null,
+      formation_nom: initialValues?.formation_nom ?? null,
+      centre_nom: initialValues?.centre_nom ?? null,
+      num_offre: initialValues?.num_offre ?? null,
+    });
+    setPartenaireNom(initialValues?.partenaire_nom ?? null);
+    setFormationNom(initialValues?.formation_nom ?? null);
+    setOwnerUsername(initialValues?.owner_username ?? null);
+    setGeneralError("");
+  }, [fixedFormationId, initialValues, todayStr]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    setGeneralError("");
     setForm((prev) => {
       const next = { ...prev, [name]: value } as ProspectionFormDraft;
       if (name === "relance_prevue") {
@@ -146,6 +176,7 @@ export default function ProspectionForm({
 
   const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
+    setGeneralError("");
     setForm((prev) => {
       const next = { ...prev, [name]: value } as ProspectionFormDraft;
       if (name === "moyen_contact") {
@@ -193,8 +224,12 @@ export default function ProspectionForm({
 
     try {
       await onSubmit(payload);
-    } catch {
-      toast.error("Erreur lors de la soumission.");
+    } catch (err) {
+      const apiError = toApiError(err);
+      const message =
+        apiError.message || "Impossible d'enregistrer la prospection avec les données actuelles.";
+      setGeneralError(message);
+      toast.error(message);
     }
   };
 
@@ -224,6 +259,12 @@ export default function ProspectionForm({
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
+      {generalError ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {generalError}
+        </Alert>
+      ) : null}
+
       {/* ─────────── Sélections ─────────── */}
       <Section
         icon={<BusinessIcon color="primary" />}

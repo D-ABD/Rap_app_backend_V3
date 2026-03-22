@@ -67,6 +67,24 @@ function getLinkedAccountId(candidat?: CandidatWithFormation | null): number | n
   return null;
 }
 
+function buildCandidateProspectionCreateUrl(candidat?: CandidatWithFormation | null): string | null {
+  const ownerId = getLinkedAccountId(candidat);
+  if (!ownerId || !candidat?.id) return null;
+
+  const params = new URLSearchParams();
+  params.set("owner", String(ownerId));
+  params.set("owner_username", nn(candidat.nom_complet || `${candidat.prenom ?? ""} ${candidat.nom ?? ""}`.trim()));
+
+  if (typeof candidat.formation === "number") {
+    params.set("formation", String(candidat.formation));
+  }
+  if (candidat.formation_nom) {
+    params.set("formation_nom", candidat.formation_nom);
+  }
+
+  return `/prospections/create?${params.toString()}`;
+}
+
 function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
   return getCandidatBusinessStatusLabel(candidat);
 }
@@ -277,6 +295,7 @@ export default function CandidatDetailModal({
   const canClearAccompagnement = !!candidat?.en_accompagnement_tre;
   const canSetAppairage = !candidat?.en_appairage;
   const canClearAppairage = !!candidat?.en_appairage;
+  const createProspectionUrl = buildCandidateProspectionCreateUrl(candidat);
   const openCandidateAppairages = () => {
     if (!candidat?.id) return;
     onClose();
@@ -488,6 +507,17 @@ export default function CandidatDetailModal({
                         Contrat signe : <strong>{nn(candidat.contrat_signe_display)}</strong>
                       </Alert>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
+                        {createProspectionUrl && (
+                          <Button
+                            variant="contained"
+                            onClick={() => {
+                              onClose();
+                              navigate(createProspectionUrl);
+                            }}
+                          >
+                            Créer une prospection
+                          </Button>
+                        )}
                         {canMarkAdmissible && (
                           <Button
                             variant="outlined"

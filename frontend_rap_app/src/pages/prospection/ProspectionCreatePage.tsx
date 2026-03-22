@@ -17,6 +17,7 @@ import type {
 import { useCreateProspection } from "../../hooks/useProspection";
 import { usePartenaire } from "../../hooks/usePartenaires";
 import api from "../../api/axios";
+import { toApiError } from "../../api/httpClient";
 
 function extractCreatedId(x: unknown): number | null {
   if (typeof x !== "object" || x === null) return null;
@@ -47,10 +48,21 @@ export default function ProspectionCreatePage() {
   const [searchParams] = useSearchParams();
   const presetPartenaire = useMemo(() => toNum(searchParams.get("partenaire")), [searchParams]);
   const presetFormation = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
+  const presetOwner = useMemo(() => toNum(searchParams.get("owner")), [searchParams]);
+
+  const returnUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (presetPartenaire) params.set("partenaire", String(presetPartenaire));
+    if (presetFormation) params.set("formation", String(presetFormation));
+    if (presetOwner) params.set("owner", String(presetOwner));
+    const query = params.toString();
+    return query ? `/prospections?${query}` : "/prospections";
+  }, [presetFormation, presetOwner, presetPartenaire]);
 
   // 🔤 labels transmis en URL (affichage immédiat)
   const paramPartenaireNom = searchParams.get("partenaire_nom")?.trim() || null;
   const paramFormationNom = searchParams.get("formation_nom")?.trim() || null;
+  const paramOwnerUsername = searchParams.get("owner_username")?.trim() || null;
 
   // 🔎 nom du partenaire via hook (fallback si pas fourni en URL)
   const { data: partenaireData } = usePartenaire(presetPartenaire ?? undefined);
@@ -98,8 +110,8 @@ export default function ProspectionCreatePage() {
       commentaire: "",
       relance_prevue: null,
 
-      owner: null,
-      owner_username: null,
+      owner: presetOwner ?? null,
+      owner_username: paramOwnerUsername,
 
       formation_nom: formationNom,
       centre_nom: null,
@@ -122,7 +134,7 @@ export default function ProspectionCreatePage() {
       last_comment_id: null,
       comments_count: undefined,
     };
-  }, [presetPartenaire, partenaireNom, presetFormation, formationNom]);
+  }, [paramOwnerUsername, presetOwner, presetPartenaire, partenaireNom, presetFormation, formationNom]);
 
   const handleSubmit = async (formData: ProspectionFormData) => {
     try {
@@ -135,10 +147,10 @@ export default function ProspectionCreatePage() {
       if (wantsComment && createdId) {
         navigate(`/prospection-commentaires/create/${createdId}`);
       } else {
-        navigate("/prospections");
+        navigate(returnUrl);
       }
-    } catch {
-      toast.error("❌ Erreur lors de la création");
+    } catch (err) {
+      toast.error(toApiError(err).message || "❌ Erreur lors de la création");
     }
   };
 
