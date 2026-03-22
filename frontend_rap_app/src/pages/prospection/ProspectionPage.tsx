@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -32,19 +32,57 @@ import ProspectionDetailModal from "./ProspectionDetailModal";
 
 export default function ProspectionPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const redirectToCreate = useRedirectToCreateProspection();
   const { user } = useAuth();
   const isCandidat = ["candidat", "stagiaire"].includes(user?.role ?? "");
 
+  const toNum = (value: string | null): number | undefined => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const parseBool = (value: string | null): boolean | undefined => {
+    if (!value) return undefined;
+    return ["1", "true", "yes"].includes(value.toLowerCase());
+  };
+
+  const urlFilters = useMemo<ProspectionFiltresValues>(
+    () => ({
+      search: searchParams.get("search") || "",
+      owner: toNum(searchParams.get("owner")),
+      partenaire: toNum(searchParams.get("partenaire")),
+      formation: toNum(searchParams.get("formation")),
+      centre: toNum(searchParams.get("centre")),
+      statut: (searchParams.get("statut") as ProspectionFiltresValues["statut"]) || undefined,
+      activite: (searchParams.get("activite") as ProspectionFiltresValues["activite"]) || undefined,
+      objectif: (searchParams.get("objectif") as ProspectionFiltresValues["objectif"]) || undefined,
+      motif: (searchParams.get("motif") as ProspectionFiltresValues["motif"]) || undefined,
+      type_prospection:
+        (searchParams.get("type_prospection") as ProspectionFiltresValues["type_prospection"]) ||
+        undefined,
+      moyen_contact:
+        (searchParams.get("moyen_contact") as ProspectionFiltresValues["moyen_contact"]) ||
+        undefined,
+      date_min: searchParams.get("date_min") || undefined,
+      date_max: searchParams.get("date_max") || undefined,
+      avec_archivees: parseBool(searchParams.get("avec_archivees")),
+    }),
+    [searchParams]
+  );
+
   // ── filtres
-  const [filters, setFilters] = useState<ProspectionFiltresValues>({
-    search: "",
-    owner: undefined,
-  });
+  const [filters, setFilters] = useState<ProspectionFiltresValues>(urlFilters);
   const [showFilters, setShowFilters] = useState(false);
 
   // ── pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+
+  useEffect(() => {
+    setFilters(urlFilters);
+    setPage(1);
+  }, [urlFilters, setPage]);
 
   // ── filtres envoyés à l'API
   type EffectiveFilters = ProspectionFiltresValues & {

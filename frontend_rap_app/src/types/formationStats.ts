@@ -20,6 +20,8 @@ export type CandidatKpis = {
   nb_test_ok: number;
   nb_inscrits_gespers: number;
   nb_entrees_formation: number;
+  nb_sortis: number;
+  nb_abandons_phase: number;
   nb_candidats_non_admissibles: number;
   nb_contrats_apprentissage: number;
   // ↓ NEW
@@ -139,6 +141,8 @@ export type GroupRow = {
   nb_test_ok: number;
   nb_inscrits_gespers: number;
   nb_entrees_formation: number;
+  nb_sortis: number;
+  nb_abandons_phase: number;
   nb_candidats_non_admissibles: number;
   nb_en_accompagnement_tre: number;
   nb_en_appairage: number;
@@ -170,6 +174,42 @@ export type GroupedResponse = {
   group_by: GroupBy;
   results: GroupRow[];
 };
+
+function safeNumber(value: number | null | undefined): number {
+  return Number(value) || 0;
+}
+
+/**
+ * Calcule les candidats restés au statut métier de base "Candidat"
+ * dans les stats formation.
+ */
+export function getFormationCandidateSansStatutCount(
+  row: Pick<
+    CandidatKpis | GroupRow,
+    | "nb_candidats"
+    | "nb_candidats_admissibles"
+    | "nb_candidats_non_admissibles"
+    | "nb_en_accompagnement_tre"
+    | "nb_en_appairage"
+    | "nb_inscrits_gespers"
+    | "nb_entrees_formation"
+    | "nb_sortis"
+    | "nb_abandons_phase"
+  >
+): number {
+  const total = safeNumber(row.nb_candidats);
+  const explicitStatuses =
+    safeNumber(row.nb_candidats_admissibles) +
+    safeNumber(row.nb_candidats_non_admissibles) +
+    safeNumber(row.nb_en_accompagnement_tre) +
+    safeNumber(row.nb_en_appairage) +
+    safeNumber(row.nb_inscrits_gespers) +
+    safeNumber(row.nb_entrees_formation) +
+    safeNumber(row.nb_sortis) +
+    safeNumber(row.nb_abandons_phase);
+
+  return Math.max(0, total - explicitStatuses);
+}
 
 // ── Tops (avec centre et n° d’offre) ─────────────────────────
 type TopBase = {

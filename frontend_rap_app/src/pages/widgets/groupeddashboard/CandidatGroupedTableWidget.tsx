@@ -15,6 +15,7 @@ import ArchiveIcon from "@mui/icons-material/Archive";
 import {
   CandidatFilters,
   CandidatGroupBy,
+  getCandidatSansStatutCount,
   useCandidatGrouped,
   getErrorMessage,
   resolveCandidatGroupLabel,
@@ -193,11 +194,14 @@ export default function CandidatGroupedTableWidget({
                   <tr>
                     <th>Groupe</th>
                     <th>Candidats</th>
+                    <th>Sans statut métier</th>
                     <th>Admissibles</th>
                     <th>Non admissibles</th>
                     <th>En accompagnement TRE</th>
                     <th>En appairage</th>
                     <th>Inscrits GESPERS</th>
+                    <th>Sortie / fin de formation</th>
+                    <th>Abandons</th>
                     <th>Contrat signé</th>
                     <th>Apprentissage</th>
                     <th>Professionnalisation</th>
@@ -221,11 +225,28 @@ export default function CandidatGroupedTableWidget({
                       <tr key={idx}>
                         <td>{label}</td>
                         <td>{fmt(r["total"] as number)}</td>
+                        <td>
+                          {fmt(
+                            getCandidatSansStatutCount({
+                              total: (r["total"] as number) ?? 0,
+                              admissibles: (r["admissibles"] as number) ?? 0,
+                              non_admissibles: (r["non_admissibles"] as number) ?? 0,
+                              en_formation: (r["en_formation"] as number) ?? 0,
+                              en_appairage: (r["en_appairage"] as number) ?? 0,
+                              en_accompagnement: (r["en_accompagnement"] as number) ?? 0,
+                              inscrits_gespers: (r["inscrits_gespers"] as number) ?? 0,
+                              sortis: (r["sortis"] as number) ?? 0,
+                              abandons_phase: (r["abandons_phase"] as number) ?? 0,
+                            })
+                          )}
+                        </td>
                         <td>{fmt(r["admissibles"] as number)}</td>
                         <td>{fmt(r["non_admissibles"] as number)}</td>
                         <td>{fmt(r["en_accompagnement"] as number)}</td>
                         <td>{fmt(r["en_appairage"] as number)}</td>
                         <td>{fmt(r["inscrits_gespers"] as number)}</td>
+                        <td>{fmt(r["sortis"] as number)}</td>
+                        <td>{fmt(r["abandons_phase"] as number)}</td>
                         <td style={{ background: colorSuccess, fontWeight: 600 }}>
                           {fmt(r["app_contrat_a_signer"] as number)}
                         </td>
@@ -249,11 +270,33 @@ export default function CandidatGroupedTableWidget({
                     <tr style={{ fontWeight: "bold", background: colorTotal }}>
                       <td>Total</td>
                       <td>{fmt(sum(data.results, "total"))}</td>
+                      <td>
+                        {fmt(
+                          data.results.reduce(
+                            (acc, row) =>
+                              acc +
+                              getCandidatSansStatutCount({
+                                total: (row["total"] as number) ?? 0,
+                                admissibles: (row["admissibles"] as number) ?? 0,
+                                non_admissibles: (row["non_admissibles"] as number) ?? 0,
+                                en_formation: (row["en_formation"] as number) ?? 0,
+                                en_appairage: (row["en_appairage"] as number) ?? 0,
+                                en_accompagnement: (row["en_accompagnement"] as number) ?? 0,
+                                inscrits_gespers: (row["inscrits_gespers"] as number) ?? 0,
+                                sortis: (row["sortis"] as number) ?? 0,
+                                abandons_phase: (row["abandons_phase"] as number) ?? 0,
+                              }),
+                            0
+                          )
+                        )}
+                      </td>
                       <td>{fmt(sum(data.results, "admissibles"))}</td>
                       <td>{fmt(sum(data.results, "non_admissibles"))}</td>
                       <td>{fmt(sum(data.results, "en_accompagnement"))}</td>
                       <td>{fmt(sum(data.results, "en_appairage"))}</td>
                       <td>{fmt(sum(data.results, "inscrits_gespers"))}</td>
+                      <td>{fmt(sum(data.results, "sortis"))}</td>
+                      <td>{fmt(sum(data.results, "abandons_phase"))}</td>
                       <td>{fmt(sum(data.results, "app_contrat_a_signer"))}</td>
                       <td>{fmt(sum(data.results, "contrat_apprentissage"))}</td>
                       <td>{fmt(sum(data.results, "contrat_professionnalisation"))}</td>

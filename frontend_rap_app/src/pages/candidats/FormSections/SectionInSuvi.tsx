@@ -12,6 +12,7 @@ import {
   FormControlLabel,
   Divider,
   Alert,
+  FormHelperText,
 } from "@mui/material";
 import type {
   CandidatFormData,
@@ -86,12 +87,13 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
 
   const requiresConsent =
     typeof form.rgpd_legal_basis === "string" && form.rgpd_legal_basis === "consentement";
+  const isFormationActive = form.parcours_phase === "stagiaire_en_formation";
 
   return (
     <Card variant="outlined">
       <CardHeader
         title="Suivi & situation"
-        subheader="Suivi administratif et niveau du candidat"
+        subheader="Suivi administratif, contrat et niveau du candidat"
       />
       <CardContent>
         {/* ---------------------- */}
@@ -103,6 +105,17 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
               Le statut principal est maintenant calcule automatiquement par le backend.
               Utilisez les cases ci-dessous pour piloter les etats manuels cumulables :
               admissible, GESPERS, accompagnement TRE et appairage.
+            </Alert>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Alert severity={form.type_contrat ? "success" : isFormationActive ? "warning" : "info"}>
+              <strong>Type de contrat :</strong>{" "}
+              {form.type_contrat
+                ? "renseigne"
+                : isFormationActive
+                  ? "a renseigner pour un stagiaire en formation."
+                  : "vous pouvez le renseigner des que le dispositif est connu."}
             </Alert>
           </Grid>
 
@@ -126,9 +139,9 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
           </Grid>
 
           {/* Type de contrat */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
-              <FormLabel>Type de contrat</FormLabel>
+              <FormLabel>Type de contrat du stagiaire</FormLabel>
               <Select
                 value={form.type_contrat ?? ""}
                 onChange={updateSelect("type_contrat")}
@@ -141,11 +154,14 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
                   </MenuItem>
                 ))}
               </Select>
+              <FormHelperText>
+                Apprentissage, professionnalisation, POEI / POEC, CRIF, sans contrat ou autre.
+              </FormHelperText>
             </FormControl>
           </Grid>
 
           {/* Contrat signé */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <FormLabel>Contrat signé</FormLabel>
               <Select
@@ -164,7 +180,7 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
           </Grid>
 
           {/* Disponibilité */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <FormLabel>Disponibilité</FormLabel>
               <Select

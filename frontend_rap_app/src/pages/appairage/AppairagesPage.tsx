@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -34,12 +34,46 @@ import ExportButtonAppairage from "../../components/export_buttons/ExportButtonA
 import PageTemplate from "../../components/PageTemplate";
 import AppairageDetailModal from "./AppairageDetailModal";
 
+type AppairagePageFilters = AppairageFiltresValues & {
+  centre?: number;
+};
+
 export const AppairagesPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const [filters, setFilters] = useState<AppairageFiltresValues>({});
+  const toNum = (value: string | null): number | undefined => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const parseBool = (value: string | null): boolean | undefined => {
+    if (!value) return undefined;
+    return ["1", "true", "yes"].includes(value.toLowerCase());
+  };
+
+  const urlFilters = useMemo<AppairagePageFilters>(
+    () => ({
+      statut: searchParams.get("statut") || undefined,
+      partenaire: toNum(searchParams.get("partenaire")),
+      formation: toNum(searchParams.get("formation")),
+      candidat: toNum(searchParams.get("candidat")),
+      search: searchParams.get("search") || undefined,
+      created_by: toNum(searchParams.get("created_by")),
+      centre: toNum(searchParams.get("centre")),
+      activite: (searchParams.get("activite") as AppairageFiltresValues["activite"]) || undefined,
+      avec_archivees: parseBool(searchParams.get("avec_archivees")),
+      annee: toNum(searchParams.get("annee")),
+      date_min: searchParams.get("date_min") || undefined,
+      date_max: searchParams.get("date_max") || undefined,
+    }),
+    [searchParams]
+  );
+
+  const [filters, setFilters] = useState<AppairagePageFilters>(urlFilters);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -52,6 +86,13 @@ export const AppairagesPage: React.FC = () => {
   // 🔹 Masqué par défaut
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+
+  useEffect(() => {
+    setFilters(urlFilters);
+    setPage(1);
+  }, [urlFilters, setPage]);
+
   const activeFiltersCount = useMemo(() => {
     const ignored = new Set(["page", "page_size"]);
     return Object.entries(filters).filter(([key, val]) => {
@@ -63,7 +104,6 @@ export const AppairagesPage: React.FC = () => {
     }).length;
   }, [filters]);
 
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
   const { data: meta, loading: loadingMeta } = useAppairageMeta();
 
   type EffectiveFilters = AppairageFiltresValues & {

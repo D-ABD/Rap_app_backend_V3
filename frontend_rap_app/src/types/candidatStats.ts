@@ -181,6 +181,42 @@ export type CandidatGroupedResponse = {
   results: CandidatGroupRow[];
 };
 
+function safeNumber(value: number | null | undefined): number {
+  return Number(value) || 0;
+}
+
+/**
+ * Calcule les candidats encore au statut métier de base "Candidat",
+ * c'est-à-dire ceux qui n'ont pas encore basculé vers un statut métier explicite.
+ */
+export function getCandidatSansStatutCount(
+  row: Pick<
+    CandidatKpis | CandidatGroupRow,
+    | "total"
+    | "admissibles"
+    | "non_admissibles"
+    | "en_formation"
+    | "en_appairage"
+    | "en_accompagnement"
+    | "inscrits_gespers"
+    | "sortis"
+    | "abandons_phase"
+  >
+): number {
+  const total = safeNumber(row.total);
+  const explicitStatuses =
+    safeNumber(row.admissibles) +
+    safeNumber(row.non_admissibles) +
+    safeNumber(row.en_formation) +
+    safeNumber(row.en_appairage) +
+    safeNumber(row.en_accompagnement) +
+    safeNumber(row.inscrits_gespers) +
+    safeNumber(row.sortis) +
+    safeNumber(row.abandons_phase);
+
+  return Math.max(0, total - explicitStatuses);
+}
+
 // ────────────────────────────────────────────────────────────
 export function getErrorMessage(err: unknown) {
   if (err instanceof Error) return err.message;

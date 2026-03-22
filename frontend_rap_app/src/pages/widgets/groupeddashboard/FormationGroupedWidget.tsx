@@ -21,6 +21,7 @@ import ArchiveIcon from "@mui/icons-material/Archive";
 import {
   Filters,
   GroupBy,
+  getFormationCandidateSansStatutCount,
   useFormationGrouped,
   useFormationDictionaries,
   resolveGroupLabel,
@@ -41,6 +42,7 @@ const COLUMNS = [
   "Saturation",
   "Entrées (formations)",
   "Candidats",
+  "Sans statut métier",
   "Admissibles",
   "Non admissibles",
   "Entretiens OK",
@@ -48,6 +50,8 @@ const COLUMNS = [
   "En accompagnement TRE",
   "En appairage",
   "Inscrits GESPERS",
+  "Sortie / fin de formation",
+  "Abandons",
   "Contrats Appr.",
   "Contrats Prof.",
   "Contrats POEI/POEC",
@@ -98,6 +102,10 @@ export default function FormationGroupedWidget({
       moyenneSaturation,
       totalEntrees: sum("entrees_formation"),
       totalCandidats: sum("nb_candidats"),
+      totalSansStatut: data.results.reduce(
+        (acc, row) => acc + getFormationCandidateSansStatutCount(row),
+        0
+      ),
       totalAdmissibles: sum("nb_candidats_admissibles"),
       totalNonAdmissibles: sum("nb_candidats_non_admissibles"),
       totalEntretien: sum("nb_entretien_ok"),
@@ -105,6 +113,8 @@ export default function FormationGroupedWidget({
       totalAccompagnementTre: sum("nb_en_accompagnement_tre"),
       totalEnAppairage: sum("nb_en_appairage"),
       totalGespers: sum("nb_inscrits_gespers"),
+      totalSortis: sum("nb_sortis"),
+      totalAbandons: sum("nb_abandons_phase"),
       totalAppr: sum("nb_contrats_apprentissage"),
       totalProf: sum("nb_contrats_professionnalisation"),
       totalPoeiPoec: sum("nb_contrats_poei_poec"),
@@ -337,6 +347,9 @@ export default function FormationGroupedWidget({
                     </TableCell>
                     <TableCell align="right">{toFixed0(r.entrees_formation)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats)}</TableCell>
+                    <TableCell align="right">
+                      {toFixed0(getFormationCandidateSansStatutCount(r))}
+                    </TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats_admissibles)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats_non_admissibles)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_entretien_ok)}</TableCell>
@@ -344,6 +357,8 @@ export default function FormationGroupedWidget({
                     <TableCell align="right">{toFixed0(r.nb_en_accompagnement_tre)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_en_appairage)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_inscrits_gespers)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_sortis)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_abandons_phase)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_contrats_apprentissage)}</TableCell>
                     <TableCell align="right">
                       {toFixed0(r.nb_contrats_professionnalisation)}
@@ -374,6 +389,7 @@ export default function FormationGroupedWidget({
                   </TableCell>
                   <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalCandidats)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalSansStatut)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAdmissibles)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalNonAdmissibles)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalEntretien)}</TableCell>
@@ -381,6 +397,8 @@ export default function FormationGroupedWidget({
                   <TableCell align="right">{toFixed0(totals.totalAccompagnementTre)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalEnAppairage)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalGespers)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalSortis)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalAbandons)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAppr)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalProf)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalPoeiPoec)}</TableCell>

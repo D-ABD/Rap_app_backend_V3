@@ -9,12 +9,14 @@ import {
   CircularProgress,
   Alert,
   Divider,
+  Chip,
 } from "@mui/material";
 
 import {
   CandidatFilters,
   CandidatGroupRow,
   getErrorMessage,
+  getCandidatSansStatutCount,
   resolveCandidatGroupLabel,
   useCandidatOverview,
   useCandidatGrouped,
@@ -114,6 +116,17 @@ export default function CandidatOverviewWidget({
   const pct = (val: number) =>
     totalStatus > 0 ? ((val / totalStatus) * 100).toFixed(1).replace(/\.0$/, "") : "0";
 
+  const statusHighlights = [
+    { label: "Sans statut métier", value: k ? getCandidatSansStatutCount(k) : 0 },
+    { label: "Admissibles", value: k?.admissibles ?? 0 },
+    { label: "En accompagnement TRE", value: k?.en_accompagnement ?? 0 },
+    { label: "En appairage", value: k?.en_appairage ?? 0 },
+    { label: "Inscrits GESPERS", value: k?.inscrits_gespers ?? 0 },
+    { label: "En formation", value: k?.en_formation ?? 0 },
+    { label: "Sortie / fin de formation", value: k?.sortis ?? 0 },
+    { label: "Abandons", value: k?.abandons_phase ?? 0 },
+  ];
+
   return (
     <Card
       sx={{
@@ -145,6 +158,20 @@ export default function CandidatOverviewWidget({
           <Typography variant="body2" color="text.secondary">
             candidats au total
           </Typography>
+        </Box>
+      )}
+
+      {!isLoading && !error && (
+        <Box display="flex" flexWrap="wrap" gap={1} justifyContent="center">
+          {statusHighlights.map((item) => (
+            <Chip
+              key={item.label}
+              variant="outlined"
+              color="default"
+              label={`${item.label} : ${item.value}`}
+              sx={{ maxWidth: "100%" }}
+            />
+          ))}
         </Box>
       )}
 

@@ -79,6 +79,12 @@ function typeOffreLabel(c: Candidat): string {
   const to = c.formation_info?.type_offre;
   return to?.nom ?? to?.libelle ?? "—";
 }
+function getLinkedAccountId(c: Candidat): number | null {
+  const account = c.compte_utilisateur;
+  if (typeof account === "number") return account;
+  if (account && typeof account === "object" && typeof account.id === "number") return account.id;
+  return null;
+}
 type AppairageLite = {
   partenaire_nom?: string | null;
   statut?: string | null;
@@ -260,6 +266,14 @@ export default function CandidatsTable({
 
   const goEdit = useCallback((id: number) => navigate(`/candidats/${id}/edit`), [navigate]);
   const goShow = useCallback((id: number) => navigate(`/candidats/${id}`), [navigate]);
+  const goCandidateAppairages = useCallback(
+    (id: number) => navigate(`/appairages?candidat=${id}`),
+    [navigate]
+  );
+  const goCandidateProspections = useCallback(
+    (ownerId: number) => navigate(`/prospections?owner=${ownerId}`),
+    [navigate]
+  );
 
   if (!items.length) {
     return (
@@ -309,6 +323,8 @@ export default function CandidatsTable({
             <TableCell>⏳ Disp.</TableCell>
             <TableCell>♿ RQTH</TableCell>
             <TableCell>🚗 Permis B</TableCell>
+            <TableCell>🟢 Admissible</TableCell>
+            <TableCell>🤝 Accompagnement TRE</TableCell>
             <TableCell>🗂️ GESPERS</TableCell>
             <TableCell>💬 Com.</TableCell>
             <TableCell>🛠 Exp.</TableCell>
@@ -340,6 +356,7 @@ export default function CandidatsTable({
             const isChecked = selectedSet.has(c.id);
             const la = getLastAppairage(c);
             const { display: ateliersDisplay, title: ateliersTitle } = atelierCountsCompact(c);
+            const linkedAccountId = getLinkedAccountId(c);
 
             return (
               <TableRow
@@ -462,6 +479,8 @@ export default function CandidatsTable({
                 <TableCell>{c.disponibilite || "—"}</TableCell>
                 <TableCell>{yesNoChip(c.rqth)}</TableCell>
                 <TableCell>{yesNoChip(c.permis_b)}</TableCell>
+                <TableCell>{yesNoChip(c.admissible)}</TableCell>
+                <TableCell>{yesNoChip(c.en_accompagnement_tre)}</TableCell>
                 <TableCell>{yesNoChip(c.inscrit_gespers)}</TableCell>
                 <TableCell>{stars(c.communication)}</TableCell>
                 <TableCell>{stars(c.experience)}</TableCell>
@@ -470,8 +489,36 @@ export default function CandidatsTable({
                 <TableCell>{yesNoChip(c.test_is_ok)}</TableCell>
                 <TableCell>{formatDateFR(c.date_inscription)}</TableCell>
                 <TableCell>{formatDateFR(c.date_naissance)}</TableCell>
-                <TableCell>{c.nb_appairages ?? "—"}</TableCell>
-                <TableCell>{c.nb_prospections ?? "—"}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {typeof c.nb_appairages === "number" && c.nb_appairages > 0 ? (
+                    <Link
+                      component="button"
+                      type="button"
+                      underline="hover"
+                      onClick={() => goCandidateAppairages(c.id)}
+                    >
+                      {c.nb_appairages}
+                    </Link>
+                  ) : (
+                    c.nb_appairages ?? "—"
+                  )}
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {typeof c.nb_prospections === "number" &&
+                  c.nb_prospections > 0 &&
+                  linkedAccountId ? (
+                    <Link
+                      component="button"
+                      type="button"
+                      underline="hover"
+                      onClick={() => goCandidateProspections(linkedAccountId)}
+                    >
+                      {c.nb_prospections}
+                    </Link>
+                  ) : (
+                    c.nb_prospections ?? "—"
+                  )}
+                </TableCell>
                 <TableCell>{la?.partenaire_nom ?? "—"}</TableCell>
                 <TableCell>{la?.statut_display ?? la?.statut ?? "—"}</TableCell>
                 <TableCell>{formatDateFR(la?.date_appairage)}</TableCell>

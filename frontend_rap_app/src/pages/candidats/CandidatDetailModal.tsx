@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,8 +14,10 @@ import {
   Stack,
   Alert,
   Chip,
+  Link,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import { useNavigate } from "react-router-dom";
 import type { Candidat } from "../../types/candidat";
 import { useCandidateAccountActions, useCandidateLifecycleActions } from "../../hooks/useCandidats";
 import { toast } from "react-toastify";
@@ -42,6 +45,27 @@ const fmt = (iso?: string | null): string => {
 
 const nn = (s?: string | null) => (s ?? "").toString().trim() || "—";
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
+
+const TYPE_CONTRAT_LABELS: Record<string, string> = {
+  apprentissage: "Apprentissage",
+  professionnalisation: "Professionnalisation",
+  sans_contrat: "Sans contrat",
+  poei_poec: "POEI / POEC",
+  crif: "CRIF",
+  autre: "Autre",
+};
+
+function typeContratLabel(value?: string | null): string {
+  if (!value) return "—";
+  return TYPE_CONTRAT_LABELS[value] ?? value;
+}
+
+function getLinkedAccountId(candidat?: CandidatWithFormation | null): number | null {
+  const account = candidat?.compte_utilisateur;
+  if (typeof account === "number") return account;
+  if (account && typeof account === "object" && typeof account.id === "number") return account.id;
+  return null;
+}
 
 function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
   return getCandidatBusinessStatusLabel(candidat);
@@ -213,6 +237,7 @@ export default function CandidatDetailModal({
   onEdit,
   onLifecycleSuccess,
 }: Props) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     loading: lifecycleLoading,
@@ -239,6 +264,7 @@ export default function CandidatDetailModal({
   if (!open) return null;
 
   const la = candidat?.last_appairage ?? null;
+  const linkedAccountId = getLinkedAccountId(candidat);
   const isStaffLike = !!user && ["admin", "superadmin", "staff", "staff_read"].includes(user.role);
   const hasLinkedAccount = !!candidat?.compte_utilisateur;
   const requestStatus = candidat?.demande_compte_statut ?? null;
@@ -251,6 +277,16 @@ export default function CandidatDetailModal({
   const canClearAccompagnement = !!candidat?.en_accompagnement_tre;
   const canSetAppairage = !candidat?.en_appairage;
   const canClearAppairage = !!candidat?.en_appairage;
+  const openCandidateAppairages = () => {
+    if (!candidat?.id) return;
+    onClose();
+    navigate(`/appairages?candidat=${candidat.id}`);
+  };
+  const openCandidateProspections = () => {
+    if (!linkedAccountId) return;
+    onClose();
+    navigate(`/prospections?owner=${linkedAccountId}`);
+  };
 
   const confirmAction = (label: string) =>
     window.confirm(`Êtes-vous sûr de vouloir passer le statut en ${label} ?`);
@@ -398,8 +434,26 @@ export default function CandidatDetailModal({
                     {section.fields.map(({ key, label }) => {
                       const val = candidat[key];
                       const value =
-                        typeof val === "boolean"
+                        key === "nb_appairages" && typeof candidat.nb_appairages === "number" ? (
+                          candidat.nb_appairages > 0 ? (
+                            <Link component="button" type="button" underline="hover" onClick={openCandidateAppairages}>
+                              {candidat.nb_appairages}
+                            </Link>
+                          ) : (
+                            "0"
+                          )
+                        ) : key === "nb_prospections" && typeof candidat.nb_prospections === "number" ? (
+                          candidat.nb_prospections > 0 && linkedAccountId ? (
+                            <Link component="button" type="button" underline="hover" onClick={openCandidateProspections}>
+                              {candidat.nb_prospections}
+                            </Link>
+                          ) : (
+                            String(candidat.nb_prospections)
+                          )
+                        ) : typeof val === "boolean"
                           ? yn(val)
+                          : key === "type_contrat"
+                            ? typeContratLabel(val as string | null)
                           : key === "parcours_phase_display" || key === "statut_metier_display"
                             ? uiPhaseLabel(candidat)
                           : key.toLowerCase().includes("date")
@@ -423,6 +477,15 @@ export default function CandidatDetailModal({
                         {yn(candidat.inscrit_gespers).toLowerCase()} · accompagnement TRE{" "}
                         {yn(candidat.en_accompagnement_tre).toLowerCase()} · appairage{" "}
                         {yn(candidat.en_appairage).toLowerCase()}
+                      </Alert>
+                      <Alert
+                        severity={candidat.type_contrat ? "success" : "info"}
+                        variant="outlined"
+                        sx={{ mb: 1 }}
+                      >
+                        Type de contrat actuel : <strong>{typeContratLabel(candidat.type_contrat)}</strong>
+                        {" · "}
+                        Contrat signe : <strong>{nn(candidat.contrat_signe_display)}</strong>
                       </Alert>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
                         {canMarkAdmissible && (
@@ -641,7 +704,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, value }: { label: string; value?: string | number | null }) {
+function Field({ label, value }: { label: string; value?: ReactNode }) {
   const display =
     value === null ||
     value === undefined ||

@@ -8,6 +8,7 @@ export const BUSINESS_STATUS_LABELS: Record<string, string> = {
   en_appairage: "En appairage",
   inscrit_gespers: "Inscrit GESPERS",
   en_formation: "En formation",
+  sortie_formation: "Sortie / fin de formation",
   abandon: "Abandon",
 };
 
@@ -50,6 +51,7 @@ export function getCandidatBusinessStatusColor(
   if (label === "En appairage") return "warning";
   if (label === "Inscrit GESPERS") return "info";
   if (label === "En formation") return "success";
+  if (label === "Sortie / fin de formation") return "secondary";
   if (label === "Abandon") return "error";
   return "default";
 }
