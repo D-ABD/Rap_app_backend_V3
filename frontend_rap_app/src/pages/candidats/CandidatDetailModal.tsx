@@ -12,11 +12,13 @@ import {
   CircularProgress,
   Stack,
   Alert,
+  Chip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import type { Candidat } from "../../types/candidat";
-import { useCandidateLifecycleActions } from "../../hooks/useCandidats";
+import { useCandidateAccountActions, useCandidateLifecycleActions } from "../../hooks/useCandidats";
 import { toast } from "react-toastify";
+import { useAuth } from "../../hooks/useAuth";
 
 /* ---------- Helpers ---------- */
 type CandidatWithFormation = Candidat & {
@@ -53,6 +55,22 @@ function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
   }
 
   return nn(candidat.parcours_phase_display ?? candidat.statut_display ?? candidat.statut);
+}
+
+function accountRequestLabel(status?: string | null): string {
+  if (status === "en_attente") return "Demande en attente";
+  if (status === "acceptee") return "Demande acceptée";
+  if (status === "refusee") return "Demande refusée";
+  return "Aucune demande";
+}
+
+function accountRequestChip(status?: string | null) {
+  const label = accountRequestLabel(status);
+  let color: "default" | "warning" | "success" | "error" = "default";
+  if (status === "en_attente") color = "warning";
+  if (status === "acceptee") color = "success";
+  if (status === "refusee") color = "error";
+  return <Chip size="small" color={color} label={label} variant="outlined" />;
 }
 
 /* ---------- Props ---------- */
@@ -203,6 +221,7 @@ export default function CandidatDetailModal({
   onEdit,
   onLifecycleSuccess,
 }: Props) {
+  const { user } = useAuth();
   const {
     loading: lifecycleLoading,
     validateInscription,
@@ -210,10 +229,19 @@ export default function CandidatDetailModal({
     completeFormation,
     abandon,
   } = useCandidateLifecycleActions();
+  const {
+    loading: accountLoading,
+    createAccount,
+    approveAccountRequest,
+    rejectAccountRequest,
+  } = useCandidateAccountActions();
 
   if (!open) return null;
 
   const la = candidat?.last_appairage ?? null;
+  const isStaffLike = !!user && ["admin", "superadmin", "staff", "staff_read"].includes(user.role);
+  const hasLinkedAccount = !!candidat?.compte_utilisateur;
+  const requestStatus = candidat?.demande_compte_statut ?? null;
   const handleLifecycleAction = async (
     action: "validate" | "start" | "complete" | "abandon"
   ) => {
@@ -240,6 +268,29 @@ export default function CandidatDetailModal({
         error?.message ||
         "L'action demandée n'a pas pu être exécutée pour ce candidat.";
       toast.error(message);
+    }
+  };
+
+  const handleAccountAction = async (action: "create" | "approve" | "reject") => {
+    if (!candidat?.id) return;
+
+    try {
+      if (action === "create") {
+        const result = await createAccount(candidat.id);
+        toast.success(result.message || "Compte utilisateur créé pour le candidat.");
+      } else if (action === "approve") {
+        const result = await approveAccountRequest(candidat.id);
+        toast.success(result.message || "Demande de compte validée.");
+      } else {
+        const result = await rejectAccountRequest(candidat.id);
+        toast.success(result.message || "Demande de compte refusée.");
+      }
+
+      await onLifecycleSuccess?.();
+    } catch (error: any) {
+      toast.error(
+        error?.message || "L'action sur le compte candidat n'a pas pu être exécutée."
+      );
     }
   };
 
@@ -333,6 +384,62 @@ export default function CandidatDetailModal({
                         >
                           Enregistrer un abandon
                         </Button>
+                      </Stack>
+                    </Grid>
+                  </Section>
+                </Grid>
+              )}
+
+              {candidat && isStaffLike && (
+                <Grid item xs={12}>
+                  <Section title="Compte candidat">
+                    <Grid item xs={12}>
+                      <Stack spacing={1}>
+                        <Alert severity={hasLinkedAccount ? "success" : "info"}>
+                          Compte lié :{" "}
+                          <strong>
+                            {hasLinkedAccount
+                              ? "oui"
+                              : "non"}
+                          </strong>
+                          {candidat.email ? ` - ${candidat.email}` : ""}
+                        </Alert>
+                        <Box>
+                          <Typography variant="body2" component="div" sx={{ mb: 1 }}>
+                            <strong>État de la demande :</strong>
+                          </Typography>
+                          <Box sx={{ mb: 1 }}>{accountRequestChip(requestStatus)}</Box>
+                        </Box>
+                        <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
+                          {!hasLinkedAccount && (
+                            <Button
+                              variant="outlined"
+                              disabled={accountLoading}
+                              onClick={() => handleAccountAction("create")}
+                            >
+                              Créer le compte candidat
+                            </Button>
+                          )}
+                          {requestStatus === "en_attente" && (
+                            <>
+                              <Button
+                                variant="contained"
+                                disabled={accountLoading}
+                                onClick={() => handleAccountAction("approve")}
+                              >
+                                Valider la demande de compte
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                disabled={accountLoading}
+                                onClick={() => handleAccountAction("reject")}
+                              >
+                                Refuser la demande de compte
+                              </Button>
+                            </>
+                          )}
+                        </Stack>
                       </Stack>
                     </Grid>
                   </Section>

@@ -11,7 +11,7 @@ from ...models.formations import Formation
 
 @pytest.mark.django_db
 def test_staff_creer_compte_action():
-    """Action staff /candidats/{id}/creer-compte/ crée un compte sans doublon."""
+    """Action staff /candidats/{id}/creer-compte/ crée ou lie un compte candidat sans promotion stagiaire."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet 1", code_postal="75101")
     formation = Formation.objects.create(
@@ -29,7 +29,7 @@ def test_staff_creer_compte_action():
     staff.centres.add(centre)
     client.force_authenticate(user=staff)
 
-    # Ce test vérifie que l'action passe lorsque le candidat est admissible et dispose d'un compte utilisateur.
+    # Ce test vérifie que l'action crée un vrai compte candidat sans passer trop tôt en stagiaire.
     cand_user = CustomUser.objects.create_user_with_role(
         email="candidat_viewset1@example.com",
         username="candidat_viewset1",
@@ -52,14 +52,15 @@ def test_staff_creer_compte_action():
     assert resp.status_code == 200
     data = resp.json()
     assert data["success"] is True
+    assert data["message"] == "Compte candidat créé ou lié avec succès."
 
     cand_user.refresh_from_db()
-    assert cand_user.role == CustomUser.ROLE_STAGIAIRE
+    assert cand_user.role == CustomUser.ROLE_CANDIDAT_USER
 
 
 @pytest.mark.django_db
 def test_staff_creer_compte_refuse_si_deja_compte():
-    """L'action creer-compte refuse si un compte est déjà lié."""
+    """L'action creer-compte ne refuse plus un compte déjà lié : elle harmonise le rôle candidat si besoin."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet 2", code_postal="75102")
     formation = Formation.objects.create(
@@ -96,11 +97,13 @@ def test_staff_creer_compte_refuse_si_deja_compte():
 
     url = reverse("candidat-creer-compte", args=[cand.id])
     resp = client.post(url)
-    assert resp.status_code == 400
+    assert resp.status_code == 200
     payload = resp.json()
-    assert payload["success"] is False
-    assert payload["message"] == "Ce candidat n'est pas admissible."
-    assert payload["errors"]["non_field_errors"] == ["Ce candidat n'est pas admissible."]
+    assert payload["success"] is True
+    assert payload["message"] == "Compte candidat créé ou lié avec succès."
+
+    cand_user.refresh_from_db()
+    assert cand_user.role == CustomUser.ROLE_CANDIDAT_USER
 
 
 @pytest.mark.django_db

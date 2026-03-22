@@ -664,6 +664,9 @@ class Candidat(BaseModel):
     def valider_comme_stagiaire(self, actor=None):
         """
         Garantit qu'un compte existe puis le passe au rôle 'stagiaire'.
+
+        A réserver à l'entrée effective en formation, pas à la simple création
+        ou liaison d'un compte candidat.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
@@ -672,6 +675,9 @@ class Candidat(BaseModel):
     def valider_comme_candidatuser(self, actor=None):
         """
         Garantit qu'un compte existe puis le passe au rôle 'CANDIDAT_USER'.
+
+        C'est l'usage attendu pour créer ou relier un compte candidat tout en
+        conservant le statut candidat avant l'entrée en formation.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
@@ -936,6 +942,9 @@ class Candidat(BaseModel):
     def lier_utilisateur(self, mot_de_passe: str | None = None, actor=None):
         """
         Alias legacy vers la source de vérité du service de compte candidat.
+
+        Crée ou lie un compte, mais ne provoque pas à lui seul une promotion en
+        `stagiaire`.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
@@ -943,11 +952,15 @@ class Candidat(BaseModel):
 
     def creer_ou_lier_compte_utilisateur(self, actor=None):
         """
-        Crée un nouveau compte utilisateur ou lie un compte existant basé sur l'email du candidat.
+        Crée un nouveau compte utilisateur ou lie un compte existant basé sur
+        l'email du candidat.
+
+        Le compte créé ou harmonisé reste au rôle `candidatuser`. La promotion
+        en `stagiaire` relève du cycle d'entrée en formation.
         """
         from ..services.candidate_account_service import CandidateAccountService
 
-        return CandidateAccountService.provision_candidate_account(self, actor=actor)
+        return CandidateAccountService.ensure_candidate_user(self, actor=actor)
 
 
 class HistoriquePlacement(BaseModel):

@@ -199,13 +199,19 @@ class CandidatViewSet(ScopedModelViewSet):
     - actions métier majeures :
       - `meta`
       - `creer-compte`
-      - `valider-stagiaire`
+      - `validate-inscription`
+      - `start-formation`
+      - `complete-formation`
+      - `abandon`
       - `valider-demande-compte`
       - `refuser-demande-compte`
       - `export-xlsx`
 
     Les actions liées au compte candidat s'appuient désormais sur
     `CandidateAccountService` plutôt que sur les anciens signaux implicites.
+    En particulier, `creer-compte` garantit un compte `candidatuser` sans
+    promotion immédiate en `stagiaire` : cette promotion reste réservée à
+    l'entrée effective en formation.
     """
 
     permission_classes = [IsStaffOrAbove, CanAccessCandidatObject]
@@ -469,10 +475,10 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="creer-compte")
     def creer_compte(self, request, pk=None):
-        """POST : provisionne/lie un compte puis promeut le candidat comme stagiaire."""
+        """POST : crée ou lie un compte candidat sans promotion immédiate en stagiaire."""
         candidat = self.get_object()
         try:
-            user = CandidateAccountService.promote_to_stagiaire(candidat, actor=request.user)
+            user = CandidateAccountService.ensure_candidate_user(candidat, actor=request.user)
         except (ValidationError, DjangoValidationError) as e:
             message, errors = _extract_validation_payload(e)
             return self.error_response(
@@ -485,7 +491,7 @@ class CandidatViewSet(ScopedModelViewSet):
         return Response(
             {
                 "success": True,
-                "message": "Candidat validé comme stagiaire.",
+                "message": "Compte candidat créé ou lié avec succès.",
                 "user_id": user.id,
                 "user_role": user.role,
             }

@@ -1,0 +1,79 @@
+# Frontend Todo Simple
+
+## Fait
+
+- structure `frontend_rap_app`
+- ancien front remis comme base active locale
+- analyse ancien front vs backend
+- plan de refonte progressive
+- remettre a niveau auth
+- remettre a niveau client API
+- remettre a niveau `me`
+- remettre a niveau `roles`
+- remettre a niveau guards
+- remettre a niveau gestion des erreurs
+- assainir les dependances frontend
+- valider la build frontend
+- types candidats
+- hooks candidats
+- RGPD candidat
+- creation candidat compatible avec le nouveau backend
+- pages candidats
+- lifecycle candidat
+- bulk actions candidats
+
+## A faire
+
+- types formations
+- hooks formations
+- pages formations
+- types prospections
+- hooks prospections
+- pages prospections
+- commentaires prospection
+- types appairages
+- hooks appairages
+- pages appairages
+- commentaires appairage
+- types partenaires
+- hooks partenaires
+- pages partenaires
+- types documents
+- hooks documents
+- pages documents
+- types commentaires formation
+- hooks commentaires formation
+- pages commentaires formation
+- types cvtheque
+- hooks cvtheque
+- pages cvtheque
+- types ateliers TRE
+- hooks ateliers TRE
+- pages ateliers TRE
+- bulk ateliers TRE
+- types prepa
+- hooks prepa
+- pages prepa
+- types declic
+- hooks declic
+- pages declic
+- types stats
+- hooks stats
+- dashboards
+- types rapports
+- hooks rapports
+- pages rapports
+- types logs
+- hooks logs
+- pages logs
+- types evenements
+- hooks evenements
+- pages evenements
+- exports
+- uniformiser les messages d'erreur UI
+- nettoyer et documenter le code au fil de l'eau
+- error handling UI
+- verifier le responsive au fil de l'eau
+- responsive pass complete
+- nettoyage ancien front
+- documentation front finale

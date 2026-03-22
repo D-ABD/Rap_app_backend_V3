@@ -327,6 +327,14 @@ type CandidateBulkResult = {
   failed: Array<{ id: number; error: string }>;
 };
 
+type CandidateAccountActionResponse = {
+  success: boolean;
+  message: string;
+  user_id?: number;
+  user_email?: string;
+  user_role?: string;
+};
+
 const LIFECYCLE_ACTION_PATHS: Record<CandidateLifecycleActionKey, string> = {
   validate_inscription: "validate-inscription",
   start_formation: "start-formation",
@@ -403,6 +411,38 @@ export function useCandidateBulkActions() {
     bulkAbandon: (candidateIds: number[]) => runBulkAction("abandon", candidateIds),
     bulkAssignAtelierTre: (candidateIds: number[], atelierTreId: number) =>
       runBulkAction("assign_atelier_tre", candidateIds, { atelier_tre_id: atelierTreId }),
+  };
+}
+
+type CandidateAccountActionKey = "create_account" | "approve_account_request" | "reject_account_request";
+
+const ACCOUNT_ACTION_PATHS: Record<CandidateAccountActionKey, string> = {
+  create_account: "creer-compte",
+  approve_account_request: "valider-demande-compte",
+  reject_account_request: "refuser-demande-compte",
+};
+
+export function useCandidateAccountActions() {
+  const [loading, setLoading] = useState(false);
+
+  const runAction = async (candidateId: number, action: CandidateAccountActionKey) => {
+    setLoading(true);
+    try {
+      const path = ACCOUNT_ACTION_PATHS[action];
+      const res = await api.post(`${API_BASE}/candidats/${candidateId}/${path}/`);
+      return unwrap<CandidateAccountActionResponse>(res.data as unknown);
+    } catch (error) {
+      throw toApiError(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    loading,
+    createAccount: (candidateId: number) => runAction(candidateId, "create_account"),
+    approveAccountRequest: (candidateId: number) => runAction(candidateId, "approve_account_request"),
+    rejectAccountRequest: (candidateId: number) => runAction(candidateId, "reject_account_request"),
   };
 }
 

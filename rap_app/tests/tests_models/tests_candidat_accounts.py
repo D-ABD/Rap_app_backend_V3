@@ -42,7 +42,7 @@ def test_candidat_create_does_not_create_user_automatically():
 
 @pytest.mark.django_db
 def test_creer_ou_lier_compte_cree_un_user_sans_doublon():
-    """L'appel explicite à creer_ou_lier_compte_utilisateur crée un compte sans doublon ni mot de passe codé en dur."""
+    """L'appel explicite à creer_ou_lier_compte_utilisateur crée un compte candidat sans doublon ni mot de passe codé en dur."""
     centre = Centre.objects.create(nom="Centre Test 2", code_postal="75002")
     formation = Formation.objects.create(
         nom="Formation Test 2",
@@ -70,6 +70,7 @@ def test_creer_ou_lier_compte_cree_un_user_sans_doublon():
 
     assert user is not None
     assert user.email.lower() == "candidat2@example.com"
+    assert user.role == CustomUser.ROLE_CANDIDAT_USER
     # Le candidat doit maintenant être lié
     cand.refresh_from_db()
     assert cand.compte_utilisateur_id == user.id
@@ -77,7 +78,7 @@ def test_creer_ou_lier_compte_cree_un_user_sans_doublon():
 
 @pytest.mark.django_db
 def test_creer_ou_lier_compte_reutilise_user_existant():
-    """Si un CustomUser existe déjà pour l'email du candidat, il doit être réutilisé plutôt qu'un nouveau compte créé."""
+    """Si un CustomUser existe déjà pour l'email du candidat, il doit être réutilisé et harmonisé au rôle candidatuser."""
     centre = Centre.objects.create(nom="Centre Test 3", code_postal="75003")
     formation = Formation.objects.create(
         nom="Formation Test 3",
@@ -110,6 +111,7 @@ def test_creer_ou_lier_compte_reutilise_user_existant():
 
     linked = cand.creer_ou_lier_compte_utilisateur()
     assert linked.id == user.id
+    assert linked.role == CustomUser.ROLE_CANDIDAT_USER
     cand.refresh_from_db()
     assert cand.compte_utilisateur_id == user.id
 
@@ -270,7 +272,7 @@ def test_valider_comme_candidatuser_cree_et_lie_un_compte_si_absent():
 
 @pytest.mark.django_db
 def test_lier_utilisateur_reutilise_la_source_de_verite_service():
-    """Le helper legacy lier_utilisateur doit rester un alias sûr vers le service central."""
+    """Le helper legacy lier_utilisateur doit rester un alias sûr vers le service central sans promotion stagiaire."""
     centre = Centre.objects.create(nom="Centre Test 8", code_postal="75008")
     formation = Formation.objects.create(
         nom="Formation Test 8",
@@ -300,6 +302,7 @@ def test_lier_utilisateur_reutilise_la_source_de_verite_service():
     assert user is not None
     assert cand.compte_utilisateur_id == user.id
     assert user.email.lower() == "legacy8@example.com"
+    assert user.role == CustomUser.ROLE_CANDIDAT_USER
     assert not user.has_usable_password()
     assert cand.updated_by_id == staff.id
 

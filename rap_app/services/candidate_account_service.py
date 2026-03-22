@@ -167,6 +167,10 @@ class CandidateAccountService:
     ) -> CustomUser:
         """
         Garantit qu'un candidat possède un compte au rôle `candidatuser`.
+
+        Cette méthode est la bonne source de vérité pour les usages "créer ou
+        lier un compte candidat" côté staff : le candidat conserve ce rôle tant
+        qu'il n'est pas effectivement entré en formation.
         """
         user = candidate.compte_utilisateur or cls.provision_candidate_account(candidate, actor=actor)
 
