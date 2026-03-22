@@ -15,14 +15,37 @@ class CandidateLifecycleService:
     Règles actuelles :
     - la validation de l'entrée dans le parcours de recrutement reste distincte
       de l'inscription GESPERS, qui est désormais manuelle ;
-    - les états manuels `en accompagnement TRE` et `en appairage` sont pilotés
-      via le statut legacy explicite ;
+    - les états manuels `admissible`, `inscrit GESPERS`,
+      `en accompagnement TRE` et `en appairage` sont pilotés via des flags
+      cumulables et réversibles ;
     - l'entrée en formation et l'abandon restent des transitions pilotées par
       le backend ;
-    - les statuts legacy manuels comme `en accompagnement` ou `en appairage`
-      ne sont pas écrasés automatiquement ici, sauf pour les transitions
-      structurées nécessaires à la compatibilité descendante.
+    - le champ legacy `statut` est encore maintenu pour compatibilité
+      descendante, mais il reflète seulement la meilleure approximation
+      possible des états manuels cumulables.
     """
+
+    @classmethod
+    def _sync_legacy_status_from_manual_flags(cls, candidate: Candidat) -> str:
+        """
+        Aligne le champ `statut` historique sur les nouveaux flags manuels
+        lorsqu'aucune transition structurée (formation / abandon) n'est active.
+        """
+        if candidate.parcours_phase == Candidat.ParcoursPhase.ABANDON:
+            return Candidat.StatutCandidat.ABANDON
+        if candidate.parcours_phase == Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION:
+            return Candidat.StatutCandidat.EN_FORMATION
+        if candidate.en_appairage:
+            return Candidat.StatutCandidat.EN_APPAIRAGE
+        if candidate.en_accompagnement_tre:
+            return Candidat.StatutCandidat.EN_ACCOMPAGNEMENT
+        return Candidat.StatutCandidat.AUTRE
+
+    @classmethod
+    def _target_phase_without_live_training(cls, candidate: Candidat) -> str:
+        if candidate.inscrit_gespers or candidate.date_validation_inscription:
+            return Candidat.ParcoursPhase.INSCRIT_VALIDE
+        return Candidat.ParcoursPhase.POSTULANT
 
     @classmethod
     @transaction.atomic
@@ -50,6 +73,38 @@ class CandidateLifecycleService:
 
         CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
 
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def set_admissible(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Active manuellement l'état admissible."""
+        updates = []
+        if not candidate.admissible:
+            candidate.admissible = True
+            updates.append("admissible")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def clear_admissible(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Retire manuellement l'état admissible."""
+        updates = []
+        if candidate.admissible:
+            candidate.admissible = False
+            updates.append("admissible")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
         return candidate
 
     @classmethod
@@ -91,6 +146,38 @@ class CandidateLifecycleService:
 
     @classmethod
     @transaction.atomic
+    def cancel_start_formation(cls, candidate: Candidat, actor=None) -> Candidat:
+        """
+        Annule une entrée en formation lorsqu'elle a été enregistrée par erreur.
+        """
+        updates = []
+
+        target_phase = cls._target_phase_without_live_training(candidate)
+        if candidate.parcours_phase != target_phase:
+            candidate.parcours_phase = target_phase
+            updates.append("parcours_phase")
+
+        if candidate.date_entree_formation_effective is not None:
+            candidate.date_entree_formation_effective = None
+            updates.append("date_entree_formation_effective")
+
+        if candidate.date_sortie_formation is not None:
+            candidate.date_sortie_formation = None
+            updates.append("date_sortie_formation")
+
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+
+        CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
+        return candidate
+
+    @classmethod
+    @transaction.atomic
     def complete_formation(cls, candidate: Candidat, actor=None) -> Candidat:
         if not candidate.formation_id:
             raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
@@ -125,57 +212,99 @@ class CandidateLifecycleService:
     @transaction.atomic
     def mark_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
         """Marque manuellement le candidat comme inscrit GESPERS."""
-        if candidate.inscrit_gespers:
-            return candidate
-
-        candidate.inscrit_gespers = True
-        candidate.save(user=actor, update_fields=["inscrit_gespers"])
+        updates = []
+        if not candidate.inscrit_gespers:
+            candidate.inscrit_gespers = True
+            updates.append("inscrit_gespers")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
         return candidate
 
     @classmethod
     @transaction.atomic
     def clear_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
         """Annule manuellement l'inscription GESPERS du candidat."""
-        if not candidate.inscrit_gespers:
-            return candidate
-
-        candidate.inscrit_gespers = False
-        candidate.save(user=actor, update_fields=["inscrit_gespers"])
+        updates = []
+        if candidate.inscrit_gespers:
+            candidate.inscrit_gespers = False
+            updates.append("inscrit_gespers")
+        if candidate.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE and not candidate.date_validation_inscription:
+            candidate.parcours_phase = Candidat.ParcoursPhase.POSTULANT
+            updates.append("parcours_phase")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
         return candidate
 
     @classmethod
     @transaction.atomic
-    def set_manual_status(cls, candidate: Candidat, status: str, actor=None) -> Candidat:
-        """
-        Positionne un statut manuel métier legacy (`en accompagnement`,
-        `en appairage`) sans écraser les transitions structurées.
-        """
-        if status not in {
-            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
-            Candidat.StatutCandidat.EN_APPAIRAGE,
-        }:
-            raise ValidationError({"statut": ["Statut manuel non autorisé."]})
-
-        if candidate.statut == status:
-            return candidate
-
-        candidate.statut = status
-        candidate.save(user=actor, update_fields=["statut"])
+    def set_accompagnement(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Active manuellement l'accompagnement TRE sans écraser l'appairage éventuel."""
+        updates = []
+        if not candidate.en_accompagnement_tre:
+            candidate.en_accompagnement_tre = True
+            updates.append("en_accompagnement_tre")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
         return candidate
 
     @classmethod
     @transaction.atomic
-    def clear_manual_status(cls, candidate: Candidat, status: str, actor=None) -> Candidat:
-        """
-        Retire un statut manuel legacy et ramène le candidat sur l'état neutre
-        `autre`, afin que le statut métier calculé redevienne dynamique.
-        """
-        if candidate.statut != status:
-            return candidate
+    def clear_accompagnement(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Retire l'accompagnement TRE manuel."""
+        updates = []
+        if candidate.en_accompagnement_tre:
+            candidate.en_accompagnement_tre = False
+            updates.append("en_accompagnement_tre")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+        return candidate
 
-        candidate.statut = Candidat.StatutCandidat.AUTRE
-        candidate.save(user=actor, update_fields=["statut"])
+    @classmethod
+    @transaction.atomic
+    def set_appairage(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Active manuellement l'appairage sans effacer l'accompagnement TRE."""
+        updates = []
+        if not candidate.en_appairage:
+            candidate.en_appairage = True
+            updates.append("en_appairage")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
+        return candidate
 
+    @classmethod
+    @transaction.atomic
+    def clear_appairage(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Retire l'appairage manuel."""
+        updates = []
+        if candidate.en_appairage:
+            candidate.en_appairage = False
+            updates.append("en_appairage")
+        legacy_status = cls._sync_legacy_status_from_manual_flags(candidate)
+        if candidate.statut != legacy_status:
+            candidate.statut = legacy_status
+            updates.append("statut")
+        if updates:
+            candidate.save(user=actor, update_fields=updates)
         return candidate
 
     @classmethod

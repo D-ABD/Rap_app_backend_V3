@@ -123,6 +123,8 @@ const SECTIONS: {
     fields: [
       { key: "statut_metier_display", label: "Statut métier" },
       { key: "admissible", label: "Admissible" },
+      { key: "en_accompagnement_tre", label: "En accompagnement TRE" },
+      { key: "en_appairage", label: "En appairage" },
       { key: "entretien_done", label: "Entretien réalisé" },
       { key: "test_is_ok", label: "Test d’entrée OK" },
       { key: "inscrit_gespers", label: "Inscrit GESPERS" },
@@ -214,8 +216,16 @@ export default function CandidatDetailModal({
   const { user } = useAuth();
   const {
     loading: lifecycleLoading,
-    validateInscription,
+    setAdmissible,
+    clearAdmissible,
+    setGespers,
+    clearGespers,
+    setAccompagnement,
+    clearAccompagnement,
+    setAppairage,
+    clearAppairage,
     startFormation,
+    cancelStartFormation,
     completeFormation,
     abandon,
   } = useCandidateLifecycleActions();
@@ -232,22 +242,83 @@ export default function CandidatDetailModal({
   const isStaffLike = !!user && ["admin", "superadmin", "staff", "staff_read"].includes(user.role);
   const hasLinkedAccount = !!candidat?.compte_utilisateur;
   const requestStatus = candidat?.demande_compte_statut ?? null;
+  const canReverseFormation = candidat?.parcours_phase === "stagiaire_en_formation";
+  const canMarkAdmissible = !candidat?.admissible;
+  const canClearAdmissible = !!candidat?.admissible;
+  const canSetGespers = !candidat?.inscrit_gespers;
+  const canClearGespers = !!candidat?.inscrit_gespers;
+  const canSetAccompagnement = !candidat?.en_accompagnement_tre;
+  const canClearAccompagnement = !!candidat?.en_accompagnement_tre;
+  const canSetAppairage = !candidat?.en_appairage;
+  const canClearAppairage = !!candidat?.en_appairage;
+
+  const confirmAction = (label: string) =>
+    window.confirm(`Êtes-vous sûr de vouloir passer le statut en ${label} ?`);
+
   const handleLifecycleAction = async (
-    action: "validate" | "start" | "complete" | "abandon"
+    action:
+      | "setAdmissible"
+      | "clearAdmissible"
+      | "setGespers"
+      | "clearGespers"
+      | "setAccompagnement"
+      | "clearAccompagnement"
+      | "setAppairage"
+      | "clearAppairage"
+      | "start"
+      | "cancelStart"
+      | "complete"
+      | "abandon"
   ) => {
     if (!candidat?.id) return;
 
     try {
-      if (action === "validate") {
-        const result = await validateInscription(candidat.id);
-        toast.success(result.message || "Inscription validée.");
+      if (action === "setAdmissible") {
+        if (!confirmAction("Candidat admissible")) return;
+        const result = await setAdmissible(candidat.id);
+        toast.success(result.message || "Statut admissible enregistré.");
+      } else if (action === "clearAdmissible") {
+        if (!confirmAction("Candidat")) return;
+        const result = await clearAdmissible(candidat.id);
+        toast.success(result.message || "Statut admissible retiré.");
+      } else if (action === "setGespers") {
+        if (!confirmAction("Inscrit GESPERS")) return;
+        const result = await setGespers(candidat.id);
+        toast.success(result.message || "Inscription GESPERS enregistrée.");
+      } else if (action === "clearGespers") {
+        if (!confirmAction("Candidat")) return;
+        const result = await clearGespers(candidat.id);
+        toast.success(result.message || "Inscription GESPERS annulée.");
+      } else if (action === "setAccompagnement") {
+        if (!confirmAction("En accompagnement TRE")) return;
+        const result = await setAccompagnement(candidat.id);
+        toast.success(result.message || "Accompagnement TRE enregistré.");
+      } else if (action === "clearAccompagnement") {
+        if (!confirmAction("Candidat")) return;
+        const result = await clearAccompagnement(candidat.id);
+        toast.success(result.message || "Accompagnement TRE retiré.");
+      } else if (action === "setAppairage") {
+        if (!confirmAction("En appairage")) return;
+        const result = await setAppairage(candidat.id);
+        toast.success(result.message || "Appairage enregistré.");
+      } else if (action === "clearAppairage") {
+        if (!confirmAction("Candidat")) return;
+        const result = await clearAppairage(candidat.id);
+        toast.success(result.message || "Appairage retiré.");
       } else if (action === "start") {
+        if (!confirmAction("En formation")) return;
         const result = await startFormation(candidat.id);
         toast.success(result.message || "Entrée en formation enregistrée.");
+      } else if (action === "cancelStart") {
+        if (!confirmAction("Candidat")) return;
+        const result = await cancelStartFormation(candidat.id);
+        toast.success(result.message || "Entrée en formation annulée.");
       } else if (action === "complete") {
+        if (!confirmAction("Sortie / fin de formation")) return;
         const result = await completeFormation(candidat.id);
         toast.success(result.message || "Sortie de formation enregistrée.");
       } else {
+        if (!confirmAction("Abandon")) return;
         const result = await abandon(candidat.id);
         toast.success(result.message || "Abandon enregistré.");
       }
@@ -347,14 +418,85 @@ export default function CandidatDetailModal({
                       <Alert severity="info" sx={{ mb: 1 }}>
                         Statut métier actuel : <strong>{uiPhaseLabel(candidat)}</strong>
                       </Alert>
+                      <Alert severity="info" variant="outlined" sx={{ mb: 1 }}>
+                        Etats actifs : admissible {yn(candidat.admissible).toLowerCase()} · GESPERS{" "}
+                        {yn(candidat.inscrit_gespers).toLowerCase()} · accompagnement TRE{" "}
+                        {yn(candidat.en_accompagnement_tre).toLowerCase()} · appairage{" "}
+                        {yn(candidat.en_appairage).toLowerCase()}
+                      </Alert>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
-                        <Button
-                          variant="outlined"
-                          disabled={lifecycleLoading}
-                          onClick={() => handleLifecycleAction("validate")}
-                        >
-                          Valider l'entrée dans le parcours de recrutement
-                        </Button>
+                        {canMarkAdmissible && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("setAdmissible")}
+                          >
+                            Candidat admissible
+                          </Button>
+                        )}
+                        {canClearAdmissible && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("clearAdmissible")}
+                          >
+                            Annuler admissible
+                          </Button>
+                        )}
+                        {canSetGespers && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("setGespers")}
+                          >
+                            Inscrire GESPERS
+                          </Button>
+                        )}
+                        {canClearGespers && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("clearGespers")}
+                          >
+                            Annuler inscription GESPERS
+                          </Button>
+                        )}
+                        {canSetAccompagnement && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("setAccompagnement")}
+                          >
+                            En accompagnement TRE
+                          </Button>
+                        )}
+                        {canClearAccompagnement && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("clearAccompagnement")}
+                          >
+                            Retirer accompagnement TRE
+                          </Button>
+                        )}
+                        {canSetAppairage && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("setAppairage")}
+                          >
+                            En appairage
+                          </Button>
+                        )}
+                        {canClearAppairage && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("clearAppairage")}
+                          >
+                            Retirer appairage
+                          </Button>
+                        )}
                         <Button
                           variant="outlined"
                           disabled={lifecycleLoading}
@@ -362,6 +504,15 @@ export default function CandidatDetailModal({
                         >
                           En formation
                         </Button>
+                        {canReverseFormation && (
+                          <Button
+                            variant="outlined"
+                            disabled={lifecycleLoading}
+                            onClick={() => handleLifecycleAction("cancelStart")}
+                          >
+                            Annuler en formation
+                          </Button>
+                        )}
                         <Button
                           variant="outlined"
                           disabled={lifecycleLoading}

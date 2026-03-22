@@ -67,6 +67,9 @@ class CandidatAdmin(admin.ModelAdmin):
         "entretien_done",
         "test_is_ok",
         "admissible",
+        "inscrit_gespers",
+        "en_accompagnement_tre",
+        "en_appairage",
         "rqth",
         "resultat_placement",
         "entreprise_placement",
@@ -83,6 +86,9 @@ class CandidatAdmin(admin.ModelAdmin):
         "disponibilite",
         "rqth",
         "admissible",
+        "inscrit_gespers",
+        "en_accompagnement_tre",
+        "en_appairage",
         "entretien_done",
         "test_is_ok",
         "formation",
@@ -170,6 +176,9 @@ class CandidatAdmin(admin.ModelAdmin):
                     "test_is_ok",
                     "rqth",
                     "admissible",
+                    "inscrit_gespers",
+                    "en_accompagnement_tre",
+                    "en_appairage",
                     "date_naissance",
                     "type_contrat",
                     "disponibilite",
@@ -361,11 +370,59 @@ class CandidatAdmin(admin.ModelAdmin):
     # ---- Admissible ----
     @admin.action(description="Admissible → Oui")
     def act_admissible_on(self, request, queryset):
-        self._bulk_set(request, queryset, "admissible", True, "✅ Oui")
+        for c in queryset:
+            CandidateLifecycleService.set_admissible(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (admissible = ✅ Oui).", level=messages.SUCCESS)
 
     @admin.action(description="Admissible → Non")
     def act_admissible_off(self, request, queryset):
-        self._bulk_set(request, queryset, "admissible", False, "❌ Non")
+        for c in queryset:
+            CandidateLifecycleService.clear_admissible(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (admissible = ❌ Non).", level=messages.SUCCESS)
+
+    @admin.action(description="Inscrit GESPERS → Oui")
+    def act_gespers_on(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.mark_gespers(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (GESPERS = ✅ Oui).", level=messages.SUCCESS)
+
+    @admin.action(description="Inscrit GESPERS → Non")
+    def act_gespers_off(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.clear_gespers(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (GESPERS = ❌ Non).", level=messages.SUCCESS)
+
+    @admin.action(description="Accompagnement TRE → Oui")
+    def act_accompagnement_on(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.set_accompagnement(c, actor=request.user)
+        self.message_user(
+            request,
+            f"{queryset.count()} candidat(s) mis à jour (accompagnement TRE = ✅ Oui).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Accompagnement TRE → Non")
+    def act_accompagnement_off(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.clear_accompagnement(c, actor=request.user)
+        self.message_user(
+            request,
+            f"{queryset.count()} candidat(s) mis à jour (accompagnement TRE = ❌ Non).",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Appairage → Oui")
+    def act_appairage_on(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.set_appairage(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (appairage = ✅ Oui).", level=messages.SUCCESS)
+
+    @admin.action(description="Appairage → Non")
+    def act_appairage_off(self, request, queryset):
+        for c in queryset:
+            CandidateLifecycleService.clear_appairage(c, actor=request.user)
+        self.message_user(request, f"{queryset.count()} candidat(s) mis à jour (appairage = ❌ Non).", level=messages.SUCCESS)
 
     # ---- Comptes utilisateurs ----
     @admin.action(description="Créer / poser un compte Stagiaire")
@@ -404,6 +461,12 @@ class CandidatAdmin(admin.ModelAdmin):
         "act_test_off",
         "act_admissible_on",
         "act_admissible_off",
+        "act_gespers_on",
+        "act_gespers_off",
+        "act_accompagnement_on",
+        "act_accompagnement_off",
+        "act_appairage_on",
+        "act_appairage_off",
         "act_valider_stagiaire",
         "act_valider_candidat_user",
     )

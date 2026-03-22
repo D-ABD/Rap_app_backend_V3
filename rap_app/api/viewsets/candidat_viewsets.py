@@ -155,8 +155,16 @@ def _build_candidat_meta(user=None) -> dict:
             "is_stagiaire_role_aligned",
             "has_compte_utilisateur",
         ],
+        "manual_status_flags": [
+            "admissible",
+            "inscrit_gespers",
+            "en_accompagnement_tre",
+            "en_appairage",
+        ],
         "phase_transition_actions": [
             {"key": "validate_inscription", "url_name": "candidat-validate-inscription", "method": "POST"},
+            {"key": "set_admissible", "url_name": "candidat-set-admissible", "method": "POST"},
+            {"key": "clear_admissible", "url_name": "candidat-clear-admissible", "method": "POST"},
             {"key": "set_gespers", "url_name": "candidat-set-gespers", "method": "POST"},
             {"key": "clear_gespers", "url_name": "candidat-clear-gespers", "method": "POST"},
             {"key": "set_accompagnement_tre", "url_name": "candidat-set-accompagnement", "method": "POST"},
@@ -164,6 +172,7 @@ def _build_candidat_meta(user=None) -> dict:
             {"key": "set_appairage", "url_name": "candidat-set-appairage", "method": "POST"},
             {"key": "clear_appairage", "url_name": "candidat-clear-appairage", "method": "POST"},
             {"key": "start_formation", "url_name": "candidat-start-formation", "method": "POST"},
+            {"key": "cancel_start_formation", "url_name": "candidat-cancel-start-formation", "method": "POST"},
             {"key": "complete_formation", "url_name": "candidat-complete-formation", "method": "POST"},
             {"key": "abandon", "url_name": "candidat-abandon", "method": "POST"},
         ],
@@ -208,10 +217,12 @@ class CandidatViewSet(ScopedModelViewSet):
       - `meta`
       - `creer-compte`
       - `validate-inscription`
+      - `set-admissible` / `clear-admissible`
       - `set-gespers` / `clear-gespers`
       - `set-accompagnement` / `clear-accompagnement`
       - `set-appairage` / `clear-appairage`
       - `start-formation`
+      - `cancel-start-formation`
       - `complete-formation`
       - `abandon`
       - `valider-demande-compte`
@@ -535,6 +546,26 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @action(detail=True, methods=["post"], url_path="set-admissible")
+    def set_admissible(self, request, pk=None):
+        """POST : active manuellement l'état admissible."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.set_admissible(candidat, actor=request.user)
+        return self.success_response(
+            data={"candidat_id": candidat.id, "admissible": candidat.admissible},
+            message="Statut 'Candidat admissible' enregistré.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="clear-admissible")
+    def clear_admissible(self, request, pk=None):
+        """POST : retire manuellement l'état admissible."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.clear_admissible(candidat, actor=request.user)
+        return self.success_response(
+            data={"candidat_id": candidat.id, "admissible": candidat.admissible},
+            message="Statut 'Candidat admissible' retiré.",
+        )
+
     @action(detail=True, methods=["post"], url_path="set-gespers")
     def set_gespers(self, request, pk=None):
         """POST : marque manuellement le candidat comme inscrit GESPERS."""
@@ -559,13 +590,13 @@ class CandidatViewSet(ScopedModelViewSet):
     def set_accompagnement(self, request, pk=None):
         """POST : positionne manuellement le candidat en accompagnement TRE."""
         candidat = self.get_object()
-        candidat = CandidateLifecycleService.set_manual_status(
-            candidat,
-            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
-            actor=request.user,
-        )
+        candidat = CandidateLifecycleService.set_accompagnement(candidat, actor=request.user)
         return self.success_response(
-            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            data={
+                "candidat_id": candidat.id,
+                "en_accompagnement_tre": candidat.en_accompagnement_tre,
+                "statut": candidat.statut,
+            },
             message="Statut 'En accompagnement TRE' enregistré.",
         )
 
@@ -573,13 +604,13 @@ class CandidatViewSet(ScopedModelViewSet):
     def clear_accompagnement(self, request, pk=None):
         """POST : retire le statut manuel d'accompagnement TRE."""
         candidat = self.get_object()
-        candidat = CandidateLifecycleService.clear_manual_status(
-            candidat,
-            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
-            actor=request.user,
-        )
+        candidat = CandidateLifecycleService.clear_accompagnement(candidat, actor=request.user)
         return self.success_response(
-            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            data={
+                "candidat_id": candidat.id,
+                "en_accompagnement_tre": candidat.en_accompagnement_tre,
+                "statut": candidat.statut,
+            },
             message="Statut 'En accompagnement TRE' retiré.",
         )
 
@@ -587,13 +618,9 @@ class CandidatViewSet(ScopedModelViewSet):
     def set_appairage(self, request, pk=None):
         """POST : positionne manuellement le candidat en appairage."""
         candidat = self.get_object()
-        candidat = CandidateLifecycleService.set_manual_status(
-            candidat,
-            Candidat.StatutCandidat.EN_APPAIRAGE,
-            actor=request.user,
-        )
+        candidat = CandidateLifecycleService.set_appairage(candidat, actor=request.user)
         return self.success_response(
-            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            data={"candidat_id": candidat.id, "en_appairage": candidat.en_appairage, "statut": candidat.statut},
             message="Statut 'En appairage' enregistré.",
         )
 
@@ -601,13 +628,9 @@ class CandidatViewSet(ScopedModelViewSet):
     def clear_appairage(self, request, pk=None):
         """POST : retire le statut manuel d'appairage."""
         candidat = self.get_object()
-        candidat = CandidateLifecycleService.clear_manual_status(
-            candidat,
-            Candidat.StatutCandidat.EN_APPAIRAGE,
-            actor=request.user,
-        )
+        candidat = CandidateLifecycleService.clear_appairage(candidat, actor=request.user)
         return self.success_response(
-            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            data={"candidat_id": candidat.id, "en_appairage": candidat.en_appairage, "statut": candidat.statut},
             message="Statut 'En appairage' retiré.",
         )
 
@@ -636,6 +659,34 @@ class CandidatViewSet(ScopedModelViewSet):
                     "parcours_phase": candidat.parcours_phase,
                     "date_entree_formation_effective": candidat.date_entree_formation_effective,
                     "user_role": getattr(compte, "role", None),
+                },
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="cancel-start-formation")
+    def cancel_start_formation(self, request, pk=None):
+        """POST : annule une entrée en formation enregistrée par erreur."""
+        candidat = self.get_object()
+        try:
+            candidat = CandidateLifecycleService.cancel_start_formation(candidat, actor=request.user)
+        except (ValidationError, DjangoValidationError) as e:
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "message": "Entrée en formation annulée.",
+                "data": {
+                    "candidat_id": candidat.id,
+                    "parcours_phase": candidat.parcours_phase,
+                    "date_entree_formation_effective": candidat.date_entree_formation_effective,
+                    "date_sortie_formation": candidat.date_sortie_formation,
                 },
             }
         )

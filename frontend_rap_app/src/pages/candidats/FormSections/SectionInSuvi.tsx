@@ -77,6 +77,8 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
       ["test_is_ok", "Test validé"],
       ["admissible", "Admissible"],
       ["inscrit_gespers", "Inscrit GESPERS"],
+      ["en_accompagnement_tre", "En accompagnement TRE"],
+      ["en_appairage", "En appairage"],
       ["courrier_rentree", "Courrier de rentrée envoyé"],
     ] as const,
     []
@@ -96,23 +98,12 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
         {/* Statuts administratifs */}
         {/* ---------------------- */}
         <Grid container spacing={2}>
-          {/* Statut */}
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <FormLabel>Statut</FormLabel>
-              <Select
-                value={form.statut ?? ""}
-                onChange={updateSelect("statut")}
-                displayEmpty
-              >
-                <MenuItem value="">—</MenuItem>
-                {(meta?.statut_choices ?? []).map((opt) => (
-                  <MenuItem key={String(opt.value)} value={String(opt.value)}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Grid item xs={12}>
+            <Alert severity="info">
+              Le statut principal est maintenant calcule automatiquement par le backend.
+              Utilisez les cases ci-dessous pour piloter les etats manuels cumulables :
+              admissible, GESPERS, accompagnement TRE et appairage.
+            </Alert>
           </Grid>
 
           {/* CV statut */}

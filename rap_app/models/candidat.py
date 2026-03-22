@@ -428,6 +428,16 @@ class Candidat(BaseModel):
     inscrit_gespers = models.BooleanField(
         default=False, verbose_name=_("Inscrit GESPERS"), help_text="Indique si le candidat est inscrit dans GESPERS."
     )
+    en_accompagnement_tre = models.BooleanField(
+        default=False,
+        verbose_name=_("En accompagnement TRE"),
+        help_text=_("Flag manuel cumulable indiquant qu'un accompagnement TRE est en cours."),
+    )
+    en_appairage = models.BooleanField(
+        default=False,
+        verbose_name=_("En appairage"),
+        help_text=_("Flag manuel cumulable indiquant qu'un travail d'appairage est en cours."),
+    )
     courrier_rentree = models.BooleanField(default=False, verbose_name=_("Courrier de rentrée envoyé"))
     date_rentree = models.DateField(null=True, blank=True, verbose_name=_("Date de rentrée"))
     admissible = models.BooleanField(default=False, verbose_name=_("Admissible"))
@@ -819,8 +829,8 @@ class Candidat(BaseModel):
         - sortie / fin de formation
         - en formation
         - inscrit GESPERS (manuel)
-        - en appairage (manuel / legacy)
-        - en accompagnement TRE (manuel / legacy)
+        - en appairage (manuel)
+        - en accompagnement TRE (manuel)
         - candidat admissible
         - candidat
         """
@@ -836,10 +846,10 @@ class Candidat(BaseModel):
         if self.inscrit_gespers:
             return self.StatutMetier.INSCRIT_GESPERS
 
-        if self.statut == self.StatutCandidat.EN_APPAIRAGE:
+        if self.en_appairage:
             return self.StatutMetier.EN_APPAIRAGE
 
-        if self.statut == self.StatutCandidat.EN_ACCOMPAGNEMENT:
+        if self.en_accompagnement_tre:
             return self.StatutMetier.EN_ACCOMPAGNEMENT_TRE
 
         if self.admissible:
@@ -894,14 +904,14 @@ class Candidat(BaseModel):
             )
 
         if value == cls.StatutMetier.EN_APPAIRAGE:
-            return Q(**{field("statut"): cls.StatutCandidat.EN_APPAIRAGE}) & ~cls.statut_metier_q(
+            return Q(**{field("en_appairage"): True}) & ~cls.statut_metier_q(
                 cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.SORTIE_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_FORMATION, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
 
         if value == cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE:
-            return Q(**{field("statut"): cls.StatutCandidat.EN_ACCOMPAGNEMENT}) & ~cls.statut_metier_q(
+            return Q(**{field("en_accompagnement_tre"): True}) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.SORTIE_FORMATION, prefix=prefix
@@ -1004,6 +1014,27 @@ class Candidat(BaseModel):
         """
         user = kwargs.pop("user", None)
         update_fields = kwargs.get("update_fields", None)
+
+        previous_status = self.statut
+        if self.parcours_phase == self.ParcoursPhase.ABANDON:
+            self.statut = self.StatutCandidat.ABANDON
+        elif self.parcours_phase == self.ParcoursPhase.STAGIAIRE_EN_FORMATION:
+            self.statut = self.StatutCandidat.EN_FORMATION
+        elif self.en_appairage:
+            self.statut = self.StatutCandidat.EN_APPAIRAGE
+        elif self.en_accompagnement_tre:
+            self.statut = self.StatutCandidat.EN_ACCOMPAGNEMENT
+        elif self.statut in {
+            self.StatutCandidat.EN_APPAIRAGE,
+            self.StatutCandidat.EN_ACCOMPAGNEMENT,
+        }:
+            self.statut = self.StatutCandidat.AUTRE
+
+        if update_fields is not None and self.statut != previous_status:
+            normalized_update_fields = list(update_fields)
+            if "statut" not in normalized_update_fields:
+                normalized_update_fields.append("statut")
+            kwargs["update_fields"] = normalized_update_fields
 
         is_new = self.pk is None
         original = None

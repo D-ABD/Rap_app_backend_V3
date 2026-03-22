@@ -132,6 +132,7 @@ type MetaRawSnake = {
   phase_filter_aliases?: CandidatMeta["phase_filter_aliases"];
   phase_ordering_fields?: string[];
   phase_read_only_fields?: string[];
+  manual_status_flags?: string[];
   phase_transition_actions?: CandidatMeta["phase_transition_actions"];
 };
 
@@ -155,6 +156,7 @@ type MetaRawCamel = {
   phaseFilterAliases?: CandidatMeta["phase_filter_aliases"];
   phaseOrderingFields?: string[];
   phaseReadOnlyFields?: string[];
+  manualStatusFlags?: string[];
   phaseTransitionActions?: CandidatMeta["phase_transition_actions"];
 };
 
@@ -254,6 +256,11 @@ function normalizeMetaLike(
       : Array.isArray(r.phaseReadOnlyFields)
         ? r.phaseReadOnlyFields.map(String)
         : [],
+    manual_status_flags: Array.isArray(r.manual_status_flags)
+      ? r.manual_status_flags.map(String)
+      : Array.isArray(r.manualStatusFlags)
+        ? r.manualStatusFlags.map(String)
+        : [],
     phase_transition_actions: (r.phase_transition_actions ??
       r.phaseTransitionActions) as CandidatMeta["phase_transition_actions"],
     // ✅ champs backend supplémentaires utilisés par le front
@@ -301,8 +308,16 @@ export function useCandidats(params: CandidatFiltresValues = {}, refreshKey = 0)
 }
 
 type CandidateLifecycleActionKey =
-  | "validate_inscription"
+  | "set_admissible"
+  | "clear_admissible"
+  | "set_gespers"
+  | "clear_gespers"
+  | "set_accompagnement"
+  | "clear_accompagnement"
+  | "set_appairage"
+  | "clear_appairage"
   | "start_formation"
+  | "cancel_start_formation"
   | "complete_formation"
   | "abandon";
 
@@ -339,8 +354,16 @@ type CandidateAccountActionResponse = {
 };
 
 const LIFECYCLE_ACTION_PATHS: Record<CandidateLifecycleActionKey, string> = {
-  validate_inscription: "validate-inscription",
+  set_admissible: "set-admissible",
+  clear_admissible: "clear-admissible",
+  set_gespers: "set-gespers",
+  clear_gespers: "clear-gespers",
+  set_accompagnement: "set-accompagnement",
+  clear_accompagnement: "clear-accompagnement",
+  set_appairage: "set-appairage",
+  clear_appairage: "clear-appairage",
   start_formation: "start-formation",
+  cancel_start_formation: "cancel-start-formation",
   complete_formation: "complete-formation",
   abandon: "abandon",
 };
@@ -363,8 +386,16 @@ export function useCandidateLifecycleActions() {
 
   return {
     loading,
-    validateInscription: (candidateId: number) => runAction(candidateId, "validate_inscription"),
+    setAdmissible: (candidateId: number) => runAction(candidateId, "set_admissible"),
+    clearAdmissible: (candidateId: number) => runAction(candidateId, "clear_admissible"),
+    setGespers: (candidateId: number) => runAction(candidateId, "set_gespers"),
+    clearGespers: (candidateId: number) => runAction(candidateId, "clear_gespers"),
+    setAccompagnement: (candidateId: number) => runAction(candidateId, "set_accompagnement"),
+    clearAccompagnement: (candidateId: number) => runAction(candidateId, "clear_accompagnement"),
+    setAppairage: (candidateId: number) => runAction(candidateId, "set_appairage"),
+    clearAppairage: (candidateId: number) => runAction(candidateId, "clear_appairage"),
     startFormation: (candidateId: number) => runAction(candidateId, "start_formation"),
+    cancelStartFormation: (candidateId: number) => runAction(candidateId, "cancel_start_formation"),
     completeFormation: (candidateId: number) => runAction(candidateId, "complete_formation"),
     abandon: (candidateId: number) => runAction(candidateId, "abandon"),
   };

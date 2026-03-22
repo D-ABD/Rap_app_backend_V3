@@ -85,7 +85,7 @@ class CandidatWritePathTests(TestCase):
             email="priorite.metier@example.com",
             formation=self.formation,
             admissible=True,
-            statut=Candidat.StatutCandidat.EN_APPAIRAGE,
+            en_appairage=True,
             created_by=self.actor,
             updated_by=self.actor,
         )

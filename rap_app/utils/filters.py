@@ -247,6 +247,9 @@ class CandidatFilter(django_filters.FilterSet):
     rqth = django_filters.BooleanFilter(field_name="rqth")
     permis_b = django_filters.BooleanFilter(field_name="permis_b")
     admissible = django_filters.BooleanFilter(field_name="admissible")
+    inscrit_gespers = django_filters.BooleanFilter(field_name="inscrit_gespers")
+    en_accompagnement_tre = django_filters.BooleanFilter(field_name="en_accompagnement_tre")
+    en_appairage = django_filters.BooleanFilter(field_name="en_appairage")
     entretien_done = django_filters.BooleanFilter(field_name="entretien_done")
     test_is_ok = django_filters.BooleanFilter(field_name="test_is_ok")
 
@@ -333,6 +336,9 @@ class CandidatFilter(django_filters.FilterSet):
             "responsable_placement",
             "vu_par",
             "admissible",
+            "inscrit_gespers",
+            "en_accompagnement_tre",
+            "en_appairage",
             "entretien_done",
             "test_is_ok",
             "entreprise_placement",

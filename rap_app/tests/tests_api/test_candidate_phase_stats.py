@@ -110,7 +110,7 @@ class CandidatePhaseStatsTests(APITestCase):
             email="appairage.stats@example.com",
             formation=self.formation,
             admissible=True,
-            statut=Candidat.StatutCandidat.EN_APPAIRAGE,
+            en_appairage=True,
             created_by=self.staff,
             updated_by=self.staff,
         )

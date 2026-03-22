@@ -65,7 +65,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
     Statistiques formations enrichies avec des KPI candidat alignés sur la
     lecture métier actuelle du parcours (admissibilité, GESPERS, appairage,
-    accompagnement TRE, formation, abandon).
+    accompagnement TRE, formation, sortie, abandon) et sur les flags manuels
+    cumulables utilisés par le front.
     """
     """
     Reporting agrégé sur les formations visibles par l'utilisateur courant.
@@ -563,12 +564,12 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.ADMISSIBLE, "candidats__"),
                     distinct=True,
                 ),
-                nb_en_accompagnement_tre=Count(
+                nb_en_accompagnement_tre_count=Count(
                     "candidats",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE, "candidats__"),
                     distinct=True,
                 ),
-                nb_en_appairage=Count(
+                nb_en_appairage_count=Count(
                     "candidats",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE, "candidats__"),
                     distinct=True,
@@ -644,6 +645,10 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             )
             .order_by(*group_fields)
         )
+
+        for row in rows:
+            row["nb_en_accompagnement_tre"] = row.pop("nb_en_accompagnement_tre_count", 0)
+            row["nb_en_appairage"] = row.pop("nb_en_appairage_count", 0)
 
         for r in rows:
             r["total_disponibles"] = int(r["total_dispo_crif"]) + int(r["total_dispo_mp"])

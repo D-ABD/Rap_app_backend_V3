@@ -353,6 +353,8 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "entreprise_validee_nom",
             "contrat_signe",
             "inscrit_gespers",
+            "en_accompagnement_tre",
+            "en_appairage",
             "courrier_rentree",
             "date_rentree",
             "admissible",
@@ -503,6 +505,9 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "courrier_rentree",
             "vu_par",
             "admissible",
+            "inscrit_gespers",
+            "en_accompagnement_tre",
+            "en_appairage",
             "entretien_done",
             "test_is_ok",
             "communication",
@@ -640,6 +645,8 @@ class CandidatListSerializer(serializers.ModelSerializer):
             "entreprise_validee_nom",
             "contrat_signe",
             "inscrit_gespers",
+            "en_accompagnement_tre",
+            "en_appairage",
             "courrier_rentree",
             "date_rentree",
             "admissible",
@@ -720,6 +727,9 @@ class CandidatListSerializer(serializers.ModelSerializer):
                 "courrier_rentree",
                 "vu_par",
                 "admissible",
+                "inscrit_gespers",
+                "en_accompagnement_tre",
+                "en_appairage",
                 "entretien_done",
                 "test_is_ok",
                 "communication",
@@ -792,7 +802,6 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             raise exceptions.PermissionDenied("Authentification requise.")
 
         restricted_fields = [
-            "admissible",
             "notes",
             "resultat_placement",
             "responsable_placement",
@@ -808,6 +817,13 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
                 if field in data:
                     raise serializers.ValidationError(
                         {field: "Ce champ ne peut être modifié que par un administrateur."}
+                    )
+
+        if user.role not in ["admin", "superadmin", "staff"]:
+            for field in ["admissible", "inscrit_gespers", "en_accompagnement_tre", "en_appairage"]:
+                if field in data:
+                    raise serializers.ValidationError(
+                        {field: "Ce champ ne peut être modifié que par un membre du staff."}
                     )
 
         if "numero_osia" in data:

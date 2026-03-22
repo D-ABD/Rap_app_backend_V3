@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -502,7 +503,7 @@ def test_staff_can_toggle_gespers_manually():
 
 
 @pytest.mark.django_db
-def test_staff_can_toggle_manual_accompagnement_and_appairage_statuses():
+def test_staff_can_toggle_manual_admissible_accompagnement_and_appairage_statuses():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet G2", code_postal="75141")
     formation = Formation.objects.create(
@@ -524,31 +525,44 @@ def test_staff_can_toggle_manual_accompagnement_and_appairage_statuses():
         prenom="Status",
         email="manual.status@example.com",
         formation=formation,
-        admissible=True,
         created_by=staff,
         updated_by=staff,
     )
 
     client.force_authenticate(user=staff)
 
+    resp_admissible = client.post(reverse("candidat-set-admissible", args=[cand.id]))
+    assert resp_admissible.status_code == 200
+    cand.refresh_from_db()
+    assert cand.admissible is True
+
+    resp_clear_admissible = client.post(reverse("candidat-clear-admissible", args=[cand.id]))
+    assert resp_clear_admissible.status_code == 200
+    cand.refresh_from_db()
+    assert cand.admissible is False
+
     resp_accompagnement = client.post(reverse("candidat-set-accompagnement", args=[cand.id]))
     assert resp_accompagnement.status_code == 200
     cand.refresh_from_db()
+    assert cand.en_accompagnement_tre is True
     assert cand.statut == Candidat.StatutCandidat.EN_ACCOMPAGNEMENT
 
     resp_clear_accompagnement = client.post(reverse("candidat-clear-accompagnement", args=[cand.id]))
     assert resp_clear_accompagnement.status_code == 200
     cand.refresh_from_db()
+    assert cand.en_accompagnement_tre is False
     assert cand.statut == Candidat.StatutCandidat.AUTRE
 
     resp_appairage = client.post(reverse("candidat-set-appairage", args=[cand.id]))
     assert resp_appairage.status_code == 200
     cand.refresh_from_db()
+    assert cand.en_appairage is True
     assert cand.statut == Candidat.StatutCandidat.EN_APPAIRAGE
 
     resp_clear_appairage = client.post(reverse("candidat-clear-appairage", args=[cand.id]))
     assert resp_clear_appairage.status_code == 200
     cand.refresh_from_db()
+    assert cand.en_appairage is False
     assert cand.statut == Candidat.StatutCandidat.AUTRE
 
 
@@ -616,7 +630,7 @@ def test_staff_can_still_filter_candidates_by_legacy_statut_during_m3():
     )
     staff.centres.add(centre)
 
-    visible = Candidat.objects.create(
+    Candidat.objects.create(
         nom="Visible",
         prenom="Legacy",
         email="visible.legacy@example.com",
@@ -626,12 +640,12 @@ def test_staff_can_still_filter_candidates_by_legacy_statut_during_m3():
         created_by=staff,
         updated_by=staff,
     )
-    Candidat.objects.create(
+    visible = Candidat.objects.create(
         nom="Masque",
         prenom="Legacy",
         email="masque.legacy@example.com",
         formation=formation,
-        statut=Candidat.StatutCandidat.AUTRE,
+        statut=Candidat.StatutCandidat.ABANDON,
         parcours_phase=Candidat.ParcoursPhase.ABANDON,
         created_by=staff,
         updated_by=staff,
@@ -787,6 +801,57 @@ def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
     assert cand.date_validation_inscription is not None
     assert cand.date_entree_formation_effective is not None
     assert compte.role == CustomUser.ROLE_STAGIAIRE
+
+
+@pytest.mark.django_db
+def test_staff_can_cancel_start_formation_and_revert_role():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet M2B2", code_postal="75129")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet M2B2",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_m2b2@example.com",
+        username="staff_m2b2",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    compte = CustomUser.objects.create_user_with_role(
+        email="candidate_m2b2@example.com",
+        username="candidate_m2b2",
+        password="password123",
+        role=CustomUser.ROLE_STAGIAIRE,
+    )
+    cand = Candidat.objects.create(
+        nom="Annule",
+        prenom="Formation",
+        email="candidate_m2b2@example.com",
+        formation=formation,
+        admissible=True,
+        inscrit_gespers=True,
+        compte_utilisateur=compte,
+        statut=Candidat.StatutCandidat.EN_FORMATION,
+        parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+        date_validation_inscription=timezone.now(),
+        date_entree_formation_effective=timezone.now(),
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp = client.post(reverse("candidat-cancel-start-formation", args=[cand.id]))
+
+    assert resp.status_code == 200
+    cand.refresh_from_db()
+    compte.refresh_from_db()
+    assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert cand.date_entree_formation_effective is None
+    assert compte.role == CustomUser.ROLE_CANDIDAT_USER
 
 
 @pytest.mark.django_db

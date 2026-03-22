@@ -88,6 +88,38 @@ class CandidateLifecycleServiceTests(TestCase):
         self.assertIsNotNone(candidate.date_entree_formation_effective)
         self.assertEqual(user.role, CustomUser.ROLE_STAGIAIRE)
 
+    def test_cancel_start_formation_reverts_candidate_to_pre_training_state(self):
+        user = CustomUser.objects.create_user_with_role(
+            email="cancel.lifecycle@example.com",
+            username="cancel_lifecycle",
+            password="password123",
+            role=CustomUser.ROLE_STAGIAIRE,
+        )
+        candidate = Candidat.objects.create(
+            nom="Cancel",
+            prenom="Formation",
+            email="cancel.lifecycle@example.com",
+            formation=self.formation,
+            admissible=True,
+            inscrit_gespers=True,
+            compte_utilisateur=user,
+            statut=Candidat.StatutCandidat.EN_FORMATION,
+            parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            date_validation_inscription=timezone.now(),
+            date_entree_formation_effective=timezone.now(),
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateLifecycleService.cancel_start_formation(candidate, actor=self.actor)
+
+        candidate.refresh_from_db()
+        user.refresh_from_db()
+        self.assertEqual(candidate.parcours_phase, Candidat.ParcoursPhase.INSCRIT_VALIDE)
+        self.assertIsNone(candidate.date_entree_formation_effective)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.AUTRE)
+        self.assertEqual(user.role, CustomUser.ROLE_CANDIDAT_USER)
+
     def test_complete_formation_sets_sortie_and_reverts_stagiaire_role(self):
         user = CustomUser.objects.create_user_with_role(
             email="complete.lifecycle@example.com",
@@ -142,3 +174,30 @@ class CandidateLifecycleServiceTests(TestCase):
         self.assertEqual(candidate.statut, Candidat.StatutCandidat.ABANDON)
         self.assertIsNotNone(candidate.date_sortie_formation)
         self.assertEqual(user.role, CustomUser.ROLE_CANDIDAT_USER)
+
+    def test_manual_flags_are_cumulative_and_sync_legacy_status(self):
+        candidate = Candidat.objects.create(
+            nom="Manual",
+            prenom="Flags",
+            email="manual.flags@example.com",
+            formation=self.formation,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateLifecycleService.set_accompagnement(candidate, actor=self.actor)
+        candidate.refresh_from_db()
+        self.assertTrue(candidate.en_accompagnement_tre)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ACCOMPAGNEMENT)
+
+        CandidateLifecycleService.set_appairage(candidate, actor=self.actor)
+        candidate.refresh_from_db()
+        self.assertTrue(candidate.en_accompagnement_tre)
+        self.assertTrue(candidate.en_appairage)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_APPAIRAGE)
+
+        CandidateLifecycleService.clear_appairage(candidate, actor=self.actor)
+        candidate.refresh_from_db()
+        self.assertFalse(candidate.en_appairage)
+        self.assertTrue(candidate.en_accompagnement_tre)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ACCOMPAGNEMENT)

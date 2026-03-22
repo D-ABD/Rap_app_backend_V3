@@ -60,12 +60,12 @@ export type ParcoursPhaseValue =
 
 export type StatutMetierValue =
   | "candidat"
-  | "non_admissible"
   | "admissible"
   | "en_accompagnement_tre"
   | "en_appairage"
   | "inscrit_gespers"
   | "en_formation"
+  | "sortie_formation"
   | "abandon";
 
 export type RgpdLegalBasisValue = "consentement" | "contrat" | "interet_legitime" | "obligation_legale";
@@ -200,6 +200,8 @@ export interface Candidat {
   test_is_ok: boolean;
   admissible: boolean;
   inscrit_gespers: boolean;
+  en_accompagnement_tre?: boolean;
+  en_appairage?: boolean;
   courrier_rentree: boolean;
 
   communication?: number | null;
@@ -298,6 +300,7 @@ export interface CandidatMeta {
   phase_filter_aliases?: Record<string, string[]>;
   phase_ordering_fields?: string[];
   phase_read_only_fields?: string[];
+  manual_status_flags?: string[];
   phase_transition_actions?: PhaseActionContract[];
   statut_metier_choices?: Choice[];
   cv_statut_choices: Array<{ value: CVStatutValue; label: string }>;
@@ -340,6 +343,9 @@ export interface CandidatFiltresValues {
   rqth?: boolean | "true" | "false";
   permis_b?: boolean | "true" | "false";
   admissible?: boolean | "true" | "false";
+  inscrit_gespers?: boolean | "true" | "false";
+  en_accompagnement_tre?: boolean | "true" | "false";
+  en_appairage?: boolean | "true" | "false";
   has_osia?: boolean | "true" | "false";
   entretien_done?: boolean | "true" | "false";
   test_is_ok?: boolean | "true" | "false";

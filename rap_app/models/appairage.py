@@ -263,7 +263,6 @@ class Appairage(BaseModel):
                     date_placement=None,
                     entreprise_validee=None,
                     contrat_signe=None,
-                    statut=Candidat.StatutCandidat.AUTRE,
                 )
             else:
                 resultat = self._STATUS_TO_RESULTAT.get(last.statut)
@@ -281,7 +280,6 @@ class Appairage(BaseModel):
                     date_placement=date_pl,
                     entreprise_validee=entreprise_validee,
                     contrat_signe=contrat,
-                    statut=Candidat.StatutCandidat.EN_APPAIRAGE,
                 )
 
             dirty = False

@@ -117,8 +117,9 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     serializers de sortie DRF.
 
     En plus des champs legacy, ce viewset expose désormais une lecture métier
-    unifiée des statuts candidat (candidat, non admissible, admissible,
-    accompagnement TRE, appairage, GESPERS, formation, abandon).
+    unifiée des statuts candidat (candidat, admissible, accompagnement TRE,
+    appairage, GESPERS, formation, sortie, abandon), tout en conservant les
+    flags manuels cumulables pour le pilotage front.
     """
 
     serializer_class = EmptySerializer
@@ -444,12 +445,12 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION),
                 distinct=True,
             ),
-            en_appairage=Count(
+            en_appairage_count=Count(
                 "id",
                 filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
                 distinct=True,
             ),
-            en_accompagnement=Count(
+            en_accompagnement_count=Count(
                 "id",
                 filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE),
                 distinct=True,
@@ -521,6 +522,8 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "contrat_crif",
             "contrat_autre",
         }
+        stats["en_appairage"] = stats.pop("en_appairage_count", 0)
+        stats["en_accompagnement"] = stats.pop("en_accompagnement_count", 0)
         kpis = {key: stats[key] for key in kpi_keys}
         app = {key: value for key, value in stats.items() if key not in kpi_keys}
 
@@ -737,12 +740,12 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION),
                     distinct=True,
                 ),
-                en_appairage=Count(
+                en_appairage_count=Count(
                     "id",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
                     distinct=True,
                 ),
-                en_accompagnement=Count(
+                en_accompagnement_count=Count(
                     "id",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE),
                     distinct=True,
@@ -800,6 +803,10 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             )
             .order_by(*fields)
         )
+
+        for row in rows:
+            row["en_appairage"] = row.pop("en_appairage_count", 0)
+            row["en_accompagnement"] = row.pop("en_accompagnement_count", 0)
 
         # Ajout de group_key / group_label selon la clé de regroupement demandée.
         if by == "centre":
