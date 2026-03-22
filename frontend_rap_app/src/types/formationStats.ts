@@ -20,13 +20,16 @@ export type CandidatKpis = {
   nb_test_ok: number;
   nb_inscrits_gespers: number;
   nb_entrees_formation: number;
+  nb_candidats_non_admissibles: number;
   nb_contrats_apprentissage: number;
   // ↓ NEW
   nb_contrats_professionnalisation: number;
   nb_contrats_poei_poec: number;
   nb_contrats_autres: number;
   // ↑ NEW
-  nb_admissibles: number;
+  nb_candidats_admissibles: number;
+  nb_en_accompagnement_tre: number;
+  nb_en_appairage: number;
   /** Inclure les formations archivées (true/false) */
   avec_archivees?: boolean; // ← ✅ nouveau champ
 };
@@ -136,6 +139,9 @@ export type GroupRow = {
   nb_test_ok: number;
   nb_inscrits_gespers: number;
   nb_entrees_formation: number;
+  nb_candidats_non_admissibles: number;
+  nb_en_accompagnement_tre: number;
+  nb_en_appairage: number;
 
   // Contrats (par type)
   nb_contrats_apprentissage: number;
@@ -145,7 +151,7 @@ export type GroupRow = {
   nb_contrats_autres: number;
   // ↑ NEW
 
-  nb_admissibles: number;
+  nb_candidats_admissibles: number;
 
   // appairages par statut ← NEW (flat pour le tableau)
   app_total: number;

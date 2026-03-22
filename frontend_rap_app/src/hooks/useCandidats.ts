@@ -114,6 +114,7 @@ type CvChoice = { value: CVStatutValue; label: string };
 
 type MetaRawSnake = {
   statut_choices?: Choice[];
+  statut_metier_choices?: Choice[];
   parcours_phase_choices?: Choice[];
   cv_statut_choices?: CvChoice[];
   type_contrat_choices?: Choice[];
@@ -136,6 +137,7 @@ type MetaRawSnake = {
 
 type MetaRawCamel = {
   statutChoices?: Choice[];
+  statutMetierChoices?: Choice[];
   parcoursPhaseChoices?: Choice[];
   cvStatutChoices?: CvChoice[];
   typeContratChoices?: Choice[];
@@ -220,6 +222,7 @@ function normalizeMetaLike(
 
   return {
     statut_choices: pickArr(r, "statut_choices", "statutChoices"),
+    statut_metier_choices: pickArr(r, "statut_metier_choices", "statutMetierChoices"),
     parcours_phase_choices: pickArr(r, "parcours_phase_choices", "parcoursPhaseChoices"),
     cv_statut_choices: pickCvArr(r, "cv_statut_choices", "cvStatutChoices"),
     type_contrat_choices: pickArr(r, "type_contrat_choices", "typeContratChoices"),

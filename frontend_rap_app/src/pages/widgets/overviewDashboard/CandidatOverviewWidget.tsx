@@ -19,17 +19,22 @@ import {
   useCandidatOverview,
   useCandidatGrouped,
 } from "../../../types/candidatStats";
+import {
+  getCandidatBusinessStatusColorByValue,
+  getCandidatBusinessStatusLabelFromValue,
+} from "../../../shared/utils/candidatStatus";
 
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-// 🎨 Couleurs cohérentes
-const STATUS_COLORS = [
-  "#fb8c00", // En appairage
-  "#6d4c41", // En accompagnement
-  "#1e88e5", // En attente entretien
-  "#ef5350", // Sans suivi
-];
+const STATUS_COLOR_HEX: Record<string, string> = {
+  default: "#90a4ae",
+  info: "#1e88e5",
+  secondary: "#6d4c41",
+  warning: "#fb8c00",
+  success: "#43a047",
+  error: "#e53935",
+};
 
 export default function CandidatOverviewWidget({
   title = "Overview Candidats",
@@ -82,19 +87,28 @@ export default function CandidatOverviewWidget({
 
   const k = data?.kpis;
 
-  // ✅ Données camembert
-  const statusData = [
-    {
-      name: "En appairage",
-      value: k?.en_appairage ?? 0,
-      color: STATUS_COLORS[0],
-    },
-    {
-      name: "En accompagnement",
-      value: k?.en_accompagnement ?? 0,
-      color: STATUS_COLORS[1],
-    },
-  ];
+  const statusData =
+    data?.repartition.par_statut_metier
+      ?.map((item) => {
+        const value = Number(item.count) || 0;
+        if (value <= 0) return null;
+
+        const key = item.statut_metier ?? "candidat";
+        return {
+          name: getCandidatBusinessStatusLabelFromValue(key),
+          value,
+          color: STATUS_COLOR_HEX[getCandidatBusinessStatusColorByValue(key)],
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          name: string;
+          value: number;
+          color: string;
+        } => item !== null
+      ) ?? [];
 
   const totalStatus = statusData.reduce((acc, d) => acc + d.value, 0);
   const pct = (val: number) =>
@@ -196,6 +210,8 @@ export default function CandidatOverviewWidget({
           </Box>
         ) : error ? (
           <Alert severity="error">{getErrorMessage(error)}</Alert>
+        ) : statusData.length === 0 ? (
+          <Alert severity="info">Aucune repartition de statut métier disponible.</Alert>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>

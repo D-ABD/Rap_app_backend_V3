@@ -13,8 +13,10 @@ class CandidateLifecycleService:
     Centralise les transitions explicites du cycle candidat.
 
     Règles actuelles :
-    - l'étape structurée précédant l'entrée en formation correspond à
-      l'inscription GESPERS ;
+    - la validation de l'entrée dans le parcours de recrutement reste distincte
+      de l'inscription GESPERS, qui est désormais manuelle ;
+    - les états manuels `en accompagnement TRE` et `en appairage` sont pilotés
+      via le statut legacy explicite ;
     - l'entrée en formation et l'abandon restent des transitions pilotées par
       le backend ;
     - les statuts legacy manuels comme `en accompagnement` ou `en appairage`
@@ -26,8 +28,8 @@ class CandidateLifecycleService:
     @transaction.atomic
     def validate_inscription(cls, candidate: Candidat, actor=None) -> Candidat:
         """
-        Positionne le candidat sur l'étape structurée "Inscrit GESPERS",
-        dernière marche avant l'entrée en formation.
+        Valide l'entrée dans le parcours de recrutement sans forcer
+        l'inscription GESPERS, qui reste une décision manuelle.
         """
         if not candidate.formation_id:
             raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
@@ -39,20 +41,14 @@ class CandidateLifecycleService:
             candidate.parcours_phase = Candidat.ParcoursPhase.INSCRIT_VALIDE
             updates.append("parcours_phase")
 
-        if not candidate.inscrit_gespers:
-            candidate.inscrit_gespers = True
-            updates.append("inscrit_gespers")
-
-        if candidate.statut != Candidat.StatutCandidat.EN_ATTENTE_RENTREE:
-            candidate.statut = Candidat.StatutCandidat.EN_ATTENTE_RENTREE
-            updates.append("statut")
-
         if candidate.date_validation_inscription is None:
             candidate.date_validation_inscription = now
             updates.append("date_validation_inscription")
 
         if updates:
             candidate.save(user=actor, update_fields=updates)
+
+        CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
 
         return candidate
 
@@ -121,6 +117,65 @@ class CandidateLifecycleService:
         if updates:
             candidate.save(user=actor, update_fields=updates)
 
+        CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
+
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def mark_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Marque manuellement le candidat comme inscrit GESPERS."""
+        if candidate.inscrit_gespers:
+            return candidate
+
+        candidate.inscrit_gespers = True
+        candidate.save(user=actor, update_fields=["inscrit_gespers"])
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def clear_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
+        """Annule manuellement l'inscription GESPERS du candidat."""
+        if not candidate.inscrit_gespers:
+            return candidate
+
+        candidate.inscrit_gespers = False
+        candidate.save(user=actor, update_fields=["inscrit_gespers"])
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def set_manual_status(cls, candidate: Candidat, status: str, actor=None) -> Candidat:
+        """
+        Positionne un statut manuel métier legacy (`en accompagnement`,
+        `en appairage`) sans écraser les transitions structurées.
+        """
+        if status not in {
+            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
+            Candidat.StatutCandidat.EN_APPAIRAGE,
+        }:
+            raise ValidationError({"statut": ["Statut manuel non autorisé."]})
+
+        if candidate.statut == status:
+            return candidate
+
+        candidate.statut = status
+        candidate.save(user=actor, update_fields=["statut"])
+        return candidate
+
+    @classmethod
+    @transaction.atomic
+    def clear_manual_status(cls, candidate: Candidat, status: str, actor=None) -> Candidat:
+        """
+        Retire un statut manuel legacy et ramène le candidat sur l'état neutre
+        `autre`, afin que le statut métier calculé redevienne dynamique.
+        """
+        if candidate.statut != status:
+            return candidate
+
+        candidate.statut = Candidat.StatutCandidat.AUTRE
+        candidate.save(user=actor, update_fields=["statut"])
+
         return candidate
 
     @classmethod
@@ -145,5 +200,7 @@ class CandidateLifecycleService:
 
         if updates:
             candidate.save(user=actor, update_fields=updates)
+
+        CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
 
         return candidate

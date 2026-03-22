@@ -186,6 +186,33 @@ class CandidateAccountService:
 
     @classmethod
     @transaction.atomic
+    def revert_to_candidate_user(
+        cls,
+        candidate: Candidat,
+        actor: CustomUser | None = None,
+    ) -> CustomUser | None:
+        """
+        Ramène un compte stagiaire lié vers le rôle `candidatuser`.
+
+        Utilisé quand une sortie de formation ou un abandon retire l'état
+        `stagiaire` sans casser le lien entre le compte et le candidat.
+        """
+        user = candidate.compte_utilisateur
+        if not user:
+            return None
+
+        if user.role != CustomUser.ROLE_CANDIDAT_USER:
+            with defer_candidate_user_sync():
+                user.role = CustomUser.ROLE_CANDIDAT_USER
+                user.save(_skip_candidate_sync=True)
+
+        if candidate.compte_utilisateur_id != user.id:
+            cls.link_user_to_candidate(user=user, candidate=candidate, actor=actor)
+
+        return user
+
+    @classmethod
+    @transaction.atomic
     def request_account(
         cls,
         candidate: Candidat,

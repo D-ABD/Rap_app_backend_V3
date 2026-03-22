@@ -42,8 +42,11 @@ const COLUMNS = [
   "Entrées (formations)",
   "Candidats",
   "Admissibles",
+  "Non admissibles",
   "Entretiens OK",
   "Tests OK",
+  "En accompagnement TRE",
+  "En appairage",
   "Inscrits GESPERS",
   "Contrats Appr.",
   "Contrats Prof.",
@@ -95,9 +98,12 @@ export default function FormationGroupedWidget({
       moyenneSaturation,
       totalEntrees: sum("entrees_formation"),
       totalCandidats: sum("nb_candidats"),
-      totalAdmissibles: sum("nb_admissibles"),
+      totalAdmissibles: sum("nb_candidats_admissibles"),
+      totalNonAdmissibles: sum("nb_candidats_non_admissibles"),
       totalEntretien: sum("nb_entretien_ok"),
       totalTest: sum("nb_test_ok"),
+      totalAccompagnementTre: sum("nb_en_accompagnement_tre"),
+      totalEnAppairage: sum("nb_en_appairage"),
       totalGespers: sum("nb_inscrits_gespers"),
       totalAppr: sum("nb_contrats_apprentissage"),
       totalProf: sum("nb_contrats_professionnalisation"),
@@ -331,9 +337,12 @@ export default function FormationGroupedWidget({
                     </TableCell>
                     <TableCell align="right">{toFixed0(r.entrees_formation)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats)}</TableCell>
-                    <TableCell align="right">{toFixed0(r.nb_admissibles)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_candidats_admissibles)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_candidats_non_admissibles)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_entretien_ok)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_test_ok)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_en_accompagnement_tre)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.nb_en_appairage)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_inscrits_gespers)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_contrats_apprentissage)}</TableCell>
                     <TableCell align="right">
@@ -366,8 +375,11 @@ export default function FormationGroupedWidget({
                   <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalCandidats)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAdmissibles)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalNonAdmissibles)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalEntretien)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalTest)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalAccompagnementTre)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalEnAppairage)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalGespers)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAppr)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalProf)}</TableCell>

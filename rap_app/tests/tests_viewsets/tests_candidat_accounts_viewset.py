@@ -422,7 +422,7 @@ def test_staff_create_candidate_normalizes_safe_text_fields():
 
 
 @pytest.mark.django_db
-def test_staff_can_validate_inscription_without_changing_legacy_status():
+def test_staff_can_validate_inscription_without_forcing_gespers_or_legacy_status():
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2A", code_postal="75128")
     formation = Formation.objects.create(
@@ -455,9 +455,101 @@ def test_staff_can_validate_inscription_without_changing_legacy_status():
     assert resp.status_code == 200
     cand.refresh_from_db()
     assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
-    assert cand.inscrit_gespers is True
+    assert cand.inscrit_gespers is False
     assert cand.date_validation_inscription is not None
-    assert cand.statut == Candidat.StatutCandidat.EN_ATTENTE_RENTREE
+    assert cand.statut == Candidat.StatutCandidat.AUTRE
+
+
+@pytest.mark.django_db
+def test_staff_can_toggle_gespers_manually():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet G1", code_postal="75140")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet G1",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_g1@example.com",
+        username="staff_g1",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Gespers",
+        prenom="Toggle",
+        email="gespers.toggle@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+    resp_set = client.post(reverse("candidat-set-gespers", args=[cand.id]))
+    assert resp_set.status_code == 200
+
+    cand.refresh_from_db()
+    assert cand.inscrit_gespers is True
+
+    resp_clear = client.post(reverse("candidat-clear-gespers", args=[cand.id]))
+    assert resp_clear.status_code == 200
+
+    cand.refresh_from_db()
+    assert cand.inscrit_gespers is False
+
+
+@pytest.mark.django_db
+def test_staff_can_toggle_manual_accompagnement_and_appairage_statuses():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet G2", code_postal="75141")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet G2",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_g2@example.com",
+        username="staff_g2",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+
+    cand = Candidat.objects.create(
+        nom="Manual",
+        prenom="Status",
+        email="manual.status@example.com",
+        formation=formation,
+        admissible=True,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    client.force_authenticate(user=staff)
+
+    resp_accompagnement = client.post(reverse("candidat-set-accompagnement", args=[cand.id]))
+    assert resp_accompagnement.status_code == 200
+    cand.refresh_from_db()
+    assert cand.statut == Candidat.StatutCandidat.EN_ACCOMPAGNEMENT
+
+    resp_clear_accompagnement = client.post(reverse("candidat-clear-accompagnement", args=[cand.id]))
+    assert resp_clear_accompagnement.status_code == 200
+    cand.refresh_from_db()
+    assert cand.statut == Candidat.StatutCandidat.AUTRE
+
+    resp_appairage = client.post(reverse("candidat-set-appairage", args=[cand.id]))
+    assert resp_appairage.status_code == 200
+    cand.refresh_from_db()
+    assert cand.statut == Candidat.StatutCandidat.EN_APPAIRAGE
+
+    resp_clear_appairage = client.post(reverse("candidat-clear-appairage", args=[cand.id]))
+    assert resp_clear_appairage.status_code == 200
+    cand.refresh_from_db()
+    assert cand.statut == Candidat.StatutCandidat.AUTRE
 
 
 @pytest.mark.django_db
@@ -825,8 +917,8 @@ def test_staff_can_bulk_validate_inscription_in_scope():
     c2.refresh_from_db()
     assert c1.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
     assert c2.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
-    assert c1.inscrit_gespers is True
-    assert c2.inscrit_gespers is True
+    assert c1.inscrit_gespers is False
+    assert c2.inscrit_gespers is False
 
 
 @pytest.mark.django_db

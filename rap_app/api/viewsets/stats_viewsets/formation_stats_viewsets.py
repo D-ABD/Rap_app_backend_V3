@@ -394,7 +394,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             ),
             nb_entrees_formation=Count(
                 "id",
-                filter=_candidate_en_formation_q() | Q(date_rentree__isnull=False),
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION),
                 distinct=True,
             ),
             nb_inscrits_valides=Count(
@@ -575,7 +575,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 ),
                 nb_entrees_formation=Count(
                     "candidats",
-                    filter=_candidate_en_formation_q("candidats__") | Q(candidats__date_rentree__isnull=False),
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION, "candidats__"),
                     distinct=True,
                 ),
                 nb_inscrits_valides=Count(

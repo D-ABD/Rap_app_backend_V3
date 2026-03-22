@@ -44,13 +44,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { access, refresh } = await loginAPI(email, password);
     storeTokens(access, refresh);
     const userData = await getUserProfile();
-    setUser(normalizeUser(userData));
+    const normalizedUser = normalizeUser(userData);
+    setUser(normalizedUser);
 
     toast.success("Connexion réussie");
-
-    // 🔄 Redirige vers la dernière page visitée ou dashboard
-    const lastPage = localStorage.getItem("lastPage") || "/dashboard";
-    navigate(lastPage, { replace: true });
+    return normalizedUser;
   };
 
   // 🚪 Déconnexion — version stabilisée avec useCallback

@@ -21,6 +21,10 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import type { Candidat } from "../../types/candidat";
+import {
+  getCandidatBusinessStatusColor,
+  getCandidatBusinessStatusLabel,
+} from "../../shared/utils/candidatStatus";
 
 /* ================= Helpers ================= */
 const dtfFR = typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
@@ -102,31 +106,19 @@ function cvChip(c: Candidat) {
   return <Chip size="small" color={color} label={label} variant="outlined" />;
 }
 
-function phaseLabel(c: Candidat): string {
-  const phase = c.parcours_phase ?? "";
-
-  if (phase === "stagiaire_en_formation") return "En formation";
-  if (phase === "sorti") return "Sortie / fin de formation";
-  if (phase === "abandon") return "Abandon";
-  if (c.admissible || phase === "admissible" || phase === "inscrit_valide") {
-    return "Candidat admissible";
-  }
-
-  return c.parcours_phase_display ?? c.statut_display ?? c.statut ?? "—";
-}
-
 function phaseChip(c: Candidat) {
-  const label = phaseLabel(c);
+  const label = getCandidatBusinessStatusLabel(c);
 
   if (label === "—") return <Typography color="text.disabled">—</Typography>;
 
-  let color: "default" | "success" | "warning" | "error" | "info" = "default";
-  if (label === "Candidat admissible") color = "info";
-  if (label === "En formation") color = "success";
-  if (label === "Sortie / fin de formation") color = "warning";
-  if (label === "Abandon") color = "error";
-
-  return <Chip size="small" color={color} label={label} variant="outlined" />;
+  return (
+    <Chip
+      size="small"
+      color={getCandidatBusinessStatusColor(label)}
+      label={label}
+      variant="outlined"
+    />
+  );
 }
 
 /* ---------- Ateliers compact ---------- */
@@ -312,7 +304,7 @@ export default function CandidatsTable({
             <TableCell>📅 Période</TableCell>
             <TableCell>📃 Contrat</TableCell>
             <TableCell>✍️ Contrat signé</TableCell>
-            <TableCell>📌 Phase</TableCell>
+            <TableCell>📌 Statut métier</TableCell>
             <TableCell>📄 CV</TableCell>
             <TableCell>⏳ Disp.</TableCell>
             <TableCell>♿ RQTH</TableCell>
@@ -323,7 +315,6 @@ export default function CandidatsTable({
             <TableCell>⚖️ CSP</TableCell>
             <TableCell>👥 Entretien</TableCell>
             <TableCell>🧪 Test</TableCell>
-            <TableCell>✅ Admissible</TableCell>
             <TableCell>📝 Inscription</TableCell>
             <TableCell>🎂 Naissance</TableCell>
             <TableCell>🔗 Appairages</TableCell>
@@ -477,7 +468,6 @@ export default function CandidatsTable({
                 <TableCell>{stars(c.csp)}</TableCell>
                 <TableCell>{yesNoChip(c.entretien_done)}</TableCell>
                 <TableCell>{yesNoChip(c.test_is_ok)}</TableCell>
-                <TableCell>{yesNoChip(c.admissible)}</TableCell>
                 <TableCell>{formatDateFR(c.date_inscription)}</TableCell>
                 <TableCell>{formatDateFR(c.date_naissance)}</TableCell>
                 <TableCell>{c.nb_appairages ?? "—"}</TableCell>

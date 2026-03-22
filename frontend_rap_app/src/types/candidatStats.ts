@@ -1,6 +1,7 @@
 // src/types/candidatStats.ts
 import { useQuery } from "@tanstack/react-query";
 import api from "../api/axios";
+import { getCandidatBusinessStatusLabelFromValue } from "../shared/utils/candidatStatus";
 
 // ────────────────────────────────────────────────────────────
 // Types & filtres
@@ -37,9 +38,15 @@ export type CandidatKpis = {
   test_ok: number;
   gespers: number;
   admissibles: number;
+  non_admissibles: number;
   en_formation: number;
   en_appairage: number;
   en_accompagnement: number;
+  inscrits_valides: number;
+  inscrits_gespers: number;
+  stagiaires_en_formation: number;
+  sortis: number;
+  abandons_phase: number;
 
   // ⭐️ nouveaux compteurs
   rqth_count: number; // ← ajouté
@@ -73,6 +80,7 @@ export type AppairageKpis = {
 
 export type Repartition = {
   par_statut: { statut: string | null; count: number }[];
+  par_statut_metier: { statut_metier: string | null; count: number }[];
   par_type_contrat: { type_contrat: string | null; count: number }[];
   par_cv: { cv_statut: string | null; count: number }[];
   par_resultat: { resultat_placement: string | null; count: number }[];
@@ -90,6 +98,7 @@ export type CandidatGroupBy =
   | "departement"
   | "formation"
   | "statut"
+  | "statut_metier"
   | "type_contrat"
   | "cv_statut"
   | "resultat_placement"
@@ -107,6 +116,7 @@ export type CandidatGroupRow = {
 
   departement?: string;
   statut?: string | null;
+  statut_metier?: string | null;
   type_contrat?: string | null;
   formation__num_offre?: string | null;
   cv_statut?: string | null;
@@ -128,8 +138,15 @@ export type CandidatGroupRow = {
   test_ok: number;
   gespers: number;
   admissibles: number;
+  non_admissibles: number;
   en_formation: number;
   en_appairage: number;
+  en_accompagnement: number;
+  inscrits_valides: number;
+  inscrits_gespers: number;
+  stagiaires_en_formation: number;
+  sortis: number;
+  abandons_phase: number;
 
   // ⭐️ nouveaux compteurs (groupés)
   osia_count: number;
@@ -188,6 +205,9 @@ export function resolveCandidatGroupLabel(row: CandidatGroupRow, by: CandidatGro
     return String(row["entreprise_placement__nom"]);
 
   if (by === "statut" && row.statut != null) return String(row.statut);
+  if (by === "statut_metier" && row.statut_metier != null) {
+    return getCandidatBusinessStatusLabelFromValue(String(row.statut_metier));
+  }
   if (by === "type_contrat" && row.type_contrat != null) return String(row.type_contrat);
   if (by === "cv_statut" && row.cv_statut != null) return String(row.cv_statut);
   if (by === "resultat_placement" && row.resultat_placement != null)
@@ -203,6 +223,9 @@ export function resolveCandidatGroupLabel(row: CandidatGroupRow, by: CandidatGro
   if (by === "responsable")
     return row.responsable_placement_id != null ? `User #${row.responsable_placement_id}` : "—";
   if (by === "statut") return row.statut ?? "—";
+  if (by === "statut_metier") {
+    return getCandidatBusinessStatusLabelFromValue(row.statut_metier);
+  }
   if (by === "type_contrat") return row.type_contrat ?? "—";
   if (by === "cv_statut") return row.cv_statut ?? "—";
   if (by === "resultat_placement") return row.resultat_placement ?? "—";

@@ -4,17 +4,26 @@ import { getTokens, storeTokens, clearTokens } from "./tokenStorage";
 import { env } from "../config/env";
 
 function buildApiBaseUrl(): string {
+  if (import.meta.env.DEV) {
+    return `${env.backendProxyTarget.trim().replace(/\/$/, "")}/api`;
+  }
+
   const raw = env.apiBaseUrl.trim().replace(/\/$/, "");
 
+  const ensureApiSuffix = (value: string): string => {
+    if (value.endsWith("/api")) return value;
+    return `${value}/api`;
+  };
+
   if (raw.startsWith("http://") || raw.startsWith("https://")) {
-    return raw;
+    return ensureApiSuffix(raw);
   }
 
   if (raw.startsWith("/")) {
-    return raw;
+    return ensureApiSuffix(raw);
   }
 
-  return `/${raw}`;
+  return ensureApiSuffix(`/${raw}`);
 }
 
 const API_BASE_URL = buildApiBaseUrl();

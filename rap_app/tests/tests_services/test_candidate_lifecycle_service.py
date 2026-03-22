@@ -43,7 +43,7 @@ class CandidateLifecycleServiceTests(TestCase):
         with self.assertRaises(ValidationError):
             CandidateLifecycleService.validate_inscription(candidate, actor=self.actor)
 
-    def test_validate_inscription_sets_phase_and_timestamp(self):
+    def test_validate_inscription_sets_phase_and_timestamp_without_forcing_gespers(self):
         candidate = Candidat.objects.create(
             nom="Inscription",
             prenom="Ok",
@@ -57,8 +57,8 @@ class CandidateLifecycleServiceTests(TestCase):
 
         candidate.refresh_from_db()
         self.assertEqual(candidate.parcours_phase, Candidat.ParcoursPhase.INSCRIT_VALIDE)
-        self.assertTrue(candidate.inscrit_gespers)
-        self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ATTENTE_RENTREE)
+        self.assertFalse(candidate.inscrit_gespers)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.AUTRE)
         self.assertIsNotNone(candidate.date_validation_inscription)
 
     def test_start_formation_sets_phase_and_promotes_stagiaire_when_possible(self):
@@ -88,7 +88,13 @@ class CandidateLifecycleServiceTests(TestCase):
         self.assertIsNotNone(candidate.date_entree_formation_effective)
         self.assertEqual(user.role, CustomUser.ROLE_STAGIAIRE)
 
-    def test_complete_formation_sets_sortie_without_touching_legacy_status(self):
+    def test_complete_formation_sets_sortie_and_reverts_stagiaire_role(self):
+        user = CustomUser.objects.create_user_with_role(
+            email="complete.lifecycle@example.com",
+            username="complete_lifecycle",
+            password="password123",
+            role=CustomUser.ROLE_STAGIAIRE,
+        )
         candidate = Candidat.objects.create(
             nom="Complete",
             prenom="Formation",
@@ -96,6 +102,7 @@ class CandidateLifecycleServiceTests(TestCase):
             formation=self.formation,
             statut=Candidat.StatutCandidat.EN_FORMATION,
             parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            compte_utilisateur=user,
             created_by=self.actor,
             updated_by=self.actor,
         )
@@ -103,17 +110,26 @@ class CandidateLifecycleServiceTests(TestCase):
         CandidateLifecycleService.complete_formation(candidate, actor=self.actor)
 
         candidate.refresh_from_db()
+        user.refresh_from_db()
         self.assertEqual(candidate.parcours_phase, Candidat.ParcoursPhase.SORTI)
         self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_FORMATION)
         self.assertIsNotNone(candidate.date_sortie_formation)
+        self.assertEqual(user.role, CustomUser.ROLE_CANDIDAT_USER)
 
-    def test_abandon_sets_new_phase_and_legacy_status(self):
+    def test_abandon_sets_new_phase_and_reverts_stagiaire_role(self):
+        user = CustomUser.objects.create_user_with_role(
+            email="abandon.lifecycle@example.com",
+            username="abandon_lifecycle",
+            password="password123",
+            role=CustomUser.ROLE_STAGIAIRE,
+        )
         candidate = Candidat.objects.create(
             nom="Abandon",
             prenom="Lifecycle",
             email="abandon.lifecycle@example.com",
             formation=self.formation,
             statut=Candidat.StatutCandidat.EN_FORMATION,
+            compte_utilisateur=user,
             created_by=self.actor,
             updated_by=self.actor,
         )
@@ -121,6 +137,8 @@ class CandidateLifecycleServiceTests(TestCase):
         CandidateLifecycleService.abandon(candidate, actor=self.actor)
 
         candidate.refresh_from_db()
+        user.refresh_from_db()
         self.assertEqual(candidate.parcours_phase, Candidat.ParcoursPhase.ABANDON)
         self.assertEqual(candidate.statut, Candidat.StatutCandidat.ABANDON)
         self.assertIsNotNone(candidate.date_sortie_formation)
+        self.assertEqual(user.role, CustomUser.ROLE_CANDIDAT_USER)

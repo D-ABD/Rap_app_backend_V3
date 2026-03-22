@@ -157,6 +157,12 @@ def _build_candidat_meta(user=None) -> dict:
         ],
         "phase_transition_actions": [
             {"key": "validate_inscription", "url_name": "candidat-validate-inscription", "method": "POST"},
+            {"key": "set_gespers", "url_name": "candidat-set-gespers", "method": "POST"},
+            {"key": "clear_gespers", "url_name": "candidat-clear-gespers", "method": "POST"},
+            {"key": "set_accompagnement_tre", "url_name": "candidat-set-accompagnement", "method": "POST"},
+            {"key": "clear_accompagnement_tre", "url_name": "candidat-clear-accompagnement", "method": "POST"},
+            {"key": "set_appairage", "url_name": "candidat-set-appairage", "method": "POST"},
+            {"key": "clear_appairage", "url_name": "candidat-clear-appairage", "method": "POST"},
             {"key": "start_formation", "url_name": "candidat-start-formation", "method": "POST"},
             {"key": "complete_formation", "url_name": "candidat-complete-formation", "method": "POST"},
             {"key": "abandon", "url_name": "candidat-abandon", "method": "POST"},
@@ -202,6 +208,9 @@ class CandidatViewSet(ScopedModelViewSet):
       - `meta`
       - `creer-compte`
       - `validate-inscription`
+      - `set-gespers` / `clear-gespers`
+      - `set-accompagnement` / `clear-accompagnement`
+      - `set-appairage` / `clear-appairage`
       - `start-formation`
       - `complete-formation`
       - `abandon`
@@ -501,7 +510,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="validate-inscription")
     def validate_inscription(self, request, pk=None):
-        """POST : valide l'étape GESPERS avant l'entrée en formation, sans casser la compatibilité legacy."""
+        """POST : valide l'entrée dans le parcours de recrutement sans forcer l'état GESPERS."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)
@@ -517,13 +526,89 @@ class CandidatViewSet(ScopedModelViewSet):
         return Response(
             {
                 "success": True,
-                "message": "Inscription validée.",
+                "message": "Entrée dans le parcours de recrutement validée.",
                 "data": {
                     "candidat_id": candidat.id,
                     "parcours_phase": candidat.parcours_phase,
                     "date_validation_inscription": candidat.date_validation_inscription,
                 },
             }
+        )
+
+    @action(detail=True, methods=["post"], url_path="set-gespers")
+    def set_gespers(self, request, pk=None):
+        """POST : marque manuellement le candidat comme inscrit GESPERS."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.mark_gespers(candidat, actor=request.user)
+        return self.success_response(
+            data={"candidat_id": candidat.id, "inscrit_gespers": candidat.inscrit_gespers},
+            message="Inscription GESPERS enregistrée.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="clear-gespers")
+    def clear_gespers(self, request, pk=None):
+        """POST : annule manuellement l'inscription GESPERS."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.clear_gespers(candidat, actor=request.user)
+        return self.success_response(
+            data={"candidat_id": candidat.id, "inscrit_gespers": candidat.inscrit_gespers},
+            message="Inscription GESPERS annulée.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="set-accompagnement")
+    def set_accompagnement(self, request, pk=None):
+        """POST : positionne manuellement le candidat en accompagnement TRE."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.set_manual_status(
+            candidat,
+            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
+            actor=request.user,
+        )
+        return self.success_response(
+            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            message="Statut 'En accompagnement TRE' enregistré.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="clear-accompagnement")
+    def clear_accompagnement(self, request, pk=None):
+        """POST : retire le statut manuel d'accompagnement TRE."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.clear_manual_status(
+            candidat,
+            Candidat.StatutCandidat.EN_ACCOMPAGNEMENT,
+            actor=request.user,
+        )
+        return self.success_response(
+            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            message="Statut 'En accompagnement TRE' retiré.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="set-appairage")
+    def set_appairage(self, request, pk=None):
+        """POST : positionne manuellement le candidat en appairage."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.set_manual_status(
+            candidat,
+            Candidat.StatutCandidat.EN_APPAIRAGE,
+            actor=request.user,
+        )
+        return self.success_response(
+            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            message="Statut 'En appairage' enregistré.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="clear-appairage")
+    def clear_appairage(self, request, pk=None):
+        """POST : retire le statut manuel d'appairage."""
+        candidat = self.get_object()
+        candidat = CandidateLifecycleService.clear_manual_status(
+            candidat,
+            Candidat.StatutCandidat.EN_APPAIRAGE,
+            actor=request.user,
+        )
+        return self.success_response(
+            data={"candidat_id": candidat.id, "statut": candidat.statut},
+            message="Statut 'En appairage' retiré.",
         )
 
     @action(detail=True, methods=["post"], url_path="start-formation")

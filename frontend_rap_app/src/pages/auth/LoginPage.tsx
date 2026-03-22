@@ -13,13 +13,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Typage minimal pour éviter les erreurs TS
-  type LoggedUser = {
-    role?: string;
-    is_superuser?: boolean;
-    is_staff?: boolean;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -27,7 +20,7 @@ export default function LoginPage() {
 
     try {
       // ✅ Authentification
-      const result = (await login(email, password)) as unknown as LoggedUser;
+      const result = await login(email, password);
 
       // ✅ Détermination du rôle
       const role = (result?.role ?? "").toLowerCase();
@@ -46,8 +39,22 @@ export default function LoginPage() {
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { detail?: string } | undefined;
-        const msg = data?.detail || "Identifiants incorrects.";
+        const status = err.response?.status;
+        const data = err.response?.data as { detail?: string; message?: string } | undefined;
+        const attemptedUrl = `${err.config?.baseURL ?? ""}${err.config?.url ?? ""}`;
+
+        let msg = data?.detail || data?.message || "Connexion impossible.";
+
+        if (!err.response) {
+          msg = "Impossible de joindre le backend. Vérifiez que Django est démarré.";
+        } else if (status === 400 || status === 401) {
+          msg = data?.detail || data?.message || "Identifiants incorrects.";
+        } else if (status === 404) {
+          msg = `Endpoint de connexion introuvable (${attemptedUrl || "URL inconnue"}).`;
+        } else if (status && status >= 500) {
+          msg = "Le backend a rencontré une erreur pendant la connexion.";
+        }
+
         setError(msg);
       } else if (err instanceof Error) {
         setError(err.message);

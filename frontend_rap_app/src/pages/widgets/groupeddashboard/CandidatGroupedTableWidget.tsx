@@ -17,6 +17,7 @@ import {
   CandidatGroupBy,
   useCandidatGrouped,
   getErrorMessage,
+  resolveCandidatGroupLabel,
 } from "../../../types/candidatStats";
 
 /* 🛠 Utils */
@@ -39,57 +40,25 @@ const CONTRAT_SIGNE_LABELS: Record<string, string> = {
 
 /* Résolution du label */
 function resolveLabel(row: Record<string, unknown>, by: CandidatGroupBy): string {
-  if (row.group_label && String(row.group_label).trim() !== "") return String(row.group_label);
-
+  const base = resolveCandidatGroupLabel(row as never, by);
   const numOffre = (row["formation__num_offre"] as string) ?? null;
-  switch (by) {
-    case "centre": {
-      const nomCentre = row["formation__centre__nom"] as string | undefined;
-      const idCentre = row["formation__centre_id"];
-      const formationNom = row["formation__nom"] as string | undefined;
-      const suffix = numOffre ? ` (${numOffre})` : formationNom ? ` (${formationNom})` : "";
-      return nomCentre
-        ? `${nomCentre}${suffix}`
-        : idCentre != null
-          ? `Centre #${idCentre}${suffix}`
-          : `—${suffix}`;
-    }
-    case "departement":
-      return (row["departement"] as string) ?? "—";
-    case "formation": {
-      const nomFormation = row["formation__nom"] as string | undefined;
-      const idFormation = row["formation_id"];
-      if (nomFormation && numOffre) return `${nomFormation} (${numOffre})`;
-      if (nomFormation) return nomFormation;
-      if (idFormation != null) return `Formation #${idFormation}`;
-      return "—";
-    }
-    case "statut":
-      return (row["statut"] as string) ?? "—";
-    case "type_contrat":
-      return (row["type_contrat"] as string) ?? "—";
-    case "cv_statut":
-      return (row["cv_statut"] as string) ?? "—";
-    case "resultat_placement":
-      return (row["resultat_placement"] as string) ?? "—";
-    case "contrat_signe": {
-      const value = row["contrat_signe"] as string | undefined;
-      return value ? CONTRAT_SIGNE_LABELS[value] || value : "—";
-    }
-    case "responsable":
-      return row["responsable_placement_id"] != null
-        ? `User #${row["responsable_placement_id"]}`
-        : "—";
-    case "entreprise":
-      return (
-        (row["entreprise_placement__nom"] as string) ??
-        (row["entreprise_placement_id"] != null
-          ? `Entreprise #${row["entreprise_placement_id"]}`
-          : "—")
-      );
-    default:
-      return "—";
+
+  if (by === "centre") {
+    const formationNom = row["formation__nom"] as string | undefined;
+    const suffix = numOffre ? ` (${numOffre})` : formationNom ? ` (${formationNom})` : "";
+    return `${base}${suffix}`;
   }
+
+  if (by === "formation" && numOffre && base !== "—") {
+    return `${base} (${numOffre})`;
+  }
+
+  if (by === "contrat_signe") {
+    const value = row["contrat_signe"] as string | undefined;
+    return value ? CONTRAT_SIGNE_LABELS[value] || value : "—";
+  }
+
+  return base;
 }
 
 /* 🎯 Composant principal */
@@ -152,6 +121,7 @@ export default function CandidatGroupedTableWidget({
                 <MenuItem value="departement">Par département</MenuItem>
                 <MenuItem value="formation">Par formation</MenuItem>
                 <MenuItem value="statut">Par statut</MenuItem>
+                <MenuItem value="statut_metier">Par statut métier</MenuItem>
                 <MenuItem value="type_contrat">Par type de contrat</MenuItem>
                 <MenuItem value="cv_statut">Par statut CV</MenuItem>
                 <MenuItem value="resultat_placement">Par résultat placement</MenuItem>
@@ -224,6 +194,8 @@ export default function CandidatGroupedTableWidget({
                     <th>Groupe</th>
                     <th>Candidats</th>
                     <th>Admissibles</th>
+                    <th>Non admissibles</th>
+                    <th>En accompagnement TRE</th>
                     <th>En appairage</th>
                     <th>Inscrits GESPERS</th>
                     <th>Contrat signé</th>
@@ -250,8 +222,10 @@ export default function CandidatGroupedTableWidget({
                         <td>{label}</td>
                         <td>{fmt(r["total"] as number)}</td>
                         <td>{fmt(r["admissibles"] as number)}</td>
+                        <td>{fmt(r["non_admissibles"] as number)}</td>
+                        <td>{fmt(r["en_accompagnement"] as number)}</td>
                         <td>{fmt(r["en_appairage"] as number)}</td>
-                        <td>{fmt(r["gespers"] as number)}</td>
+                        <td>{fmt(r["inscrits_gespers"] as number)}</td>
                         <td style={{ background: colorSuccess, fontWeight: 600 }}>
                           {fmt(r["app_contrat_a_signer"] as number)}
                         </td>
@@ -276,8 +250,10 @@ export default function CandidatGroupedTableWidget({
                       <td>Total</td>
                       <td>{fmt(sum(data.results, "total"))}</td>
                       <td>{fmt(sum(data.results, "admissibles"))}</td>
+                      <td>{fmt(sum(data.results, "non_admissibles"))}</td>
+                      <td>{fmt(sum(data.results, "en_accompagnement"))}</td>
                       <td>{fmt(sum(data.results, "en_appairage"))}</td>
-                      <td>{fmt(sum(data.results, "gespers"))}</td>
+                      <td>{fmt(sum(data.results, "inscrits_gespers"))}</td>
                       <td>{fmt(sum(data.results, "app_contrat_a_signer"))}</td>
                       <td>{fmt(sum(data.results, "contrat_apprentissage"))}</td>
                       <td>{fmt(sum(data.results, "contrat_professionnalisation"))}</td>

@@ -95,6 +95,16 @@ class CandidatePhaseStatsTests(APITestCase):
             updated_by=self.staff,
         )
         Candidat.objects.create(
+            nom="Sortie",
+            prenom="Formation",
+            email="sortie.stats@example.com",
+            formation=self.formation,
+            parcours_phase=Candidat.ParcoursPhase.SORTI,
+            statut=Candidat.StatutCandidat.EN_FORMATION,
+            created_by=self.staff,
+            updated_by=self.staff,
+        )
+        Candidat.objects.create(
             nom="Appairage",
             prenom="Manuel",
             email="appairage.stats@example.com",
@@ -112,7 +122,7 @@ class CandidatePhaseStatsTests(APITestCase):
         self.assertEqual(response.data["kpis"]["inscrits_valides"], 1)
         self.assertEqual(response.data["kpis"]["inscrits_gespers"], 1)
         self.assertEqual(response.data["kpis"]["stagiaires_en_formation"], 1)
-        self.assertEqual(response.data["kpis"]["non_admissibles"], 1)
+        self.assertEqual(response.data["kpis"]["non_admissibles"], 0)
         self.assertEqual(response.data["kpis"]["en_appairage"], 1)
         self.assertEqual(response.data["kpis"]["en_formation"], 2)
 
@@ -121,12 +131,13 @@ class CandidatePhaseStatsTests(APITestCase):
         }
         self.assertEqual(repartition[Candidat.ParcoursPhase.INSCRIT_VALIDE], 1)
         self.assertEqual(repartition[Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION], 1)
+        self.assertEqual(repartition[Candidat.ParcoursPhase.SORTI], 1)
         statut_metier = {
             item["statut_metier"]: item["count"] for item in response.data["repartition"]["par_statut_metier"]
         }
         self.assertEqual(statut_metier[Candidat.StatutMetier.INSCRIT_GESPERS], 1)
-        self.assertEqual(statut_metier[Candidat.StatutMetier.NON_ADMISSIBLE], 1)
         self.assertEqual(statut_metier[Candidat.StatutMetier.EN_APPAIRAGE], 1)
+        self.assertEqual(statut_metier[Candidat.StatutMetier.SORTIE_FORMATION], 1)
 
     def test_candidat_stats_grouped_accepts_parcours_phase_dimension(self):
         response = self.client.get(reverse("candidat-stats-grouped"), {"by": "parcours_phase"})
@@ -145,8 +156,8 @@ class CandidatePhaseStatsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         by_key = {row["group_key"]: row for row in response.data["results"]}
         self.assertEqual(by_key[Candidat.StatutMetier.INSCRIT_GESPERS]["inscrits_gespers"], 1)
-        self.assertEqual(by_key[Candidat.StatutMetier.NON_ADMISSIBLE]["non_admissibles"], 1)
         self.assertEqual(by_key[Candidat.StatutMetier.EN_APPAIRAGE]["en_appairage"], 1)
+        self.assertEqual(by_key[Candidat.StatutMetier.SORTIE_FORMATION]["en_formation"], 1)
 
     def test_formation_stats_exposes_phase_based_candidate_kpis(self):
         response = self.client.get(reverse("formation-stats-list"))
@@ -156,7 +167,7 @@ class CandidatePhaseStatsTests(APITestCase):
         self.assertEqual(candidats["nb_inscrits_valides"], 1)
         self.assertEqual(candidats["nb_inscrits_gespers"], 1)
         self.assertEqual(candidats["nb_stagiaires_en_formation"], 1)
-        self.assertEqual(candidats["nb_candidats_non_admissibles"], 1)
+        self.assertEqual(candidats["nb_candidats_non_admissibles"], 0)
         self.assertEqual(candidats["nb_en_appairage"], 1)
         self.assertEqual(candidats["nb_entrees_formation"], 2)
 

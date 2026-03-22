@@ -19,6 +19,7 @@ import type { Candidat } from "../../types/candidat";
 import { useCandidateAccountActions, useCandidateLifecycleActions } from "../../hooks/useCandidats";
 import { toast } from "react-toastify";
 import { useAuth } from "../../hooks/useAuth";
+import { getCandidatBusinessStatusLabel } from "../../shared/utils/candidatStatus";
 
 /* ---------- Helpers ---------- */
 type CandidatWithFormation = Candidat & {
@@ -43,18 +44,7 @@ const nn = (s?: string | null) => (s ?? "").toString().trim() || "—";
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
 
 function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
-  if (!candidat) return "—";
-
-  const phase = candidat.parcours_phase ?? "";
-
-  if (phase === "stagiaire_en_formation") return "En formation";
-  if (phase === "sorti") return "Sortie / fin de formation";
-  if (phase === "abandon") return "Abandon";
-  if (candidat.admissible || phase === "admissible" || phase === "inscrit_valide") {
-    return "Candidat admissible";
-  }
-
-  return nn(candidat.parcours_phase_display ?? candidat.statut_display ?? candidat.statut);
+  return getCandidatBusinessStatusLabel(candidat);
 }
 
 function accountRequestLabel(status?: string | null): string {
@@ -131,7 +121,7 @@ const SECTIONS: {
   {
     title: "Statut",
     fields: [
-      { key: "parcours_phase_display", label: "Phase" },
+      { key: "statut_metier_display", label: "Statut métier" },
       { key: "admissible", label: "Admissible" },
       { key: "entretien_done", label: "Entretien réalisé" },
       { key: "test_is_ok", label: "Test d’entrée OK" },
@@ -339,7 +329,7 @@ export default function CandidatDetailModal({
                       const value =
                         typeof val === "boolean"
                           ? yn(val)
-                          : key === "parcours_phase_display"
+                          : key === "parcours_phase_display" || key === "statut_metier_display"
                             ? uiPhaseLabel(candidat)
                           : key.toLowerCase().includes("date")
                             ? fmt(val as string)
@@ -355,7 +345,7 @@ export default function CandidatDetailModal({
                   <Section title="Actions de parcours">
                     <Grid item xs={12}>
                       <Alert severity="info" sx={{ mb: 1 }}>
-                        Phase actuelle : <strong>{uiPhaseLabel(candidat)}</strong>
+                        Statut métier actuel : <strong>{uiPhaseLabel(candidat)}</strong>
                       </Alert>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
                         <Button

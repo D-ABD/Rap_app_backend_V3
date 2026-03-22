@@ -439,7 +439,11 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE),
                 distinct=True,
             ),
-            en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
+            en_formation=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION),
+                distinct=True,
+            ),
             en_appairage=Count(
                 "id",
                 filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
@@ -728,7 +732,11 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE),
                     distinct=True,
                 ),
-                en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
+                en_formation=Count(
+                    "id",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_FORMATION),
+                    distinct=True,
+                ),
                 en_appairage=Count(
                     "id",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),

@@ -65,7 +65,7 @@ class CandidatWritePathTests(TestCase):
         self.assertFalse(candidat.is_en_formation_now)
         self.assertFalse(candidat.has_compte_utilisateur)
 
-    def test_statut_metier_calcule_detects_non_admissible_after_entretien(self):
+    def test_statut_metier_calcule_keeps_candidate_when_entretien_done_without_admissible(self):
         candidat = Candidat.objects.create(
             nom="Refuse",
             prenom="Entretien",
@@ -76,7 +76,7 @@ class CandidatWritePathTests(TestCase):
             updated_by=self.actor,
         )
 
-        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.NON_ADMISSIBLE)
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.CANDIDAT)
 
     def test_statut_metier_calcule_prioritizes_manual_appairage_and_gespers(self):
         candidat = Candidat.objects.create(
@@ -97,6 +97,20 @@ class CandidatWritePathTests(TestCase):
         candidat.refresh_from_db()
 
         self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.INSCRIT_GESPERS)
+
+    def test_statut_metier_calcule_exposes_sortie_formation(self):
+        candidat = Candidat.objects.create(
+            nom="Sortie",
+            prenom="Metier",
+            email="sortie.metier@example.com",
+            formation=self.formation,
+            parcours_phase=Candidat.ParcoursPhase.SORTI,
+            statut=Candidat.StatutCandidat.EN_FORMATION,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.SORTIE_FORMATION)
 
     def test_parcours_phase_calculee_detects_active_stagiaire_session(self):
         compte = CustomUser.objects.create_user_with_role(

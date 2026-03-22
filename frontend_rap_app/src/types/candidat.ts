@@ -27,6 +27,7 @@ export interface PhaseContract {
   legacy_status_field: string;
   recommended_phase_field: string;
   derived_phase_field: string;
+  business_status_field?: string;
   legacy_status_supported: boolean;
   legacy_status_deprecated: boolean;
   legacy_status_removal_stage: string;
@@ -51,14 +52,20 @@ export interface FormationInfo {
 export type CVStatutValue = "oui" | "en_cours" | "a_modifier";
 export type ContratSigneValue = "non" | "en_cours" | "signe" | "valide";
 export type ParcoursPhaseValue =
-  | "prospect"
-  | "candidature_recue"
-  | "entretien_planifie"
-  | "entretien_realise"
-  | "admissible"
+  | "postulant"
   | "inscrit_valide"
   | "stagiaire_en_formation"
   | "sorti"
+  | "abandon";
+
+export type StatutMetierValue =
+  | "candidat"
+  | "non_admissible"
+  | "admissible"
+  | "en_accompagnement_tre"
+  | "en_appairage"
+  | "inscrit_gespers"
+  | "en_formation"
   | "abandon";
 
 export type RgpdLegalBasisValue = "consentement" | "contrat" | "interet_legitime" | "obligation_legale";
@@ -179,6 +186,8 @@ export interface Candidat {
   parcours_phase?: ParcoursPhaseValue | null;
   parcours_phase_display?: string | null;
   parcours_phase_calculee?: string | null;
+  statut_metier_calcule?: StatutMetierValue | null;
+  statut_metier_display?: string | null;
   is_inscrit_valide?: boolean;
   is_en_formation_now?: boolean;
   has_compte_utilisateur?: boolean;
@@ -290,6 +299,7 @@ export interface CandidatMeta {
   phase_ordering_fields?: string[];
   phase_read_only_fields?: string[];
   phase_transition_actions?: PhaseActionContract[];
+  statut_metier_choices?: Choice[];
   cv_statut_choices: Array<{ value: CVStatutValue; label: string }>;
   type_contrat_choices: Choice[];
   disponibilite_choices: Choice[];

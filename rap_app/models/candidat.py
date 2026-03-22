@@ -126,6 +126,7 @@ class Candidat(BaseModel):
         EN_APPAIRAGE = "en_appairage", _("En appairage")
         INSCRIT_GESPERS = "inscrit_gespers", _("Inscrit GESPERS")
         EN_FORMATION = "en_formation", _("En formation")
+        SORTIE_FORMATION = "sortie_formation", _("Sortie / fin de formation")
         ABANDON = "abandon", _("Abandon")
 
     class TypeContrat(models.TextChoices):
@@ -770,6 +771,12 @@ class Candidat(BaseModel):
         if self.parcours_phase == self.ParcoursPhase.ABANDON or self.statut == self.StatutCandidat.ABANDON:
             return self.ParcoursPhase.ABANDON
 
+        if self.parcours_phase == self.ParcoursPhase.SORTI:
+            return self.ParcoursPhase.SORTI
+
+        if self.parcours_phase == self.ParcoursPhase.STAGIAIRE_EN_FORMATION:
+            return self.ParcoursPhase.STAGIAIRE_EN_FORMATION
+
         formation = getattr(self, "formation", None)
         today = timezone.localdate()
         formation_end = getattr(formation, "end_date", None) if formation else None
@@ -809,28 +816,24 @@ class Candidat(BaseModel):
 
         Priorité retenue :
         - abandon
+        - sortie / fin de formation
         - en formation
-        - inscrit GESPERS
+        - inscrit GESPERS (manuel)
         - en appairage (manuel / legacy)
         - en accompagnement TRE (manuel / legacy)
         - candidat admissible
-        - candidat non admissible si entretien déjà réalisé
         - candidat
         """
         if self.parcours_phase_calculee == self.ParcoursPhase.ABANDON:
             return self.StatutMetier.ABANDON
 
-        if self.parcours_phase_calculee in {
-            self.ParcoursPhase.STAGIAIRE_EN_FORMATION,
-            self.ParcoursPhase.SORTI,
-        }:
+        if self.parcours_phase_calculee == self.ParcoursPhase.SORTI:
+            return self.StatutMetier.SORTIE_FORMATION
+
+        if self.parcours_phase_calculee == self.ParcoursPhase.STAGIAIRE_EN_FORMATION:
             return self.StatutMetier.EN_FORMATION
 
-        if (
-            self.inscrit_gespers
-            or bool(self.date_validation_inscription)
-            or self.parcours_phase == self.ParcoursPhase.INSCRIT_VALIDE
-        ):
+        if self.inscrit_gespers:
             return self.StatutMetier.INSCRIT_GESPERS
 
         if self.statut == self.StatutCandidat.EN_APPAIRAGE:
@@ -841,9 +844,6 @@ class Candidat(BaseModel):
 
         if self.admissible:
             return self.StatutMetier.ADMISSIBLE
-
-        if self.entretien_done:
-            return self.StatutMetier.NON_ADMISSIBLE
 
         return self.StatutMetier.CANDIDAT
 
@@ -873,17 +873,22 @@ class Candidat(BaseModel):
         if value == cls.StatutMetier.EN_FORMATION:
             return (
                 Q(**{field("parcours_phase"): cls.ParcoursPhase.STAGIAIRE_EN_FORMATION})
-                | Q(**{field("parcours_phase"): cls.ParcoursPhase.SORTI})
                 | Q(**{field("statut"): cls.StatutCandidat.EN_FORMATION})
-                | Q(**{f"{field('date_entree_formation_effective')}__isnull": False})
+            ) & ~Q(**{field("parcours_phase"): cls.ParcoursPhase.SORTI}) & ~Q(
+                **{field("parcours_phase"): cls.ParcoursPhase.ABANDON}
+            ) & Q(**{f"{field('date_sortie_formation')}__isnull": True})
+
+        if value == cls.StatutMetier.SORTIE_FORMATION:
+            return (
+                Q(**{field("parcours_phase"): cls.ParcoursPhase.SORTI})
+                | Q(**{f"{field('date_sortie_formation')}__isnull": False})
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ABANDON, prefix=prefix
             )
 
         if value == cls.StatutMetier.INSCRIT_GESPERS:
-            return (
-                Q(**{field("inscrit_gespers"): True})
-                | Q(**{field("parcours_phase"): cls.ParcoursPhase.INSCRIT_VALIDE})
-                | Q(**{f"{field('date_validation_inscription')}__isnull": False})
-                | Q(**{field("statut"): cls.StatutCandidat.EN_ATTENTE_RENTREE})
+            return Q(**{field("inscrit_gespers"): True}) & ~cls.statut_metier_q(
+                cls.StatutMetier.SORTIE_FORMATION, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.ABANDON, prefix=prefix
             )
@@ -891,41 +896,37 @@ class Candidat(BaseModel):
         if value == cls.StatutMetier.EN_APPAIRAGE:
             return Q(**{field("statut"): cls.StatutCandidat.EN_APPAIRAGE}) & ~cls.statut_metier_q(
                 cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.ABANDON, prefix=prefix
-            )
+            ) & ~cls.statut_metier_q(cls.StatutMetier.SORTIE_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_FORMATION, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
 
         if value == cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE:
             return Q(**{field("statut"): cls.StatutCandidat.EN_ACCOMPAGNEMENT}) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.EN_FORMATION, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
+                cls.StatutMetier.SORTIE_FORMATION, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ABANDON, prefix=prefix
+            )
 
         if value == cls.StatutMetier.ADMISSIBLE:
             return Q(**{field("admissible"): True}) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.EN_APPAIRAGE, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.ABANDON, prefix=prefix
-            )
-
-        if value == cls.StatutMetier.NON_ADMISSIBLE:
-            return Q(**{field("entretien_done"): True}, **{field("admissible"): False}) & ~cls.statut_metier_q(
-                cls.StatutMetier.ADMISSIBLE, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
+            ) & ~cls.statut_metier_q(cls.StatutMetier.SORTIE_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_FORMATION, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
 
+        if value == cls.StatutMetier.NON_ADMISSIBLE:
+            return Q(pk__isnull=True)
+
         if value == cls.StatutMetier.CANDIDAT:
-            return ~cls.statut_metier_q(cls.StatutMetier.NON_ADMISSIBLE, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.ADMISSIBLE, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix) & ~cls.statut_metier_q(
-                cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
-            ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
+            return ~cls.statut_metier_q(cls.StatutMetier.ADMISSIBLE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_APPAIRAGE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.SORTIE_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
                 cls.StatutMetier.EN_FORMATION, prefix=prefix
             ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
 
