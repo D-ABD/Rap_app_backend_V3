@@ -1,6 +1,7 @@
 // src/pages/formations/FormationTable.tsx
 import { useMemo, useState } from "react";
 import { Button, Chip, LinearProgress, Typography, Box, Stack, Checkbox } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { Formation } from "../../types/formation";
 import { getFieldValue } from "../../utils/getFieldValue";
 import ResponsiveTableTemplate, { TableColumn } from "../../components/ResponsiveTableTemplate";
@@ -14,8 +15,14 @@ interface Props {
 }
 
 const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
+const buildCandidatesUrl = (id: number) => `/candidats?formation=${id}`;
+const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_phase=stagiaire_en_formation`;
+const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
+const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
+const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
 
 export default function FormationTable({ formations, selectedIds, onToggleSelect }: Props) {
+  const navigate = useNavigate();
   const [sortField, _setSortField] = useState<string | null>(null); // ✅ renommé
   const [sortAsc, _setSortAsc] = useState(true); // ✅ renommé
 
@@ -196,8 +203,41 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
       label: "Durée (h)",
       render: (r) => r.total_heures ?? "—",
     },
-    { key: "nombre_candidats", label: "Candidats" },
+    {
+      key: "nombre_candidats",
+      label: "Candidats",
+      render: (row) => (
+        <Button
+          size="small"
+          variant="text"
+          sx={{ px: 0, minWidth: 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(buildCandidatesUrl(row.id));
+          }}
+        >
+          {row.nombre_candidats ?? 0}
+        </Button>
+      ),
+    },
     { key: "nombre_entretiens", label: "Entretiens" },
+    {
+      key: "nombre_evenements",
+      label: "Événements",
+      render: (row) => (
+        <Button
+          size="small"
+          variant="text"
+          sx={{ px: 0, minWidth: 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(buildEvenementsUrl(row.id));
+          }}
+        >
+          {row.nombre_evenements ?? 0}
+        </Button>
+      ),
+    },
     {
       key: "inscrits",
       label: "Capacité / Inscrits",
@@ -208,9 +248,17 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
 
         return (
           <Box>
-            <Typography variant="body2">
+            <Button
+              size="small"
+              variant="text"
+              sx={{ px: 0, minWidth: 0 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(buildInscritsUrl(row.id));
+              }}
+            >
               {inscrits} / {cap || "—"} inscrits
-            </Typography>
+            </Button>
             {cap > 0 && (
               <LinearProgress
                 variant="determinate"
@@ -301,6 +349,50 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
           <Stack direction="row" spacing={1}>
             <Button
               size="small"
+              variant="text"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(buildCandidatesUrl(row.id));
+              }}
+            >
+              Candidats
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(buildProspectionsUrl(row.id));
+              }}
+            >
+              Prospections
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(buildAppairagesUrl(row.id));
+              }}
+            >
+              Appairages
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(buildEvenementsUrl(row.id));
+              }}
+            >
+              Événements
+            </Button>
+            <Button
+              size="small"
               variant="outlined"
               color="primary"
               onClick={(e) => {
@@ -316,7 +408,7 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
               color="warning"
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `/formations/${row.id}/edit`;
+                navigate(`/formations/${row.id}/edit`);
               }}
             >
               Éditer

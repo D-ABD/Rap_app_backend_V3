@@ -43,6 +43,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import SchoolIcon from "@mui/icons-material/School";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import EventIcon from "@mui/icons-material/Event";
 
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 
@@ -329,6 +330,9 @@ export default function MainLayout() {
                     </MenuItem>
                     <MenuItem component={Link} to="/documents">
                       Documents
+                    </MenuItem>
+                    <MenuItem component={Link} to="/evenements">
+                      <EventIcon fontSize="small" sx={{ mr: 1 }} /> Événements
                     </MenuItem>
                   </Menu>
                 </>

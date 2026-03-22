@@ -77,6 +77,9 @@ import ProspectionCommentEditPage from "../pages/prospection/prospectioncomments
 import DocumentsPage from "src/pages/Documents/DocumentsPage";
 import DocumentsCreatePage from "src/pages/Documents/DocumentsCreatePage";
 import DocumentsEditPage from "src/pages/Documents/DocumentsEditPage";
+import EvenementsPage from "../pages/evenements/EvenementsPage";
+import EvenementsCreatePage from "../pages/evenements/EvenementsCreatePage";
+import EvenementsEditPage from "../pages/evenements/EvenementsEditPage";
 
 import DeclicPages from "src/pages/declic/DeclicPages";
 import DeclicCreatePage from "src/pages/declic/DeclicCreatePage";
@@ -401,6 +404,9 @@ export default function AppRoute() {
         <Route path="/formations/create" element={secure(<FormationsCreatePage />)} />
         <Route path="/formations/:id/edit" element={secure(<FormationsEditPage />)} />
         <Route path="/formations/:id" element={secure(<FormationDetailPage />)} />
+        <Route path="/evenements" element={secure(<EvenementsPage />)} />
+        <Route path="/evenements/create" element={secure(<EvenementsCreatePage />)} />
+        <Route path="/evenements/:id/edit" element={secure(<EvenementsEditPage />)} />
         <Route
           path="/formations/:formationId/commentaires"
           element={secure(<FormationsCommentairesPage />)}

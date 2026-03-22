@@ -7,6 +7,7 @@ from drf_spectacular.utils import (
 from rest_framework import serializers
 
 from ...models.evenements import Evenement
+from ...models.formations import Formation
 
 
 @extend_schema_serializer(
@@ -43,6 +44,12 @@ class EvenementSerializer(serializers.ModelSerializer):
     validate : si type_evenement == 'autre', description_autre est obligatoire.
     """
 
+    formation_id = serializers.PrimaryKeyRelatedField(
+        source="formation",
+        queryset=Formation.objects.all(),
+        required=False,
+        allow_null=True,
+    )
     formation_nom = serializers.CharField(source="formation.nom", read_only=True)
     type_evenement_display = serializers.CharField(source="get_type_evenement_display", read_only=True)
     event_date_formatted = serializers.SerializerMethodField()

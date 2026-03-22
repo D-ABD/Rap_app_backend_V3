@@ -1,6 +1,6 @@
 // src/pages/candidats/CandidatsPage.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -48,15 +48,55 @@ type AtelierTreOption = {
 
 export default function CandidatsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const toNum = useCallback((value: string | null) => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, []);
+
+  const parseBool = useCallback((value: string | null) => {
+    if (!value) return undefined;
+    const lowered = value.toLowerCase();
+    if (["1", "true", "yes", "on"].includes(lowered)) return true;
+    if (["0", "false", "no", "off"].includes(lowered)) return false;
+    return undefined;
+  }, []);
+
+  const urlFilters = useMemo<CandidatFiltresValues>(
+    () => ({
+      search: searchParams.get("search") || "",
+      ordering: searchParams.get("ordering") || "-date_inscription",
+      centre: toNum(searchParams.get("centre")),
+      formation: toNum(searchParams.get("formation")),
+      parcours_phase: (searchParams.get("parcours_phase") as CandidatFiltresValues["parcours_phase"]) || undefined,
+      statut: searchParams.get("statut") || undefined,
+      cv_statut: (searchParams.get("cv_statut") as CandidatFiltresValues["cv_statut"]) || undefined,
+      type_contrat: searchParams.get("type_contrat") || undefined,
+      disponibilite: searchParams.get("disponibilite") || undefined,
+      resultat_placement: searchParams.get("resultat_placement") || undefined,
+      contrat_signe: searchParams.get("contrat_signe") || undefined,
+      responsable_placement: toNum(searchParams.get("responsable_placement")),
+      admissible: parseBool(searchParams.get("admissible")),
+      inscrit_gespers: parseBool(searchParams.get("inscrit_gespers")),
+      en_accompagnement_tre: parseBool(searchParams.get("en_accompagnement_tre")),
+      en_appairage: parseBool(searchParams.get("en_appairage")),
+      rqth: parseBool(searchParams.get("rqth")),
+      permis_b: parseBool(searchParams.get("permis_b")),
+      entretien_done: parseBool(searchParams.get("entretien_done")),
+      test_is_ok: parseBool(searchParams.get("test_is_ok")),
+      date_min: searchParams.get("date_min") || undefined,
+      date_max: searchParams.get("date_max") || undefined,
+    }),
+    [parseBool, searchParams, toNum]
+  );
+
   const [refreshNonce, setRefreshNonce] = useState(0);
   // Filtres
-  const [filters, setFilters] = useState<CandidatFiltresValues>({
-    search: "",
-    ordering: "-date_inscription",
-  });
+  const [filters, setFilters] = useState<CandidatFiltresValues>(urlFilters);
 
   const [showFilters, setShowFilters] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -68,6 +108,11 @@ return false;
       localStorage.setItem("candidats.showFilters", showFilters ? "1" : "0");
     }
   }, [showFilters]);
+
+  useEffect(() => {
+    setFilters(urlFilters);
+    setPage(1);
+  }, [setPage, urlFilters]);
 
   // Pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();

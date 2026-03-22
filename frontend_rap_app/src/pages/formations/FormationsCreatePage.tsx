@@ -7,6 +7,7 @@ import PageTemplate from "../../components/PageTemplate";
 import FormationForm from "./FormationForm";
 import { useCreateFormation, useFormationCreationChoices } from "../../hooks/useFormations";
 import type { FormationFormData, FormationFormDataRaw } from "../../types/formation";
+import { toApiError } from "../../api/httpClient";
 
 export default function FormationsCreatePage() {
   const navigate = useNavigate();
@@ -64,8 +65,8 @@ export default function FormationsCreatePage() {
         await createFormation(payload);
         toast.success("✅ Formation créée avec succès !");
         navigate("/formations");
-      } catch {
-        toast.error("❌ Erreur lors de la création de la formation");
+      } catch (err) {
+        toast.error(`❌ ${toApiError(err).message || "Erreur lors de la création de la formation"}`);
       }
     },
     [createFormation, navigate]

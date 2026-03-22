@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
+  Alert,
   Box,
   Stack,
   Button,
@@ -15,6 +16,7 @@ import {
   Grid,
   Paper,
   Divider,
+  FormHelperText,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -25,6 +27,7 @@ import {
 } from "@mui/icons-material";
 import type { Formation, FormationFormDataRaw } from "../../types/formation";
 import type { NomId } from "../../types/formation";
+import { toApiError } from "../../api/httpClient";
 
 /* =========================================
  * Sous-composants au niveau module
@@ -130,6 +133,7 @@ function FormationForm({
   }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string>("");
 
   // ✅ Initialisation — exécution une seule fois au montage
   useEffect(() => {
@@ -161,9 +165,7 @@ function FormationForm({
       total_heures: initialValues.total_heures ?? 0,
       heures_distanciel: initialValues.heures_distanciel ?? 0,
     });
-    // ⛔️ Ne pas redéclencher quand initialValues change (évite la double validation)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialValues]);
 
   // ✅ Handlers
   const handleChange = useCallback(
@@ -177,6 +179,8 @@ function FormationForm({
             : Number(value)
           : value,
       }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+      setGeneralError("");
     },
     []
   );
@@ -184,30 +188,82 @@ function FormationForm({
   const handleCheckbox = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setValues((prev) => ({ ...prev, [name]: checked }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setGeneralError("");
   }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setErrors({});
-      if (!values.nom.trim()) {
-        setErrors({ nom: "Le nom est requis" });
+      setGeneralError("");
+
+      const nextErrors: Record<string, string> = {};
+
+      if (!values.nom?.trim()) {
+        nextErrors.nom = "Le nom de la formation est obligatoire.";
+      }
+      if (!values.centre_id) {
+        nextErrors.centre_id = "Veuillez sélectionner un centre.";
+      }
+      if (!values.type_offre_id) {
+        nextErrors.type_offre_id = "Veuillez sélectionner un type d’offre.";
+      }
+      if (!values.statut_id) {
+        nextErrors.statut_id = "Veuillez sélectionner un statut.";
+      }
+      if (
+        values.start_date &&
+        values.end_date &&
+        new Date(values.start_date).getTime() > new Date(values.end_date).getTime()
+      ) {
+        nextErrors.start_date = "La date de début doit être antérieure à la date de fin.";
+        nextErrors.end_date = "La date de fin doit être postérieure à la date de début.";
+      }
+
+      if (Object.keys(nextErrors).length > 0) {
+        setErrors(nextErrors);
         return;
       }
+
       try {
         await onSubmit(values);
-      } catch (err: any) {
-        if (err?.response?.data?.errors) {
-          setErrors(err.response.data.errors);
+      } catch (err) {
+        const apiError = toApiError(err);
+        const fieldErrors = Object.fromEntries(
+          Object.entries(apiError.errors ?? {}).map(([field, messages]) => [field, messages[0] ?? ""])
+        );
+
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors);
         }
+
+        setGeneralError(apiError.message || "Impossible d’enregistrer la formation.");
       }
     },
     [values, onSubmit]
   );
 
+  const numericLabels: Record<string, string> = {
+    prevus_crif: "Places prévues CRIF",
+    prevus_mp: "Places prévues MP",
+    inscrits_crif: "Inscrits CRIF",
+    inscrits_mp: "Inscrits MP",
+    cap: "Capacité maximale",
+    entree_formation: "Entrées en formation",
+    nombre_candidats: "Nombre de candidats",
+    nombre_entretiens: "Nombre d’entretiens",
+  };
+
   // ✅ Rendu
   return (
     <Box component="form" onSubmit={handleSubmit}>
+      {generalError ? (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {generalError}
+        </Alert>
+      ) : null}
+
       <Section icon={<AssignmentIcon color="primary" />} title="Informations principales">
         <Input
           label="Nom"
@@ -219,7 +275,7 @@ function FormationForm({
         />
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
+          <FormControl fullWidth error={!!errors.centre_id}>
             <InputLabel id="centre-label">Centre</InputLabel>
             <Select
               labelId="centre-label"
@@ -235,11 +291,12 @@ function FormationForm({
                 </MenuItem>
               ))}
             </Select>
+            <FormHelperText>{errors.centre_id || "Centre de rattachement de la formation."}</FormHelperText>
           </FormControl>
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
+          <FormControl fullWidth error={!!errors.type_offre_id}>
             <InputLabel id="type-offre-label">Type d’offre</InputLabel>
             <Select
               labelId="type-offre-label"
@@ -255,11 +312,12 @@ function FormationForm({
                 </MenuItem>
               ))}
             </Select>
+            <FormHelperText>{errors.type_offre_id || "Type de dispositif ou d’offre associé."}</FormHelperText>
           </FormControl>
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
+          <FormControl fullWidth error={!!errors.statut_id}>
             <InputLabel id="statut-label">Statut</InputLabel>
             <Select
               labelId="statut-label"
@@ -275,6 +333,7 @@ function FormationForm({
                 </MenuItem>
               ))}
             </Select>
+            <FormHelperText>{errors.statut_id || "Statut administratif actuel de la formation."}</FormHelperText>
           </FormControl>
         </Grid>
 
@@ -362,7 +421,7 @@ function FormationForm({
         {["prevus_crif", "prevus_mp", "inscrits_crif", "inscrits_mp", "cap"].map((field) => (
           <Input
             key={field}
-            label={field.replace("_", " ").toUpperCase()}
+            label={numericLabels[field] || field}
             name={field}
             type="number"
             value={(values as any)[field]}
@@ -376,7 +435,7 @@ function FormationForm({
         {["entree_formation", "nombre_candidats", "nombre_entretiens"].map((field) => (
           <Input
             key={field}
-            label={field.replace("_", " ").toUpperCase()}
+            label={numericLabels[field] || field}
             name={field}
             type="number"
             value={(values as any)[field]}
@@ -399,19 +458,25 @@ function FormationForm({
       </Section>
 
       {/* Boutons */}
-      <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+      <Stack
+        direction={{ xs: "column-reverse", sm: "row" }}
+        spacing={2}
+        justifyContent="flex-end"
+        sx={{ mt: 3 }}
+      >
         <Button
           type="submit"
           variant="contained"
           color="success"
           disabled={loading || loadingChoices}
           startIcon={loading ? <CircularProgress size={18} /> : undefined}
+          fullWidth={loading || loadingChoices ? true : false}
         >
           {loading ? "Enregistrement..." : submitLabel}
         </Button>
 
         {onCancel && (
-          <Button variant="outlined" color="inherit" onClick={onCancel}>
+          <Button variant="outlined" color="inherit" onClick={onCancel} fullWidth>
             Annuler
           </Button>
         )}

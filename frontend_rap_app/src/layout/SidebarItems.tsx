@@ -17,6 +17,7 @@ import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import InsightsIcon from "@mui/icons-material/Insights";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import EventIcon from "@mui/icons-material/Event";
 
 export interface SidebarItem {
   label: string;
@@ -163,6 +164,11 @@ export const sidebarItems: SidebarItem[] = [
         label: "Documents",
         path: "/documents",
         icon: <DescriptionIcon sx={{ color: "secondary.main" }} />,
+      },
+      {
+        label: "Événements",
+        path: "/evenements",
+        icon: <EventIcon sx={{ color: "secondary.main" }} />,
       },
     ],
   },

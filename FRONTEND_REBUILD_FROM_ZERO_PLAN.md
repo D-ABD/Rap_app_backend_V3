@@ -80,14 +80,30 @@ Etat courant :
 - module `candidats` deja entame
 - types et meta candidats deja etendus pour `parcours_phase`, `phase_contract` et RGPD
 - creation candidat deja revalidee avec les nouveaux champs RGPD obligatoires du backend
-- affichage UI des phases candidat deja simplifie
+- affichage UI des phases candidat deja simplifie puis realigne sur les statuts metier backend
 - actions lifecycle candidat deja branchees dans l'UI
 - actions bulk candidats deja branchees dans l'UI
 - compte candidat deja realigne avec le backend pour conserver le role `candidatuser`
   jusqu'a l'entree en formation
-- un chantier dedie de clarification des statuts candidat UI est maintenant pose
-  dans [CANDIDAT_STATUTS_UI_CHANTIER.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/CANDIDAT_STATUTS_UI_CHANTIER.md)
-- prochaine cible : finaliser les statuts candidat UI puis formations
+- statuts candidat backend/frontend maintenant realignes avec :
+  - flags manuels cumulables `admissible`, `inscrit_gespers`, `en_accompagnement_tre`, `en_appairage`
+  - transitions structurees `en formation`, `sortie / fin de formation`, `abandon`
+  - confirmations et messages UI clairs dans la modale candidat
+- navigation rapide depuis candidats vers appairages et prospections maintenant branchee
+- dashboards candidats / formations deja partiellement realignes sur les nouveaux statuts metier
+- module `formations` maintenant reellement avance avec :
+  - types / hooks / pages principales remises a niveau
+  - creation / edition
+  - detail modal et detail page
+  - messages d'erreur plus clairs
+  - navigation front plus propre
+  - liens rapides vers candidats, inscrits, prospections, appairages, partenaires et evenements
+- module `evenements` maintenant branche comme vrai module front avec :
+  - routes dediees
+  - liste / detail / creation / edition
+  - integration dans navbar et sidebar
+  - pre-remplissage et conservation fiables de la formation
+- prochaine cible : poursuivre l'alignement des modules CRM autour de formations
 
 ## 3. Modules metier principaux
 
@@ -108,7 +124,6 @@ Etat courant :
 - dashboards
 - rapports
 - logs
-- evenements
 
 ---
 
@@ -145,15 +160,13 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. finaliser candidats
-2. remettre a niveau formations
-3. remettre a niveau prospections
-4. remettre a niveau appairages
-5. remettre a niveau partenaires / documents / commentaires / cvtheque
-6. remettre a niveau ateliers TRE
-7. remettre a niveau prepa / declic
-8. remettre a niveau stats / dashboards
-9. remettre a niveau rapports / logs / evenements
+1. remettre a niveau prospections
+2. remettre a niveau appairages
+3. remettre a niveau partenaires / documents / commentaires / cvtheque
+4. remettre a niveau ateliers TRE
+5. remettre a niveau prepa / declic
+6. finaliser stats / dashboards
+7. remettre a niveau rapports / logs
 
 ---
 
@@ -172,10 +185,10 @@ Le chantier sera termine quand :
 
 ## Prochaine Etape Concrete
 
-Reprendre le socle critique dans cet ordre :
+Reprendre les modules metier dans cet ordre :
 
-1. candidats
-2. statuts candidat UI
-3. formations
+1. formations
+2. prospections
+3. appairages
 
 Ensuite seulement, remettre a niveau les autres modules.

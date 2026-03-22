@@ -22,18 +22,29 @@
 - lifecycle candidat
 - bulk actions candidats
 - compte candidat aligne avec le backend
+- statuts candidat backend/frontend realignes
+- statuts candidat manuels cumulables
+- modale candidat avec actions dynamiques et actions inverses
+- type de contrat remis en evidence dans le form et la modale candidat
+- stats candidats realignees sur les statuts metier
+- stats formations realignees sur les statuts candidat utiles
+- candidats sans statut metier identifies dans les stats
+- navigation candidats vers appairages et prospections
+- premier lot formations : creation, edition, detail et erreurs UI clarifiees
+- types formations
+- hooks formations
+- pages formations
+- navigation formations vers candidats, appairages, prospections, partenaires et evenements
+- module evenements branche dans navbar et sidebar
+- types evenements
+- hooks evenements
+- pages evenements
+- creation / edition evenement avec formation conservee et pre-remplissage fiable
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- statuts candidat UI
-- regles de priorite des statuts candidat
-- gestion manuelle `en appairage`
-- gestion manuelle `en accompagnement TRE`
-- types formations
-- hooks formations
-- pages formations
 - types prospections
 - hooks prospections
 - pages prospections
@@ -66,16 +77,13 @@
 - pages declic
 - types stats
 - hooks stats
-- dashboards
+- finaliser dashboards
 - types rapports
 - hooks rapports
 - pages rapports
 - types logs
 - hooks logs
 - pages logs
-- types evenements
-- hooks evenements
-- pages evenements
 - exports
 - uniformiser les messages d'erreur UI
 - nettoyer et documenter le code au fil de l'eau

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import api from "../../api/axios";
+import { toApiError } from "../../api/httpClient";
 
 import {
   useFormation,
@@ -60,8 +61,8 @@ export default function FormationsEditPage() {
         setLocalDetail({ ...formation, est_archivee: true, activite: "archivee" });
         toast.info("📦 Formation archivée");
       }
-    } catch {
-      toast.error("❌ Échec de l’opération d’archivage");
+    } catch (err) {
+      toast.error(`❌ ${toApiError(err).message || "Échec de l’opération d’archivage"}`);
     }
   };
 
@@ -76,8 +77,8 @@ export default function FormationsEditPage() {
       await deleteFormation();
       toast.success("🗑️ Formation supprimée");
       navigate("/formations");
-    } catch {
-      toast.error("❌ Échec de la suppression");
+    } catch (err) {
+      toast.error(`❌ ${toApiError(err).message || "Échec de la suppression"}`);
     }
   };
 
@@ -94,8 +95,8 @@ export default function FormationsEditPage() {
 
       // 🔁 Redirige vers la liste
       navigate("/formations");
-    } catch (error: any) {
-      toast.error("❌ Échec de la mise à jour");
+    } catch (error: unknown) {
+      toast.error(`❌ ${toApiError(error).message || "Échec de la mise à jour"}`);
       throw error;
     }
   };

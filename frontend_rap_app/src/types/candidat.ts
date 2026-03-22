@@ -330,6 +330,7 @@ export interface CandidatMeta {
 export interface CandidatFiltresValues {
   centre?: number;
   formation?: number;
+  parcours_phase?: ParcoursPhaseValue;
   ville?: string;
   code_postal?: string;
   statut?: string;

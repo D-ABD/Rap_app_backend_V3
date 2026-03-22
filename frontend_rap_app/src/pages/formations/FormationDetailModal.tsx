@@ -11,10 +11,11 @@ import {
   Button,
   CircularProgress,
   Paper,
+  Stack,
 } from "@mui/material";
 import { useFormation } from "../../hooks/useFormations";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import AddDocumentButton from "../../pages/formations/componentsFormations/AddDocumentButton";
 import FormationCommentsModal from "../../components/modals/FormationCommentsModal";
@@ -73,6 +74,11 @@ const nn = (s?: string | number | null) =>
   s === null || s === undefined || s === "" ? "—" : String(s);
 
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
+const buildCandidatesUrl = (id: number) => `/candidats?formation=${id}`;
+const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_phase=stagiaire_en_formation`;
+const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
+const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
+const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
 
 /* ---------- Composant principal ---------- */
 export default function FormationDetailModal({ open, onClose, formationId }: Props) {
@@ -122,6 +128,43 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
       <DialogContent dividers>
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
           <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Section title="Actions rapides">
+                <Grid item xs={12}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => navigate(`/candidats/create?formation=${formation.id}`)}
+                    >
+                      Ajouter un candidat
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/prospections/create?formation=${formation.id}`)}
+                    >
+                      Ajouter une prospection
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/appairages/create?formation=${formation.id}`)}
+                    >
+                      Ajouter un appairage
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/evenements/create?formation=${formation.id}`)}
+                    >
+                      Ajouter un événement
+                    </Button>
+                  </Stack>
+                </Grid>
+              </Section>
+            </Grid>
+
             {/* ─────────── Identité ─────────── */}
             <Grid item xs={12}>
               <Section title="Identité">
@@ -196,9 +239,31 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
             <Grid item xs={12}>
               <Section title="Statistiques et indicateurs">
                 <Field label="Entrées en formation" value={nn(formation.entree_formation)} />
-                <Field label="Candidats" value={nn(formation.nombre_candidats)} />
+                <Field
+                  label="Candidats"
+                  value={
+                    <Button component={Link} to={buildCandidatesUrl(formation.id)} size="small">
+                      {nn(formation.nombre_candidats)}
+                    </Button>
+                  }
+                />
+                <Field
+                  label="Inscrits"
+                  value={
+                    <Button component={Link} to={buildInscritsUrl(formation.id)} size="small">
+                      {nn(formation.inscrits_total)}
+                    </Button>
+                  }
+                />
                 <Field label="Entretiens" value={nn(formation.nombre_entretiens)} />
-                <Field label="Événements" value={nn(formation.nombre_evenements)} />
+                <Field
+                  label="Événements"
+                  value={
+                    <Button component={Link} to={buildEvenementsUrl(formation.id)} size="small">
+                      {nn(formation.nombre_evenements)}
+                    </Button>
+                  }
+                />
                 <Field label="Saturation" value={nn(formation.saturation)} />
                 <Field label="Badge saturation" value={nn(formation.saturation_badge)} />
                 <Field label="Badge label" value={nn(formation.saturation_badge_label)} />
@@ -214,7 +279,11 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                   label="Partenaires"
                   value={
                     formation.partenaires?.length
-                      ? formation.partenaires.map((p) => p.nom).join(", ")
+                      ? formation.partenaires.map((p) => (
+                          <span key={p.id}>
+                            <Link to={`/partenaires/${p.id}/edit`}>{p.nom}</Link>{" "}
+                          </span>
+                        ))
                       : "—"
                   }
                 />
@@ -222,8 +291,28 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                   label="Prospections"
                   value={
                     formation.prospections?.length
-                      ? `${formation.prospections.length} prospections`
+                      ? (
+                          <Button component={Link} to={buildProspectionsUrl(formation.id)} size="small">
+                            {formation.prospections.length} prospection(s)
+                          </Button>
+                        )
                       : "—"
+                  }
+                />
+                <Field
+                  label="Appairages"
+                  value={
+                    <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
+                      Voir les appairages liés
+                    </Button>
+                  }
+                />
+                <Field
+                  label="Événements liés"
+                  value={
+                    <Button component={Link} to={buildEvenementsUrl(formation.id)} size="small">
+                      Voir les événements
+                    </Button>
                   }
                 />
 

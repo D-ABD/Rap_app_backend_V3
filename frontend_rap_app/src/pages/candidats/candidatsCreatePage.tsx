@@ -1,6 +1,6 @@
 // src/pages/candidats/CandidatCreatePage.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { CircularProgress, Typography, Box } from "@mui/material";
 
@@ -22,11 +22,18 @@ type CreatedCandidatLite = {
 
 export default function CandidatCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: meta, loading: loadingMeta } = useCandidatMeta();
   const { user: me } = useMe();
   const { create, loading } = useCreateCandidat();
 
   const canEditFormation = !!me && ["admin", "superadmin", "staff"].includes(me.role);
+  const presetFormation = useMemo(() => {
+    const raw = searchParams.get("formation");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  }, [searchParams]);
 
   // 🔹 Modale post-création
   const [choiceOpen, setChoiceOpen] = useState(false);
@@ -90,6 +97,7 @@ export default function CandidatCreatePage() {
     <PageTemplate title="➕ Nouveau candidat" backButton onBack={() => navigate(-1)}>
       <Box mt={2}>
         <CandidatForm
+          initialValues={presetFormation ? ({ formation: presetFormation } as CandidatFormData) : undefined}
           meta={meta}
           currentUser={me}
           canEditFormation={canEditFormation}
