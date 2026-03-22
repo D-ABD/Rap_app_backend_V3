@@ -53,7 +53,7 @@ class AppairagePlacementServiceTests(TestCase):
         self.assertEqual(self.candidat.resultat_placement, ResultatPlacementChoices.ADMIS)
         self.assertEqual(self.candidat.responsable_placement, self.actor)
         self.assertEqual(self.candidat.placement_appairage, self.appairage)
-        self.assertEqual(self.candidat.statut, Candidat.StatutCandidat.EN_APPAIRAGE)
+        self.assertEqual(self.candidat.statut, Candidat.StatutCandidat.AUTRE)
         self.assertEqual(HistoriquePlacement.objects.filter(candidat=self.candidat).count(), 1)
 
         second_changes = AppairagePlacementService.sync_after_save(self.appairage, actor=self.actor)

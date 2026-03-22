@@ -58,6 +58,7 @@ class CandidatePhaseStatsTests(APITestCase):
             email="inscrit.stats@example.com",
             formation=self.formation,
             parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            inscrit_gespers=True,
             statut=Candidat.StatutCandidat.AUTRE,
             created_by=self.staff,
             updated_by=self.staff,
@@ -82,13 +83,37 @@ class CandidatePhaseStatsTests(APITestCase):
             created_by=self.staff,
             updated_by=self.staff,
         )
+        Candidat.objects.create(
+            nom="Refuse",
+            prenom="Entretien",
+            email="refuse.stats@example.com",
+            formation=self.formation,
+            entretien_done=True,
+            admissible=False,
+            statut=Candidat.StatutCandidat.AUTRE,
+            created_by=self.staff,
+            updated_by=self.staff,
+        )
+        Candidat.objects.create(
+            nom="Appairage",
+            prenom="Manuel",
+            email="appairage.stats@example.com",
+            formation=self.formation,
+            admissible=True,
+            statut=Candidat.StatutCandidat.EN_APPAIRAGE,
+            created_by=self.staff,
+            updated_by=self.staff,
+        )
 
     def test_candidat_stats_uses_phase_kpis_without_breaking_legacy_en_formation(self):
         response = self.client.get(reverse("candidat-stats-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["kpis"]["inscrits_valides"], 1)
+        self.assertEqual(response.data["kpis"]["inscrits_gespers"], 1)
         self.assertEqual(response.data["kpis"]["stagiaires_en_formation"], 1)
+        self.assertEqual(response.data["kpis"]["non_admissibles"], 1)
+        self.assertEqual(response.data["kpis"]["en_appairage"], 1)
         self.assertEqual(response.data["kpis"]["en_formation"], 2)
 
         repartition = {
@@ -96,6 +121,12 @@ class CandidatePhaseStatsTests(APITestCase):
         }
         self.assertEqual(repartition[Candidat.ParcoursPhase.INSCRIT_VALIDE], 1)
         self.assertEqual(repartition[Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION], 1)
+        statut_metier = {
+            item["statut_metier"]: item["count"] for item in response.data["repartition"]["par_statut_metier"]
+        }
+        self.assertEqual(statut_metier[Candidat.StatutMetier.INSCRIT_GESPERS], 1)
+        self.assertEqual(statut_metier[Candidat.StatutMetier.NON_ADMISSIBLE], 1)
+        self.assertEqual(statut_metier[Candidat.StatutMetier.EN_APPAIRAGE], 1)
 
     def test_candidat_stats_grouped_accepts_parcours_phase_dimension(self):
         response = self.client.get(reverse("candidat-stats-grouped"), {"by": "parcours_phase"})
@@ -108,13 +139,25 @@ class CandidatePhaseStatsTests(APITestCase):
             1,
         )
 
+    def test_candidat_stats_grouped_accepts_statut_metier_dimension(self):
+        response = self.client.get(reverse("candidat-stats-grouped"), {"by": "statut_metier"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        by_key = {row["group_key"]: row for row in response.data["results"]}
+        self.assertEqual(by_key[Candidat.StatutMetier.INSCRIT_GESPERS]["inscrits_gespers"], 1)
+        self.assertEqual(by_key[Candidat.StatutMetier.NON_ADMISSIBLE]["non_admissibles"], 1)
+        self.assertEqual(by_key[Candidat.StatutMetier.EN_APPAIRAGE]["en_appairage"], 1)
+
     def test_formation_stats_exposes_phase_based_candidate_kpis(self):
         response = self.client.get(reverse("formation-stats-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         candidats = response.data["kpis"]["candidats"]
         self.assertEqual(candidats["nb_inscrits_valides"], 1)
+        self.assertEqual(candidats["nb_inscrits_gespers"], 1)
         self.assertEqual(candidats["nb_stagiaires_en_formation"], 1)
+        self.assertEqual(candidats["nb_candidats_non_admissibles"], 1)
+        self.assertEqual(candidats["nb_en_appairage"], 1)
         self.assertEqual(candidats["nb_entrees_formation"], 2)
 
     def test_formation_stats_grouped_invalid_by_uses_standard_error_envelope(self):

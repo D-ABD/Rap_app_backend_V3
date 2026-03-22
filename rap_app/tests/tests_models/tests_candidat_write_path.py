@@ -60,9 +60,43 @@ class CandidatWritePathTests(TestCase):
         )
 
         self.assertEqual(candidat.parcours_phase_calculee, Candidat.ParcoursPhase.POSTULANT)
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.CANDIDAT)
         self.assertFalse(candidat.is_inscrit_valide)
         self.assertFalse(candidat.is_en_formation_now)
         self.assertFalse(candidat.has_compte_utilisateur)
+
+    def test_statut_metier_calcule_detects_non_admissible_after_entretien(self):
+        candidat = Candidat.objects.create(
+            nom="Refuse",
+            prenom="Entretien",
+            email="refuse.entretien@example.com",
+            entretien_done=True,
+            admissible=False,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.NON_ADMISSIBLE)
+
+    def test_statut_metier_calcule_prioritizes_manual_appairage_and_gespers(self):
+        candidat = Candidat.objects.create(
+            nom="Priorite",
+            prenom="Metier",
+            email="priorite.metier@example.com",
+            formation=self.formation,
+            admissible=True,
+            statut=Candidat.StatutCandidat.EN_APPAIRAGE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.EN_APPAIRAGE)
+
+        candidat.inscrit_gespers = True
+        candidat.save(user=self.actor, update_fields=["inscrit_gespers"])
+        candidat.refresh_from_db()
+
+        self.assertEqual(candidat.statut_metier_calcule, Candidat.StatutMetier.INSCRIT_GESPERS)
 
     def test_parcours_phase_calculee_detects_active_stagiaire_session(self):
         compte = CustomUser.objects.create_user_with_role(

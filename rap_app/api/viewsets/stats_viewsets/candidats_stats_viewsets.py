@@ -61,6 +61,7 @@ GroupKey = Literal[
     "departement",
     "formation",
     "statut",
+    "statut_metier",
     "parcours_phase",
     "type_contrat",
     "cv_statut",
@@ -99,6 +100,10 @@ def _candidate_inscrit_valide_q() -> Q:
     return Q(parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE)
 
 
+def _candidate_statut_metier_q(value: str, prefix: str = "") -> Q:
+    return Candidat.statut_metier_q(value, prefix=prefix)
+
+
 # =============================================================================
 class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     """
@@ -110,6 +115,10 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     Les endpoints exposent des KPI globaux (`list`) et des agrégats groupés
     (`grouped`). Les réponses sont construites manuellement plutôt que via des
     serializers de sortie DRF.
+
+    En plus des champs legacy, ce viewset expose désormais une lecture métier
+    unifiée des statuts candidat (candidat, non admissible, admissible,
+    accompagnement TRE, appairage, GESPERS, formation, abandon).
     """
 
     serializer_class = EmptySerializer
@@ -425,10 +434,28 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
             gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
             admissibles=Count("id", filter=Q(admissible=True), distinct=True),
+            non_admissibles=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE),
+                distinct=True,
+            ),
             en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
-            en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
-            en_accompagnement=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_ACCOMPAGNEMENT), distinct=True),
+            en_appairage=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
+                distinct=True,
+            ),
+            en_accompagnement=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE),
+                distinct=True,
+            ),
             inscrits_valides=Count("id", filter=_candidate_inscrit_valide_q(), distinct=True),
+            inscrits_gespers=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.INSCRIT_GESPERS),
+                distinct=True,
+            ),
             stagiaires_en_formation=Count(
                 "id",
                 filter=_candidate_phase_equals(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION),
@@ -470,10 +497,12 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "test_ok",
             "gespers",
             "admissibles",
+            "non_admissibles",
             "en_formation",
             "en_appairage",
             "en_accompagnement",
             "inscrits_valides",
+            "inscrits_gespers",
             "stagiaires_en_formation",
             "sortis",
             "abandons_phase",
@@ -496,6 +525,10 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         rep_parcours_phase = list(
             qs.values("parcours_phase").annotate(count=Count("id", distinct=True)).order_by("parcours_phase")
         )
+        rep_statut_metier = [
+            {"statut_metier": status, "count": qs.filter(_candidate_statut_metier_q(status)).count()}
+            for status, _label in Candidat.StatutMetier.choices
+        ]
         rep_type_contrat = list(
             qs.values("type_contrat").annotate(count=Count("id", distinct=True)).order_by("type_contrat")
         )
@@ -509,6 +542,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "appairages": {k: int(v or 0) for k, v in app.items()},
             "repartition": {
                 "par_statut": rep_statut,
+                "par_statut_metier": rep_statut_metier,
                 "par_parcours_phase": rep_parcours_phase,
                 "par_type_contrat": rep_type_contrat,
                 "par_cv": rep_cv,
@@ -568,6 +602,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "departement",
             "formation",
             "statut",
+            "statut_metier",
             "parcours_phase",
             "type_contrat",
             "cv_statut",
@@ -589,6 +624,7 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "formation": ["formation_id", "formation__nom", "formation__num_offre"],
             "statut": ["statut"],
             "parcours_phase": ["parcours_phase"],
+            "statut_metier": [],
             "type_contrat": ["type_contrat"],
             "cv_statut": ["cv_statut"],
             "resultat_placement": ["resultat_placement"],
@@ -596,6 +632,86 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "responsable": ["responsable_placement_id"],
             "entreprise": ["entreprise_placement_id", "entreprise_placement__nom"],
         }
+
+        if by == "statut_metier":
+            rows = []
+            for status_value, status_label in Candidat.StatutMetier.choices:
+                grouped_qs = qs.filter(_candidate_statut_metier_q(status_value))
+                rows.append(
+                    {
+                        "group_key": status_value,
+                        "group_label": status_label,
+                        "total": grouped_qs.values("id").distinct().count(),
+                        "entretien_ok": grouped_qs.filter(entretien_done=True).values("id").distinct().count(),
+                        "test_ok": grouped_qs.filter(test_is_ok=True).values("id").distinct().count(),
+                        "gespers": grouped_qs.filter(inscrit_gespers=True).values("id").distinct().count(),
+                        "admissibles": grouped_qs.filter(admissible=True).values("id").distinct().count(),
+                        "non_admissibles": grouped_qs.filter(
+                            _candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "en_formation": grouped_qs.filter(_candidate_en_formation_q()).values("id").distinct().count(),
+                        "en_appairage": grouped_qs.filter(
+                            _candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "en_accompagnement": grouped_qs.filter(
+                            _candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "inscrits_valides": grouped_qs.filter(_candidate_inscrit_valide_q())
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "inscrits_gespers": grouped_qs.filter(
+                            _candidate_statut_metier_q(Candidat.StatutMetier.INSCRIT_GESPERS)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "stagiaires_en_formation": grouped_qs.filter(
+                            _candidate_phase_equals(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "sortis": grouped_qs.filter(_candidate_phase_equals(Candidat.ParcoursPhase.SORTI))
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "abandons_phase": grouped_qs.filter(
+                            _candidate_phase_equals(Candidat.ParcoursPhase.ABANDON)
+                        )
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "rqth_count": grouped_qs.filter(rqth=True).values("id").distinct().count(),
+                        "osia_count": grouped_qs.exclude(numero_osia__isnull=True)
+                        .exclude(numero_osia="")
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "cv_renseigne": grouped_qs.exclude(cv_statut__isnull=True)
+                        .exclude(cv_statut="")
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "courrier_rentree_count": grouped_qs.filter(courrier_rentree=True)
+                        .values("id")
+                        .distinct()
+                        .count(),
+                        "ateliers_tre_total": grouped_qs.values("ateliers_tre").distinct().count(),
+                        "appairages_total": grouped_qs.values("appairages").distinct().count(),
+                    }
+                )
+            logger.debug("CandidatStats grouped by %s → %d lignes", by, len(rows))
+            return Response({"group_by": by, "results": rows})
 
         fields = group_fields_map[by]
 
@@ -607,9 +723,28 @@ class CandidatStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
                 gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
                 admissibles=Count("id", filter=Q(admissible=True), distinct=True),
+                non_admissibles=Count(
+                    "id",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE),
+                    distinct=True,
+                ),
                 en_formation=Count("id", filter=_candidate_en_formation_q(), distinct=True),
-                en_appairage=Count("id", filter=Q(statut=Candidat.StatutCandidat.EN_APPAIRAGE), distinct=True),
+                en_appairage=Count(
+                    "id",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
+                    distinct=True,
+                ),
+                en_accompagnement=Count(
+                    "id",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE),
+                    distinct=True,
+                ),
                 inscrits_valides=Count("id", filter=_candidate_inscrit_valide_q(), distinct=True),
+                inscrits_gespers=Count(
+                    "id",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.INSCRIT_GESPERS),
+                    distinct=True,
+                ),
                 stagiaires_en_formation=Count(
                     "id",
                     filter=_candidate_phase_equals(Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION),

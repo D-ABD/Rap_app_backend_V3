@@ -455,8 +455,9 @@ def test_staff_can_validate_inscription_without_changing_legacy_status():
     assert resp.status_code == 200
     cand.refresh_from_db()
     assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert cand.inscrit_gespers is True
     assert cand.date_validation_inscription is not None
-    assert cand.statut == Candidat.StatutCandidat.AUTRE
+    assert cand.statut == Candidat.StatutCandidat.EN_ATTENTE_RENTREE
 
 
 @pytest.mark.django_db
@@ -497,7 +498,7 @@ def test_staff_can_filter_candidates_by_parcours_phase_alias():
     )
 
     client.force_authenticate(user=staff)
-    resp = client.get(reverse("candidat-list"), {"parcoursPhase": "Inscrit validé"})
+    resp = client.get(reverse("candidat-list"), {"parcoursPhase": "Inscrit GESPERS"})
 
     assert resp.status_code == 200
     payload = resp.json().get("data", resp.json())
@@ -645,6 +646,7 @@ def test_staff_cannot_directly_patch_legacy_status_or_phase_fields():
     cand.refresh_from_db()
     assert cand.statut == Candidat.StatutCandidat.AUTRE
     assert cand.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert cand.inscrit_gespers is False
     assert cand.date_sortie_formation is None
 
 
@@ -823,6 +825,8 @@ def test_staff_can_bulk_validate_inscription_in_scope():
     c2.refresh_from_db()
     assert c1.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
     assert c2.parcours_phase == Candidat.ParcoursPhase.INSCRIT_VALIDE
+    assert c1.inscrit_gespers is True
+    assert c2.inscrit_gespers is True
 
 
 @pytest.mark.django_db

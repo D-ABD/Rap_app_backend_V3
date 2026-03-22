@@ -132,10 +132,12 @@ def _build_candidat_meta(user=None) -> dict:
     return {
         "statut_choices": [{"value": k, "label": v} for k, v in Candidat.StatutCandidat.choices],
         "parcours_phase_choices": [{"value": k, "label": v} for k, v in Candidat.ParcoursPhase.choices],
+        "statut_metier_choices": [{"value": k, "label": v} for k, v in Candidat.StatutMetier.choices],
         "phase_contract": {
             "legacy_status_field": "statut",
             "recommended_phase_field": "parcours_phase",
             "derived_phase_field": "parcours_phase_calculee",
+            "business_status_field": "statut_metier_calcule",
             "legacy_status_supported": True,
             "legacy_status_deprecated": True,
             "legacy_status_removal_stage": "post_front_migration",
@@ -499,7 +501,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="validate-inscription")
     def validate_inscription(self, request, pk=None):
-        """POST : positionne la nouvelle phase métier sur `inscrit_valide` sans casser le statut legacy."""
+        """POST : valide l'étape GESPERS avant l'entrée en formation, sans casser la compatibilité legacy."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)

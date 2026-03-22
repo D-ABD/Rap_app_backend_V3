@@ -277,7 +277,10 @@ export default function CandidatDetailModal({
     try {
       if (action === "create") {
         const result = await createAccount(candidat.id);
-        toast.success(result.message || "Compte utilisateur créé pour le candidat.");
+        toast.success(
+          result.message ||
+            "Compte candidat créé ou lié. Le passage en stagiaire se fera uniquement à l'entrée en formation."
+        );
       } else if (action === "approve") {
         const result = await approveAccountRequest(candidat.id);
         toast.success(result.message || "Demande de compte validée.");
@@ -404,6 +407,11 @@ export default function CandidatDetailModal({
                           </strong>
                           {candidat.email ? ` - ${candidat.email}` : ""}
                         </Alert>
+                        <Alert severity="info" variant="outlined">
+                          Créer ou lier un compte laisse le candidat au statut candidat.
+                          Le rôle stagiaire n'est attribué qu'au moment de l'entrée en
+                          formation.
+                        </Alert>
                         <Box>
                           <Typography variant="body2" component="div" sx={{ mb: 1 }}>
                             <strong>État de la demande :</strong>
@@ -417,7 +425,7 @@ export default function CandidatDetailModal({
                               disabled={accountLoading}
                               onClick={() => handleAccountAction("create")}
                             >
-                              Créer le compte candidat
+                              Créer ou lier le compte candidat
                             </Button>
                           )}
                           {requestStatus === "en_attente" && (

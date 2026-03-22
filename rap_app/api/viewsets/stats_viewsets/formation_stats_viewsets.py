@@ -57,7 +57,16 @@ def _candidate_phase_q(phase: str, prefix: str = "") -> Q:
     return Q(**{f"{prefix}parcours_phase": phase})
 
 
+def _candidate_statut_metier_q(value: str, prefix: str = "") -> Q:
+    return Candidat.statut_metier_q(value, prefix=prefix)
+
+
 class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
+    """
+    Statistiques formations enrichies avec des KPI candidat alignés sur la
+    lecture métier actuelle du parcours (admissibilité, GESPERS, appairage,
+    accompagnement TRE, formation, abandon).
+    """
     """
     Reporting agrégé sur les formations visibles par l'utilisateur courant.
 
@@ -363,6 +372,26 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             nb_entretien_ok=Count("id", filter=Q(entretien_done=True), distinct=True),
             nb_test_ok=Count("id", filter=Q(test_is_ok=True), distinct=True),
             nb_inscrits_gespers=Count("id", filter=Q(inscrit_gespers=True), distinct=True),
+            nb_candidats_non_admissibles=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE),
+                distinct=True,
+            ),
+            nb_candidats_admissibles=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.ADMISSIBLE),
+                distinct=True,
+            ),
+            nb_en_accompagnement_tre=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE),
+                distinct=True,
+            ),
+            nb_en_appairage=Count(
+                "id",
+                filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE),
+                distinct=True,
+            ),
             nb_entrees_formation=Count(
                 "id",
                 filter=_candidate_en_formation_q() | Q(date_rentree__isnull=False),
@@ -524,6 +553,26 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 nb_entretien_ok=Count("candidats", filter=Q(candidats__entretien_done=True), distinct=True),
                 nb_test_ok=Count("candidats", filter=Q(candidats__test_is_ok=True), distinct=True),
                 nb_inscrits_gespers=Count("candidats", filter=Q(candidats__inscrit_gespers=True), distinct=True),
+                nb_candidats_non_admissibles=Count(
+                    "candidats",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE, "candidats__"),
+                    distinct=True,
+                ),
+                nb_candidats_admissibles=Count(
+                    "candidats",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.ADMISSIBLE, "candidats__"),
+                    distinct=True,
+                ),
+                nb_en_accompagnement_tre=Count(
+                    "candidats",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_ACCOMPAGNEMENT_TRE, "candidats__"),
+                    distinct=True,
+                ),
+                nb_en_appairage=Count(
+                    "candidats",
+                    filter=_candidate_statut_metier_q(Candidat.StatutMetier.EN_APPAIRAGE, "candidats__"),
+                    distinct=True,
+                ),
                 nb_entrees_formation=Count(
                     "candidats",
                     filter=_candidate_en_formation_q("candidats__") | Q(candidats__date_rentree__isnull=False),

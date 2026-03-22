@@ -15,6 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -98,14 +99,33 @@ class Candidat(BaseModel):
         Phase métier cible du parcours candidat.
 
         Cette phase est introduite en mode compatible : elle n'écrase pas
-        encore le champ legacy `statut`, mais prépare la future source de
-        vérité du cycle candidat -> inscrit -> stagiaire.
+        encore le champ legacy `statut`, mais porte les transitions
+        structurées du cycle candidat jusqu'à l'entrée en formation.
         """
 
-        POSTULANT = "postulant", _("Candidat postulant")
-        INSCRIT_VALIDE = "inscrit_valide", _("Inscrit validé")
-        STAGIAIRE_EN_FORMATION = "stagiaire_en_formation", _("Stagiaire / en cours de formation")
-        SORTI = "sorti", _("Sorti de formation")
+        POSTULANT = "postulant", _("Candidat")
+        INSCRIT_VALIDE = "inscrit_valide", _("Inscrit GESPERS")
+        STAGIAIRE_EN_FORMATION = "stagiaire_en_formation", _("En formation")
+        SORTI = "sorti", _("Sortie / fin de formation")
+        ABANDON = "abandon", _("Abandon")
+
+    class StatutMetier(models.TextChoices):
+        """
+        Lecture métier unifiée du parcours candidat pour les écrans et les
+        statistiques.
+
+        Cette représentation est dérivée des champs existants. Elle permet de
+        clarifier les étapes pour le front sans casser les champs legacy ni les
+        transitions déjà en place.
+        """
+
+        CANDIDAT = "candidat", _("Candidat")
+        NON_ADMISSIBLE = "non_admissible", _("Candidat non admissible")
+        ADMISSIBLE = "admissible", _("Candidat admissible")
+        EN_ACCOMPAGNEMENT_TRE = "en_accompagnement_tre", _("En accompagnement TRE")
+        EN_APPAIRAGE = "en_appairage", _("En appairage")
+        INSCRIT_GESPERS = "inscrit_gespers", _("Inscrit GESPERS")
+        EN_FORMATION = "en_formation", _("En formation")
         ABANDON = "abandon", _("Abandon")
 
     class TypeContrat(models.TextChoices):
@@ -747,7 +767,7 @@ class Candidat(BaseModel):
         Cette propriété reste volontairement conservatrice pendant la phase M1 :
         elle n'écrit rien et ne remplace pas encore `statut`.
         """
-        if self.statut == self.StatutCandidat.ABANDON:
+        if self.parcours_phase == self.ParcoursPhase.ABANDON or self.statut == self.StatutCandidat.ABANDON:
             return self.ParcoursPhase.ABANDON
 
         formation = getattr(self, "formation", None)
@@ -772,14 +792,144 @@ class Candidat(BaseModel):
             return self.ParcoursPhase.STAGIAIRE_EN_FORMATION
 
         if formation and (
-            self.admissible
+            self.inscrit_gespers
             or bool(self.date_validation_inscription)
-            or self.inscrit_gespers
             or self.statut in {self.StatutCandidat.EN_ATTENTE_RENTREE, self.StatutCandidat.EN_FORMATION}
+            or self.parcours_phase == self.ParcoursPhase.INSCRIT_VALIDE
         ):
             return self.ParcoursPhase.INSCRIT_VALIDE
 
         return self.ParcoursPhase.POSTULANT
+
+    @property
+    def statut_metier_calcule(self):
+        """
+        Retourne le statut métier lisible qui doit faire foi pour les écrans
+        et les statistiques candidat.
+
+        Priorité retenue :
+        - abandon
+        - en formation
+        - inscrit GESPERS
+        - en appairage (manuel / legacy)
+        - en accompagnement TRE (manuel / legacy)
+        - candidat admissible
+        - candidat non admissible si entretien déjà réalisé
+        - candidat
+        """
+        if self.parcours_phase_calculee == self.ParcoursPhase.ABANDON:
+            return self.StatutMetier.ABANDON
+
+        if self.parcours_phase_calculee in {
+            self.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            self.ParcoursPhase.SORTI,
+        }:
+            return self.StatutMetier.EN_FORMATION
+
+        if (
+            self.inscrit_gespers
+            or bool(self.date_validation_inscription)
+            or self.parcours_phase == self.ParcoursPhase.INSCRIT_VALIDE
+        ):
+            return self.StatutMetier.INSCRIT_GESPERS
+
+        if self.statut == self.StatutCandidat.EN_APPAIRAGE:
+            return self.StatutMetier.EN_APPAIRAGE
+
+        if self.statut == self.StatutCandidat.EN_ACCOMPAGNEMENT:
+            return self.StatutMetier.EN_ACCOMPAGNEMENT_TRE
+
+        if self.admissible:
+            return self.StatutMetier.ADMISSIBLE
+
+        if self.entretien_done:
+            return self.StatutMetier.NON_ADMISSIBLE
+
+        return self.StatutMetier.CANDIDAT
+
+    @property
+    def statut_metier_display(self):
+        """
+        Libellé utilisateur du statut métier calculé.
+        """
+        try:
+            return self.StatutMetier(self.statut_metier_calcule).label
+        except Exception:
+            return self.statut_metier_calcule
+
+    @classmethod
+    def statut_metier_q(cls, value: str, prefix: str = "") -> Q:
+        """
+        Exprime un statut métier calculé sous forme de prédicat SQL réutilisable
+        dans les statistiques.
+        """
+        field = lambda name: f"{prefix}{name}"
+
+        if value == cls.StatutMetier.ABANDON:
+            return Q(**{field("parcours_phase"): cls.ParcoursPhase.ABANDON}) | Q(
+                **{field("statut"): cls.StatutCandidat.ABANDON}
+            )
+
+        if value == cls.StatutMetier.EN_FORMATION:
+            return (
+                Q(**{field("parcours_phase"): cls.ParcoursPhase.STAGIAIRE_EN_FORMATION})
+                | Q(**{field("parcours_phase"): cls.ParcoursPhase.SORTI})
+                | Q(**{field("statut"): cls.StatutCandidat.EN_FORMATION})
+                | Q(**{f"{field('date_entree_formation_effective')}__isnull": False})
+            )
+
+        if value == cls.StatutMetier.INSCRIT_GESPERS:
+            return (
+                Q(**{field("inscrit_gespers"): True})
+                | Q(**{field("parcours_phase"): cls.ParcoursPhase.INSCRIT_VALIDE})
+                | Q(**{f"{field('date_validation_inscription')}__isnull": False})
+                | Q(**{field("statut"): cls.StatutCandidat.EN_ATTENTE_RENTREE})
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ABANDON, prefix=prefix
+            )
+
+        if value == cls.StatutMetier.EN_APPAIRAGE:
+            return Q(**{field("statut"): cls.StatutCandidat.EN_APPAIRAGE}) & ~cls.statut_metier_q(
+                cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ABANDON, prefix=prefix
+            )
+
+        if value == cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE:
+            return Q(**{field("statut"): cls.StatutCandidat.EN_ACCOMPAGNEMENT}) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_FORMATION, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
+
+        if value == cls.StatutMetier.ADMISSIBLE:
+            return Q(**{field("admissible"): True}) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_APPAIRAGE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_FORMATION, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ABANDON, prefix=prefix
+            )
+
+        if value == cls.StatutMetier.NON_ADMISSIBLE:
+            return Q(**{field("entretien_done"): True}, **{field("admissible"): False}) & ~cls.statut_metier_q(
+                cls.StatutMetier.ADMISSIBLE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_FORMATION, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
+
+        if value == cls.StatutMetier.CANDIDAT:
+            return ~cls.statut_metier_q(cls.StatutMetier.NON_ADMISSIBLE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.ADMISSIBLE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.EN_ACCOMPAGNEMENT_TRE, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_APPAIRAGE, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.INSCRIT_GESPERS, prefix=prefix) & ~cls.statut_metier_q(
+                cls.StatutMetier.EN_FORMATION, prefix=prefix
+            ) & ~cls.statut_metier_q(cls.StatutMetier.ABANDON, prefix=prefix)
+
+        return Q(pk__isnull=True)
 
     @property
     def is_inscrit_valide(self) -> bool:

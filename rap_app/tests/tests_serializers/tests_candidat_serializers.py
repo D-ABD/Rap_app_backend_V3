@@ -69,8 +69,10 @@ class CandidatSerializerTest(TestCase):
         data = serializer.data
 
         self.assertEqual(data["parcours_phase"], Candidat.ParcoursPhase.INSCRIT_VALIDE)
-        self.assertEqual(data["parcours_phase_display"], "Inscrit validé")
+        self.assertEqual(data["parcours_phase_display"], "Inscrit GESPERS")
         self.assertEqual(data["parcours_phase_calculee"], Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
+        self.assertEqual(data["statut_metier_calcule"], Candidat.StatutMetier.EN_FORMATION)
+        self.assertEqual(data["statut_metier_display"], "En formation")
         self.assertTrue(data["is_inscrit_valide"])
         self.assertTrue(data["is_en_formation_now"])
         self.assertTrue(data["is_stagiaire_role_aligned"])
@@ -82,6 +84,7 @@ class CandidatSerializerTest(TestCase):
 
         self.assertEqual(data["parcours_phase"], Candidat.ParcoursPhase.INSCRIT_VALIDE)
         self.assertEqual(data["parcours_phase_calculee"], Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
+        self.assertEqual(data["statut_metier_calcule"], Candidat.StatutMetier.EN_FORMATION)
         self.assertTrue(data["is_inscrit_valide"])
         self.assertTrue(data["is_en_formation_now"])
         self.assertTrue(data["has_compte_utilisateur"])
@@ -109,8 +112,8 @@ class CandidatSerializerTest(TestCase):
     def test_query_params_serializer_accepts_parcours_phase_labels_and_aliases(self):
         serializer = CandidatQueryParamsSerializer(
             data={
-                "parcoursPhase": "Inscrit valide",
-                "parcours_phase__in": "Stagiaire / en cours de formation,abandon",
+                "parcoursPhase": "Inscrit GESPERS",
+                "parcours_phase__in": "En formation,abandon",
             }
         )
 

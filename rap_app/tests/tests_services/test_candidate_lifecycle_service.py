@@ -57,6 +57,8 @@ class CandidateLifecycleServiceTests(TestCase):
 
         candidate.refresh_from_db()
         self.assertEqual(candidate.parcours_phase, Candidat.ParcoursPhase.INSCRIT_VALIDE)
+        self.assertTrue(candidate.inscrit_gespers)
+        self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ATTENTE_RENTREE)
         self.assertIsNotNone(candidate.date_validation_inscription)
 
     def test_start_formation_sets_phase_and_promotes_stagiaire_when_possible(self):

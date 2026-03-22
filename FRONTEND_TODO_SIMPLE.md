@@ -21,9 +21,16 @@
 - pages candidats
 - lifecycle candidat
 - bulk actions candidats
+- compte candidat aligne avec le backend
+- dependances frontend assainies
+- build frontend validee
 
 ## A faire
 
+- statuts candidat UI
+- regles de priorite des statuts candidat
+- gestion manuelle `en appairage`
+- gestion manuelle `en accompagnement TRE`
 - types formations
 - hooks formations
 - pages formations

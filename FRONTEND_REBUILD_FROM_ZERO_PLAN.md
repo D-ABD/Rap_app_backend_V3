@@ -83,7 +83,11 @@ Etat courant :
 - affichage UI des phases candidat deja simplifie
 - actions lifecycle candidat deja branchees dans l'UI
 - actions bulk candidats deja branchees dans l'UI
-- prochaine cible : compte candidat puis formations
+- compte candidat deja realigne avec le backend pour conserver le role `candidatuser`
+  jusqu'a l'entree en formation
+- un chantier dedie de clarification des statuts candidat UI est maintenant pose
+  dans [CANDIDAT_STATUTS_UI_CHANTIER.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/CANDIDAT_STATUTS_UI_CHANTIER.md)
+- prochaine cible : finaliser les statuts candidat UI puis formations
 
 ## 3. Modules metier principaux
 
@@ -171,7 +175,7 @@ Le chantier sera termine quand :
 Reprendre le socle critique dans cet ordre :
 
 1. candidats
-2. compte candidat
+2. statuts candidat UI
 3. formations
 
 Ensuite seulement, remettre a niveau les autres modules.

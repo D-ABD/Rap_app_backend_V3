@@ -233,6 +233,8 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
     cv_statut_display = serializers.CharField(read_only=True)
     parcours_phase_display = serializers.CharField(read_only=True)
     parcours_phase_calculee = serializers.CharField(read_only=True)
+    statut_metier_calcule = serializers.CharField(read_only=True)
+    statut_metier_display = serializers.CharField(read_only=True)
     is_inscrit_valide = serializers.BooleanField(read_only=True)
     is_en_formation_now = serializers.BooleanField(read_only=True)
     is_stagiaire_role_aligned = serializers.BooleanField(read_only=True)
@@ -291,6 +293,8 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "parcours_phase",
             "parcours_phase_display",
             "parcours_phase_calculee",
+            "statut_metier_calcule",
+            "statut_metier_display",
             "is_inscrit_valide",
             "is_en_formation_now",
             "is_stagiaire_role_aligned",
@@ -387,6 +391,8 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "parcours_phase",
             "parcours_phase_display",
             "parcours_phase_calculee",
+            "statut_metier_calcule",
+            "statut_metier_display",
             "is_inscrit_valide",
             "is_en_formation_now",
             "is_stagiaire_role_aligned",
@@ -536,6 +542,8 @@ class CandidatListSerializer(serializers.ModelSerializer):
     cv_statut_display = serializers.CharField(read_only=True)
     parcours_phase_display = serializers.CharField(read_only=True)
     parcours_phase_calculee = serializers.CharField(read_only=True)
+    statut_metier_calcule = serializers.CharField(read_only=True)
+    statut_metier_display = serializers.CharField(read_only=True)
     is_inscrit_valide = serializers.BooleanField(read_only=True)
     is_en_formation_now = serializers.BooleanField(read_only=True)
     has_compte_utilisateur = serializers.BooleanField(read_only=True)
@@ -577,6 +585,8 @@ class CandidatListSerializer(serializers.ModelSerializer):
             "parcours_phase",
             "parcours_phase_display",
             "parcours_phase_calculee",
+            "statut_metier_calcule",
+            "statut_metier_display",
             "is_inscrit_valide",
             "is_en_formation_now",
             "has_compte_utilisateur",

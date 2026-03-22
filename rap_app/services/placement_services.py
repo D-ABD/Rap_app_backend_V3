@@ -156,7 +156,6 @@ class AppairagePlacementService:
                 "entreprise_validee": None,
                 "contrat_signe": None,
                 "placement_appairage": None,
-                "statut": Candidat.StatutCandidat.AUTRE,
             }
 
         resultat = appairage._STATUS_TO_RESULTAT.get(appairage.statut)
@@ -178,7 +177,6 @@ class AppairagePlacementService:
             "entreprise_validee": entreprise_validee,
             "contrat_signe": contrat,
             "placement_appairage": appairage,
-            "statut": Candidat.StatutCandidat.EN_APPAIRAGE,
         }
 
     @classmethod
