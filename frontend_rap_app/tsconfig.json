@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    // ✅ Cible moderne compatible avec Vite
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "types": ["vitest", "node"],
+
+
+    // ✅ JSX moderne pour React 17+ / 18+
+    "jsx": "react-jsx",
+
+    // ✅ Bonne rigueur TypeScript
+    "strict": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    // ✅ Ne génère pas de .js (Vite s'en charge)
+    "noEmit": true,
+
+    // ✅ Résolution de modules propre (import "src/...")
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"],
+      "react-toastify": ["node_modules/react-toastify/dist/index.d.ts"]
+    }
+  },
+
+  // ✅ Inclut tout le code de ton app
+  "include": ["src"],
+
+  // ✅ Référence TS/Vite par défaut
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

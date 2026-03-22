@@ -1,0 +1,239 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import {
+  Box,
+  Stack,
+  Button,
+  CircularProgress,
+  Typography,
+  Select,
+  MenuItem,
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+} from "@mui/material";
+
+import PageTemplate from "src/components/PageTemplate";
+import usePagination from "src/hooks/usePagination";
+import { usePrepaFiltersOptions, usePrepaList, useDeletePrepa } from "src/hooks/usePrepa";
+
+import { Prepa } from "src/types/prepa";
+import type { PrepaFiltresValues } from "src/types/prepa";
+
+import PrepaTableAteliers from "./PrepaTableAteliers";
+import PrepaDetailModal from "./PrepaDetailModal";
+
+import ExportButtonPrepa from "src/components/export_buttons/ExportButtonPrepa";
+import FiltresPrepaPanel from "src/components/filters/FiltresPrepaPanel";
+
+export default function PrepaPageAteliers() {
+  const navigate = useNavigate();
+
+  // Filtres
+  const [filters, setFilters] = useState<PrepaFiltresValues>({
+    ordering: "-date_prepa",
+    page: 1,
+  });
+
+  // Options filtres
+  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions();
+
+  // Toggle panneau filtres
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem("prepa.showFilters");
+    return saved === "1";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("prepa.showFilters", showFilters ? "1" : "0");
+  }, [showFilters]);
+
+  // Pagination
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+
+  // Filtres appliqués pour ATELIERS
+  const effectiveFilters = useMemo(() => {
+    const { type_prepa: _ignored, ...safeFilters } = filters;
+
+    return {
+      ...safeFilters,
+      page,
+      page_size: pageSize,
+      type_prepa: ["atelier_1"],
+    };
+  }, [filters, page, pageSize]);
+
+  // Données
+  const { data, loading, error } = usePrepaList(effectiveFilters);
+  const { remove } = useDeletePrepa();
+
+  const items: Prepa[] = useMemo(() => data?.results ?? [], [data]);
+
+  useEffect(() => {
+    setCount(data?.count ?? 0);
+  }, [data, setCount]);
+
+  // Sélection
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  useEffect(() => {
+    const visible = new Set(items.map((i) => i.id));
+    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [items]);
+
+  // Suppression
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    try {
+      await remove(selectedId);
+      toast.success("🗑️ Séance supprimée");
+      setShowConfirm(false);
+      setSelectedId(null);
+
+      setPage((p) => (items.length - 1 <= 0 && p > 1 ? p - 1 : p));
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur de suppression");
+    }
+  };
+
+  // Détail
+  const [selectedPrepa, setSelectedPrepa] = useState<Prepa | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+
+  const handleRowClick = (id: number) => {
+    const d = items.find((i) => i.id === id);
+    if (d) {
+      setSelectedPrepa(d);
+      setShowDetail(true);
+    }
+  };
+
+  return (
+    <PageTemplate
+      title="Ateliers Prépa"
+      refreshButton
+      onRefresh={() => setFilters({ ...filters })}
+      actions={
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Button variant="outlined" onClick={() => navigate(-1)} startIcon={<span>←</span>}>
+            Retour
+          </Button>
+
+          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
+            {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
+          </Button>
+
+          <Select
+            size="small"
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {[5, 10, 20, 50].map((s) => (
+              <MenuItem key={s} value={s}>
+                {s} / page
+              </MenuItem>
+            ))}
+          </Select>
+
+          <Button variant="contained" onClick={() => navigate("/prepa/create/ateliers")}>
+            ➕ Nouvelle séance
+          </Button>
+
+          <ExportButtonPrepa data={items} selectedIds={selectedIds} />
+        </Stack>
+      }
+      footer={
+        count > 0 && (
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1}
+          >
+            <Typography>
+              Page {page} / {totalPages} ({count} résultats)
+            </Typography>
+
+            <Pagination
+              page={page}
+              count={totalPages}
+              onChange={(_, val) => setPage(val)}
+              color="primary"
+            />
+          </Stack>
+        )
+      }
+    >
+      {/* Filtres */}
+      {showFilters && (
+        <Box mt={2}>
+          <FiltresPrepaPanel
+            options={loadingFilters ? undefined : filterOptions}
+            values={filters}
+            onChange={(n) => {
+              setFilters(n);
+              setPage(1);
+            }}
+            onRefresh={() => setFilters({ ...filters })}
+          />
+        </Box>
+      )}
+
+      {/* Table Ateliers */}
+      <Box mt={2}>
+        {loading ? (
+          <CircularProgress />
+        ) : error ? (
+          <Typography color="error">⚠️ Erreur de chargement</Typography>
+        ) : !items.length ? (
+          <Typography textAlign="center" color="text.secondary" mt={4}>
+            Aucun atelier trouvé.
+          </Typography>
+        ) : (
+          <PrepaTableAteliers
+            items={items}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onDelete={(id) => {
+              setSelectedId(id);
+              setShowConfirm(true);
+            }}
+            onRowClick={handleRowClick}
+          />
+        )}
+      </Box>
+
+      {/* Modale détail */}
+      <PrepaDetailModal
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        prepa={selectedPrepa}
+        onEdit={(id) => navigate(`/prepa/${id}/edit`)}
+      />
+
+      {/* Confirmation Suppression */}
+      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
+        <DialogTitle>Confirmation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Supprimer cette séance ?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Supprimer
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageTemplate>
+  );
+}
