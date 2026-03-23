@@ -145,7 +145,7 @@ export const AppairagesPage: React.FC = () => {
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Impossible de supprimer un ou plusieurs appairages.");
     }
   };
 

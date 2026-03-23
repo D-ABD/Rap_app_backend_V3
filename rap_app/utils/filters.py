@@ -207,6 +207,7 @@ class CandidatFilter(django_filters.FilterSet):
     # 🔗 FK
     formation = django_filters.NumberFilter(field_name="formation_id")
     centre = django_filters.NumberFilter(field_name="formation__centre_id")
+    owner = django_filters.NumberFilter(field_name="compte_utilisateur_id")
 
     # 🔤 choix + variantes IN
     statut = django_filters.ChoiceFilter(field_name="statut", choices=Candidat.StatutCandidat.choices)

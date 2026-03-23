@@ -34,6 +34,7 @@ export default function AppairagesCreatePage() {
   const { data: meta, loading: metaLoading, error: metaError } = useAppairageMeta();
 
   const [searchParams] = useSearchParams();
+  const presetCandidat = useMemo(() => toNum(searchParams.get("candidat")), [searchParams]);
   const presetPartenaire = useMemo(() => toNum(searchParams.get("partenaire")), [searchParams]);
   const presetFormation = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
 
@@ -75,7 +76,7 @@ export default function AppairagesCreatePage() {
       partenaire_nom: partenaireNom,
       formation: presetFormation ?? null,
       formation_nom: formationNom,
-      candidat: null,
+      candidat: presetCandidat ?? null,
       candidat_nom: null,
       candidat_prenom: null,
       statut: defaultStatut,
@@ -83,7 +84,7 @@ export default function AppairagesCreatePage() {
       last_commentaire: null,
       commentaires: [],
     };
-  }, [presetPartenaire, partenaireNom, presetFormation, formationNom]);
+  }, [presetPartenaire, partenaireNom, presetFormation, formationNom, presetCandidat]);
 
   const handleSubmit = async (formData: AppairageCreatePayload) => {
     try {

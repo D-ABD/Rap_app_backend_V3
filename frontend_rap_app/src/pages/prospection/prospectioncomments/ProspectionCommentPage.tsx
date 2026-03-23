@@ -1,7 +1,7 @@
 // src/pages/prospection/prospectioncomments/ProspectionCommentPage.tsx
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -58,6 +58,7 @@ function normalizeRole(u: User | null): NormalizedRole {
 export default function ProspectionCommentPage() {
   const navigate = useNavigate();
   const { prospectionId } = useParams<{ prospectionId?: string }>();
+  const [searchParams] = useSearchParams();
 
   const { user: me } = useMe();
   const role: NormalizedRole = useMemo(() => normalizeRole(me), [me]);
@@ -68,16 +69,31 @@ export default function ProspectionCommentPage() {
   // 🔹 filtres masqués par défaut
   const [showFilters, setShowFilters] = useState(false);
 
+  const scopedProspectionId = useMemo(() => {
+    if (prospectionId && Number.isFinite(Number(prospectionId))) return Number(prospectionId);
+    const raw = searchParams.get("prospection");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [prospectionId, searchParams]);
+
   const [params, setParams] = useState<ProspectionCommentListParams & { search?: string }>(() => {
     const initial: ProspectionCommentListParams & { search?: string } = {
       ordering: "-created_at",
       search: "",
     };
-    if (prospectionId && Number.isFinite(Number(prospectionId))) {
-      initial.prospection = Number(prospectionId);
+    if (scopedProspectionId) {
+      initial.prospection = scopedProspectionId;
     }
     return initial;
   });
+
+  useEffect(() => {
+    setParams((prev) => ({
+      ...prev,
+      prospection: scopedProspectionId,
+    }));
+  }, [scopedProspectionId]);
 
   // ✅ Pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
@@ -218,7 +234,16 @@ export default function ProspectionCommentPage() {
             ))}
           </Select>
 
-          <Button variant="contained" onClick={() => navigate("/prospection-commentaires/create")}>
+          <Button
+            variant="contained"
+            onClick={() =>
+              navigate(
+                scopedProspectionId
+                  ? `/prospection-commentaires/create/${scopedProspectionId}`
+                  : "/prospection-commentaires/create"
+              )
+            }
+          >
             ➕ Nouveau commentaire
           </Button>
         </Stack>
@@ -254,10 +279,7 @@ export default function ProspectionCommentPage() {
             onRefresh={() => setReloadKey((k) => k + 1)}
             onReset={() => {
               setParams({
-                prospection:
-                  prospectionId && Number.isFinite(Number(prospectionId))
-                    ? Number(prospectionId)
-                    : undefined,
+                prospection: scopedProspectionId,
                 is_internal: undefined,
                 created_by: undefined,
                 ordering: "-created_at",

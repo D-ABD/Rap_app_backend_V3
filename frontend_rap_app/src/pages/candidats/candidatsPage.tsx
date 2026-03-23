@@ -72,6 +72,7 @@ export default function CandidatsPage() {
       ordering: searchParams.get("ordering") || "-date_inscription",
       centre: toNum(searchParams.get("centre")),
       formation: toNum(searchParams.get("formation")),
+      owner: toNum(searchParams.get("owner")),
       parcours_phase: (searchParams.get("parcours_phase") as CandidatFiltresValues["parcours_phase"]) || undefined,
       statut: searchParams.get("statut") || undefined,
       cv_statut: (searchParams.get("cv_statut") as CandidatFiltresValues["cv_statut"]) || undefined,

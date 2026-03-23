@@ -13,6 +13,7 @@ import {
   Chip,
   Box,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import type { AppairageListItem, TypeOffreMini } from "../../types/appairage";
 
@@ -225,7 +226,18 @@ export default function AppairageTable({
                   title={r.candidat_nom ?? ""}
                 >
                   <Typography variant="body2" fontWeight={600}>
-                    {r.candidat_nom ?? "—"}
+                    {r.candidat ? (
+                      <Link
+                        component={RouterLink}
+                        to={`/candidats/${r.candidat}`}
+                        onClick={(e) => e.stopPropagation()}
+                        underline="hover"
+                      >
+                        {r.candidat_nom ?? "—"}
+                      </Link>
+                    ) : (
+                      r.candidat_nom ?? "—"
+                    )}
                   </Typography>
                 </TableCell>
 
@@ -271,7 +283,18 @@ export default function AppairageTable({
                 {/* ✅ Partenaire */}
                 <TableCell sx={{ maxWidth: 220 }}>
                   <Typography variant="body2" fontWeight="bold" noWrap>
-                    {r.partenaire_nom ?? "—"}
+                    {r.partenaire ? (
+                      <Link
+                        component={RouterLink}
+                        to={`/partenaires/${r.partenaire}/edit`}
+                        onClick={(e) => e.stopPropagation()}
+                        underline="hover"
+                      >
+                        {r.partenaire_nom ?? "—"}
+                      </Link>
+                    ) : (
+                      r.partenaire_nom ?? "—"
+                    )}
                   </Typography>
                   {r.partenaire_contact_nom && (
                     <Typography variant="caption" color="text.secondary" display="block">
@@ -298,7 +321,18 @@ export default function AppairageTable({
                 {/* ✅ Formation */}
                 <TableCell>
                   <Typography variant="body2" fontWeight="bold">
-                    {formationLib}
+                    {r.formation ? (
+                      <Link
+                        component={RouterLink}
+                        to={`/formations/${r.formation}`}
+                        onClick={(e) => e.stopPropagation()}
+                        underline="hover"
+                      >
+                        {formationLib}
+                      </Link>
+                    ) : (
+                      formationLib
+                    )}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block">
                     {centreNom}
@@ -397,6 +431,13 @@ export default function AppairageTable({
                   <Stack direction="row" spacing={1}>
                     <Link component="button" color="primary" onClick={() => onRowClick(r.id)}>
                       Éditer
+                    </Link>
+                    <Link
+                      component={RouterLink}
+                      to={`/appairage-commentaires?appairage=${r.id}`}
+                      underline="hover"
+                    >
+                      Commentaires
                     </Link>
                     {onDeleteClick && (
                       <Link component="button" color="error" onClick={() => onDeleteClick(r.id)}>

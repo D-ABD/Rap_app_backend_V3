@@ -38,7 +38,12 @@ export default function AppairageCommentCreatePage() {
   const appairageTarget =
     lastCreated?.appairage != null ? `/appairages/${lastCreated.appairage}/edit` : "/appairages";
 
-  const commentsListTarget = "/appairage-commentaires";
+  const commentsListTarget =
+    lastCreated?.appairage != null
+      ? `/appairage-commentaires?appairage=${lastCreated.appairage}`
+      : prefilledAppairageId != null
+        ? `/appairage-commentaires?appairage=${prefilledAppairageId}`
+        : "/appairage-commentaires";
   const dashboardTarget = "/dashboard";
 
   return (

@@ -1,6 +1,6 @@
 // src/pages/appairages/appairage_comments/AppairageCommentPage.tsx
-import { useMemo, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -50,6 +50,7 @@ function normalizeRole(u: User | null): NormalizedRole {
 export default function AppairageCommentPage() {
   const navigate = useNavigate();
   const { appairageId } = useParams<{ appairageId?: string }>();
+  const [searchParams] = useSearchParams();
 
   const { user: me } = useMe();
   const role: NormalizedRole = useMemo(() => normalizeRole(me), [me]);
@@ -57,16 +58,31 @@ export default function AppairageCommentPage() {
   const showFilters = ["superadmin", "admin", "staff"].includes(role);
   const panelMode: "default" | "candidate" = showFilters ? "default" : "candidate";
 
+  const scopedAppairageId = useMemo(() => {
+    if (appairageId && Number.isFinite(Number(appairageId))) return Number(appairageId);
+    const raw = searchParams.get("appairage");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [appairageId, searchParams]);
+
   const [params, setParams] = useState<AppairageCommentListParams & { search?: string }>(() => {
     const initial: AppairageCommentListParams & { search?: string } = {
       ordering: "-created_at",
       search: "",
     };
-    if (appairageId && Number.isFinite(Number(appairageId))) {
-      initial.appairage = Number(appairageId);
+    if (scopedAppairageId) {
+      initial.appairage = scopedAppairageId;
     }
     return initial;
   });
+
+  useEffect(() => {
+    setParams((prev) => ({
+      ...prev,
+      appairage: scopedAppairageId,
+    }));
+  }, [scopedAppairageId]);
 
   const [reloadKey, setReloadKey] = useState<number>(0);
 
@@ -129,7 +145,13 @@ export default function AppairageCommentPage() {
           <ExportButtonAppairageComment data={rows} selectedIds={[]} />
           <Button
             variant="contained"
-            onClick={() => navigate("/appairage-commentaires/create")}
+            onClick={() =>
+              navigate(
+                scopedAppairageId
+                  ? `/appairage-commentaires/create/${scopedAppairageId}`
+                  : "/appairage-commentaires/create"
+              )
+            }
             sx={{ width: { xs: "100%", sm: "auto" } }}
           >
             ➕ Nouveau commentaire
@@ -149,10 +171,7 @@ export default function AppairageCommentPage() {
           onRefresh={() => setReloadKey((k) => k + 1)}
           onReset={() =>
             setParams({
-              appairage:
-                appairageId && Number.isFinite(Number(appairageId))
-                  ? Number(appairageId)
-                  : undefined,
+              appairage: scopedAppairageId,
               created_by: undefined,
               ordering: "-created_at",
               search: "",

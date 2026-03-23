@@ -50,7 +50,12 @@ export default function ProspectionCommentCreatePage() {
         : `/prospections/${lastCreated.prospection}/edit-candidat`
       : "/prospection";
 
-  const commentsListTarget = "/prospection-commentaires";
+  const commentsListTarget =
+    lastCreated?.prospection != null
+      ? `/prospection-commentaires?prospection=${lastCreated.prospection}`
+      : prefilledProspectionId != null
+        ? `/prospection-commentaires?prospection=${prefilledProspectionId}`
+        : "/prospection-commentaires";
   const dashboardTarget = "/dashboard";
 
   return (
@@ -63,7 +68,7 @@ export default function ProspectionCommentCreatePage() {
           <Button variant="outlined" onClick={() => navigate(-1)}>
             ← Retour
           </Button>
-          <Button variant="outlined" onClick={() => navigate("/prospection-commentaires")}>
+          <Button variant="outlined" onClick={() => navigate(commentsListTarget)}>
             Liste
           </Button>
         </Stack>

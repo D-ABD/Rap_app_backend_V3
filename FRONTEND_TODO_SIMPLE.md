@@ -44,6 +44,7 @@
 - stats evenements backend et frontend
 - navigation croisee prospections vers candidats, formations, partenaires et commentaires
 - module prospections staff et candidat aligne avec navigation detail / commentaires / stats
+- navigation liee par ID fiabilisee sur les modules repris pour n'afficher que le contexte demande
 - dependances frontend assainies
 - build frontend validee
 

@@ -10,8 +10,12 @@ import {
   Divider,
   Paper,
   CircularProgress,
+  Link,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import AddCommentIcon from "@mui/icons-material/AddComment";
+import LaunchIcon from "@mui/icons-material/Launch";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import type { Appairage, AppairageListItem } from "../../types/appairage";
 
 interface Props {
@@ -29,6 +33,7 @@ export default function AppairageDetailModal({
   loading = false,
   onEdit,
 }: Props) {
+  const navigate = useNavigate();
   if (!open) return null;
 
   return (
@@ -72,6 +77,24 @@ export default function AppairageDetailModal({
                       <Item label="Nom" value={appairage.partenaire_nom} />
                     </Grid>
                     <Grid item xs={6}>
+                      <Item
+                        label="Ouvrir"
+                        value={
+                          appairage.partenaire ? (
+                            <Link
+                              component={RouterLink}
+                              to={`/partenaires/${appairage.partenaire}/edit`}
+                              underline="hover"
+                            >
+                              Voir le partenaire
+                            </Link>
+                          ) : (
+                            "—"
+                          )
+                        }
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
                       <Item label="Contact" value={appairage.partenaire_contact_nom} />
                     </Grid>
                     <Grid item xs={6}>
@@ -85,6 +108,22 @@ export default function AppairageDetailModal({
 
                 <Section title="Candidat">
                   <Item label="Nom" value={appairage.candidat_nom} />
+                  <Item
+                    label="Ouvrir"
+                    value={
+                      appairage.candidat ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/candidats/${appairage.candidat}`}
+                          underline="hover"
+                        >
+                          Voir le candidat
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                 </Section>
               </Grid>
 
@@ -94,6 +133,24 @@ export default function AppairageDetailModal({
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
                       <Item label="Nom" value={appairage.formation_nom} />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Item
+                        label="Ouvrir"
+                        value={
+                          appairage.formation ? (
+                            <Link
+                              component={RouterLink}
+                              to={`/formations/${appairage.formation}`}
+                              underline="hover"
+                            >
+                              Voir la formation
+                            </Link>
+                          ) : (
+                            "—"
+                          )
+                        }
+                      />
                     </Grid>
                     <Grid item xs={6}>
                       <Item label="Type" value={appairage.formation_type_offre} />
@@ -232,16 +289,36 @@ export default function AppairageDetailModal({
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
-        {appairage && onEdit && (
-          <Button
-            startIcon={<EditIcon />}
-            color="primary"
-            variant="contained"
-            onClick={() => onEdit(appairage.id)}
-          >
-            Modifier
-          </Button>
-        )}
+        <Box display="flex" gap={1} flexWrap="wrap">
+          {appairage && onEdit && (
+            <Button
+              startIcon={<EditIcon />}
+              color="primary"
+              variant="contained"
+              onClick={() => onEdit(appairage.id)}
+            >
+              Modifier
+            </Button>
+          )}
+          {appairage && (
+            <Button
+              startIcon={<AddCommentIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/appairage-commentaires/create/${appairage.id}`)}
+            >
+              Ajouter un commentaire
+            </Button>
+          )}
+          {appairage && (
+            <Button
+              startIcon={<LaunchIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/appairage-commentaires?appairage=${appairage.id}`)}
+            >
+              Voir les commentaires
+            </Button>
+          )}
+        </Box>
 
         <Button variant="outlined" onClick={onClose}>
           Fermer

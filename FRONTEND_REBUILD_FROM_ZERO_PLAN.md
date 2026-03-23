@@ -42,6 +42,8 @@ Regles de qualite a respecter pendant toute la refonte :
 - le code doit rester lisible, structure et documente pour pouvoir etre repris et modifie facilement dans 1 an ou 2
 - on privilegie les corrections durables plutot que les contournements rapides difficiles a maintenir
 - chaque ecran repris doit rester responsive et utilisable sur desktop comme sur mobile
+- toute navigation vers une liste ou un objet lie doit transmettre l'identifiant utile
+- toute page cible doit consommer cet identifiant pour afficher uniquement le contexte demande
 
 ---
 
@@ -111,6 +113,13 @@ Etat courant :
   - acces plus direct aux commentaires prospection depuis la table et la modale
   - pages staff et candidat plus coherentes
   - detail et commentaires mieux branches dans le dashboard
+- les navigations liees par ID ont ete fiabilisees sur les modules deja repris :
+  - `candidats`
+  - `formations`
+  - `prospections`
+  - `appairages`
+  - `evenements`
+  - commentaires `prospections` et `appairages`
 - stats `evenements` maintenant branchees comme vrai module dashboard avec :
   - KPI globaux
   - repartition par type et statut temporel
