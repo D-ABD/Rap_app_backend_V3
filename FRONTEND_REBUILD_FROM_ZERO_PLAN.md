@@ -124,7 +124,15 @@ Etat courant :
   - KPI globaux
   - repartition par type et statut temporel
   - tableaux groupes par centre / formation / type / statut
-- prochaine cible : poursuivre l'alignement des modules CRM autour de formations
+- module `appairages` maintenant suffisamment repris avec :
+  - liste, detail, creation et edition
+  - commentaires relies et scopes par ID
+  - navigation directe vers candidats, formations, partenaires et commentaires
+- module `partenaires` maintenant suffisamment repris avec :
+  - liste, detail, creation et edition
+  - compteurs exploitables vers prospections et appairages
+  - actions rapides de creation contextuelle depuis le detail
+- prochaine cible : poursuivre l'alignement des modules support autour de documents / commentaires / cvtheque
 
 ## 3. Modules metier principaux
 
@@ -181,12 +189,11 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. remettre a niveau appairages
-2. remettre a niveau partenaires / documents / commentaires / cvtheque
-3. remettre a niveau ateliers TRE
-4. remettre a niveau prepa / declic
-5. finaliser les derniers ecarts stats / dashboards
-6. remettre a niveau rapports / logs
+1. remettre a niveau documents / commentaires / cvtheque
+2. remettre a niveau ateliers TRE
+3. remettre a niveau prepa / declic
+4. finaliser les derniers ecarts stats / dashboards
+5. remettre a niveau rapports / logs
 
 ---
 
@@ -207,8 +214,8 @@ Le chantier sera termine quand :
 
 Reprendre les modules metier dans cet ordre :
 
-1. appairages
-2. partenaires / documents / commentaires / cvtheque
-3. ateliers TRE
+1. documents / commentaires / cvtheque
+2. ateliers TRE
+3. prepa / declic
 
 Ensuite seulement, remettre a niveau les autres modules.

@@ -13,6 +13,10 @@ import {
   Paper,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import HandshakeIcon from "@mui/icons-material/Handshake";
+import LaunchIcon from "@mui/icons-material/Launch";
+import { useNavigate } from "react-router-dom";
 import type { Partenaire } from "../../types/partenaire";
 
 /* ---------- Helpers ---------- */
@@ -52,6 +56,7 @@ export default function PartenaireCandidatDetailModal({
   loading = false,
   onEdit,
 }: Props) {
+  const navigate = useNavigate();
   if (!open) return null;
 
   if (loading || !partenaire)
@@ -62,6 +67,14 @@ export default function PartenaireCandidatDetailModal({
         </DialogContent>
       </Dialog>
     );
+
+  const prospectionsCount = partenaire.prospections_count ?? partenaire.prospections?.count ?? 0;
+  const appairagesCount = partenaire.appairages_count ?? partenaire.appairages?.count ?? 0;
+  const partenaireNom = encodeURIComponent(partenaire.nom);
+  const prospectionsUrl = `/prospections?partenaire=${partenaire.id}`;
+  const appairagesUrl = `/appairages?partenaire=${partenaire.id}`;
+  const createProspectionUrl = `/prospections/create?partenaire=${partenaire.id}&partenaire_nom=${partenaireNom}`;
+  const createAppairageUrl = `/appairages/create?partenaire=${partenaire.id}&partenaire_nom=${partenaireNom}`;
 
   return (
     <Dialog
@@ -208,11 +221,74 @@ export default function PartenaireCandidatDetailModal({
                 <Field label="Créé par" value={partenaire.created_by?.full_name ?? "—"} />
               </Section>
             </Grid>
+
+            <Grid item xs={12}>
+              <Section title="Liens métier">
+                <Field
+                  label="Prospections"
+                  value={
+                    <Link href={prospectionsUrl} underline="hover" onClick={(e) => e.stopPropagation()}>
+                      {prospectionsCount}
+                    </Link>
+                  }
+                />
+                <Field
+                  label="Appairages"
+                  value={
+                    <Link href={appairagesUrl} underline="hover" onClick={(e) => e.stopPropagation()}>
+                      {appairagesCount}
+                    </Link>
+                  }
+                />
+              </Section>
+            </Grid>
           </Grid>
         </Paper>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
+        <Box display="flex" gap={1} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            startIcon={<CampaignIcon />}
+            onClick={() => {
+              onClose();
+              navigate(createProspectionUrl);
+            }}
+          >
+            Créer une prospection
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<HandshakeIcon />}
+            onClick={() => {
+              onClose();
+              navigate(createAppairageUrl);
+            }}
+          >
+            Créer un appairage
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<LaunchIcon />}
+            onClick={() => {
+              onClose();
+              navigate(prospectionsUrl);
+            }}
+          >
+            Voir les prospections
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<LaunchIcon />}
+            onClick={() => {
+              onClose();
+              navigate(appairagesUrl);
+            }}
+          >
+            Voir les appairages
+          </Button>
+        </Box>
         <Button onClick={onClose} variant="outlined">
           Fermer
         </Button>

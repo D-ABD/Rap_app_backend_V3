@@ -338,6 +338,8 @@ export default function PartenairesPage() {
           <PartenairesTable
             partenaires={partenaires}
             selectedIds={selectedIds}
+            buildProspectionsUrl={(partenaireId) => `/prospections?partenaire=${partenaireId}`}
+            buildAppairagesUrl={(partenaireId) => `/appairages?partenaire=${partenaireId}`}
             onToggleSelect={(id) =>
               setSelectedIds((prev) =>
                 prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]

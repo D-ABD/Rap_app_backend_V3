@@ -45,18 +45,13 @@
 - navigation croisee prospections vers candidats, formations, partenaires et commentaires
 - module prospections staff et candidat aligne avec navigation detail / commentaires / stats
 - navigation liee par ID fiabilisee sur les modules repris pour n'afficher que le contexte demande
+- module appairages aligne avec table, detail, creation, edition, commentaires et navigation croisee
+- module partenaires aligne avec pages, detail, creation, edition et navigation vers prospections / appairages
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- types appairages
-- hooks appairages
-- pages appairages
-- commentaires appairage
-- types partenaires
-- hooks partenaires
-- pages partenaires
 - types documents
 - hooks documents
 - pages documents
