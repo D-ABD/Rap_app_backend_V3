@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -31,7 +30,6 @@ import ExportButtonProspection from "../../components/export_buttons/ExportButto
 import ProspectionDetailModalCandidat from "./ProspectionDetailModalCandidat";
 
 export default function ProspectionPageCandidat() {
-  const navigate = useNavigate();
   const redirectToCreate = useRedirectToCreateProspection();
   const { user } = useAuth();
   const isCandidat = ["candidat", "stagiaire"].includes(user?.role ?? "");
@@ -115,7 +113,7 @@ export default function ProspectionPageCandidat() {
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Impossible de supprimer une ou plusieurs prospections.");
     }
   };
 
@@ -266,7 +264,6 @@ export default function ProspectionPageCandidat() {
         open={showDetail}
         onClose={() => setShowDetail(false)}
         prospectionId={detailId}
-        onEdit={(id) => navigate(`/prospections/${id}/edit/candidat`)}
       />
     </PageTemplate>
   );

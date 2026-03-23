@@ -14,8 +14,10 @@ import {
   Chip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import AddCommentIcon from "@mui/icons-material/AddComment";
+import LaunchIcon from "@mui/icons-material/Launch";
 import { useProspection } from "../../hooks/useProspection";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -42,7 +44,6 @@ type Props = {
   open: boolean;
   onClose: () => void;
   prospectionId: number | null;
-  onEdit?: (id: number) => void;
 };
 
 /* ---------- Component ---------- */
@@ -50,7 +51,6 @@ export default function ProspectionDetailModalCandidat({
   open,
   onClose,
   prospectionId,
-  onEdit,
 }: Props) {
   const { data: prospection, loading } = useProspection(prospectionId);
   const navigate = useNavigate();
@@ -101,6 +101,22 @@ export default function ProspectionDetailModalCandidat({
               <Grid item xs={12}>
                 <Section title="Partenaire">
                   <Field label="Nom" value={nn(prospection.partenaire_nom)} />
+                  <Field
+                    label="Ouvrir"
+                    value={
+                      prospection.partenaire ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/partenaires/${prospection.partenaire}/edit`}
+                          underline="hover"
+                        >
+                          Voir le partenaire
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                   <Field label="Ville" value={nn(prospection.partenaire_ville)} />
                   <Field label="ID partenaire" value={nn(prospection.partenaire)} />
                   <Field
@@ -137,6 +153,22 @@ export default function ProspectionDetailModalCandidat({
               <Grid item xs={12}>
                 <Section title="Formation">
                   <Field label="Nom formation" value={nn(prospection.formation_nom)} />
+                  <Field
+                    label="Ouvrir"
+                    value={
+                      prospection.formation ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/formations/${prospection.formation}`}
+                          underline="hover"
+                        >
+                          Voir la formation
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                   <Field label="N° offre" value={nn(prospection.num_offre)} />
                   <Field
                     label="Dates"
@@ -252,22 +284,38 @@ export default function ProspectionDetailModalCandidat({
 
       {/* ---------- Actions ---------- */}
       <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
-        {prospection && prospection.id != null && (
-          <Button
-            startIcon={<EditIcon />}
-            variant="contained"
-            color="primary"
-            onClick={() => navigate(`/prospections/${prospection.id}/edit/candidat`)}
-          >
-            Modifier
-          </Button>
-        )}
+        <Box display="flex" gap={1} flexWrap="wrap">
+          {prospection && prospection.id != null && (
+            <Button
+              startIcon={<EditIcon />}
+              variant="contained"
+              color="primary"
+              onClick={() => navigate(`/prospections/${prospection.id}/edit/candidat`)}
+            >
+              Modifier
+            </Button>
+          )}
 
-        {prospection && onEdit && prospection.id != null && (
-          <Button variant="contained" color="warning" onClick={() => onEdit(prospection.id!)}>
-            Voir les commentaires
-          </Button>
-        )}
+          {prospection && prospection.id != null && (
+            <Button
+              startIcon={<AddCommentIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/prospection-commentaires/create/${prospection.id}`)}
+            >
+              Ajouter un commentaire
+            </Button>
+          )}
+
+          {prospection && prospection.id != null && (
+            <Button
+              startIcon={<LaunchIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/prospection-commentaires?prospection=${prospection.id}`)}
+            >
+              Voir les commentaires
+            </Button>
+          )}
+        </Box>
         <Button variant="outlined" onClick={onClose}>
           Fermer
         </Button>

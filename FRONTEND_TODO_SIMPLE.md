@@ -43,15 +43,12 @@
 - stats prospections enrichies avec liens candidat / formation
 - stats evenements backend et frontend
 - navigation croisee prospections vers candidats, formations, partenaires et commentaires
+- module prospections staff et candidat aligne avec navigation detail / commentaires / stats
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- types prospections
-- hooks prospections
-- pages prospections
-- commentaires prospection
 - types appairages
 - hooks appairages
 - pages appairages

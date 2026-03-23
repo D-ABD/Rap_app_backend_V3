@@ -47,6 +47,7 @@ import AteliersTREGroupedWidget from "./widgets/groupeddashboard/AteliersTREGrou
 import EvenementGroupedWidget from "./widgets/groupeddashboard/EvenementGroupedWidget";
 
 import FormationStatsSummary from "./widgets/overviewDashboard/FormationStatsSummary";
+import ProspectionCommentStatsDashboard from "./widgets/commentsDahboard/ProspectionCommentStatsDashboard";
 import DeclicStatsSummary from "./declic/DeclicStatsSummary";
 import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
 import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
@@ -257,6 +258,9 @@ export default function DashboardPage() {
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <EvenementOverviewWidget title="Overview Événements" />
+            </Grid>
+            <Grid item xs={12}>
+              <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
             </Grid>
           </Grid>,
           "Suivi Prospection / Appairage / TRE / Événements",

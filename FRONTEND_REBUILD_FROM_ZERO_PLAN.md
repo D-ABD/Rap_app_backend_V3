@@ -109,6 +109,8 @@ Etat courant :
 - module `prospections` maintenant mieux relie au reste du front avec :
   - navigation directe vers candidats, formations et partenaires
   - acces plus direct aux commentaires prospection depuis la table et la modale
+  - pages staff et candidat plus coherentes
+  - detail et commentaires mieux branches dans le dashboard
 - stats `evenements` maintenant branchees comme vrai module dashboard avec :
   - KPI globaux
   - repartition par type et statut temporel
@@ -170,13 +172,12 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. remettre a niveau prospections
-2. remettre a niveau appairages
-3. remettre a niveau partenaires / documents / commentaires / cvtheque
-4. remettre a niveau ateliers TRE
-5. remettre a niveau prepa / declic
-6. finaliser les derniers ecarts stats / dashboards
-7. remettre a niveau rapports / logs
+1. remettre a niveau appairages
+2. remettre a niveau partenaires / documents / commentaires / cvtheque
+3. remettre a niveau ateliers TRE
+4. remettre a niveau prepa / declic
+5. finaliser les derniers ecarts stats / dashboards
+6. remettre a niveau rapports / logs
 
 ---
 
@@ -197,8 +198,8 @@ Le chantier sera termine quand :
 
 Reprendre les modules metier dans cet ordre :
 
-1. prospections
-2. appairages
-3. partenaires / documents / commentaires / cvtheque
+1. appairages
+2. partenaires / documents / commentaires / cvtheque
+3. ateliers TRE
 
 Ensuite seulement, remettre a niveau les autres modules.
