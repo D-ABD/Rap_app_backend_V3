@@ -2,6 +2,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Typography, Button, Box, Grid, Stack } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
+import BackNavButton from "../components/BackNavButton";
 import DeclicStatsSummary from "./declic/DeclicStatsSummary";
 
 const DashboardDeclicStaffPage = () => {
@@ -9,6 +10,10 @@ const DashboardDeclicStaffPage = () => {
 
   return (
     <PageWrapper maxWidth="lg">
+      <Box mb={2}>
+        <BackNavButton />
+      </Box>
+
       {/* ----------------------------------------------------- */}
       {/* 🧩 En-tête */}
       {/* ----------------------------------------------------- */}

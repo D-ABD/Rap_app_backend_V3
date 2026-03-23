@@ -5,6 +5,7 @@ import { FaChartLine, FaHandshake, FaUserTie, FaInfoCircle } from "react-icons/f
 import { useAuth } from "../hooks/useAuth";
 import logo from "../assets/logo.png";
 import PageWrapper from "../components/PageWrapper"; // ✅ wrapper responsive
+import BackNavButton from "../components/BackNavButton";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -40,6 +41,10 @@ export default function HomePage() {
 
   return (
     <PageWrapper maxWidth="lg">
+      <Box mb={2}>
+        <BackNavButton />
+      </Box>
+
       {/* 🔹 Hero Section */}
       <Box textAlign="center" py={{ xs: 2, md: 4 }}>
         <img src={logo} alt="Logo Rap App" style={{ height: 80, maxWidth: "100%" }} />

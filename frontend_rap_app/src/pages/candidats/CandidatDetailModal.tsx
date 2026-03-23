@@ -85,6 +85,26 @@ function buildCandidateProspectionCreateUrl(candidat?: CandidatWithFormation | n
   return `/prospections/create?${params.toString()}`;
 }
 
+function buildCandidateAppairageCreateUrl(candidat?: CandidatWithFormation | null): string | null {
+  if (!candidat?.id) return null;
+
+  const params = new URLSearchParams();
+  params.set("candidat", String(candidat.id));
+  params.set(
+    "candidat_nom",
+    nn(candidat.nom_complet || `${candidat.prenom ?? ""} ${candidat.nom ?? ""}`.trim())
+  );
+
+  if (typeof candidat.formation === "number") {
+    params.set("formation", String(candidat.formation));
+  }
+  if (candidat.formation_nom) {
+    params.set("formation_nom", candidat.formation_nom);
+  }
+
+  return `/appairages/create?${params.toString()}`;
+}
+
 function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
   return getCandidatBusinessStatusLabel(candidat);
 }
@@ -296,6 +316,7 @@ export default function CandidatDetailModal({
   const canSetAppairage = !candidat?.en_appairage;
   const canClearAppairage = !!candidat?.en_appairage;
   const createProspectionUrl = buildCandidateProspectionCreateUrl(candidat);
+  const createAppairageUrl = buildCandidateAppairageCreateUrl(candidat);
   const openCandidateAppairages = () => {
     if (!candidat?.id) return;
     onClose();
@@ -507,6 +528,18 @@ export default function CandidatDetailModal({
                         Contrat signe : <strong>{nn(candidat.contrat_signe_display)}</strong>
                       </Alert>
                       <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
+                        {createAppairageUrl && (
+                          <Button
+                            variant="contained"
+                            color="secondary"
+                            onClick={() => {
+                              onClose();
+                              navigate(createAppairageUrl);
+                            }}
+                          >
+                            Créer un appairage
+                          </Button>
+                        )}
                         {createProspectionUrl && (
                           <Button
                             variant="contained"

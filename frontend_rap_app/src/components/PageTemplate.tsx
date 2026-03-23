@@ -38,7 +38,7 @@ function PageTemplate({
   subtitle,
   actions,
   actionsRight,
-  backButton = false,
+  backButton = true,
   onBack,
   refreshButton = false,
   onRefresh,

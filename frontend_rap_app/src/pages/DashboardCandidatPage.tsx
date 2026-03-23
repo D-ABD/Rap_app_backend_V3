@@ -3,6 +3,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Typography, Button, Box, Grid } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
+import BackNavButton from "../components/BackNavButton";
 
 // Widgets
 import ProspectionOverviewWidget from "./widgets/overviewDashboard/ProspectionOverviewWidget";
@@ -14,6 +15,10 @@ const DashboardCandidatPage = () => {
 
   return (
     <PageWrapper maxWidth="md">
+      <Box mb={2}>
+        <BackNavButton />
+      </Box>
+
       <Box mb={3}>
         <Typography variant="h5" fontWeight="bold" gutterBottom>
           Bonjour, {user?.first_name || user?.email || "candidat"} 👋

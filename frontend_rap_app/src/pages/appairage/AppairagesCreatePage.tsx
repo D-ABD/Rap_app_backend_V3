@@ -39,6 +39,7 @@ export default function AppairagesCreatePage() {
   const presetFormation = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
 
   // labels transmis en URL
+  const paramCandidatNom = searchParams.get("candidat_nom")?.trim() || null;
   const paramPartenaireNom = searchParams.get("partenaire_nom")?.trim() || null;
   const paramFormationNom = searchParams.get("formation_nom")?.trim() || null;
 
@@ -77,14 +78,14 @@ export default function AppairagesCreatePage() {
       formation: presetFormation ?? null,
       formation_nom: formationNom,
       candidat: presetCandidat ?? null,
-      candidat_nom: null,
+      candidat_nom: paramCandidatNom,
       candidat_prenom: null,
       statut: defaultStatut,
       commentaire: "",
       last_commentaire: null,
       commentaires: [],
     };
-  }, [presetPartenaire, partenaireNom, presetFormation, formationNom, presetCandidat]);
+  }, [presetPartenaire, partenaireNom, presetFormation, formationNom, presetCandidat, paramCandidatNom]);
 
   const handleSubmit = async (formData: AppairageCreatePayload) => {
     try {

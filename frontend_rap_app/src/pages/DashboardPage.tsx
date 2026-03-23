@@ -21,6 +21,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
+import BackNavButton from "../components/BackNavButton";
 
 // ---------- Widgets ----------
 import FormationSaturationWidget from "./widgets/saturationdashboard/FormationSaturationWidget";
@@ -118,6 +119,10 @@ export default function DashboardPage() {
   return (
     <PageWrapper maxWidth="xl">
       <Box display="flex" flexDirection="column">
+        <Box mb={2}>
+          <BackNavButton />
+        </Box>
+
         {/* ================================================ */}
         {/* 🏁 HERO SECTION */}
         {/* ================================================ */}

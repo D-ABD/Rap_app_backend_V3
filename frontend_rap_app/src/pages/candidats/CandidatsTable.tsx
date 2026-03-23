@@ -104,6 +104,21 @@ function buildCandidateProspectionCreateUrl(c: Candidat): string | null {
 
   return `/prospections/create?${params.toString()}`;
 }
+function buildCandidateAppairageCreateUrl(c: Candidat): string {
+  const params = new URLSearchParams();
+  params.set("candidat", String(c.id));
+  params.set("candidat_nom", fullName(c));
+
+  if (typeof c.formation === "number") {
+    params.set("formation", String(c.formation));
+  }
+  const formationName = c.formation_info?.nom;
+  if (formationName) {
+    params.set("formation_nom", formationName);
+  }
+
+  return `/appairages/create?${params.toString()}`;
+}
 type AppairageLite = {
   partenaire_nom?: string | null;
   statut?: string | null;
@@ -297,6 +312,12 @@ export default function CandidatsTable({
     (candidate: Candidat) => {
       const url = buildCandidateProspectionCreateUrl(candidate);
       if (url) navigate(url);
+    },
+    [navigate]
+  );
+  const goCreateCandidateAppairage = useCallback(
+    (candidate: Candidat) => {
+      navigate(buildCandidateAppairageCreateUrl(candidate));
     },
     [navigate]
   );
@@ -598,6 +619,11 @@ export default function CandidatsTable({
                   <Tooltip title="Éditer">
                     <IconButton size="small" onClick={() => goEdit(c.id)}>
                       <EditIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Créer un appairage">
+                    <IconButton size="small" color="secondary" onClick={() => goCreateCandidateAppairage(c)}>
+                      <AddIcon fontSize="inherit" />
                     </IconButton>
                   </Tooltip>
                   {getLinkedAccountId(c) && (

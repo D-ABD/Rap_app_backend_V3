@@ -2,6 +2,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { Typography, Button, Box, Grid, Stack, Divider } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
+import BackNavButton from "../components/BackNavButton";
 
 import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
 import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
@@ -11,6 +12,10 @@ export default function DashboardPrepaStaffPage() {
 
   return (
     <PageWrapper maxWidth="xl">
+      <Box mb={2}>
+        <BackNavButton />
+      </Box>
+
       {/* ----------------------------------------------------- */}
       {/* 🧩 En-tête */}
       {/* ----------------------------------------------------- */}

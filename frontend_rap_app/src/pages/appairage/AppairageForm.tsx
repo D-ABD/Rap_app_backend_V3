@@ -115,12 +115,18 @@ export default function AppairageForm({
   const [form, setForm] = useState<AppairageCreatePayload>(safeInitial);
   useEffect(() => setForm(safeInitial), [safeInitial]);
 
-  const [candidatNom, setCandidatNom] = useState<string | null>(null);
-  const [partenaireNom, setPartenaireNom] = useState<string | null>(null);
-  const [formationLabel, setFormationLabel] = useState<string | null>(null);
+  const [candidatNom, setCandidatNom] = useState<string | null>(initialValues?.candidat_nom ?? null);
+  const [partenaireNom, setPartenaireNom] = useState<string | null>(initialValues?.partenaire_nom ?? null);
+  const [formationLabel, setFormationLabel] = useState<string | null>(initialValues?.formation_nom ?? null);
   const [errors, setErrors] = useState<Partial<Record<"candidat" | "partenaire", string>>>({});
   const [showCandidatModal, setShowCandidatModal] = useState(false);
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
+
+  useEffect(() => {
+    setCandidatNom(initialValues?.candidat_nom ?? null);
+    setPartenaireNom(initialValues?.partenaire_nom ?? null);
+    setFormationLabel(initialValues?.formation_nom ?? null);
+  }, [initialValues]);
 
   useEffect(() => {
     if (!meta) return;
