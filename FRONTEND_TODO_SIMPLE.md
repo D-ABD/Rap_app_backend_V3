@@ -47,24 +47,15 @@
 - navigation liee par ID fiabilisee sur les modules repris pour n'afficher que le contexte demande
 - module appairages aligne avec table, detail, creation, edition, commentaires et navigation croisee
 - module partenaires aligne avec pages, detail, creation, edition et navigation vers prospections / appairages
+- module documents aligne avec navigation contextuelle par formation et retours de liste coherents
+- module commentaires formation aligne avec navigation contextuelle par formation et edition plus propre
+- module cvtheque aligne avec creation, edition, navigation contextuelle candidat et retour de liste
+- module ateliers TRE aligne avec detail navigable, multi-selection candidats et edition des presences
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- types documents
-- hooks documents
-- pages documents
-- types commentaires formation
-- hooks commentaires formation
-- pages commentaires formation
-- types cvtheque
-- hooks cvtheque
-- pages cvtheque
-- types ateliers TRE
-- hooks ateliers TRE
-- pages ateliers TRE
-- bulk ateliers TRE
 - types prepa
 - hooks prepa
 - pages prepa

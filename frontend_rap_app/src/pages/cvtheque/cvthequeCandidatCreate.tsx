@@ -19,7 +19,7 @@ export default function CVThequeCandidatCreatePage() {
 
     if (res.success && res.data) {
       toast.success("📄 Document ajouté à la CVThèque !");
-      navigate(`/cvtheque/${res.data.id}/preview/candidat`);
+      navigate("/cvtheque/candidat");
     } else {
       toast.error("Erreur lors de la création du document.");
     }
@@ -30,6 +30,7 @@ export default function CVThequeCandidatCreatePage() {
       title="➕ Ajouter un document"
       subtitle="Déposer un fichier PDF / DOC / DOCX dans la CVThèque"
       backButton
+      onBack={() => navigate("/cvtheque/candidat")}
     >
       <Box maxWidth={700} mx="auto">
         <CVThequeFormCandidat

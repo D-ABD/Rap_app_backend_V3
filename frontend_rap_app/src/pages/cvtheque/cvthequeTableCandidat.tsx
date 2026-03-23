@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Link as RouterLink } from "react-router-dom";
 
 import { CVThequeItem } from "src/types/cvtheque";
 import { useCVThequeDownload } from "src/hooks/useCvtheque";
@@ -108,7 +109,14 @@ export default function CVThequeTableCandidat({
 
                   {/* CANDIDAT */}
                   <TableCell>
-                    {doc.candidat.prenom} {doc.candidat.nom}
+                    <Typography
+                      component={RouterLink}
+                      to={`/candidats/${doc.candidat.id}`}
+                      sx={{ color: "primary.main", textDecoration: "none" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {doc.candidat.prenom} {doc.candidat.nom}
+                    </Typography>
                     <br />
                     <Typography variant="caption" color="text.secondary">
                       {doc.candidat.ville || "—"}
@@ -117,7 +125,18 @@ export default function CVThequeTableCandidat({
 
                   {/* FORMATION */}
                   <TableCell>
-                    <strong>{doc.formation_nom || "—"}</strong>
+                    {doc.formation_nom ? (
+                      <Typography
+                        component={RouterLink}
+                        to={`/formations?search=${encodeURIComponent(doc.formation_nom)}`}
+                        sx={{ color: "primary.main", textDecoration: "none", fontWeight: 600 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {doc.formation_nom}
+                      </Typography>
+                    ) : (
+                      <strong>—</strong>
+                    )}
                     <Typography variant="caption" color="text.secondary">
                       {doc.formation_type_offre || "—"}
                     </Typography>

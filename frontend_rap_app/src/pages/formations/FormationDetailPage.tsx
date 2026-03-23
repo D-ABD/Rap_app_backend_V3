@@ -90,6 +90,9 @@ export default function FormationsDetailPage() {
                   <Button variant="outlined" onClick={() => navigate(`/evenements/create?formation=${formation.id}`)}>
                     Ajouter un événement
                   </Button>
+                  <Button variant="outlined" onClick={() => navigate(`/documents/create?formation_id=${formation.id}`)}>
+                    Ajouter un document
+                  </Button>
                 </Stack>
               </Grid>
             </Section>

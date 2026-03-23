@@ -1,18 +1,44 @@
-import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Box, CircularProgress } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
 import CVThequeForm from "./cvthequeForm";
 
-import { CVThequePayload } from "src/types/cvtheque";
+import { CVThequeDetail, CVThequePayload } from "src/types/cvtheque";
 import { useCreateCV, useCVChoices } from "src/hooks/useCvtheque";
 
 export default function CVThequeCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const presetCandidateId = useMemo(() => {
+    const raw = searchParams.get("candidat");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [searchParams]);
+  const presetCandidateName = searchParams.get("candidat_nom")?.trim() || undefined;
+  const returnToListUrl = useMemo(() => {
+    return presetCandidateId ? `/cvtheque?candidat=${presetCandidateId}` : "/cvtheque";
+  }, [presetCandidateId]);
 
-const { loading: loadingChoices } = useCVChoices();
-
+  const { loading: loadingChoices } = useCVChoices();
+  const defaultValues = useMemo<Partial<CVThequeDetail> | undefined>(() => {
+    if (!presetCandidateId) return undefined;
+    return {
+      candidat: {
+        id: presetCandidateId,
+        nom: "",
+        prenom: presetCandidateName ?? "",
+        email: "",
+        telephone: "",
+        ville: null,
+        code_postal: null,
+        statut: null,
+      },
+    };
+  }, [presetCandidateId, presetCandidateName]);
 
   const { create, loading: creating } = useCreateCV();
 
@@ -21,30 +47,31 @@ const { loading: loadingChoices } = useCVChoices();
 
     if (res.success && res.data) {
       toast.success("📄 Document ajouté à la CVThèque !");
-      navigate(`/cvtheque/${res.data.id}/preview`);
+      navigate(returnToListUrl);
     } else {
       toast.error("Erreur lors de la création du document.");
     }
   };
 
-return (
-  <PageTemplate
-    title="➕ Ajouter un document"
-    subtitle="Déposer un fichier PDF / DOC / DOCX dans la CVThèque"
-    backButton
-  >
-    {loadingChoices ? (
-      <CircularProgress />
-    ) : (
-      <Box maxWidth={700} mx="auto">
-        <CVThequeForm
-          onSubmit={handleCreate}
-          loading={creating}
-          isEdit={false}
-        />
-      </Box>
-    )}
-  </PageTemplate>
-);
-
+  return (
+    <PageTemplate
+      title="➕ Ajouter un document"
+      subtitle="Déposer un fichier PDF / DOC / DOCX dans la CVThèque"
+      backButton
+      onBack={() => navigate(returnToListUrl)}
+    >
+      {loadingChoices ? (
+        <CircularProgress />
+      ) : (
+        <Box maxWidth={700} mx="auto">
+          <CVThequeForm
+            onSubmit={handleCreate}
+            loading={creating}
+            isEdit={false}
+            defaultValues={defaultValues}
+          />
+        </Box>
+      )}
+    </PageTemplate>
+  );
 }

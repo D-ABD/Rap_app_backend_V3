@@ -7,30 +7,35 @@ import {
   Stack,
   InputLabel,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
-import { CVThequePayload, DocumentType } from "src/types/cvtheque";
+import { CVThequeDetail, CVThequePayload, DocumentType } from "src/types/cvtheque";
 
 type Props = {
+  defaultValues?: Partial<CVThequeDetail>;
   onSubmit: (payload: Omit<CVThequePayload, "candidat">) => Promise<void>;
   loading?: boolean;
 };
 
 export default function CVThequeFormCandidat({
+  defaultValues = {},
   onSubmit,
   loading = false,
 }: Props) {
+  const navigate = useNavigate();
   const [form, setForm] = useState<{
     titre: string;
     document_type: DocumentType;
     mots_cles: string;
     fichier: File | null;
   }>({
-    titre: "",
-    document_type: "CV",
-    mots_cles: "",
+    titre: defaultValues.titre || "",
+    document_type: defaultValues.document_type || "CV",
+    mots_cles: defaultValues.mots_cles || "",
     fichier: null,
   });
+  const isEdit = Boolean(defaultValues.id);
 
   const handleChange = (field: keyof typeof form, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -51,7 +56,7 @@ export default function CVThequeFormCandidat({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.fichier) {
+    if (!isEdit && !form.fichier) {
       alert("Merci d'ajouter un fichier.");
       return;
     }
@@ -110,10 +115,18 @@ export default function CVThequeFormCandidat({
           {form.fichier ? form.fichier.name : "Choisir un fichier"}
           <input type="file" hidden accept=".pdf,.doc,.docx" onChange={handleFile} />
         </Button>
+
+        {isEdit && !form.fichier && (
+          <Box mt={1} color="text.secondary">
+            Le fichier actuel sera conservé si vous n'en sélectionnez pas un nouveau.
+          </Box>
+        )}
       </Box>
 
       <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
-        <Button type="reset">Réinitialiser</Button>
+        <Button type="button" onClick={() => navigate("/cvtheque/candidat")}>
+          Annuler
+        </Button>
         <Button type="submit" variant="contained" disabled={loading}>
           {loading ? "Envoi..." : "Déposer"}
         </Button>

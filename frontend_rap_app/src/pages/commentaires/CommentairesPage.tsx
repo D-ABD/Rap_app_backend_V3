@@ -4,7 +4,7 @@
 // ======================================================
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -38,6 +38,7 @@ import ExportButtonCommentaires from "../../components/export_buttons/ExportButt
 
 export default function CommentairesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -45,10 +46,18 @@ export default function CommentairesPage() {
   const [search, setSearch] = useState("");
 
   // 🎚️ filtres
+  const scopedFormationId = useMemo(() => {
+    const raw = searchParams.get("formation") || searchParams.get("formation_id");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [searchParams]);
+
   const [filters, setFilters] = useState<CommentaireFiltresValues>({
     centre_id: undefined,
     statut_id: undefined,
     type_offre_id: undefined,
+    formation: scopedFormationId,
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -62,6 +71,11 @@ export default function CommentairesPage() {
 
   // 📄 pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, formation: scopedFormationId }));
+    setPage(1);
+  }, [scopedFormationId, setPage]);
 
   // ⚙️ fetch des commentaires
   const effectiveParams = useMemo(
@@ -163,7 +177,11 @@ export default function CommentairesPage() {
 
           <Button
             variant="contained"
-            onClick={() => navigate("/commentaires/create")}
+            onClick={() =>
+              navigate(
+                scopedFormationId ? `/commentaires/create/${scopedFormationId}` : "/commentaires/create"
+              )
+            }
             fullWidth={isMobile}
           >
             ➕ Ajouter

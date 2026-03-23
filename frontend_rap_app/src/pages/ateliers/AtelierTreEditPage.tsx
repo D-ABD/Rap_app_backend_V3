@@ -124,6 +124,13 @@ export default function AtelierTREEditPage() {
     candidats: Array.isArray(data.candidats)
       ? data.candidats.filter((x): x is number => typeof x === "number")
       : [],
+    presences: Array.isArray(data.presences)
+      ? data.presences.map((presence) => ({
+          candidat_id: presence.candidat_id ?? presence.candidat.id,
+          statut: presence.statut,
+          commentaire: presence.commentaire,
+        }))
+      : [],
   };
 
   return (

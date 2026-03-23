@@ -87,7 +87,11 @@ export default function AtelierTREForm({
 
   const [centreLabel, setCentreLabel] = useState<string>("");
   const [candPills, setCandPills] = useState<Array<{ id: number; label: string }>>([]);
-  const [presences, setPresences] = useState<Record<number, PresenceStatut>>({});
+  const [presences, setPresences] = useState<Record<number, PresenceStatut>>(
+    Object.fromEntries(
+      (initialValues?.presences ?? []).map((presence) => [presence.candidat_id, presence.statut])
+    ) as Record<number, PresenceStatut>
+  );
 
   const [showCentreModal, setShowCentreModal] = useState(false);
   const [showCandidatsModal, setShowCandidatsModal] = useState(false);
@@ -224,7 +228,7 @@ export default function AtelierTREForm({
 
           <Stack direction="row" spacing={1} mb={2}>
             <Button variant="outlined" onClick={() => setShowCandidatsModal(true)}>
-              👤 Ajouter un candidat
+              👥 Sélectionner des candidats
             </Button>
             {!!(form.candidats?.length ?? 0) && (
               <Button
@@ -266,6 +270,23 @@ export default function AtelierTREForm({
                           </MenuItem>
                         ))}
                       </Select>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setForm((f) => ({
+                            ...f,
+                            candidats: (f.candidats ?? []).filter((id) => id !== c.id),
+                          }));
+                          setPresences((prev) => {
+                            const next = { ...prev };
+                            delete next[c.id];
+                            return next;
+                          });
+                        }}
+                      >
+                        Retirer
+                      </Button>
                     </Stack>
                   </Grid>
                 ))}
@@ -314,23 +335,23 @@ export default function AtelierTREForm({
       <CandidatsSelectModal
         show={showCandidatsModal}
         onClose={() => setShowCandidatsModal(false)}
+        multiple
+        allowClear={false}
+        selectedIds={form.candidats ?? []}
         onlyCandidateLike
         onlyActive={false}
         onSelect={(pick: CandidatPick) => {
           setShowCandidatsModal(false);
-          setForm((f) => {
-            const exists = (f.candidats ?? []).includes(pick.id);
-            const nextIds = exists ? (f.candidats ?? []) : [...(f.candidats ?? []), pick.id];
-            return { ...f, candidats: nextIds };
-          });
-          setCandPills((prev) => {
-            if (prev.some((p) => p.id === pick.id)) return prev;
-            const label =
-              pick.nom_complet ||
-              [pick.prenom, pick.nom].filter(Boolean).join(" ") ||
-              `#${pick.id}`;
-            return [...prev, { id: pick.id, label }];
-          });
+          setForm((f) => ({ ...f, candidats: [...(f.candidats ?? []), pick.id] }));
+        }}
+        onSelectMany={(picks: CandidatPick[]) => {
+          const nextIds = picks.map((pick) => pick.id);
+          setForm((f) => ({ ...f, candidats: nextIds }));
+          setPresences((prev) =>
+            Object.fromEntries(
+              Object.entries(prev).filter(([candidateId]) => nextIds.includes(Number(candidateId)))
+            ) as Record<number, PresenceStatut>
+          );
         }}
       />
     </>

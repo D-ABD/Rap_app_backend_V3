@@ -106,7 +106,7 @@ export default function AtelierTRECreatePage() {
   // Liens de la modale post-création
   const primaryHref = lastCreated?.id ? `/ateliers-tre/${lastCreated.id}/edit` : `/ateliers-tre`;
 
-  const secondaryHref = lastCreated?.id ? `/ateliers-tre/${lastCreated.id}` : `/ateliers-tre`;
+  const secondaryHref = lastCreated?.id ? `/ateliers-tre/${lastCreated.id}/edit` : `/ateliers-tre`;
 
   return (
     <PageTemplate title="➕ Nouvel atelier TRE" backButton onBack={() => navigate(-1)}>
@@ -139,7 +139,7 @@ export default function AtelierTRECreatePage() {
         primaryLabel="Configurer / Éditer l’atelier"
         primaryVariant="primary"
         secondaryHref={secondaryHref}
-        secondaryLabel="Voir l’atelier"
+        secondaryLabel="Voir / modifier l’atelier"
         secondaryVariant="secondary"
         tertiaryHref="/ateliers-tre"
         tertiaryLabel="Retour à la liste"

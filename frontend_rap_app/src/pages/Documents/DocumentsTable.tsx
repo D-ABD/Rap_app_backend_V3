@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -84,7 +84,14 @@ export default function DocumentsTable({ documents, showActions = false, onDelet
                   <TableCell>
                     {doc.formation ? (
                       <Box>
-                        <Typography variant="body2" fontWeight={600}>
+                        <Typography
+                          component={RouterLink}
+                          to={`/formations/${doc.formation}`}
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{ color: "primary.main", textDecoration: "none" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {doc.formation_nom ?? "—"}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -168,7 +175,14 @@ export default function DocumentsTable({ documents, showActions = false, onDelet
                     <Typography variant="subtitle2" color="primary">
                       Formation liée :
                     </Typography>
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography
+                      component={RouterLink}
+                      to={`/formations/${doc.formation}`}
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ color: "primary.main", textDecoration: "none" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {doc.formation_nom ?? "—"}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">

@@ -1,7 +1,7 @@
 // src/components/ui/DocumentForm.tsx
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -28,11 +28,26 @@ type Props = {
 
 export default function DocumentForm({ formationId, initialValues, documentId }: Props) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const scopedFormationId = useMemo(() => {
+    return (
+      initialValues?.formation ??
+      formationId ??
+      searchParams.get("formation_id") ??
+      searchParams.get("formation") ??
+      ""
+    );
+  }, [formationId, initialValues?.formation, searchParams]);
+
+  const returnToListUrl = useMemo(() => {
+    return scopedFormationId ? `/documents?formation=${scopedFormationId}` : "/documents";
+  }, [scopedFormationId]);
 
   const [formationNom, setFormationNom] = useState<string | null>(
     initialValues?.formation_nom ?? null
   );
-  const [loading, setLoading] = useState(!!formationId && !initialValues?.formation_nom);
+  const [loading, setLoading] = useState(!!scopedFormationId && !initialValues?.formation_nom);
   const [showModal, setShowModal] = useState(false);
   const [typeDocumentChoices, setTypeDocumentChoices] = useState<TypeDocumentChoice[]>([]);
 
@@ -47,12 +62,12 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
     nom_fichier: initialValues?.nom_fichier ?? "",
     fichier: null,
     type_document: initialValues?.type_document ?? "",
-    formation: initialValues?.formation ?? (formationId ? Number(formationId) : ""),
+    formation: scopedFormationId ? Number(scopedFormationId) : "",
   });
 
   // 🔽 Charger le nom de la formation si absent
   useEffect(() => {
-    const id = initialValues?.formation ?? (formationId ? Number(formationId) : null);
+    const id = scopedFormationId ? Number(scopedFormationId) : null;
     if (!id || formationNom) return;
 
     import("../../api/axios").then((api) => {
@@ -62,7 +77,7 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
         .catch(() => toast.error("Formation introuvable"))
         .finally(() => setLoading(false));
     });
-  }, [formationId, initialValues, formationNom]);
+  }, [scopedFormationId, formationNom]);
 
   // 🔽 Charger les types de document
   useEffect(() => {
@@ -98,7 +113,7 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
         toast.success("Document créé avec succès");
       }
 
-      navigate("/documents");
+      navigate(returnToListUrl);
     } catch (err: unknown) {
       const axiosError = err as {
         response?: {
@@ -235,7 +250,11 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
               <Button type="submit" variant="contained" color="success">
                 💾 Enregistrer
               </Button>
-              <Button variant="outlined" color="secondary" onClick={() => navigate("/documents")}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => navigate(returnToListUrl)}
+              >
                 Annuler
               </Button>
             </Stack>

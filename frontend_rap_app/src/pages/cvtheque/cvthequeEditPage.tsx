@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import CvThequeForm from "./cvthequeForm";
 import { CircularProgress, Typography } from "@mui/material";
 import { useEffect } from "react";
@@ -9,13 +10,18 @@ import { toast } from "react-toastify";
 export default function CVThequeEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const cvId = Number(id || 0);
+  const scopedCandidateId = searchParams.get("candidat");
+  const returnToListUrl = useMemo(() => {
+    return scopedCandidateId ? `/cvtheque?candidat=${scopedCandidateId}` : "/cvtheque";
+  }, [scopedCandidateId]);
 
   // Si ID invalide → redirection
   useEffect(() => {
-    if (!cvId) navigate("/cvtheque");
-  }, [cvId, navigate]);
+    if (!cvId) navigate(returnToListUrl);
+  }, [cvId, navigate, returnToListUrl]);
 
   const { data: cv, loading } = useCVDetail(cvId);
   const { update, loading: updating } = useUpdateCV();
@@ -25,7 +31,7 @@ export default function CVThequeEditPage() {
 
     if (res.success) {
       toast.success("✔️ CV mis à jour avec succès !");
-      navigate("/cvtheque"); // ✅ Redirection vers la liste
+      navigate(returnToListUrl);
     } else {
       toast.error("❌ Erreur lors de la mise à jour.");
     }

@@ -4,8 +4,8 @@
 // + archivage / désarchivage — version fluide (sans reset de curseur)
 // ======================================================
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -33,12 +33,25 @@ import { Commentaire } from "../../types/commentaire";
 export default function CommentairesEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState<Commentaire | null>(null);
   const [showNavigationModal, setShowNavigationModal] = useState(false);
   const [isArchived, setIsArchived] = useState(false);
   const [busyArchive, setBusyArchive] = useState(false);
+  const [formationIdFromComment, setFormationIdFromComment] = useState<number | null>(null);
+
+  const scopedFormationId = useMemo(() => {
+    const raw = searchParams.get("formation") || searchParams.get("formation_id");
+    if (!raw) return formationIdFromComment;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : formationIdFromComment;
+  }, [formationIdFromComment, searchParams]);
+
+  const returnToListUrl = useMemo(() => {
+    return scopedFormationId ? `/commentaires?formation=${scopedFormationId}` : "/commentaires";
+  }, [scopedFormationId]);
 
   const { values, errors, setValues, setErrors } = useForm<{
     contenu: string;
@@ -69,7 +82,7 @@ export default function CommentairesEditPage() {
   useEffect(() => {
     if (!id) {
       toast.error("ID du commentaire manquant");
-      navigate("/commentaires");
+      navigate(returnToListUrl);
       return;
     }
 
@@ -87,13 +100,14 @@ export default function CommentairesEditPage() {
 
         setMeta(data);
         setIsArchived(data.statut_commentaire === "archive");
+        setFormationIdFromComment(data.formation_id ?? data.formation ?? null);
       })
       .catch(() => {
         toast.error("Erreur lors du chargement du commentaire");
-        navigate("/commentaires");
+        navigate(returnToListUrl);
       })
       .finally(() => setLoading(false));
-  }, [id, navigate, setValues]);
+  }, [id, navigate, returnToListUrl, setValues]);
 
   /* ---------- Soumission ---------- */
   const handleSubmit = async (e: FormEvent) => {
@@ -152,7 +166,7 @@ export default function CommentairesEditPage() {
     <PageTemplate
       title="✏️ Modifier un commentaire"
       backButton
-      onBack={() => navigate("/commentaires")}
+      onBack={() => navigate(returnToListUrl)}
       actionsRight={
         !loading && (
           <Button
@@ -248,7 +262,7 @@ export default function CommentairesEditPage() {
                 onClick={() =>
                   values.formation
                     ? navigate(`/formations/${values.formation}`)
-                    : navigate("/commentaires")
+                    : navigate(returnToListUrl)
                 }
               >
                 Annuler
@@ -273,7 +287,7 @@ export default function CommentairesEditPage() {
           <Button onClick={() => navigate(`/formations/${values.formation}`)} variant="outlined">
             ← Retour à la formation
           </Button>
-          <Button onClick={() => navigate(`/commentaires`)} variant="contained">
+          <Button onClick={() => navigate(returnToListUrl)} variant="contained">
             💬 Voir commentaires
           </Button>
         </DialogActions>

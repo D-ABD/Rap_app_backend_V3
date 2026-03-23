@@ -160,6 +160,13 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                     >
                       Ajouter un événement
                     </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/documents/create?formation_id=${formation.id}`)}
+                    >
+                      Ajouter un document
+                    </Button>
                   </Stack>
                 </Grid>
               </Section>

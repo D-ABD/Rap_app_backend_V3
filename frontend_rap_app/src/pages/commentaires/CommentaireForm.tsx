@@ -5,8 +5,8 @@
 //  édition naturelle + TS safe + accessibilité)
 // ======================================================
 
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Box, Button, CircularProgress, Stack, Typography, Paper } from "@mui/material";
 import { useQuill } from "react-quilljs";
@@ -46,14 +46,23 @@ export default function CommentaireForm({
   onSubmit,
 }: Props) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const scopedFormationId = useMemo(() => {
+    return formationId || searchParams.get("formation_id") || searchParams.get("formation") || "";
+  }, [formationId, searchParams]);
+
+  const returnToListUrl = useMemo(() => {
+    return scopedFormationId ? `/commentaires?formation=${scopedFormationId}` : "/commentaires";
+  }, [scopedFormationId]);
 
   const [formationNom, setFormationNom] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!!formationId);
+  const [loading, setLoading] = useState(!!scopedFormationId);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { values, errors, setErrors, setValues } = useForm<CommentaireFormData>({
-    formation: formationId || "",
+    formation: scopedFormationId,
     contenu: contenuInitial || "",
   });
 
@@ -86,20 +95,20 @@ export default function CommentaireForm({
 
   /* ---------- Mise à jour du formationId ---------- */
   useEffect(() => {
-    if (formationId) {
-      setValues((prev) => ({ ...prev, formation: formationId }));
+    if (scopedFormationId) {
+      setValues((prev) => ({ ...prev, formation: scopedFormationId }));
     }
-  }, [formationId, setValues]);
+  }, [scopedFormationId, setValues]);
 
   /* ---------- Chargement du nom de la formation ---------- */
   useEffect(() => {
-    if (!formationId) return;
+    if (!scopedFormationId) return;
     api
-      .get(`/formations/${formationId}/`)
+      .get(`/formations/${scopedFormationId}/`)
       .then((res) => setFormationNom(res.data.nom))
       .catch(() => toast.error("Formation introuvable"))
       .finally(() => setLoading(false));
-  }, [formationId]);
+  }, [scopedFormationId]);
 
   /* ---------- Soumission ---------- */
   const handleSubmit = async (e: FormEvent) => {
@@ -116,7 +125,7 @@ export default function CommentaireForm({
 
     const payload = {
       contenu: contenuHtml,
-      formation: formationId || values.formation || null,
+      formation: scopedFormationId || values.formation || null,
     };
 
     if (!payload.formation) {
@@ -129,7 +138,7 @@ export default function CommentaireForm({
       await api.post("/commentaires/", payload);
       toast.success("✅ Commentaire créé avec succès");
       if (onSubmit) onSubmit(payload);
-      navigate("/commentaires");
+      navigate(returnToListUrl);
     } catch (err: unknown) {
       const axiosError = err as {
         response?: { data?: Record<string, string[]> };
@@ -240,7 +249,7 @@ export default function CommentaireForm({
                 variant="outlined"
                 onClick={() => {
                   if (!submitting && window.confirm("Annuler les modifications ?")) {
-                    navigate("/commentaires");
+                    navigate(returnToListUrl);
                   }
                 }}
               >

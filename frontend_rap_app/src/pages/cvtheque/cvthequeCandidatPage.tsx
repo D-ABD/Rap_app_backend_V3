@@ -131,9 +131,9 @@ export default function CVThequeCandidatPage() {
     setPreviewOpen(true);
   };
 
-const handleEdit = (id: number) => {
-  navigate(`/cvtheque/${id}/edit`);
-};
+  const handleEdit = (id: number) => {
+    navigate(`/cvtheque/${id}/edit/candidat`);
+  };
 
 
   // -------------------------------
@@ -183,7 +183,7 @@ const handleEdit = (id: number) => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate("/cvtheque/create")}
+            onClick={() => navigate("/cvtheque/create/candidat")}
           >
             Ajouter un CV
           </Button>

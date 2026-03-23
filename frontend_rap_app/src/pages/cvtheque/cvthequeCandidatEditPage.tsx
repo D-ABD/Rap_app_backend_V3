@@ -14,7 +14,7 @@ export default function CVThequeCandidatEditPage() {
   // Si l’ID est invalide → redirect
   useEffect(() => {
     if (!cvId) {
-      navigate("/cvtheque");
+      navigate("/cvtheque/candidat");
     }
   }, [cvId, navigate]);
 
@@ -25,7 +25,7 @@ export default function CVThequeCandidatEditPage() {
     const res = await update(cvId, payload);
 
     if (res.success && res.data) {
-      navigate(`/cvtheque/${res.data.id}/preview/candidat`);
+      navigate("/cvtheque/candidat");
     }
   };
 
@@ -34,6 +34,7 @@ export default function CVThequeCandidatEditPage() {
 
   return (
     <CVThequeFormCandidat
+      defaultValues={cv}
       onSubmit={handleSubmit}
       loading={updating}
     />

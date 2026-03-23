@@ -11,7 +11,9 @@ import {
   Paper,
   CircularProgress,
   Chip,
+  Link,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { AtelierTRE, AtelierTREPresence } from "../../types/ateliersTre";
 
@@ -109,10 +111,18 @@ export default function AtelierTREDetailModal({
                 <Section title="Informations générales">
                   <Field label="Type d’atelier" value={nn(atelier.type_atelier_display)} />
                   <Field label="Date de l’atelier" value={fmt(atelier.date_atelier)} />
-                  <Field
-                    label="Centre"
-                    value={nn(atelier.centre_detail?.label ?? atelier.centre)}
-                  />
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" component="span">
+                      <strong>Centre :</strong>{" "}
+                      {atelier.centre_detail?.label ? (
+                        <Link component={RouterLink} to="/centres" underline="hover">
+                          {atelier.centre_detail.label}
+                        </Link>
+                      ) : (
+                        nn(atelier.centre)
+                      )}
+                    </Typography>
+                  </Grid>
                   <Field label="Nombre d’inscrits" value={atelier.nb_inscrits} />
                 </Section>
               </Grid>
@@ -151,9 +161,14 @@ export default function AtelierTREDetailModal({
                                 flexWrap: "wrap",
                               }}
                             >
-                              <Typography variant="body2" component="span" sx={{ fontWeight: 500 }}>
+                              <Link
+                                component={RouterLink}
+                                to={`/candidats/${p.candidat.id}`}
+                                underline="hover"
+                                sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+                              >
                                 {p.candidat.nom}
-                              </Typography>
+                              </Link>
                               {renderPresenceChip(p.statut)}
                               {p.commentaire && (
                                 <Typography variant="body2" component="em" sx={{ opacity: 0.7 }}>
@@ -177,9 +192,19 @@ export default function AtelierTREDetailModal({
               <Grid item xs={12}>
                 <Section title="Candidats associés">
                   {atelier.candidats_detail?.length ? (
-                    <Typography variant="body2">
-                      {atelier.candidats_detail.map((c) => c.nom).join(", ")}
-                    </Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      {atelier.candidats_detail.map((c) => (
+                        <Link
+                          key={c.id}
+                          component={RouterLink}
+                          to={`/candidats/${c.id}`}
+                          underline="hover"
+                          sx={{ fontSize: "0.95rem" }}
+                        >
+                          {c.nom}
+                        </Link>
+                      ))}
+                    </Box>
                   ) : (
                     <Typography variant="body2" color="error">
                       Aucun candidat (NC)

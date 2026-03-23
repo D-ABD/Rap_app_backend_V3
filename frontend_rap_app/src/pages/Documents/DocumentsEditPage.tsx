@@ -22,6 +22,9 @@ export default function DocumentsEditPage() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const formationIdFromUrl = searchParams.get("formation_id");
+  const returnToListUrl = formationIdFromUrl
+    ? `/documents?formation=${formationIdFromUrl}`
+    : "/documents";
 
   const [initialValues, setInitialValues] = useState<DocumentFormInitialValues | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,14 +61,18 @@ export default function DocumentsEditPage() {
       })
       .catch(() => {
         toast.error("Erreur lors du chargement du document");
-        navigate("/documents");
+        navigate(returnToListUrl);
       })
       .finally(() => setLoading(false));
-  }, [id, navigate]);
+  }, [id, navigate, returnToListUrl]);
 
   if (loading) {
     return (
-      <PageTemplate title="✏️ Modifier un document" backButton onBack={() => navigate(-1)}>
+      <PageTemplate
+        title="✏️ Modifier un document"
+        backButton
+        onBack={() => navigate(returnToListUrl)}
+      >
         <Box display="flex" justifyContent="center" alignItems="center" py={6}>
           <CircularProgress />
         </Box>
@@ -75,7 +82,11 @@ export default function DocumentsEditPage() {
 
   if (!initialValues) {
     return (
-      <PageTemplate title="✏️ Modifier un document" backButton onBack={() => navigate(-1)}>
+      <PageTemplate
+        title="✏️ Modifier un document"
+        backButton
+        onBack={() => navigate(returnToListUrl)}
+      >
         <Typography color="error" align="center" mt={4}>
           ⚠️ Impossible de charger le document.
         </Typography>
@@ -86,7 +97,11 @@ export default function DocumentsEditPage() {
   const f = initialValues;
 
   return (
-    <PageTemplate title="✏️ Modifier un document" backButton onBack={() => navigate(-1)}>
+    <PageTemplate
+      title="✏️ Modifier un document"
+      backButton
+      onBack={() => navigate(returnToListUrl)}
+    >
       {/* 💡 Encart d’informations sur la formation */}
       {f.formation && (
         <Card

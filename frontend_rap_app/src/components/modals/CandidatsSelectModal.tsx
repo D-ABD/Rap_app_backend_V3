@@ -15,6 +15,11 @@ import {
   Typography,
   Grid,
   CircularProgress,
+  Checkbox,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
@@ -117,11 +122,15 @@ interface Props {
   show: boolean;
   onClose: () => void;
   onSelect: (c: CandidatPick) => void;
+  onSelectMany?: (candidats: CandidatPick[]) => void;
   onlyCandidateLike?: boolean;
   onlyActive?: boolean;
   requireLinkedUser?: boolean;
   onCreate?: (payload: CreateCandidatPayload) => Promise<CreateCandidatResult>;
   prospectionId?: number;
+  multiple?: boolean;
+  selectedIds?: number[];
+  allowClear?: boolean;
 }
 
 /* ---------- Helpers ---------- */
@@ -196,16 +205,22 @@ export default function CandidatsSelectModal({
   show,
   onClose,
   onSelect,
+  onSelectMany,
   onlyCandidateLike = true,
   onlyActive = false,
   requireLinkedUser = false,
   onCreate,
   prospectionId,
+  multiple = false,
+  selectedIds = [],
+  allowClear = true,
 }: Props) {
   const [search, setSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<CandidatPick[]>([]);
+  const [formationFilter, setFormationFilter] = useState<string>("");
+  const [localSelectedIds, setLocalSelectedIds] = useState<number[]>(selectedIds);
 
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
@@ -248,6 +263,11 @@ export default function CandidatsSelectModal({
     };
   }, [search, show]);
 
+  useEffect(() => {
+    if (!show) return;
+    setLocalSelectedIds(selectedIds);
+  }, [selectedIds, show]);
+
   const filtered = useMemo<CandidatPick[]>(() => {
     let list = items;
     if (onlyCandidateLike) {
@@ -274,8 +294,44 @@ export default function CandidatsSelectModal({
         return full.includes(s);
       });
     }
+    if (formationFilter) {
+      list = list.filter((c) => String(c.formation?.id ?? "") === formationFilter);
+    }
     return list;
-  }, [items, onlyActive, onlyCandidateLike, requireLinkedUser, search]);
+  }, [formationFilter, items, onlyActive, onlyCandidateLike, requireLinkedUser, search]);
+
+  const formationOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const c of items) {
+      const id = c.formation?.id;
+      if (typeof id === "number" && !map.has(id)) {
+        map.set(id, c.formation_nom || c.formation?.nom || `Formation #${id}`);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  }, [items]);
+
+  const toggleCandidate = (id: number) => {
+    setLocalSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((candidateId) => candidateId !== id) : [...prev, id]
+    );
+  };
+
+  const handleConfirmMany = () => {
+    if (!onSelectMany) return;
+    const selected = filtered
+      .filter((c) => localSelectedIds.includes(c.id))
+      .concat(
+        items.filter(
+          (c) => localSelectedIds.includes(c.id) && !filtered.some((visible) => visible.id === c.id)
+        )
+      )
+      .filter((c, index, arr) => arr.findIndex((x) => x.id === c.id) === index);
+    onSelectMany(selected);
+    onClose();
+  };
 
   const canCreate = !!onCreate || typeof prospectionId === "number";
   const createDisabled = creating || _nn(nom) === "" || _nn(prenom) === "";
@@ -329,7 +385,9 @@ export default function CandidatsSelectModal({
 
   return (
     <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Sélectionner un candidat / stagiaire</DialogTitle>
+      <DialogTitle>
+        {multiple ? "Sélectionner plusieurs candidats / stagiaires" : "Sélectionner un candidat / stagiaire"}
+      </DialogTitle>
       <DialogContent dividers>
         <TextField
           fullWidth
@@ -340,6 +398,23 @@ export default function CandidatsSelectModal({
           margin="normal"
         />
 
+        <FormControl fullWidth margin="normal" size="small">
+          <InputLabel id="candidats-select-formation-label">Formation</InputLabel>
+          <Select
+            labelId="candidats-select-formation-label"
+            label="Formation"
+            value={formationFilter}
+            onChange={(ev) => setFormationFilter(String(ev.target.value))}
+          >
+            <MenuItem value="">Toutes les formations</MenuItem>
+            {formationOptions.map((option) => (
+              <MenuItem key={option.id} value={String(option.id)}>
+                {option.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         {loading ? (
           <Box display="flex" justifyContent="center" py={2}>
             <CircularProgress />
@@ -349,42 +424,56 @@ export default function CandidatsSelectModal({
         ) : (
           <List>
             {/* 🟢 Option spéciale pour désélectionner le candidat */}
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => {
-                  onSelect({
-                    id: 0,
-                    nom: "",
-                    prenom: "",
-                    nom_complet: "— Aucun candidat —",
-                    email: null,
-                    formation: null,
-                  });
-                  onClose();
-                }}
-                sx={{
-                  borderBottom: "1px solid #eee",
-                  backgroundColor: "#f9fafb",
-                  "&:hover": { backgroundColor: "#f3f4f6" },
-                }}
-              >
-                <ListItemText
-                  primary={<strong>❌ Aucun candidat (retirer l’attribution)</strong>}
-                  secondary="Cette prospection ne sera liée à aucun candidat."
-                />
-              </ListItemButton>
-            </ListItem>
+            {!multiple && allowClear && (
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    onSelect({
+                      id: 0,
+                      nom: "",
+                      prenom: "",
+                      nom_complet: "— Aucun candidat —",
+                      email: null,
+                      formation: null,
+                    });
+                    onClose();
+                  }}
+                  sx={{
+                    borderBottom: "1px solid #eee",
+                    backgroundColor: "#f9fafb",
+                    "&:hover": { backgroundColor: "#f3f4f6" },
+                  }}
+                >
+                  <ListItemText
+                    primary={<strong>❌ Aucun candidat (retirer l’attribution)</strong>}
+                    secondary="Cette prospection ne sera liée à aucun candidat."
+                  />
+                </ListItemButton>
+              </ListItem>
+            )}
 
             {/* Liste normale des candidats */}
             {filtered.map((c) => (
               <ListItem key={c.id} disablePadding>
                 <ListItemButton
                   onClick={() => {
+                    if (multiple) {
+                      toggleCandidate(c.id);
+                      return;
+                    }
                     onSelect(c);
                     onClose();
                   }}
                   sx={{ borderBottom: "1px solid #eee" }}
                 >
+                  {multiple && (
+                    <Checkbox
+                      edge="start"
+                      checked={localSelectedIds.includes(c.id)}
+                      tabIndex={-1}
+                      disableRipple
+                    />
+                  )}
                   <ListItemText
                     primary={
                       <>
@@ -456,6 +545,15 @@ export default function CandidatsSelectModal({
       </DialogContent>
 
       <DialogActions>
+        {multiple && (
+          <Button
+            onClick={handleConfirmMany}
+            variant="contained"
+            disabled={!localSelectedIds.length}
+          >
+            Ajouter {localSelectedIds.length > 0 ? `(${localSelectedIds.length})` : ""}
+          </Button>
+        )}
         <Button onClick={onClose} color="secondary">
           ❌ Fermer
         </Button>

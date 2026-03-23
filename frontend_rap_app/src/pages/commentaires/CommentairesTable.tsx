@@ -19,7 +19,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { Edit as EditIcon } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import type { Commentaire } from "../../types/commentaire";
 
@@ -196,7 +196,19 @@ export default function CommentairesTable({
               {/* ✅ Infos formation */}
               <TableCell sx={{ maxWidth: 340 }}>
                 <Typography variant="subtitle2">
-                  {c.formation_label || c.formation_nom || "—"}
+                  {c.formation ? (
+                    <Typography
+                      component={RouterLink}
+                      to={`/formations/${c.formation}`}
+                      variant="subtitle2"
+                      sx={{ color: "primary.main", textDecoration: "none" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {c.formation_label || c.formation_nom || "—"}
+                    </Typography>
+                  ) : (
+                    c.formation_label || c.formation_nom || "—"
+                  )}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
                   {c.type_offre_nom || "—"} / {c.num_offre || "—"}

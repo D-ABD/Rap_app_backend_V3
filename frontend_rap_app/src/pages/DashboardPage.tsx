@@ -154,6 +154,9 @@ export default function DashboardPage() {
             <Button variant="contained" component={RouterLink} to="/appairages">
               Appairages
             </Button>
+            <Button variant="contained" component={RouterLink} to="/evenements">
+              Événements
+            </Button>
 
             <Button variant="contained" component={RouterLink} to="/cvtheque">
               Cvtheque

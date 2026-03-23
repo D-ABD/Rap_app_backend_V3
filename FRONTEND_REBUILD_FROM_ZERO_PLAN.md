@@ -132,7 +132,16 @@ Etat courant :
   - liste, detail, creation et edition
   - compteurs exploitables vers prospections et appairages
   - actions rapides de creation contextuelle depuis le detail
-- prochaine cible : poursuivre l'alignement des modules support autour de documents / commentaires / cvtheque
+- modules support maintenant suffisamment repris autour de :
+  - `documents`
+  - `commentaires`
+  - `cvtheque`
+- module `ateliers TRE` maintenant suffisamment repris avec :
+  - liste / creation / edition / detail
+  - multi-selection de candidats via modale
+  - presences mieux gerees en creation et edition
+  - navigation detail vers candidats et centre
+- prochaine cible : poursuivre l'alignement de `prepa / declic`
 
 ## 3. Modules metier principaux
 
@@ -189,9 +198,9 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. remettre a niveau documents / commentaires / cvtheque
-2. remettre a niveau ateliers TRE
-3. remettre a niveau prepa / declic
+1. remettre a niveau prepa / declic
+2. finaliser les derniers ecarts stats / dashboards
+3. remettre a niveau rapports / logs
 4. finaliser les derniers ecarts stats / dashboards
 5. remettre a niveau rapports / logs
 
@@ -214,8 +223,8 @@ Le chantier sera termine quand :
 
 Reprendre les modules metier dans cet ordre :
 
-1. documents / commentaires / cvtheque
-2. ateliers TRE
-3. prepa / declic
+1. prepa / declic
+2. finaliser les derniers ecarts stats / dashboards
+3. rapports / logs
 
 Ensuite seulement, remettre a niveau les autres modules.

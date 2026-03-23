@@ -1,6 +1,6 @@
 // src/pages/documents/DocumentsPage.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Box, Button, CircularProgress, MenuItem, Select, Stack, Typography } from "@mui/material";
 
@@ -17,6 +17,7 @@ import DocumentPreview from "./DocumentPreview"; // ✅ import ajouté
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
 
   const [previewDoc] = useState<Document | null>(null); // ✅ nouveau
 
@@ -48,6 +49,8 @@ export default function DocumentsPage() {
   );
 
   const { formation_id } = useParams<{ formation_id?: string }>();
+  const formationIdFromQuery = searchParams.get("formation") || searchParams.get("formation_id");
+  const scopedFormationId = formationIdFromQuery ?? formation_id ?? undefined;
   const navigate = useNavigate();
 
   const { page, setPage, pageSize, setPageSize, hasNext, hasPrev, count, setCount, totalPages } =
@@ -77,9 +80,10 @@ export default function DocumentsPage() {
       page,
       page_size: pageSize,
       ordering: "-created_at",
+      formation: scopedFormationId,
       ...cleanFilters,
     }),
-    [search, page, pageSize, cleanFilters]
+    [search, page, pageSize, scopedFormationId, cleanFilters]
   );
 
   const { data, loading, error, fetchData } = useFetch<{
@@ -167,7 +171,9 @@ export default function DocumentsPage() {
           <Button
             variant="contained"
             onClick={() =>
-              navigate(`/documents/create${formation_id ? `?formation_id=${formation_id}` : ""}`)
+              navigate(
+                `/documents/create${scopedFormationId ? `?formation_id=${scopedFormationId}` : ""}`
+              )
             }
           >
             ➕ Ajouter un document

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Stack,
@@ -9,6 +9,7 @@ import {
   MenuItem,
   Link,
 } from "@mui/material";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
@@ -30,6 +31,8 @@ export default function CVThequeForm({
   loading = false,
   isEdit = false,
 }: CVThequeFormProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   // Form state
   const [form, setForm] = useState<CVThequePayload>({
     titre: defaultValues.titre || "",
@@ -56,13 +59,34 @@ export default function CVThequeForm({
     defaultValues.candidat
       ? {
           id: defaultValues.candidat.id,
-          nom_complet: `${defaultValues.candidat.prenom} ${defaultValues.candidat.nom}`,
+          nom_complet:
+            `${defaultValues.candidat.prenom ?? ""} ${defaultValues.candidat.nom ?? ""}`.trim() ||
+            `Candidat #${defaultValues.candidat.id}`,
         }
       : null
   );
 
+  useEffect(() => {
+    if (!defaultValues.candidat) return;
+    setSelectedCandidat({
+      id: defaultValues.candidat.id,
+      nom_complet:
+        `${defaultValues.candidat.prenom ?? ""} ${defaultValues.candidat.nom ?? ""}`.trim() ||
+        `Candidat #${defaultValues.candidat.id}`,
+    });
+  }, [defaultValues.candidat]);
+
   const handleChange = (field: keyof CVThequePayload, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCancel = () => {
+    const candidatId = defaultValues.candidat?.id ?? searchParams.get("candidat");
+    if (candidatId) {
+      navigate(`/cvtheque?search=&candidat=${candidatId}`);
+      return;
+    }
+    navigate("/cvtheque");
   };
 
   // ---------------------------
@@ -222,8 +246,8 @@ export default function CVThequeForm({
 
       {/* SUBMIT */}
       <Stack direction="row" spacing={2} justifyContent="flex-end" mt={4}>
-        <Button variant="outlined" type="reset">
-          Réinitialiser
+        <Button variant="outlined" type="button" onClick={handleCancel}>
+          Annuler
         </Button>
 
         <Button variant="contained" type="submit" disabled={loading}>

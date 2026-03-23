@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Stack,
@@ -33,6 +33,7 @@ import CVThequePreview from "./cvthequePreview";
 // -------------------------------
 export type CVFilters = {
   search?: string;
+  candidat?: number;
   ville?: string;
   centre_id?: number;
   formation_id?: number;
@@ -45,8 +46,18 @@ const defaultFilters: CVFilters = {};
 
 export default function CVThequePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const scopedCandidateId = useMemo(() => {
+    const raw = searchParams.get("candidat");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [searchParams]);
 
-  const [filters, setFilters] = useState<CVFilters>(defaultFilters);
+  const [filters, setFilters] = useState<CVFilters>({
+    ...defaultFilters,
+    candidat: scopedCandidateId,
+  });
   const [showFilters, setShowFilters] = useState(false);
 
   const [previewItem, setPreviewItem] = useState<CVThequeItem | null>(null);
@@ -68,6 +79,7 @@ export default function CVThequePage() {
   const queryParams = useMemo(
     () => ({
       search: filters.search || "",
+      candidat: filters.candidat || undefined,
       ville: filters.ville || undefined,
       document_type: filters.document_type || undefined,
       centre_id: filters.centre_id || undefined,
@@ -79,6 +91,14 @@ export default function CVThequePage() {
     }),
     [filters, page, pageSize]
   );
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      candidat: scopedCandidateId,
+    }));
+    setPage(1);
+  }, [scopedCandidateId, setPage]);
 
   // -------------------------------
   // DATA
@@ -131,9 +151,9 @@ export default function CVThequePage() {
     setPreviewOpen(true);
   };
 
-const handleEdit = (id: number) => {
-  navigate(`/cvtheque/${id}/edit`);
-};
+  const handleEdit = (id: number) => {
+    navigate(`/cvtheque/${id}/edit${scopedCandidateId ? `?candidat=${scopedCandidateId}` : ""}`);
+  };
 
 
   // -------------------------------
@@ -161,7 +181,10 @@ const handleEdit = (id: number) => {
               variant="outlined"
               startIcon={<ReplayIcon />}
               onClick={() => {
-                setFilters(defaultFilters);
+                setFilters({
+                  ...defaultFilters,
+                  candidat: scopedCandidateId,
+                });
                 setPage(1);
               }}
             >
@@ -184,6 +207,7 @@ const handleEdit = (id: number) => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate("/cvtheque/create")}
+            
           >
             Ajouter un CV
           </Button>
