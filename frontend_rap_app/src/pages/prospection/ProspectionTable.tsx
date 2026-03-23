@@ -1,5 +1,6 @@
 import { Checkbox, Typography, Button, Box, Chip, Link } from "@mui/material";
 import { Theme } from "@mui/material/styles";
+import { Link as RouterLink } from "react-router-dom";
 import ResponsiveTableTemplate, {
   type TableColumn,
 } from "../../components/ResponsiveTableTemplate";
@@ -104,7 +105,18 @@ export default function ProspectionTable({
       render: (row) => (
         <Box display="flex" flexDirection="column" gap={0.4}>
           <Typography variant="subtitle2" fontWeight={600} noWrap>
-            {row.owner_username || <span style={{ color: "#aaa" }}>—</span>}
+            {row.owner && row.owner_username ? (
+              <Link
+                component={RouterLink}
+                to={`/candidats?owner=${row.owner}`}
+                onClick={(e) => e.stopPropagation()}
+                underline="hover"
+              >
+                {row.owner_username}
+              </Link>
+            ) : (
+              <span style={{ color: "#aaa" }}>—</span>
+            )}
           </Typography>
           {row.date_prospection ? (
             <Chip
@@ -184,7 +196,18 @@ export default function ProspectionTable({
       render: (row) => (
         <Box display="flex" flexDirection="column" gap={0.2}>
           <Typography variant="subtitle2" fontWeight={700} noWrap>
-            {row.partenaire_nom || "—"}
+            {row.partenaire && row.partenaire_nom ? (
+              <Link
+                component={RouterLink}
+                to={`/partenaires/${row.partenaire}/edit`}
+                onClick={(e) => e.stopPropagation()}
+                underline="hover"
+              >
+                {row.partenaire_nom}
+              </Link>
+            ) : (
+              "—"
+            )}
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap>
             📍 {row.partenaire_ville || "—"}
@@ -214,7 +237,18 @@ export default function ProspectionTable({
       render: (row) => (
         <Box display="flex" flexDirection="column" gap={0.2}>
           <Typography variant="subtitle2" fontWeight={600} noWrap>
-            {row.formation_nom || "—"}
+            {row.formation && row.formation_nom ? (
+              <Link
+                component={RouterLink}
+                to={`/formations/${row.formation}`}
+                onClick={(e) => e.stopPropagation()}
+                underline="hover"
+              >
+                {row.formation_nom}
+              </Link>
+            ) : (
+              row.formation_nom || "—"
+            )}
           </Typography>
           <Typography variant="body2" color="text.secondary" noWrap>
             {row.centre_nom || "—"}
@@ -314,6 +348,22 @@ export default function ProspectionTable({
             {fmt(row.created_at)}
           </Typography>
         </Box>
+      ),
+    },
+    {
+      key: "comments_nav",
+      label: "Commentaires",
+      width: 150,
+      render: (row) => (
+        <Button
+          size="small"
+          variant="outlined"
+          component={RouterLink}
+          to={`/prospection-commentaires?prospection=${row.id}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {row.comments_count ? `${row.comments_count} commentaire(s)` : "Voir"}
+        </Button>
       ),
     },
   ];

@@ -153,8 +153,12 @@ export default function ProspectionPage() {
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
-    } catch {
-      toast.error("Erreur lors de la suppression");
+    } catch (err) {
+      const message =
+        err && typeof err === "object" && "response" in err
+          ? "Impossible de supprimer une ou plusieurs prospections."
+          : "Une erreur inattendue est survenue pendant la suppression.";
+      toast.error(message);
     }
   };
 

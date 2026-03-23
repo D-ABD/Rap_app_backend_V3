@@ -106,6 +106,9 @@ Etat courant :
 - stats `prospections` maintenant enrichies pour mieux refleter :
   - les prospections avec ou sans candidat
   - les prospections avec ou sans formation
+- module `prospections` maintenant mieux relie au reste du front avec :
+  - navigation directe vers candidats, formations et partenaires
+  - acces plus direct aux commentaires prospection depuis la table et la modale
 - stats `evenements` maintenant branchees comme vrai module dashboard avec :
   - KPI globaux
   - repartition par type et statut temporel

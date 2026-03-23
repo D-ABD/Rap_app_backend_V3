@@ -14,9 +14,12 @@ import {
   Chip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import AddCommentIcon from "@mui/icons-material/AddComment";
+import LaunchIcon from "@mui/icons-material/Launch";
 import { useMemo } from "react";
 import { useProspection } from "../../hooks/useProspection";
 import React from "react";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 /* ---------- Helpers ---------- */
 const useFormatters = () => {
@@ -59,6 +62,7 @@ type Props = {
 
 /* ---------- Component ---------- */
 export default function ProspectionDetailModal({ open, onClose, prospectionId, onEdit }: Props) {
+  const navigate = useNavigate();
   const { fmt, nn, yn } = useFormatters();
   const { data: prospection, loading } = useProspection(prospectionId ?? null);
 
@@ -114,6 +118,22 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
                   <Field label="Nom" value={nn(prospection.partenaire_nom)} />
                   <Field label="Ville" value={nn(prospection.partenaire_ville)} />
                   <Field
+                    label="Ouvrir"
+                    value={
+                      prospection.partenaire ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/partenaires/${prospection.partenaire}/edit`}
+                          underline="hover"
+                        >
+                          Voir le partenaire
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                  <Field
                     label="Téléphone"
                     value={
                       prospection.partenaire_tel ? (
@@ -147,6 +167,22 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
               <Grid item xs={12}>
                 <Section title="Formation">
                   <Field label="Nom formation" value={nn(prospection.formation_nom)} />
+                  <Field
+                    label="Ouvrir"
+                    value={
+                      prospection.formation ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/formations/${prospection.formation}`}
+                          underline="hover"
+                        >
+                          Voir la formation
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                   <Field label="N° offre" value={nn(prospection.num_offre)} />
                   <Field
                     label="Dates"
@@ -174,6 +210,22 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
               <Grid item xs={12}>
                 <Section title="Candidat / Propriétaire">
                   <Field label="Utilisateur associé" value={nn(prospection.owner_username)} />
+                  <Field
+                    label="Navigation"
+                    value={
+                      prospection.owner ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/candidats?owner=${prospection.owner}`}
+                          underline="hover"
+                        >
+                          Voir les candidats liés
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                   <Field label="ID utilisateur" value={nn(prospection.owner)} />
                   <Field label="Actif ?" value={yn(prospection.is_active)} />
                 </Section>
@@ -285,21 +337,36 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
 
       {/* ---------- Actions ---------- */}
       <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
-        {prospection && onEdit && prospection.id != null && (
-          <Button
-            startIcon={<EditIcon />}
-            variant="contained"
-            color="primary"
-            onClick={() => onEdit(prospection.id)}
-          >
-            Modifier
-          </Button>
-        )}
-        {prospection && onEdit && prospection.id != null && (
-          <Button variant="contained" color="warning" onClick={() => onEdit(prospection.id!)}>
-            Voir les commentaires
-          </Button>
-        )}
+        <Box display="flex" gap={1} flexWrap="wrap">
+          {prospection && onEdit && prospection.id != null && (
+            <Button
+              startIcon={<EditIcon />}
+              variant="contained"
+              color="primary"
+              onClick={() => onEdit(prospection.id)}
+            >
+              Modifier
+            </Button>
+          )}
+          {prospection && prospection.id != null && (
+            <Button
+              startIcon={<AddCommentIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/prospection-commentaires/create/${prospection.id}`)}
+            >
+              Ajouter un commentaire
+            </Button>
+          )}
+          {prospection && prospection.id != null && (
+            <Button
+              startIcon={<LaunchIcon />}
+              variant="outlined"
+              onClick={() => navigate(`/prospection-commentaires?prospection=${prospection.id}`)}
+            >
+              Voir les commentaires
+            </Button>
+          )}
+        </Box>
         <Button variant="outlined" onClick={onClose}>
           Fermer
         </Button>
