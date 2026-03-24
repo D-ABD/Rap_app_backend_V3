@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
+import PrepaInvitesSection from "./PrepaInvitesSection";
 
 interface Props {
   initialValues?: Partial<Prepa>;
@@ -42,6 +43,7 @@ export default function PrepaFormIC({
     type_prepa: initialValues?.type_prepa ?? "info_collective",
     date_prepa: initialValues?.date_prepa ?? "",
     centre_id: initialValues?.centre_id ?? undefined,
+    formateur_animateur: initialValues?.formateur_animateur ?? "",
     commentaire: initialValues?.commentaire ?? "",
     nombre_places_ouvertes: initialValues?.nombre_places_ouvertes ?? 0,
     nombre_prescriptions: initialValues?.nombre_prescriptions ?? 0,
@@ -51,6 +53,7 @@ export default function PrepaFormIC({
     nb_inscrits_prepa: initialValues?.nb_inscrits_prepa ?? 0,
     nb_presents_prepa: initialValues?.nb_presents_prepa ?? 0,
     nb_absents_prepa: initialValues?.nb_absents_prepa ?? 0,
+    stagiaires_prepa: initialValues?.stagiaires_prepa ?? [],
   });
 
   const [centreLabel, setCentreLabel] = useState<string>("");
@@ -184,6 +187,16 @@ export default function PrepaFormIC({
                 )}
               </Stack>
             </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography fontWeight={600}>Formateur / animateur</Typography>
+              <TextField
+                fullWidth
+                placeholder="Nom du formateur qui anime la séance"
+                value={form.formateur_animateur ?? ""}
+                onChange={(e) => handleChange("formateur_animateur", e.target.value)}
+              />
+            </Grid>
           </Grid>
         </Paper>
 
@@ -259,6 +272,13 @@ export default function PrepaFormIC({
             </Grid>
           </Paper>
         </Collapse>
+
+        <PrepaInvitesSection
+          stagiaires={form.stagiaires_prepa ?? []}
+          onChange={(stagiaires) =>
+            handleChange("stagiaires_prepa", stagiaires as Prepa["stagiaires_prepa"])
+          }
+        />
 
         {/* --- Commentaire --- */}
         <Paper sx={{ p: 2, mb: 2 }}>

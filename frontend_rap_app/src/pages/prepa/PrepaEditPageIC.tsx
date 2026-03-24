@@ -133,6 +133,7 @@ export default function PrepaEditPageIC() {
     type_prepa: data.type_prepa ?? "info_collective",
     date_prepa: data.date_prepa?.trim() ? data.date_prepa : "",
     centre_id: typeof data.centre_id === "number" ? data.centre_id : (data.centre?.id ?? undefined),
+    formateur_animateur: data.formateur_animateur ?? "",
     commentaire: data.commentaire ?? "",
     nombre_places_ouvertes: data.nombre_places_ouvertes ?? 0,
     nombre_prescriptions: data.nombre_prescriptions ?? 0,
@@ -142,6 +143,7 @@ export default function PrepaEditPageIC() {
     nb_inscrits_prepa: data.nb_inscrits_prepa ?? 0,
     nb_presents_prepa: data.nb_presents_prepa ?? 0,
     nb_absents_prepa: data.nb_absents_prepa ?? 0,
+    stagiaires_prepa: data.stagiaires_prepa ?? [],
   };
 
   /* ─────────────────────────────── */

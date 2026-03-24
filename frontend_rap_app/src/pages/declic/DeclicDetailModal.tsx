@@ -10,7 +10,9 @@ import {
   Box,
   Paper,
   CircularProgress,
+  Link,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Declic } from "src/types/declic";
 
@@ -101,7 +103,22 @@ export default function DeclicDetailModal({
                     value={nn(declic.type_declic_display ?? declic.type_declic)}
                   />
                   <Field label="Date de la séance" value={fmt(declic.date_declic)} />
-                  <Field label="Centre" value={nn(declic.centre?.nom ?? declic.centre_id)} />
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" component="span">
+                      <strong>Centre :</strong>{" "}
+                      {declic.centre?.id ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/declic/objectifs?centre=${declic.centre.id}`}
+                          underline="hover"
+                        >
+                          {declic.centre.nom}
+                        </Link>
+                      ) : (
+                        nn(declic.centre?.nom ?? declic.centre_id)
+                      )}
+                    </Typography>
+                  </Grid>
                   <Field label="Commentaire" value={nn(declic.commentaire)} />
                 </Section>
               </Grid>
@@ -162,14 +179,25 @@ export default function DeclicDetailModal({
         }}
       >
         {declic && onEdit && declic.id != null && (
-          <Button
-            startIcon={<EditIcon />}
-            color="primary"
-            variant="contained"
-            onClick={() => onEdit(declic.id)}
-          >
-            Modifier
-          </Button>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {declic.centre?.id ? (
+              <Button
+                component={RouterLink}
+                to={`/declic/objectifs?centre=${declic.centre.id}`}
+                variant="outlined"
+              >
+                Voir les objectifs du centre
+              </Button>
+            ) : null}
+            <Button
+              startIcon={<EditIcon />}
+              color="primary"
+              variant="contained"
+              onClick={() => onEdit(declic.id)}
+            >
+              Modifier
+            </Button>
+          </Box>
         )}
         <Button variant="outlined" onClick={onClose}>
           Fermer

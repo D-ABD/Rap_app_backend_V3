@@ -32,6 +32,7 @@ from .viewsets.me_viewsets import DemandeCompteCandidatView, MeAPIView, RoleChoi
 from .viewsets.partenaires_viewsets import PartenaireViewSet
 from .viewsets.prepa_objectifs_viewsets import ObjectifPrepaViewSet
 from .viewsets.prepa_viewset import PrepaViewSet
+from .viewsets.stagiaires_prepa_viewsets import StagiairePrepaViewSet
 from .viewsets.prospection_comment_viewsets import ProspectionCommentViewSet
 from .viewsets.prospection_viewsets import ProspectionViewSet
 from .viewsets.rapports_viewsets import RapportViewSet
@@ -85,6 +86,7 @@ router.register(r"prospection-commentaires", ProspectionCommentViewSet, basename
 # router.register(r"suivis-jury", SuiviJuryViewSet, basename="suivijury")
 # router.register(r"vaes", VAEViewSet, basename="vae")
 router.register(r"prepa", PrepaViewSet, basename="prepa")
+router.register(r"stagiaires-prepa", StagiairePrepaViewSet, basename="stagiaire-prepa")
 router.register(r"prepa-objectifs", ObjectifPrepaViewSet, basename="objectif-prepa")
 router.register(r"prepa-stats", PrepaStatsViewSet, basename="prepa-stats")
 router.register(r"declic", DeclicViewSet, basename="declic")

@@ -71,7 +71,8 @@ export default function MainLayoutPrepa() {
   const menuItems = [
     { label: "Dashboard Prépa", path: "/dashboard/prepa", icon: <HomeIcon /> },
     { label: "IC Prépa", path: "/prepa/ic", icon: <SchoolRoundedIcon /> },
-    { label: "Ateliers 1 Prépa", path: "/prepa/ateliers", icon: <SchoolRoundedIcon /> },
+    { label: "Ateliers Prépa", path: "/prepa/ateliers", icon: <SchoolRoundedIcon /> },
+    { label: "Stagiaires Prépa", path: "/prepa/stagiaires", icon: <SchoolRoundedIcon /> },
     { label: "Mon profil", path: "/mon-profil", icon: <AccountCircleIcon /> },
   ];
 

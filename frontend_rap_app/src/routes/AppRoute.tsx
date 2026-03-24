@@ -106,6 +106,9 @@ import PrepaCreatePageIC from "src/pages/prepa/PrepaCreatePageIC";
 import PrepaCreatePageAteliers from "src/pages/prepa/PrepaCreatePageAteliers";
 import PrepaEditPageIC from "src/pages/prepa/PrepaEditPageIC";
 import PrepaEditPageAteliers from "src/pages/prepa/PrepaEditPageAteliers";
+import StagiairesPrepaPage from "src/pages/prepa/StagiairesPrepaPage";
+import StagiairesPrepaCreatePage from "src/pages/prepa/StagiairesPrepaCreatePage";
+import StagiairesPrepaEditPage from "src/pages/prepa/StagiairesPrepaEditPage";
 import CVThequeCreatePage from "src/pages/cvtheque/cvthequeCreate";
 import CVThequeEditPage from "src/pages/cvtheque/cvthequeEditPage";
 import CVThequePage from "src/pages/cvtheque/cvthequePage";
@@ -496,6 +499,30 @@ export default function AppRoute() {
           element={
             <PrepaRoute>
               <PrepaPagesAteliers />
+            </PrepaRoute>
+          }
+        />
+        <Route
+          path="/prepa/stagiaires"
+          element={
+            <PrepaRoute>
+              <StagiairesPrepaPage />
+            </PrepaRoute>
+          }
+        />
+        <Route
+          path="/prepa/stagiaires/create"
+          element={
+            <PrepaRoute>
+              <StagiairesPrepaCreatePage />
+            </PrepaRoute>
+          }
+        />
+        <Route
+          path="/prepa/stagiaires/:id/edit"
+          element={
+            <PrepaRoute>
+              <StagiairesPrepaEditPage />
             </PrepaRoute>
           }
         />

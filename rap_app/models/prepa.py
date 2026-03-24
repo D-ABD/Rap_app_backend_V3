@@ -59,6 +59,13 @@ class Prepa(BaseModel):
         related_name="prepas",
         verbose_name=_("Centre de formation"),
     )
+    formateur_animateur = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Formateur / animateur"),
+        help_text=_("Nom de la personne qui anime la séance ou l'atelier."),
+    )
 
     nombre_places_ouvertes = models.PositiveIntegerField(default=0, verbose_name=_("Places ouvertes (IC)"))
     nombre_prescriptions = models.PositiveIntegerField(default=0, verbose_name=_("Prescriptions (IC)"))
@@ -350,6 +357,157 @@ class Prepa(BaseModel):
         Retourne les informations collectives filtrées selon les critères.
         """
         return cls.objects.ic().filter(**filters)
+
+
+class StagiairePrepa(BaseModel):
+    """
+    Personne suivie dans un parcours Prépa sans compte utilisateur ni fiche candidat.
+    """
+
+    class StatutParcours(models.TextChoices):
+        EN_ATTENTE = "en_attente", _("En attente de parcours")
+        EN_PARCOURS = "en_parcours", _("En parcours")
+        PARCOURS_TERMINE = "parcours_termine", _("Parcours terminé")
+        ABANDON = "abandon", _("Abandon")
+
+    prepa_origine = models.ForeignKey(
+        Prepa,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stagiaires_prepa",
+        verbose_name=_("Prépa d'origine"),
+    )
+    centre = models.ForeignKey(
+        Centre,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stagiaires_prepa",
+        verbose_name=_("Centre"),
+    )
+    nom = models.CharField(max_length=120, verbose_name=_("Nom"))
+    prenom = models.CharField(max_length=120, verbose_name=_("Prénom"))
+    telephone = models.CharField(max_length=30, blank=True, null=True, verbose_name=_("Téléphone"))
+    email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
+    statut_parcours = models.CharField(
+        max_length=24,
+        choices=StatutParcours.choices,
+        default=StatutParcours.EN_ATTENTE,
+        db_index=True,
+        verbose_name=_("Statut de parcours"),
+    )
+    date_entree_parcours = models.DateField(blank=True, null=True, verbose_name=_("Date d'entrée parcours"))
+    date_sortie_parcours = models.DateField(blank=True, null=True, verbose_name=_("Date de sortie parcours"))
+    commentaire_suivi = models.TextField(blank=True, null=True, verbose_name=_("Commentaire de suivi"))
+    motif_abandon = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Motif d'abandon"))
+
+    atelier_1_realise = models.BooleanField(default=False, verbose_name=_("Atelier 1 réalisé"))
+    atelier_2_realise = models.BooleanField(default=False, verbose_name=_("Atelier 2 réalisé"))
+    atelier_3_realise = models.BooleanField(default=False, verbose_name=_("Atelier 3 réalisé"))
+    atelier_4_realise = models.BooleanField(default=False, verbose_name=_("Atelier 4 réalisé"))
+    atelier_5_realise = models.BooleanField(default=False, verbose_name=_("Atelier 5 réalisé"))
+    atelier_6_realise = models.BooleanField(default=False, verbose_name=_("Atelier 6 réalisé"))
+    atelier_autre_realise = models.BooleanField(default=False, verbose_name=_("Autre atelier réalisé"))
+
+    date_atelier_1 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 1"))
+    date_atelier_2 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 2"))
+    date_atelier_3 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 3"))
+    date_atelier_4 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 4"))
+    date_atelier_5 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 5"))
+    date_atelier_6 = models.DateField(blank=True, null=True, verbose_name=_("Date atelier 6"))
+    date_atelier_autre = models.DateField(blank=True, null=True, verbose_name=_("Date autre atelier"))
+
+    class Meta:
+        verbose_name = _("Stagiaire Prépa")
+        verbose_name_plural = _("Stagiaires Prépa")
+        ordering = ["nom", "prenom", "id"]
+        indexes = [
+            models.Index(fields=["prepa_origine"]),
+            models.Index(fields=["centre"]),
+            models.Index(fields=["statut_parcours"]),
+            models.Index(fields=["nom", "prenom"]),
+        ]
+
+    def __str__(self):
+        """
+        Affichage lisible d'un stagiaire Prépa.
+        """
+        nom_complet = " ".join(part for part in [self.prenom, self.nom] if part)
+        return nom_complet or f"Stagiaire Prépa #{self.pk}"
+
+    def save(self, *args, user=None, **kwargs):
+        """
+        Aligne le centre avec la Prépa d'origine quand il n'est pas renseigné explicitement.
+        """
+        if self.prepa_origine and not self.centre:
+            self.centre = self.prepa_origine.centre
+        super().save(*args, user=user, **kwargs)
+
+    @classmethod
+    def atelier_flag_map(cls) -> Dict[str, tuple[str, str]]:
+        """
+        Mapping centralisé entre type d'atelier, champ booléen et champ date.
+        """
+        return {
+            Prepa.TypePrepa.ATELIER1: ("atelier_1_realise", "date_atelier_1"),
+            Prepa.TypePrepa.ATELIER2: ("atelier_2_realise", "date_atelier_2"),
+            Prepa.TypePrepa.ATELIER3: ("atelier_3_realise", "date_atelier_3"),
+            Prepa.TypePrepa.ATELIER4: ("atelier_4_realise", "date_atelier_4"),
+            Prepa.TypePrepa.ATELIER5: ("atelier_5_realise", "date_atelier_5"),
+            Prepa.TypePrepa.ATELIER6: ("atelier_6_realise", "date_atelier_6"),
+            Prepa.TypePrepa.AUTRE: ("atelier_autre_realise", "date_atelier_autre"),
+        }
+
+    @property
+    def ateliers_realises_count(self) -> int:
+        """
+        Nombre d'ateliers marqués comme réalisés.
+        """
+        return sum(int(bool(getattr(self, flag))) for flag, _ in self.atelier_flag_map().values())
+
+    @property
+    def ateliers_realises_labels(self) -> list[str]:
+        """
+        Libellés des ateliers déjà réalisés pour affichage et export.
+        """
+        labels = []
+        for type_prepa, (flag, _) in self.atelier_flag_map().items():
+            if getattr(self, flag):
+                labels.append(Prepa.TypePrepa(type_prepa).label)
+        return labels
+
+    @property
+    def dernier_atelier_label(self) -> Optional[str]:
+        """
+        Libellé du dernier atelier réalisé connu via les dates renseignées.
+        """
+        dated = []
+        for type_prepa, (flag, date_field) in self.atelier_flag_map().items():
+            if getattr(self, flag) and getattr(self, date_field):
+                dated.append((getattr(self, date_field), Prepa.TypePrepa(type_prepa).label))
+        if not dated:
+            return None
+        dated.sort(key=lambda item: item[0], reverse=True)
+        return dated[0][1]
+
+    @property
+    def dernier_atelier_date(self):
+        """
+        Date du dernier atelier réalisé connu.
+        """
+        dated = []
+        for _, (flag, date_field) in self.atelier_flag_map().items():
+            if getattr(self, flag) and getattr(self, date_field):
+                dated.append(getattr(self, date_field))
+        return max(dated) if dated else None
+
+    @property
+    def a_deja_commence(self) -> bool:
+        """
+        Indique si le stagiaire a un début de parcours ou au moins un atelier réalisé.
+        """
+        return bool(self.date_entree_parcours or self.ateliers_realises_count)
 
 
 class ObjectifPrepa(BaseModel):

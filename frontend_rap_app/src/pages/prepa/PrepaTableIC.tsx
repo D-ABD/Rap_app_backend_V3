@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import { Link } from "@mui/material";
 import type { Prepa } from "src/types/prepa";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -266,7 +268,18 @@ export default function PrepaTableIC({
                     backgroundColor: "#fff",
                   }}
                 >
-                  {d.centre?.nom ?? "—"}
+                  {d.centre?.id ? (
+                    <Link
+                      component={RouterLink}
+                      to={`/prepa/objectifs?centre=${d.centre.id}`}
+                      underline="hover"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {d.centre.nom}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
                 </TableCell>
 
                 {/* IC Inscrits */}

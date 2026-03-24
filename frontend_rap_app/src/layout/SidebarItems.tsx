@@ -77,6 +77,11 @@ export const sidebarItems: SidebarItem[] = [
         icon: <SchoolIcon sx={{ color: "success.main" }} />,
       },
       {
+        label: "Stagiaires Prépa",
+        path: "/prepa/stagiaires",
+        icon: <PeopleIcon sx={{ color: "success.main" }} />,
+      },
+      {
         label: "Objectifs Prépa",
         path: "/prepa/objectifs",
         icon: <BarChartIcon sx={{ color: "success.main" }} />,

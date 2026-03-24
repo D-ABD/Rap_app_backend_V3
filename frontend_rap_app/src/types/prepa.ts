@@ -12,6 +12,51 @@ export interface CentreLight {
   code_postal?: string | null;
 }
 
+export type StagiairePrepaStatut =
+  | "en_attente"
+  | "en_parcours"
+  | "parcours_termine"
+  | "abandon";
+
+export interface StagiairePrepa {
+  id?: number;
+  nom: string;
+  prenom: string;
+  telephone?: string | null;
+  email?: string | null;
+  prepa_origine_id?: number | null;
+  prepa_origine_label?: string;
+  centre?: CentreLight | null;
+  centre_id?: number | null;
+  centre_nom?: string;
+  statut_parcours?: StagiairePrepaStatut;
+  statut_parcours_display?: string;
+  date_entree_parcours?: string | null;
+  date_sortie_parcours?: string | null;
+  commentaire_suivi?: string | null;
+  motif_abandon?: string | null;
+  atelier_1_realise?: boolean;
+  atelier_2_realise?: boolean;
+  atelier_3_realise?: boolean;
+  atelier_4_realise?: boolean;
+  atelier_5_realise?: boolean;
+  atelier_6_realise?: boolean;
+  atelier_autre_realise?: boolean;
+  date_atelier_1?: string | null;
+  date_atelier_2?: string | null;
+  date_atelier_3?: string | null;
+  date_atelier_4?: string | null;
+  date_atelier_5?: string | null;
+  date_atelier_6?: string | null;
+  date_atelier_autre?: string | null;
+  ateliers_realises_count?: number;
+  ateliers_realises_labels?: string[];
+  dernier_atelier_label?: string | null;
+  dernier_atelier_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // 🎯 Objectif Prépa – Objectifs annuels par centre
 export interface ObjectifPrepa {
   id: number;
@@ -60,6 +105,8 @@ export interface Prepa {
   centre: CentreLight | null;
   centre_id?: number;
   centre_nom?: string;
+  formateur_animateur?: string | null;
+  stagiaires_prepa?: StagiairePrepa[];
 
   // --- Information collective
   nombre_places_ouvertes: number;
@@ -141,12 +188,12 @@ export interface ObjectifPrepaSynthese {
 // 🔹 Type d’activité Prépa
 export type TypePrepa =
   | "info_collective"
-  | "session_1"
-  | "session_2"
-  | "session_3"
-  | "session_4"
-  | "session_5"
-  | "session_6"
+  | "atelier_1"
+  | "atelier_2"
+  | "atelier_3"
+  | "atelier_4"
+  | "atelier_5"
+  | "atelier_6"
   | "autre";
 
 // 🔹 Structure générique pour les listes de choix (centre, type, etc.)
@@ -175,6 +222,17 @@ export interface PrepaFiltersOptions {
   annees: number[]; // ✅ liste des années (ex: [2025, 2024, 2023])
   centres: CentreLight[];
   type_prepa: Choice[];
+}
+
+export interface StagiairePrepaFiltersValues {
+  search?: string;
+  centre?: number;
+  statut_parcours?: StagiairePrepaStatut;
+  type_atelier?: string;
+  annee?: number;
+  prepa_origine?: number;
+  ordering?: string;
+  page?: number;
 }
 
 // -----------------------------------------------------------------------------

@@ -29,6 +29,15 @@ export default function PrepaPage() {
           >
             🟪 Ateliers Prépa
           </Button>
+
+          <Button
+            variant="outlined"
+            size="large"
+            fullWidth
+            onClick={() => navigate("/prepa/stagiaires")}
+          >
+            👥 Stagiaires Prépa
+          </Button>
         </Stack>
       </Stack>
     </PageTemplate>

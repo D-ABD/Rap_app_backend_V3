@@ -11,7 +11,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from ..models.prepa import ObjectifPrepa, Prepa
+from ..models.prepa import ObjectifPrepa, Prepa, StagiairePrepa
 
 logger = logging.getLogger("rap_app.admin.prepa")
 
@@ -60,6 +60,7 @@ def export_prepa_xlsx(modeladmin, request, queryset):
         "Type activité",
         "Date",
         "Centre",
+        "Formateur / animateur",
         "Places ouvertes",
         "Prescriptions",
         "Présents IC",
@@ -95,6 +96,7 @@ def export_prepa_xlsx(modeladmin, request, queryset):
                 obj.get_type_prepa_display(),
                 obj.date_prepa.strftime("%d/%m/%Y") if obj.date_prepa else "",
                 getattr(obj.centre, "nom", "—"),
+                obj.formateur_animateur or "—",
                 obj.nombre_places_ouvertes,
                 obj.nombre_prescriptions,
                 obj.nb_presents_info,
@@ -200,6 +202,7 @@ class PrepaAdmin(admin.ModelAdmin):
         "date_display",
         "type_badge",
         "centre",
+        "formateur_animateur",
         "presents_display",
         "absents_display",
         "adhesions_display",
@@ -212,9 +215,13 @@ class PrepaAdmin(admin.ModelAdmin):
     ordering = ("-date_prepa",)
     readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
     actions = [export_prepa_xlsx]
+    inlines = []
 
     fieldsets = (
-        ("📅 Informations générales", {"fields": ("type_prepa", "date_prepa", "centre", "commentaire")}),
+        (
+            "📅 Informations générales",
+            {"fields": ("type_prepa", "date_prepa", "centre", "formateur_animateur", "commentaire")},
+        ),
         (
             "📊 Données Information collective",
             {
@@ -278,6 +285,75 @@ class PrepaAdmin(admin.ModelAdmin):
         return f"{obj.taux_presence_prepa:.1f} %" if obj.taux_presence_prepa else "—"
 
     taux_presence_prepa_display.short_description = "Présence Prépa"
+
+    def updated_at_display(self, obj):
+        return localtime(obj.updated_at).strftime("%d/%m/%Y %H:%M") if obj.updated_at else "—"
+
+    updated_at_display.short_description = "Modifié le"
+
+
+class StagiairePrepaInline(admin.TabularInline):
+    """
+    Saisie inline des stagiaires Prépa rattachés à une séance d'origine.
+    """
+
+    model = StagiairePrepa
+    extra = 1
+    fields = ("nom", "prenom", "telephone", "email", "statut_parcours")
+
+
+PrepaAdmin.inlines = [StagiairePrepaInline]
+
+
+@admin.register(StagiairePrepa)
+class StagiairePrepaAdmin(admin.ModelAdmin):
+    """Suivi nominatif des stagiaires Prépa."""
+
+    list_display = (
+        "nom",
+        "prenom",
+        "centre",
+        "statut_parcours",
+        "prepa_origine",
+        "atelier_1_realise",
+        "atelier_6_realise",
+        "updated_at_display",
+    )
+    list_filter = ("statut_parcours", "centre")
+    search_fields = ("nom", "prenom", "telephone", "email", "centre__nom")
+    autocomplete_fields = ("centre", "prepa_origine")
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+
+    fieldsets = (
+        ("Identité", {"fields": ("nom", "prenom", "telephone", "email")}),
+        ("Contexte", {"fields": ("centre", "prepa_origine", "statut_parcours")}),
+        (
+            "Suivi",
+            {
+                "fields": (
+                    "date_entree_parcours",
+                    "date_sortie_parcours",
+                    "commentaire_suivi",
+                    "motif_abandon",
+                )
+            },
+        ),
+        (
+            "Ateliers réalisés",
+            {
+                "fields": (
+                    ("atelier_1_realise", "date_atelier_1"),
+                    ("atelier_2_realise", "date_atelier_2"),
+                    ("atelier_3_realise", "date_atelier_3"),
+                    ("atelier_4_realise", "date_atelier_4"),
+                    ("atelier_5_realise", "date_atelier_5"),
+                    ("atelier_6_realise", "date_atelier_6"),
+                    ("atelier_autre_realise", "date_atelier_autre"),
+                )
+            },
+        ),
+        ("Métadonnées", {"fields": ("created_at", "updated_at", "created_by", "updated_by")}),
+    )
 
     def updated_at_display(self, obj):
         return localtime(obj.updated_at).strftime("%d/%m/%Y %H:%M") if obj.updated_at else "—"

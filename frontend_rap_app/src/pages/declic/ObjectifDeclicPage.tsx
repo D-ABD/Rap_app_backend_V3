@@ -2,6 +2,7 @@
 // 📊 ObjectifDeclicPage — Liste + filtres + CRUD (création / édition modale)
 // -----------------------------------------------------------------------------
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Stack,
   Typography,
@@ -26,9 +27,17 @@ import { useObjectifsDeclic, useObjectifsDeclicFiltersOptions } from "src/hooks/
 import type { ObjectifDeclicFiltresValues } from "src/types/declic";
 
 export default function ObjectifDeclicPage() {
+  const [searchParams] = useSearchParams();
+  const scopedCentre = useMemo(() => {
+    const raw = searchParams.get("centre");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [searchParams]);
   // 🎛️ États des filtres
   const [filters, setFilters] = useState<ObjectifDeclicFiltresValues>({
     annee: new Date().getFullYear(),
+    centre: scopedCentre,
     ordering: "-annee",
     page: 1,
   });
@@ -45,6 +54,10 @@ export default function ObjectifDeclicPage() {
       localStorage.setItem("objectifsDeclic.showFilters", showFilters ? "1" : "0");
     }
   }, [showFilters]);
+
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, centre: scopedCentre }));
+  }, [scopedCentre]);
 
   // 🔢 Pagination locale
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();

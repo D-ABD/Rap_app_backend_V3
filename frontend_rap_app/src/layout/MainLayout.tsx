@@ -216,7 +216,14 @@ export default function MainLayout() {
                   to="/prepa/ateliers"
                   onClick={() => setAnchorPrepa(null)}
                 >
-                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Ateliers1 Prépa
+                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Ateliers Prépa
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/prepa/stagiaires"
+                  onClick={() => setAnchorPrepa(null)}
+                >
+                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Stagiaires Prépa
                 </MenuItem>
 
                 <MenuItem

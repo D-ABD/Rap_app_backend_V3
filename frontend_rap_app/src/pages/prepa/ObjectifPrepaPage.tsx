@@ -2,6 +2,7 @@
 // 📊 ObjectifPrepaPage — Liste + filtres + CRUD (création / édition modale)
 // -----------------------------------------------------------------------------
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Stack,
   Typography,
@@ -26,9 +27,17 @@ import FiltresObjectifsPrepaPanel from "src/components/filters/FiltresObjectifsP
 import ExportButtonObjectifsPrepa from "src/components/export_buttons/ExportButtonPrepaObjectifs";
 
 export default function ObjectifPrepaPage() {
+  const [searchParams] = useSearchParams();
+  const scopedCentre = useMemo(() => {
+    const raw = searchParams.get("centre");
+    if (!raw) return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }, [searchParams]);
   // 🎛️ États des filtres
   const [filters, setFilters] = useState<ObjectifPrepaFiltresValues>({
     annee: new Date().getFullYear(),
+    centre: scopedCentre,
     ordering: "-annee",
     page: 1,
   });
@@ -45,6 +54,10 @@ export default function ObjectifPrepaPage() {
       localStorage.setItem("objectifsPrepa.showFilters", showFilters ? "1" : "0");
     }
   }, [showFilters]);
+
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, centre: scopedCentre }));
+  }, [scopedCentre]);
 
   // 🔢 Pagination locale
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();

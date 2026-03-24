@@ -19,6 +19,14 @@ import api from "../../api/axios";
 
 type CentreLite = { id: number; label: string };
 
+type RawCentre = {
+  id: number;
+  nom?: string | null;
+  label?: string | null;
+  departement?: string | null;
+  code_postal?: string | null;
+};
+
 type Props = {
   show: boolean;
   onClose: () => void;
@@ -32,6 +40,35 @@ function useDebounce<T>(v: T, ms = 300) {
     return () => clearTimeout(id);
   }, [v, ms]);
   return val;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function extractResults(payload: unknown): RawCentre[] {
+  if (Array.isArray(payload)) return payload as RawCentre[];
+  if (!isRecord(payload)) return [];
+
+  if (Array.isArray(payload.results)) return payload.results as RawCentre[];
+
+  if (isRecord(payload.data)) {
+    const inner = payload.data;
+    if (Array.isArray(inner.results)) return inner.results as RawCentre[];
+    if (Array.isArray(inner.data)) return inner.data as RawCentre[];
+  }
+
+  if (Array.isArray(payload.data)) return payload.data as RawCentre[];
+  return [];
+}
+
+function toCentreLite(c: RawCentre): CentreLite {
+  const base = c.label ?? c.nom ?? `#${c.id}`;
+  const suffix = c.departement ? ` (${c.departement})` : "";
+  return {
+    id: c.id,
+    label: `${base}${suffix}`,
+  };
 }
 
 export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
@@ -52,18 +89,8 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
           const r = await api.get("/centres/liste-simple/", {
             params: { search: dq || undefined, page_size: 200 },
           });
-          const payload = r.data;
-          const results = Array.isArray(payload?.results)
-            ? payload.results
-            : Array.isArray(payload)
-              ? payload
-              : [];
-          setItems(
-            results.map((c: { id: number; nom?: string; label?: string }) => ({
-              id: c.id,
-              label: c.label ?? c.nom ?? `#${c.id}`,
-            }))
-          );
+          const results = extractResults(r.data);
+          setItems(results.map(toCentreLite));
         } catch {
           // fallback DRF standard
           const r = await api.get("/centres/", {
@@ -73,18 +100,8 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
               page_size: 200,
             },
           });
-          const payload = r.data;
-          const results = Array.isArray(payload?.results)
-            ? payload.results
-            : Array.isArray(payload)
-              ? payload
-              : [];
-          setItems(
-            results.map((c: { id: number; nom?: string; label?: string }) => ({
-              id: c.id,
-              label: c.label ?? c.nom ?? `#${c.id}`,
-            }))
-          );
+          const results = extractResults(r.data);
+          setItems(results.map(toCentreLite));
         }
       } catch {
         setErr("Erreur lors du chargement des centres.");

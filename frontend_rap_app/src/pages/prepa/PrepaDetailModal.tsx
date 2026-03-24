@@ -10,7 +10,9 @@ import {
   Box,
   Paper,
   CircularProgress,
+  Link,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Prepa } from "src/types/prepa";
 
@@ -95,10 +97,23 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
                     value={nn(prepa.type_prepa_display ?? prepa.type_prepa)}
                   />
                   <Field label="Date de la séance" value={fmt(prepa.date_prepa)} />
-                  <Field
-                    label="Centre"
-                    value={nn(prepa.centre_nom ?? prepa.centre?.nom ?? prepa.centre_id)}
-                  />
+                  <Field label="Formateur / animateur" value={nn(prepa.formateur_animateur)} />
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="body2" component="span">
+                      <strong>Centre :</strong>{" "}
+                      {prepa.centre?.id ? (
+                        <Link
+                          component={RouterLink}
+                          to={`/prepa/objectifs?centre=${prepa.centre.id}`}
+                          underline="hover"
+                        >
+                          {prepa.centre_nom ?? prepa.centre.nom}
+                        </Link>
+                      ) : (
+                        nn(prepa.centre_nom ?? prepa.centre?.nom ?? prepa.centre_id)
+                      )}
+                    </Typography>
+                  </Grid>
                   <Field label="Commentaire" value={nn(prepa.commentaire)} />
                 </Section>
               </Grid>
@@ -177,6 +192,34 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
 
               {/* ───────────── Métadonnées ───────────── */}
               <Grid item xs={12}>
+                <Section title="Stagiaires Prépa liés">
+                  {prepa.stagiaires_prepa?.length ? (
+                    <Grid item xs={12}>
+                      <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
+                        {prepa.stagiaires_prepa.map((stagiaire, index) => (
+                          <li key={stagiaire.id ?? `${stagiaire.nom}-${stagiaire.prenom}-${index}`}>
+                            <Typography variant="body2">
+                              <strong>
+                                {nn(stagiaire.prenom)} {nn(stagiaire.nom)}
+                              </strong>
+                              {stagiaire.telephone ? ` - ${stagiaire.telephone}` : ""}
+                              {stagiaire.email ? ` - ${stagiaire.email}` : ""}
+                              {stagiaire.statut_parcours_display
+                                ? ` - ${stagiaire.statut_parcours_display}`
+                                : ""}
+                            </Typography>
+                          </li>
+                        ))}
+                      </Box>
+                    </Grid>
+                  ) : (
+                    <Field label="Stagiaires" value="Aucun stagiaire Prépa renseigné" />
+                  )}
+                </Section>
+              </Grid>
+
+              {/* ───────────── Métadonnées ───────────── */}
+              <Grid item xs={12}>
                 <Section title="Métadonnées">
                   <Field label="Créé le" value={fmt(prepa.created_at)} />
                   <Field label="Mis à jour le" value={fmt(prepa.updated_at)} />
@@ -197,14 +240,39 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
         }}
       >
         {prepa && onEdit && prepa.id != null && (
-          <Button
-            startIcon={<EditIcon />}
-            color="primary"
-            variant="contained"
-            onClick={() => onEdit(prepa.id)}
-          >
-            Modifier
-          </Button>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {prepa.centre?.id ? (
+              <Button
+                component={RouterLink}
+                to={`/prepa/objectifs?centre=${prepa.centre.id}`}
+                variant="outlined"
+              >
+                Voir les objectifs du centre
+              </Button>
+            ) : null}
+            <Button
+              component={RouterLink}
+              to={`/prepa/stagiaires?prepa_origine=${prepa.id}`}
+              variant="outlined"
+            >
+              Voir les stagiaires Prépa
+            </Button>
+            <Button
+              component={RouterLink}
+              to={`/prepa/stagiaires/create?prepa_origine=${prepa.id}`}
+              variant="outlined"
+            >
+              Ajouter un stagiaire
+            </Button>
+            <Button
+              startIcon={<EditIcon />}
+              color="primary"
+              variant="contained"
+              onClick={() => onEdit(prepa.id)}
+            >
+              Modifier
+            </Button>
+          </Box>
         )}
         <Button variant="outlined" onClick={onClose}>
           Fermer

@@ -63,7 +63,15 @@ export default function PrepaPageAteliers() {
       ...safeFilters,
       page,
       page_size: pageSize,
-      type_prepa: ["atelier_1"],
+      type_prepa: [
+        "atelier_1",
+        "atelier_2",
+        "atelier_3",
+        "atelier_4",
+        "atelier_5",
+        "atelier_6",
+        "autre",
+      ],
     };
   }, [filters, page, pageSize]);
 

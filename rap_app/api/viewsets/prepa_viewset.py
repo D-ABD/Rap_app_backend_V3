@@ -77,7 +77,7 @@ class PrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     permission_classes = [IsPrepaStaffOrAbove]
 
     # Par défaut, queryset complet, filtré ensuite dynamiquement (cf. get_queryset)
-    queryset = Prepa.objects.select_related("centre").all()
+    queryset = Prepa.objects.select_related("centre").prefetch_related("stagiaires_prepa").all()
 
     # ---------------------------------------------------
     # 🔹 Options de filtres pour le frontend
@@ -142,7 +142,7 @@ class PrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         Retourne les séances Prépa visibles pour l'utilisateur après
         application du scope local par centre puis des filtres métier.
         """
-        qs = Prepa.objects.select_related("centre")
+        qs = Prepa.objects.select_related("centre").prefetch_related("stagiaires_prepa")
         qs = self._scope_qs_to_user_centres(qs)
 
         params = self.request.query_params
