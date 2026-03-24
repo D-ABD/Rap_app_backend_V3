@@ -864,7 +864,9 @@ class Formation(BaseModel):
         """
         Retourne le taux de transformation candidats → inscrits.
         """
-        nb_candidats = self.nombre_candidats or 1
+        nb_candidats = self.nombre_candidats or 0
+        if nb_candidats <= 0:
+            return 0.0
         return round(100.0 * self.total_inscrits / nb_candidats, 2)
 
     @property

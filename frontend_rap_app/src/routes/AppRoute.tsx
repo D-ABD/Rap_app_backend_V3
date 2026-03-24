@@ -84,6 +84,9 @@ import EvenementsEditPage from "../pages/evenements/EvenementsEditPage";
 import DeclicPages from "src/pages/declic/DeclicPages";
 import DeclicCreatePage from "src/pages/declic/DeclicCreatePage";
 import DeclicEditPage from "src/pages/declic/DeclicEditPage";
+import ParticipantsDeclicPage from "src/pages/declic/ParticipantsDeclicPage";
+import ParticipantsDeclicCreatePage from "src/pages/declic/ParticipantsDeclicCreatePage";
+import ParticipantsDeclicEditPage from "src/pages/declic/ParticipantsDeclicEditPage";
 import ObjectifDeclicPage from "src/pages/declic/ObjectifDeclicPage";
 import ObjectifDeclicEditPage from "src/pages/declic/ObjectifDeclicEditPage";
 
@@ -447,6 +450,30 @@ export default function AppRoute() {
           element={
             <DeclicRoute>
               <DeclicEditPage />
+            </DeclicRoute>
+          }
+        />
+        <Route
+          path="/participants-declic"
+          element={
+            <DeclicRoute>
+              <ParticipantsDeclicPage />
+            </DeclicRoute>
+          }
+        />
+        <Route
+          path="/participants-declic/create"
+          element={
+            <DeclicRoute>
+              <ParticipantsDeclicCreatePage />
+            </DeclicRoute>
+          }
+        />
+        <Route
+          path="/participants-declic/:id/edit"
+          element={
+            <DeclicRoute>
+              <ParticipantsDeclicEditPage />
             </DeclicRoute>
           }
         />

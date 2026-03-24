@@ -8,6 +8,42 @@ import { useDeleteStagiairePrepa, useStagiairePrepaDetail, useStagiairesPrepaMet
 import type { StagiairePrepa } from "src/types/prepa";
 import StagiairesPrepaForm from "./StagiairesPrepaForm";
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
+const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === "string");
+
+function extractApiMessage(data: unknown): string | null {
+  if (!isRecord(data)) return null;
+
+  const maybeMessage = (data as { message?: unknown }).message;
+  if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
+
+  const maybeErrors = (data as { errors?: unknown }).errors;
+  const errorsObj = isRecord(maybeErrors) ? maybeErrors : data;
+  const parts: string[] = [];
+
+  for (const [field, val] of Object.entries(errorsObj)) {
+    const label =
+      field === "motif_abandon"
+        ? "Motif d'abandon"
+        : field === "prepa_origine_id"
+          ? "Prépa d'origine"
+          : field === "centre_id"
+            ? "Centre"
+            : field === "non_field_errors"
+              ? "Validation"
+              : field;
+
+    if (typeof val === "string") {
+      parts.push(`${label}: ${val}`);
+    } else if (isStringArray(val)) {
+      parts.push(`${label}: ${val.join(" · ")}`);
+    }
+  }
+
+  return parts.length ? parts.join(" | ") : null;
+}
+
 export default function StagiairesPrepaEditPage() {
   const navigate = useNavigate();
   const { id: idParam } = useParams<{ id: string }>();
@@ -22,12 +58,16 @@ export default function StagiairesPrepaEditPage() {
     if (Number.isNaN(id)) return;
     try {
       setSubmitting(true);
-      await update(id, values);
+      const payload = Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [key, value === "" ? undefined : value])
+      ) as Partial<StagiairePrepa>;
+      await update(id, payload);
       toast.success("Stagiaire Prépa mis à jour");
       navigate("/prepa/stagiaires");
     } catch (e) {
-      const err = e as AxiosError<{ message?: string }>;
-      toast.error(err.response?.data?.message ?? err.message ?? "Erreur lors de la mise à jour");
+      const err = e as AxiosError<unknown>;
+      const parsed = err.response?.data ? extractApiMessage(err.response.data) : null;
+      toast.error(parsed ?? err.message ?? "Erreur lors de la mise à jour du stagiaire Prépa");
     } finally {
       setSubmitting(false);
     }

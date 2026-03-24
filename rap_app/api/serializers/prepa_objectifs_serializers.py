@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
+from .rich_text_utils import sanitize_rich_text
 
 
 @extend_schema_serializer(
@@ -129,6 +130,9 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
         if not obj.centre or not obj.annee:
             return 0
         return Prepa.taux_retention(obj.centre, obj.annee)
+
+    def validate_commentaire(self, value):
+        return sanitize_rich_text(value)
 
     def create(self, validated_data):
         """Crée l'objectif ; departement déduit des deux premiers caractères du code_postal du centre. Passe request.user à save(user=user)."""

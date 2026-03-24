@@ -26,7 +26,7 @@ export default function StagiairesPrepaPage() {
   );
   const { data, loading, error } = useStagiairesPrepaList(effectiveFilters);
   const { remove } = useDeleteStagiairePrepa();
-  const { exportList, exportEmargement } = useExportStagiairesPrepa();
+  const { exportList, exportPresence, exportEmargement } = useExportStagiairesPrepa();
 
   useEffect(() => {
     setCount(data?.count ?? 0);
@@ -70,6 +70,9 @@ export default function StagiairesPrepaPage() {
           </Button>
           <Button variant="outlined" onClick={() => exportList()}>
             ⬇️ Export liste
+          </Button>
+          <Button variant="outlined" onClick={() => exportPresence()}>
+            📋 Feuille de présence
           </Button>
           <Button variant="outlined" onClick={() => exportEmargement()}>
             📝 Feuille d'émargement

@@ -1,6 +1,7 @@
 // src/features/appairages/components/AppairageLastCommentRow.tsx
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import type { AppairageCommentDTO } from "../../../types/appairageComment";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 type Props = {
   appairageId: number;
@@ -40,19 +41,9 @@ export default function AppairageLastCommentRow({
           </Typography>
         ) : (
           <>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.primary",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-              title={lastComment.body}
-            >
-              {lastComment.body}
-            </Typography>
+            <Box sx={{ maxHeight: 56, overflow: "hidden" }}>
+              <CommentaireContent html={lastComment.body || "<em>—</em>"} />
+            </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
               {lastComment.auteur_nom} •{" "}
               {new Date(lastComment.created_at).toLocaleDateString("fr-FR")}

@@ -10,6 +10,26 @@ export interface CentreLight {
   code_postal?: string | null;
 }
 
+export interface ParticipantDeclic {
+  id?: number;
+  nom: string;
+  prenom: string;
+  telephone?: string | null;
+  email?: string | null;
+  declic_origine_id?: number | null;
+  declic_origine_label?: string;
+  type_declic?: string;
+  type_declic_display?: string;
+  date_declic?: string;
+  centre?: CentreLight | null;
+  centre_id?: number | null;
+  centre_nom?: string;
+  present?: boolean;
+  commentaire_presence?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // -----------------------------------------------------------------------------
 // 🎯 Objectif Déclic – Objectifs annuels par centre
 // -----------------------------------------------------------------------------
@@ -68,6 +88,8 @@ export interface Declic {
 
   centre: CentreLight | null;
   centre_id?: number;
+  centre_nom?: string;
+  participants_declic?: ParticipantDeclic[];
 
   // ---------------------------
   // ATELIERS UNIQUEMENT
@@ -151,6 +173,17 @@ export interface DeclicFiltersOptions {
   annees: number[];
   centres: CentreLight[];
   type_declic: Choice[];
+}
+
+export interface ParticipantDeclicFiltersValues {
+  search?: string;
+  centre?: number;
+  declic_origine?: number;
+  type_declic?: TypeDeclic;
+  annee?: number;
+  present?: "true" | "false";
+  ordering?: string;
+  page?: number;
 }
 
 // -----------------------------------------------------------------------------

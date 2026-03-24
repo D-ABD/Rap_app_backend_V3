@@ -38,6 +38,7 @@ import CandidatsSelectModal, {
 } from "../../components/modals/CandidatsSelectModal";
 import type { Partenaire } from "../../types/partenaire";
 import PartenaireSelectModal from "../../components/modals/PartenairesSelectModal";
+import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
 
 const TERMINAUX: ProspectionStatut[] = ["acceptee", "refusee", "annulee"];
 type Mode = "create" | "edit";
@@ -66,6 +67,7 @@ type ProspectionFormDraft = {
   formation_nom?: string | null;
   centre_nom?: string | null;
   num_offre?: string | null;
+  commentaire?: string | null;
 };
 
 function extractOwnerUserId(candidate: CandidatPick): number | null {
@@ -108,6 +110,7 @@ export default function ProspectionFormCandidat({
     formation_nom: initialValues?.formation_nom ?? null,
     centre_nom: initialValues?.centre_nom ?? null,
     num_offre: initialValues?.num_offre ?? null,
+    commentaire: initialValues?.commentaire ?? "",
   });
 
   const [partenaireNom, setPartenaireNom] = useState<string | null>(
@@ -188,6 +191,7 @@ export default function ProspectionFormCandidat({
       ...(form.relance_prevue ? { relance_prevue: form.relance_prevue } : {}),
       ...(partenaireNom ? { partenaire_nom: partenaireNom } : {}),
       ...(formationNom ? { formation_nom: formationNom } : {}),
+      ...(form.commentaire ? { commentaire: form.commentaire } : {}),
     };
 
     try {
@@ -362,6 +366,15 @@ export default function ProspectionFormCandidat({
             </FormControl>
           </Grid>
         </Grid>
+      </Section>
+
+      <Section icon={<AssignmentIcon color="primary" />} title="Commentaire libre">
+        <RichHtmlEditorField
+          label="Commentaire"
+          value={form.commentaire ?? ""}
+          onChange={(value) => setForm((prev) => ({ ...prev, commentaire: value }))}
+          placeholder="Ajouter un commentaire enrichi : gras, couleur, listes…"
+        />
       </Section>
 
       {/* ─────────── Actions ─────────── */}

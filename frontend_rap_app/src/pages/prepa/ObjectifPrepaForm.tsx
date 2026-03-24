@@ -24,6 +24,7 @@ import {
   useObjectifsPrepa,
   useUpdateObjectifPrepa,
 } from "src/hooks/usePrepaObjectifs";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 
 // ─────────────────────────────────────────────
 // 📌 Props
@@ -219,13 +220,12 @@ export default function ObjectifPrepaForm({ open, onClose, id }: Props) {
 
               {/* Commentaire */}
               <Grid item xs={12}>
-                <TextField
+                <RichHtmlEditorField
                   label="Commentaire"
-                  fullWidth
-                  multiline
-                  rows={2}
                   value={form.commentaire ?? ""}
-                  onChange={(e) => handleChange("commentaire", e.target.value)}
+                  onChange={(value) => handleChange("commentaire", value)}
+                  placeholder="Ajouter un commentaire enrichi…"
+                  minHeight={120}
                 />
               </Grid>
             </Grid>

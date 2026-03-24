@@ -18,6 +18,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import type { AppairageCommentDTO } from "../../../types/appairageComment";
 import { useState } from "react";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 interface Props {
   rows: AppairageCommentDTO[];
@@ -190,22 +191,17 @@ export default function AppairageCommentTable({
                       {r.created_by_username || "—"} • {fmt(r.created_at)}
                     </Typography>
 
-                    <Typography
-                      variant="body2"
+                    <Box
                       sx={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
                         mt: 0.5,
                         maxWidth: 400,
+                        maxHeight: 84,
+                        overflow: "hidden",
                         color: "text.secondary",
                       }}
-                      title={r.body}
                     >
-                      {r.body || "—"}
-                    </Typography>
+                      <CommentaireContent html={r.body || "<em>—</em>"} />
+                    </Box>
                   </TableCell>
 
                   {(onEdit || onDelete) && (

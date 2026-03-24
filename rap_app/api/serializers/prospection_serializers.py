@@ -11,6 +11,7 @@ from rest_framework import serializers
 from ...models.formations import Formation
 from ...models.prospection import HistoriqueProspection, Prospection, ProspectionChoices
 from ..serializers.prospection_comment_serializers import ProspectionCommentSerializer
+from .rich_text_utils import sanitize_rich_text
 
 
 class BaseProspectionSerializer(serializers.ModelSerializer):
@@ -251,6 +252,9 @@ class ProspectionSerializer(BaseProspectionSerializer):
         if value and value < timezone.now().date():
             raise serializers.ValidationError(_("La date de relance prévue doit être dans le futur."))
         return value
+
+    def validate_commentaire(self, value):
+        return sanitize_rich_text(value)
 
 
 class ProspectionWriteSerializer(ProspectionSerializer):

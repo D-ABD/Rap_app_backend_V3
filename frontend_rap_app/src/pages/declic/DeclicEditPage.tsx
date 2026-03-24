@@ -135,9 +135,10 @@ export default function DeclicEditPage() {
   /* 🧮 Valeurs initiales */
   /* ─────────────────────────────── */
   const initialValues: Partial<Declic> = {
-    type_declic: data.type_declic ?? "info_collective",
+    type_declic: data.type_declic ?? "atelier_1",
     date_declic: data.date_declic?.trim() ? data.date_declic : "",
     centre_id: typeof data.centre_id === "number" ? data.centre_id : (data.centre?.id ?? undefined),
+    participants_declic: data.participants_declic ?? [],
     commentaire: data.commentaire ?? "",
     nb_inscrits_declic: data.nb_inscrits_declic ?? 0,
     nb_presents_declic: data.nb_presents_declic ?? 0,

@@ -144,6 +144,10 @@ export default function DeclicPage() {
             ➕ Nouvelle séance
           </Button>
 
+          <Button variant="outlined" onClick={() => navigate("/participants-declic")}>
+            👥 Participants Déclic
+          </Button>
+
           {/* ✅ Export Excel */}
           <ExportButtonDeclic data={items} selectedIds={selectedIds} />
         </Stack>
@@ -188,7 +192,9 @@ export default function DeclicPage() {
       {loading ? (
         <CircularProgress />
       ) : error ? (
-        <Typography color="error">⚠️ Erreur de chargement des séances Déclic.</Typography>
+        <Typography color="error">
+          ⚠️ {error.message || "Erreur de chargement des séances Déclic."}
+        </Typography>
       ) : !items.length ? (
         <Box textAlign="center" color="text.secondary" my={4}>
           <Typography>Aucune séance Déclic trouvée.</Typography>

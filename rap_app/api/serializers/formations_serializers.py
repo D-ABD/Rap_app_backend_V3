@@ -93,6 +93,8 @@ class FormationListSerializer(serializers.Serializer):
     nombre_candidats = serializers.IntegerField()
     candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField()
+    nombre_prospections = serializers.IntegerField(required=False, read_only=True)
+    nombre_appairages = serializers.IntegerField(required=False, read_only=True)
     intitule_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_rncp = serializers.CharField(required=False, allow_blank=True, allow_null=True)

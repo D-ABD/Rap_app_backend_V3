@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { Box, Typography, Divider, Stack, Button, Paper, CircularProgress } from "@mui/material";
 import type { Prospection } from "../../../types/prospection";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 interface Props {
   prospections: Prospection[];
@@ -52,9 +53,12 @@ export default function ProspectionsSection({
           <Typography variant="body2" color="text.secondary">
             📌 {p.objectif_display} — 🏷️ {p.statut_display}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            📝 {p.commentaire || "—"}
-          </Typography>
+          <Box sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" component="div">
+              📝
+            </Typography>
+            <CommentaireContent html={p.commentaire || "<em>—</em>"} />
+          </Box>
           <Divider sx={{ mt: 1 }} />
         </Box>
       ))}

@@ -25,6 +25,42 @@ const isAxiosErr = (e: unknown): e is AxiosError<unknown> =>
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 const hasArrayProp = (o: Record<string, unknown>, k: string) => Array.isArray(o[k]);
 
+function unwrapApiData<T>(payload: unknown): T | null {
+  if (isObject(payload) && "data" in payload) {
+    return (payload.data as T) ?? null;
+  }
+  return (payload as T) ?? null;
+}
+
+function extractApiErrorMessage(error: unknown): string | null {
+  if (!isAxiosErr(error)) return null;
+
+  const data = error.response?.data;
+  if (!isObject(data)) return error.message ?? null;
+
+  const message = data.message;
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+
+  const errors = isObject(data.errors) ? data.errors : data;
+  const parts: string[] = [];
+  for (const [field, value] of Object.entries(errors)) {
+    if (typeof value === "string" && value.trim()) {
+      parts.push(`${field}: ${value}`);
+      continue;
+    }
+    if (Array.isArray(value)) {
+      const strings = value.filter((item): item is string => typeof item === "string");
+      if (strings.length) {
+        parts.push(`${field}: ${strings.join(" · ")}`);
+      }
+    }
+  }
+
+  return parts.length ? parts.join(" | ") : (error.message ?? null);
+}
+
 // ────────────────────────────────────────────────────────────────
 // 🧩 Normalisation API (pagination, results, etc.)
 // ────────────────────────────────────────────────────────────────
@@ -105,7 +141,7 @@ export function useDeclicList(filters: Partial<DeclicFilters> = {}) {
       } catch (e) {
         if (isAbort(e)) return dbg("Déclic fetch aborted");
         if (isAxiosErr(e)) dbg("Déclic list error", e.message, e.response?.status);
-        setError(e as Error);
+        setError(new Error(extractApiErrorMessage(e) ?? "Erreur lors du chargement des séances Déclic."));
       } finally {
         setLoading(false);
       }
@@ -265,9 +301,16 @@ export function useDeclicMeta() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        const res = await api.get("/declic/meta/", { signal: ctrl.signal });
-        setMeta(res.data);
-        dbg("useDeclicMeta.success", Object.keys(res.data ?? {}));
+        const res = await api.get("/declic/filters/", { signal: ctrl.signal });
+        const payload = unwrapApiData<Record<string, unknown>>(res.data) ?? {};
+        const normalized = {
+          type_declic_choices: Array.isArray(payload.type_declic) ? payload.type_declic : [],
+          centre_choices: Array.isArray(payload.centres) ? payload.centres : [],
+          annees: Array.isArray(payload.annees) ? payload.annees : [],
+          departements: Array.isArray(payload.departements) ? payload.departements : [],
+        };
+        setMeta(normalized);
+        dbg("useDeclicMeta.success", Object.keys(normalized));
       } catch (e) {
         if (!isAbort(e)) {
           dbg("useDeclicMeta.error", e);
@@ -303,7 +346,12 @@ export function useDeclicFiltersOptions() {
     queryKey: ["declic-filters-options"],
     queryFn: async () => {
       const res = await api.get("/declic/filters/");
-      return res.data;
+      return unwrapApiData<DeclicFiltersOptions>(res.data) ?? {
+        annees: [],
+        departements: [],
+        centres: [],
+        type_declic: [],
+      };
     },
     staleTime: 1000 * 60 * 10, // 10 min
   });

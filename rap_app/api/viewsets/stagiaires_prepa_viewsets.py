@@ -246,6 +246,44 @@ class StagiairePrepaViewSet(viewsets.ModelViewSet):
         self._style_sheet(ws, header_row=3)
         return self._xlsx_response(wb, "stagiaires_prepa_emargement.xlsx")
 
+    @action(detail=False, methods=["get", "post"], url_path="export-presence-xlsx")
+    def export_presence_xlsx(self, request):
+        qs = self._filtered_export_qs(request)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Presence Prepa"
+
+        title = "Feuille de présence - Stagiaires Prépa"
+        type_atelier = request.query_params.get("type_atelier")
+        if type_atelier:
+            try:
+                title = f"{title} - {Prepa.TypePrepa(type_atelier).label}"
+            except ValueError:
+                pass
+
+        ws.merge_cells("A1:G1")
+        ws["A1"] = title
+        ws["A1"].font = Font(bold=True, size=14)
+        ws["A1"].alignment = Alignment(horizontal="center")
+        ws.append([])
+        ws.append(["Nom", "Prénom", "Centre", "Statut", "Téléphone", "Email", "Présent"])
+
+        for obj in qs:
+            ws.append(
+                [
+                    obj.nom,
+                    obj.prenom,
+                    getattr(obj.centre, "nom", ""),
+                    obj.get_statut_parcours_display(),
+                    obj.telephone or "",
+                    obj.email or "",
+                    "",
+                ]
+            )
+
+        self._style_sheet(ws, header_row=3)
+        return self._xlsx_response(wb, "stagiaires_prepa_presence.xlsx")
+
     def _style_sheet(self, ws, header_row=1):
         fill = PatternFill("solid", fgColor="DCE6F1")
         border = Border(

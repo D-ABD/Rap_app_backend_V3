@@ -258,7 +258,9 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             places_disponibles_calc=ExpressionWrapper(
                 (F("prevus_crif") + F("prevus_mp")) - (F("inscrits_crif") + F("inscrits_mp")),
                 output_field=IntegerField(),
-            )
+            ),
+            nombre_prospections=Count("prospections", distinct=True),
+            nombre_appairages=Count("appairages", distinct=True),
         ).select_related("centre", "type_offre", "statut")
 
     def get_object(self):

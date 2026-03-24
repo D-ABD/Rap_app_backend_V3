@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
 
 interface Props {
@@ -286,13 +287,11 @@ export default function PrepaForm({
         {/* --- Commentaire --- */}
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6">Commentaire</Typography>
-          <TextField
-            multiline
-            fullWidth
-            minRows={3}
-            placeholder="Ajouter un commentaire (facultatif)…"
+          <RichHtmlEditorField
+            label="Commentaire"
             value={form.commentaire ?? ""}
-            onChange={(e) => handleChange("commentaire", e.target.value)}
+            onChange={(value) => handleChange("commentaire", value)}
+            placeholder="Ajouter un commentaire enrichi…"
           />
         </Paper>
 

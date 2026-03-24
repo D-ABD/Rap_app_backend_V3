@@ -18,6 +18,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useObjectifsPrepa } from "src/hooks/usePrepaObjectifs";
+import CommentaireContent from "../commentaires/CommentaireContent";
 import type { ObjectifPrepa } from "src/types/prepa";
 
 // ─────────────────────────────────────────────
@@ -220,9 +221,7 @@ export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: P
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 Commentaire
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {objectif.commentaire}
-              </Typography>
+              <CommentaireContent html={objectif.commentaire} />
             </Box>
           )}
         </Paper>

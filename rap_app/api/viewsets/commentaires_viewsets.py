@@ -7,6 +7,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
+from django.utils.html import strip_tags
 from django.utils import timezone as dj_timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from openpyxl import Workbook
@@ -548,7 +549,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             ws.append(
                 [
                     c.id,
-                    c.contenu or "",
+                    strip_tags(c.contenu or ""),
                     getattr(c, "activite", "") or "",
                     getattr(c.created_by, "username", ""),
                     _fmt(c.created_at),

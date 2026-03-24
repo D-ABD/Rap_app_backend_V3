@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
 
 interface Props {
@@ -61,8 +62,12 @@ export default function PrepaFormIC({
 
   /* ===================== CHOIX DYNAMIQUES ===================== */
   const typeChoices = useMemo(
-    () =>
-      meta?.type_prepa_choices?.length ? meta.type_prepa_choices : TYPE_PREPA_CHOICES_FALLBACK,
+    () => {
+      const source = meta?.type_prepa_choices?.length
+        ? meta.type_prepa_choices
+        : TYPE_PREPA_CHOICES_FALLBACK;
+      return source.filter((choice) => choice.value === "info_collective");
+    },
     [meta?.type_prepa_choices]
   );
 
@@ -283,13 +288,11 @@ export default function PrepaFormIC({
         {/* --- Commentaire --- */}
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6">Commentaire</Typography>
-          <TextField
-            multiline
-            fullWidth
-            minRows={3}
-            placeholder="Ajouter un commentaire (facultatif)…"
+          <RichHtmlEditorField
+            label="Commentaire"
             value={form.commentaire ?? ""}
-            onChange={(e) => handleChange("commentaire", e.target.value)}
+            onChange={(value) => handleChange("commentaire", value)}
+            placeholder="Ajouter un commentaire enrichi…"
           />
         </Paper>
 

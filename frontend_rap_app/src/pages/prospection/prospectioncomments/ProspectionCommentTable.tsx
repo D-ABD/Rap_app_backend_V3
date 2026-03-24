@@ -17,6 +17,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import ResponsiveTableTemplate, { TableColumn } from "../../../components/ResponsiveTableTemplate";
 import type { ProspectionCommentDTO } from "../../../types/prospectionComment";
 import { useState } from "react";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 interface Props {
   rows: ProspectionCommentDTO[];
@@ -188,19 +189,16 @@ export default function ProspectionCommentTable({
           </Box>
 
           {/* Corps du commentaire */}
-          <Typography
-            variant="body2"
+          <Box
             sx={{
-              display: "-webkit-box",
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: "vertical",
+              mt: 0.5,
+              maxHeight: 84,
               overflow: "hidden",
-              textOverflow: "ellipsis",
             }}
-            title={r.body}
+            title={undefined}
           >
-            {r.body || "—"}
-          </Typography>
+            <CommentaireContent html={r.body || "<em>—</em>"} />
+          </Box>
         </Box>
       ),
     },

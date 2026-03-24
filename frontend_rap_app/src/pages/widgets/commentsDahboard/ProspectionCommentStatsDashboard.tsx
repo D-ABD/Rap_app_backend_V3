@@ -27,6 +27,7 @@ import {
   useProspectionCommentGrouped,
   ProspectionCommentGroupRow,
 } from "../../../types/prospectionCommentStats";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 /* ──────────────────────────────
    Helper de formatage des dates
@@ -226,7 +227,7 @@ export default function ProspectionCommentStatsDashboard({
                           color: "text.secondary",
                         }}
                       >
-                        {c.body || <em>—</em>}
+                        <CommentaireContent html={c.body || "<em>—</em>"} />
                       </Box>
                     </TableCell>
                   </TableRow>

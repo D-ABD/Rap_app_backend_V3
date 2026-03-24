@@ -22,6 +22,7 @@ from .viewsets.commentaires_viewsets import CommentaireViewSet
 # Imports des ViewSets et vues nécessaires aux routes
 from .viewsets.cvtheque_viewset import CVThequeViewSet
 from .viewsets.declic_objectifs_viewsets import ObjectifDeclicViewSet
+from .viewsets.participants_declic_viewsets import ParticipantDeclicViewSet
 from .viewsets.declic_viewset import DeclicViewSet
 from .viewsets.documents_viewsets import DocumentViewSet
 from .viewsets.evenements_viewsets import EvenementViewSet
@@ -90,6 +91,7 @@ router.register(r"stagiaires-prepa", StagiairePrepaViewSet, basename="stagiaire-
 router.register(r"prepa-objectifs", ObjectifPrepaViewSet, basename="objectif-prepa")
 router.register(r"prepa-stats", PrepaStatsViewSet, basename="prepa-stats")
 router.register(r"declic", DeclicViewSet, basename="declic")
+router.register(r"participants-declic", ParticipantDeclicViewSet, basename="participant-declic")
 router.register(r"objectifs-declic", ObjectifDeclicViewSet, basename="objectifs-declic")
 router.register(r"declic-stats", DeclicStatsViewSet, basename="declic-stats")
 router.register(r"cvtheque", CVThequeViewSet, basename="cvtheque")

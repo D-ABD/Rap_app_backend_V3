@@ -118,6 +118,63 @@ class Declic(BaseModel):
         )
         return max(objectif_annuel - realise, 0)
 
+
+class ParticipantDeclic(BaseModel):
+    """
+    Participant nominatif rattaché à une séance Déclic.
+
+    Le suivi est volontairement simple :
+    - aucune notion de parcours
+    - une ligne = une personne sur une séance donnée
+    - présence signée ou non, exploitable pour présence / émargement
+    """
+
+    declic_origine = models.ForeignKey(
+        Declic,
+        on_delete=models.CASCADE,
+        related_name="participants_declic",
+        verbose_name=_("Séance Déclic d'origine"),
+    )
+    centre = models.ForeignKey(
+        Centre,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="participants_declic",
+        verbose_name=_("Centre"),
+    )
+    nom = models.CharField(max_length=120, verbose_name=_("Nom"))
+    prenom = models.CharField(max_length=120, verbose_name=_("Prénom"))
+    telephone = models.CharField(max_length=30, blank=True, null=True, verbose_name=_("Téléphone"))
+    email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
+    present = models.BooleanField(default=True, verbose_name=_("Présent"))
+    commentaire_presence = models.TextField(blank=True, null=True, verbose_name=_("Commentaire de présence"))
+
+    class Meta:
+        verbose_name = _("Participant Déclic")
+        verbose_name_plural = _("Participants Déclic")
+        ordering = ["-declic_origine__date_declic", "nom", "prenom", "-id"]
+        indexes = [
+            models.Index(fields=["declic_origine"]),
+            models.Index(fields=["centre"]),
+            models.Index(fields=["present"]),
+            models.Index(fields=["nom", "prenom"]),
+        ]
+
+    def __str__(self):
+        return f"{self.prenom} {self.nom} - {self.declic_origine}"
+
+    def save(self, *args, user=None, **kwargs):
+        if not self.centre and self.declic_origine_id:
+            self.centre = getattr(self.declic_origine, "centre", None)
+
+        if user is not None:
+            if not self.pk:
+                self.created_by = user
+            self.updated_by = user
+
+        super().save(*args, **kwargs)
+
     @classmethod
     def total_accueillis(cls, annee=None, centre=None, departement=None):
         """

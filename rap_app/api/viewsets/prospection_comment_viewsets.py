@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.templatetags.static import static
+from django.utils.html import strip_tags
 from django.utils import timezone as dj_timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -518,7 +519,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                 str(getattr(getattr(c.prospection, "partenaire", None), "nom", "—")),
                 str(getattr(getattr(c.prospection, "formation", None), "nom", "—")),
                 str(getattr(c.created_by, "username", "—")),
-                str(c.body or ""),
+                str(strip_tags(c.body or "")),
                 c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "—",
             ]
             ws.append(row)

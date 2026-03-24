@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography, Paper, Chip } from "@mui/material";
 import { useAppairage } from "../../../hooks/useAppairage";
 import PageTemplate from "../../../components/PageTemplate";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 export default function AppairageDetailPage() {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ export default function AppairageDetailPage() {
               <Typography variant="body2" fontWeight="bold">
                 {c.auteur_nom || "—"} • {new Date(c.created_at).toLocaleString("fr-FR")}
               </Typography>
-              <Typography variant="body2">{c.body}</Typography>
+              <CommentaireContent html={c.body || "<em>—</em>"} />
             </Box>
           ))
         ) : (

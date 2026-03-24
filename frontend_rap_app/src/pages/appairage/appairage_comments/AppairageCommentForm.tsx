@@ -1,11 +1,14 @@
 // src/pages/appairages/appairage_comments/AppairageCommentForm.tsx
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
+import { useQuill } from "react-quilljs";
+import "quill/dist/quill.snow.css";
 import type {
   AppairageCommentCreateInput,
   AppairageCommentUpdateInput,
   AppairageCommentDTO,
 } from "../../../types/appairageComment";
+import { colorOptions } from "../../../utils/registerQuillFormats";
 
 type Props = {
   initial?: AppairageCommentDTO | null;
@@ -14,14 +17,26 @@ type Props = {
 };
 
 const MAX_BODY_LEN = 4000;
+const TOOLBAR = [
+  ["bold", "italic", "strike"],
+  [{ color: colorOptions }, { background: colorOptions }],
+  ["clean"],
+];
 
 export default function AppairageCommentForm({ initial = null, appairageId, onSubmit }: Props) {
   const [appairage, setAppairage] = useState<number | "">(initial?.appairage ?? appairageId ?? "");
   const [body, setBody] = useState<string>(initial?.body ?? "");
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  const bodyId = useId();
+  const { quill, quillRef } = useQuill({
+    theme: "snow",
+    modules: {
+      toolbar: { container: TOOLBAR },
+      history: { delay: 500, maxStack: 100, userOnly: true },
+      clipboard: { matchVisual: false },
+    },
+    formats: ["bold", "italic", "strike", "color", "background"],
+  });
 
   useEffect(() => {
     if (appairageId != null) {
@@ -29,12 +44,37 @@ export default function AppairageCommentForm({ initial = null, appairageId, onSu
     }
   }, [appairageId]);
 
+  useEffect(() => {
+    if (!quill) return;
+    const isEmpty = quill.root.innerHTML === "<p><br></p>" || quill.getText().trim() === "";
+    if (initial?.body && isEmpty) {
+      quill.clipboard.dangerouslyPasteHTML(initial.body);
+    }
+  }, [quill, initial?.body]);
+
+  useEffect(() => {
+    if (!quill) return;
+    const sync = () => {
+      const html = quill.root.innerHTML ?? "";
+      setBody(html);
+      if (html.length > MAX_BODY_LEN) {
+        quill.deleteText(MAX_BODY_LEN, quill.getLength());
+      }
+    };
+    quill.on("text-change", sync);
+    return () => {
+      quill.off("text-change", sync);
+    };
+  }, [quill]);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setError(null);
 
-      if (body.trim().length === 0) {
+      const bodyHtml = (quill?.root.innerHTML ?? body).trim();
+      const bodyText = (quill?.getText() ?? "").trim();
+      if (bodyText.length === 0) {
         setError("Veuillez renseigner un commentaire.");
         return;
       }
@@ -42,10 +82,10 @@ export default function AppairageCommentForm({ initial = null, appairageId, onSu
       setSubmitting(true);
 
       const payload: AppairageCommentCreateInput | AppairageCommentUpdateInput = initial
-        ? { body: body.trim() } // update → seul le body est modifiable
+        ? { body: bodyHtml } // update → seul le body est modifiable
         : {
             appairage: Number(appairage),
-            body: body.trim(),
+            body: bodyHtml,
           };
 
       try {
@@ -59,7 +99,7 @@ export default function AppairageCommentForm({ initial = null, appairageId, onSu
         setSubmitting(false);
       }
     },
-    [appairage, body, onSubmit, initial]
+    [appairage, body, onSubmit, initial, quill]
   );
 
   return (
@@ -78,17 +118,30 @@ export default function AppairageCommentForm({ initial = null, appairageId, onSu
         )}
 
         {/* Champ commentaire */}
-        <TextField
-          id={bodyId}
-          label="Commentaire"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          required
-          fullWidth
-          multiline
-          minRows={3}
-          inputProps={{ maxLength: MAX_BODY_LEN }}
-        />
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
+            Commentaire
+          </Typography>
+          <Box
+            sx={{
+              "& .ql-editor": {
+                minHeight: 160,
+                maxHeight: 320,
+                overflowY: "auto",
+                backgroundColor: "#fff",
+                borderRadius: 1,
+                padding: "0.5rem",
+                fontSize: "0.95rem",
+                lineHeight: 1.5,
+              },
+            }}
+          >
+            <div ref={quillRef} />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {MAX_BODY_LEN - body.length} caractères restants
+          </Typography>
+        </Box>
 
         {error && (
           <Typography color="error" variant="body2">

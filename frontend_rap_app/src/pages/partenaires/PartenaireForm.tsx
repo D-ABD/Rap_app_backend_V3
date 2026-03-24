@@ -33,6 +33,7 @@ import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 
 import type { Partenaire, PartenaireChoicesResponse, CentreLite } from "../../types/partenaire";
 import CentresSelectModal from "../../components/modals/CentresSelectModal";
+import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
 
 type CentreOption = { value: number; label: string };
 
@@ -578,14 +579,12 @@ export default function PartenaireForm({
             </Grid>
 
             <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
+              <RichHtmlEditorField
                 label={`Description (${count(form.action_description)}/1000)`}
                 value={form.action_description || ""}
-                onChange={(e) => handleChange("action_description", e.target.value)}
-                inputProps={{ maxLength: 1000 }}
+                onChange={(value) => handleChange("action_description", value)}
+                placeholder="Décrire l'action commerciale…"
+                minHeight={120}
               />
             </Grid>
           </Grid>
@@ -619,14 +618,12 @@ export default function PartenaireForm({
         </AccordionSummary>
 
         <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={4}
+          <RichHtmlEditorField
             label={`Informations complémentaires (${count(form.description)}/2000)`}
             value={form.description || ""}
-            onChange={(e) => handleChange("description", e.target.value)}
-            inputProps={{ maxLength: 2000 }}
+            onChange={(value) => handleChange("description", value)}
+            placeholder="Décrire le partenaire, le contexte, les besoins…"
+            minHeight={140}
           />
         </AccordionDetails>
       </Accordion>

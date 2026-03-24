@@ -8,7 +8,6 @@ import {
   Typography,
   Box,
   Badge,
-  TextField,
   List,
   ListItem,
   ListItemText,
@@ -25,6 +24,8 @@ import {
   useDeleteAppairageComment,
 } from "../../hooks/useAppairageComments";
 import type { AppairageCommentDTO } from "../../types/appairageComment";
+import CommentaireContent from "../../pages/commentaires/CommentaireContent";
+import RichHtmlEditorField from "../forms/RichHtmlEditorField";
 
 type Props = {
   show: boolean;
@@ -68,7 +69,8 @@ export default function AppairageCommentsModal({
   const { remove, loading: deleting } = useDeleteAppairageComment(deletingId ?? 0);
 
   const handleAdd = async () => {
-    if (!newComment.trim()) return;
+    const trimmed = newComment.replace(/<[^>]*>/g, "").trim();
+    if (!trimmed) return;
     try {
       const created = await create({
         appairage: appairageId,
@@ -113,16 +115,19 @@ export default function AppairageCommentsModal({
       <DialogContent dividers>
         {/* Formulaire ajout commentaire */}
         <Box sx={{ mb: 2 }}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
+          <RichHtmlEditorField
+            label="Ajouter un commentaire"
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Ajouter un commentaire…"
-            sx={{ mb: 1 }}
+            onChange={setNewComment}
+            placeholder="Ajouter un commentaire enrichi…"
+            minHeight={120}
           />
-          <Button variant="contained" onClick={handleAdd} disabled={!newComment.trim() || creating}>
+          <Button
+            variant="contained"
+            onClick={handleAdd}
+            disabled={!newComment.replace(/<[^>]*>/g, "").trim() || creating}
+            sx={{ mt: 1 }}
+          >
             {creating ? "⏳ Ajout…" : "Ajouter"}
           </Button>
         </Box>
@@ -158,11 +163,11 @@ export default function AppairageCommentsModal({
                   }
                   secondary={
                     <Typography
+                      component="div"
                       variant="body1"
                       color="text.primary"
-                      sx={{ whiteSpace: "pre-wrap" }}
                     >
-                      {c.body}
+                      <CommentaireContent html={c.body || "<em>—</em>"} />
                     </Typography>
                   }
                 />

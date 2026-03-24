@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { Declic, CentreLight } from "src/types/declic";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
+import DeclicParticipantsSection from "./DeclicParticipantsSection";
 
 interface Props {
   initialValues?: Partial<Declic>;
@@ -28,7 +30,6 @@ interface Props {
 
 /* ===================== CHOIX PAR DÉFAUT ===================== */
 const TYPE_DEClic_CHOICES_FALLBACK = [
-  { value: "info_collective", label: "Information collective" },
   { value: "atelier_1", label: "Atelier 1" },
   { value: "atelier_2", label: "Atelier 2" },
   { value: "atelier_3", label: "Atelier 3" },
@@ -48,13 +49,14 @@ export default function DeclicForm({
   onCentreChange,
 }: Props) {
   const [form, setForm] = useState<Partial<Declic>>({
-    type_declic: initialValues?.type_declic ?? "info_collective",
+    type_declic: initialValues?.type_declic ?? "atelier_1",
     date_declic: initialValues?.date_declic ?? "",
     centre_id: initialValues?.centre_id ?? undefined,
     commentaire: initialValues?.commentaire ?? "",
     nb_inscrits_declic: initialValues?.nb_inscrits_declic ?? 0,
     nb_presents_declic: initialValues?.nb_presents_declic ?? 0,
     nb_absents_declic: initialValues?.nb_absents_declic ?? 0,
+    participants_declic: initialValues?.participants_declic ?? [],
   });
 
   const [centreLabel, setCentreLabel] = useState<string>("");
@@ -104,7 +106,7 @@ export default function DeclicForm({
   };
 
   /* ===================== DÉTERMINER LE TYPE ===================== */
-  const isAtelier = form.type_declic?.startsWith("atelier");
+  const isAtelier = form.type_declic?.startsWith("atelier") || form.type_declic === "autre";
 
   return (
     <>
@@ -214,16 +216,19 @@ export default function DeclicForm({
           </Paper>
         </Collapse>
 
+        <DeclicParticipantsSection
+          participants={form.participants_declic ?? []}
+          onChange={(participants) => handleChange("participants_declic", participants)}
+        />
+
         {/* --- Commentaire --- */}
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6">Commentaire</Typography>
-          <TextField
-            multiline
-            fullWidth
-            minRows={3}
-            placeholder="Ajouter un commentaire (facultatif)…"
+          <RichHtmlEditorField
+            label="Commentaire"
             value={form.commentaire ?? ""}
-            onChange={(e) => handleChange("commentaire", e.target.value)}
+            onChange={(value) => handleChange("commentaire", value)}
+            placeholder="Ajouter un commentaire enrichi…"
           />
         </Paper>
 

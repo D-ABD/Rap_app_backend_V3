@@ -1,10 +1,26 @@
 import bleach
+from bleach.css_sanitizer import CSSSanitizer
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.prospection import Prospection
 from ...models.prospection_comments import ProspectionComment
+
+ALLOWED_TAGS = ["a", "b", "i", "strong", "em", "u", "strike", "span", "p", "br", "ul", "ol", "li"]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title", "target", "rel"],
+    "span": ["style"],
+}
+css_sanitizer = CSSSanitizer(
+    allowed_css_properties=[
+        "color",
+        "background-color",
+        "font-weight",
+        "font-style",
+        "text-decoration",
+    ]
+)
 
 
 class ProspectionCommentSerializer(serializers.ModelSerializer):
@@ -133,9 +149,14 @@ class ProspectionCommentSerializer(serializers.ModelSerializer):
 
     def validate_body(self, value: str) -> str:
         """Nettoie le HTML (balises et attributs autorisés) avec bleach puis linkify."""
-        allowed_tags = ["b", "i", "u", "strong", "em", "p", "br", "ul", "ol", "li", "a"]
-        allowed_attrs = {"a": ["href", "title", "target"]}
-        cleaned = bleach.clean(value or "", tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        cleaned = bleach.clean(
+            value or "",
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            css_sanitizer=css_sanitizer,
+            strip=True,
+            strip_comments=True,
+        )
         return bleach.linkify(cleaned)
 
     def update(self, instance: ProspectionComment, validated_data):

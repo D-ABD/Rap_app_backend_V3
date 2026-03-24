@@ -30,6 +30,7 @@ from .logs import LogUtilisateur
 from .models_test import DummyModel
 from .partenaires import Partenaire
 from .prepa import Prepa, StagiairePrepa
+from .declic import Declic, ParticipantDeclic
 from .prospection import HistoriqueProspection, Prospection
 from .rapports import Rapport
 from .statut import Statut

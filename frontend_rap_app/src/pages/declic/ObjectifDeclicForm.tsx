@@ -24,6 +24,7 @@ import {
   useObjectifsDeclic,
   useUpdateObjectifDeclic,
 } from "src/hooks/useDeclicObjectifs";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 
 // ─────────────────────────────────────────────
 // 📌 Props
@@ -218,13 +219,12 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
 
               {/* Commentaire */}
               <Grid item xs={12}>
-                <TextField
+                <RichHtmlEditorField
                   label="Commentaire"
-                  fullWidth
-                  multiline
-                  rows={2}
                   value={form.commentaire ?? ""}
-                  onChange={(e) => handleChange("commentaire", e.target.value)}
+                  onChange={(value) => handleChange("commentaire", value)}
+                  placeholder="Ajouter un commentaire enrichi…"
+                  minHeight={120}
                 />
               </Grid>
             </Grid>

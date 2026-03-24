@@ -182,13 +182,22 @@ async function exportBlob(url: string, ids?: number[]) {
 }
 
 export function useExportStagiairesPrepa() {
+  const buildSearch = (searchOverride?: string) => {
+    if (typeof searchOverride === "string") return searchOverride;
+    return typeof window !== "undefined" ? window.location.search || "" : "";
+  };
+
   return {
-    exportList: async (ids?: number[]) => {
-      const qs = typeof window !== "undefined" ? window.location.search || "" : "";
+    exportList: async (ids?: number[], searchOverride?: string) => {
+      const qs = buildSearch(searchOverride);
       await exportBlob(`/stagiaires-prepa/export-xlsx/${qs.startsWith("?") ? qs : ""}`, ids);
     },
-    exportEmargement: async (ids?: number[]) => {
-      const qs = typeof window !== "undefined" ? window.location.search || "" : "";
+    exportPresence: async (ids?: number[], searchOverride?: string) => {
+      const qs = buildSearch(searchOverride);
+      await exportBlob(`/stagiaires-prepa/export-presence-xlsx/${qs.startsWith("?") ? qs : ""}`, ids);
+    },
+    exportEmargement: async (ids?: number[], searchOverride?: string) => {
+      const qs = buildSearch(searchOverride);
       await exportBlob(`/stagiaires-prepa/export-emargement-xlsx/${qs.startsWith("?") ? qs : ""}`, ids);
     },
   };

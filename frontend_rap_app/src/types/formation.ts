@@ -18,6 +18,7 @@ import type { Commentaire } from "./commentaire";
 import type { Document } from "./document";
 import type { Evenement } from "./evenement";
 import type { Prospection } from "./prospection";
+import type { Appairage } from "./appairage";
 import type { HistoriqueFormation } from "./historique";
 import type { Partenaire } from "./partenaire";
 
@@ -78,6 +79,8 @@ export interface Formation {
   nombre_candidats?: number;
   nombre_entretiens?: number;
   nombre_evenements?: number;
+  nombre_prospections?: number;
+  nombre_appairages?: number;
 
   // métriques calculées (côté modèle)
   saturation?: number | null;
@@ -116,6 +119,7 @@ export interface Formation {
   documents?: Document[];
   evenements?: Evenement[];
   prospections?: Prospection[];
+  appairages?: Appairage[];
   historique?: HistoriqueFormation[];
   partenaires?: Partenaire[]; // ManyToMany
 

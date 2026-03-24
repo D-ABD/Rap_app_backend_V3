@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import Prepa, StagiairePrepa
+from .rich_text_utils import sanitize_rich_text
 
 
 @extend_schema_serializer(
@@ -153,6 +154,9 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+    def validate_commentaire_suivi(self, value):
+        return sanitize_rich_text(value)
 
 
 @extend_schema_serializer(
@@ -361,6 +365,9 @@ class PrepaSerializer(serializers.ModelSerializer):
             attrs["stagiaires_prepa"] = self._normalize_stagiaires(stagiaires)
 
         return attrs
+
+    def validate_commentaire(self, value):
+        return sanitize_rich_text(value)
 
     def _sync_stagiaires_prepa(self, instance: Prepa, stagiaires_data, user=None) -> None:
         existing = {stagiaire.id: stagiaire for stagiaire in instance.stagiaires_prepa.all()}

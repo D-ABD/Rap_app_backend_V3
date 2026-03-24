@@ -20,6 +20,24 @@ const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_ph
 const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
 const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
 const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
+const getProgressColor = (value?: number | null) => {
+  if (typeof value !== "number" || Number.isNaN(value)) return "#757575";
+  if (value >= 80) return "#2e7d32";
+  if (value >= 25) return "#ed6c02";
+  return "#d32f2f";
+};
+const getProspectionsCount = (row: Formation) =>
+  typeof row.nombre_prospections === "number"
+    ? row.nombre_prospections
+    : Array.isArray(row.prospections)
+      ? row.prospections.length
+      : null;
+const getAppairagesCount = (row: Formation) =>
+  typeof row.nombre_appairages === "number"
+    ? row.nombre_appairages
+    : Array.isArray(row.appairages)
+      ? row.appairages.length
+      : null;
 
 export default function FormationTable({ formations, selectedIds, onToggleSelect }: Props) {
   const navigate = useNavigate();
@@ -182,6 +200,7 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
         ),
     },
     { key: "num_offre", label: "N° Offre" },
+    { key: "num_kairos", label: "N° Kairos", render: (row) => row.num_kairos || "—" },
     {
       key: "start_date",
       label: "Début",
@@ -192,12 +211,6 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
       label: "Fin",
       render: (row) => formatDate(row.end_date),
     },
-    {
-      key: "intitule_diplome",
-      label: "Diplôme / Titre visé",
-      render: (r) => r.intitule_diplome || "—",
-    },
-    { key: "code_rncp", label: "Code RNCP", render: (r) => r.code_rncp || "—" },
     {
       key: "total_heures",
       label: "Durée (h)",
@@ -239,8 +252,54 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
       ),
     },
     {
+      key: "cap",
+      label: "Capacité",
+      render: (row) => row.cap ?? "—",
+    },
+    {
+      key: "prevus_crif",
+      label: "Prévu CRIF",
+      render: (row) => row.prevus_crif ?? 0,
+    },
+    {
+      key: "prevus_mp",
+      label: "Prévu MP",
+      render: (row) => row.prevus_mp ?? 0,
+    },
+    {
+      key: "inscrits_crif",
+      label: "Inscrits CRIF",
+      render: (row) => row.inscrits_crif ?? 0,
+    },
+    {
+      key: "inscrits_mp",
+      label: "Inscrits MP",
+      render: (row) => row.inscrits_mp ?? 0,
+    },
+    {
+      key: "inscrits_total",
+      label: "Inscrits total",
+      render: (row) => row.inscrits_total ?? ((row.inscrits_crif ?? 0) + (row.inscrits_mp ?? 0)),
+    },
+    {
+      key: "prevus_total",
+      label: "Prévu total",
+      render: (row) => row.prevus_total ?? ((row.prevus_crif ?? 0) + (row.prevus_mp ?? 0)),
+    },
+    {
+      key: "places_restantes_crif_mp",
+      label: "Places restantes MP/CRIF",
+      render: (row) =>
+        `MP ${row.places_restantes_mp ?? Math.max((row.prevus_mp ?? 0) - (row.inscrits_mp ?? 0), 0)} / CRIF ${row.places_restantes_crif ?? Math.max((row.prevus_crif ?? 0) - (row.inscrits_crif ?? 0), 0)}`,
+    },
+    {
+      key: "places_restantes",
+      label: "Places restantes total",
+      render: (row) => row.places_restantes ?? row.places_disponibles ?? "—",
+    },
+    {
       key: "inscrits",
-      label: "Capacité / Inscrits",
+      label: "Inscrits détaillés",
       render: (row) => {
         const inscrits = (row.inscrits_crif ?? 0) + (row.inscrits_mp ?? 0);
         const cap = row.cap ?? 0;
@@ -269,7 +328,7 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
                   borderRadius: 3,
                   backgroundColor: "#eee",
                   "& .MuiLinearProgress-bar": {
-                    backgroundColor: pct > 95 ? "#c62828" : pct > 75 ? "#ed6c02" : "#2e7d32",
+                    backgroundColor: getProgressColor(pct),
                   },
                 }}
               />
@@ -284,7 +343,11 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
       render: (row) =>
         typeof row.saturation === "number" ? (
           <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              sx={{ color: getProgressColor(row.saturation) }}
+            >
               {Math.round(row.saturation)}%
             </Typography>
             <LinearProgress
@@ -295,8 +358,7 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
                 borderRadius: 3,
                 backgroundColor: "#eee",
                 "& .MuiLinearProgress-bar": {
-                  backgroundColor:
-                    row.saturation > 95 ? "#d32f2f" : row.saturation > 75 ? "#ed6c02" : "#2e7d32",
+                  backgroundColor: getProgressColor(row.saturation),
                 },
               }}
             />
@@ -311,7 +373,11 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
       render: (row) =>
         typeof row.taux_transformation === "number" ? (
           <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              sx={{ color: getProgressColor(row.taux_transformation) }}
+            >
               {row.taux_transformation}%
             </Typography>
             <LinearProgress
@@ -322,12 +388,7 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
                 borderRadius: 3,
                 backgroundColor: "#eee",
                 "& .MuiLinearProgress-bar": {
-                  backgroundColor:
-                    row.taux_transformation > 60
-                      ? "#2e7d32"
-                      : row.taux_transformation > 30
-                        ? "#ed6c02"
-                        : "#d32f2f",
+                  backgroundColor: getProgressColor(row.taux_transformation),
                 },
               }}
             />
@@ -335,6 +396,40 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
         ) : (
           "—"
         ),
+    },
+    {
+      key: "nombre_prospections",
+      label: "Nb prospections",
+      render: (row) => (
+        <Button
+          size="small"
+          variant="text"
+          sx={{ px: 0, minWidth: 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(buildProspectionsUrl(row.id));
+          }}
+        >
+          {getProspectionsCount(row) ?? "—"}
+        </Button>
+      ),
+    },
+    {
+      key: "nombre_appairages",
+      label: "Nb appairages",
+      render: (row) => (
+        <Button
+          size="small"
+          variant="text"
+          sx={{ px: 0, minWidth: 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(buildAppairagesUrl(row.id));
+          }}
+        >
+          {getAppairagesCount(row) ?? "—"}
+        </Button>
+      ),
     },
   ];
 
@@ -347,50 +442,6 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
         cardTitle={(row) => row.nom || "—"}
         actions={(row) => (
           <Stack direction="row" spacing={1}>
-            <Button
-              size="small"
-              variant="text"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(buildCandidatesUrl(row.id));
-              }}
-            >
-              Candidats
-            </Button>
-            <Button
-              size="small"
-              variant="text"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(buildProspectionsUrl(row.id));
-              }}
-            >
-              Prospections
-            </Button>
-            <Button
-              size="small"
-              variant="text"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(buildAppairagesUrl(row.id));
-              }}
-            >
-              Appairages
-            </Button>
-            <Button
-              size="small"
-              variant="text"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(buildEvenementsUrl(row.id));
-              }}
-            >
-              Événements
-            </Button>
             <Button
               size="small"
               variant="outlined"

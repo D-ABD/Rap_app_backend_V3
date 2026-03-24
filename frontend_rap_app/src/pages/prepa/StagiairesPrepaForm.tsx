@@ -1,6 +1,7 @@
-import { Box, Button, Chip, FormControlLabel, Grid, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, FormControlLabel, Grid, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { StagiairePrepa } from "src/types/prepa";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 
 interface Props {
   initialValues?: Partial<StagiairePrepa>;
@@ -79,6 +80,7 @@ export default function StagiairesPrepaForm({
     await onSubmit(form);
   };
 
+  const isAbandon = form.statut_parcours === "abandon";
   const ateliersRealisesLive = useMemo(
     () =>
       atelierFields
@@ -113,6 +115,11 @@ export default function StagiairesPrepaForm({
         <Typography variant="h6" mb={2}>
           Parcours
         </Typography>
+        {isAbandon ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Le motif d'abandon est obligatoire quand le statut est <strong>Abandon</strong>.
+          </Alert>
+        ) : null}
         <Grid container spacing={2}>
           <Grid item xs={12} md={3}>
             <TextField
@@ -186,19 +193,26 @@ export default function StagiairesPrepaForm({
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
+              required={isAbandon}
               label="Motif d'abandon"
               value={form.motif_abandon ?? ""}
               onChange={(e) => update("motif_abandon", e.target.value)}
+              error={isAbandon && !(form.motif_abandon ?? "").trim()}
+              helperText={
+                isAbandon
+                  ? (form.motif_abandon ?? "").trim()
+                    ? "Motif saisi."
+                    : "Explique pourquoi le stagiaire a abandonné."
+                  : "À renseigner uniquement en cas d'abandon."
+              }
             />
           </Grid>
           <Grid item xs={12}>
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
+            <RichHtmlEditorField
               label="Commentaire de suivi"
               value={form.commentaire_suivi ?? ""}
-              onChange={(e) => update("commentaire_suivi", e.target.value)}
+              onChange={(value) => update("commentaire_suivi", value)}
+              placeholder="Ajouter un commentaire de suivi enrichi…"
             />
           </Grid>
         </Grid>

@@ -10,6 +10,8 @@ export const breadcrumbLabels: Record<string, string> = {
   "ateliers-tre": "Ateliers TRE",
   formations: "Formations",
   evenements: "Événements",
+  declic: "Déclic",
+  "participants-declic": "Participants Déclic",
   prepa: "Prépa",
   objectifs: "Objectifs",
   ic: "IC Prépa",

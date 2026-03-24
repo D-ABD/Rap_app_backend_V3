@@ -49,19 +49,23 @@
 - module partenaires aligne avec pages, detail, creation, edition et navigation vers prospections / appairages
 - module documents aligne avec navigation contextuelle par formation et retours de liste coherents
 - module commentaires formation aligne avec navigation contextuelle par formation et edition plus propre
+- commentaires enrichis maintenant relus correctement avec gras / couleurs / surlignages sur les modules repris
+- champs texte libre enrichis branches sur prospections, prepa, declic, objectifs, suivi nominatif et partenaires
+- stats commentaires prospection / appairage alignees sur le rendu enrichi
+- exports commentaires PDF alignes sur le rendu enrichi
+- exports commentaires XLSX nettoyes en texte lisible sans balises HTML brutes
+- rendu enrichi maintenant conserve aussi dans les dashboards commentaires corriges et les principaux ecrans detail
+- exports commentaires clarifies :
+  - PDF : rendu riche conserve
+  - XLSX : export volontairement nettoye en texte lisible sans HTML brut
 - module cvtheque aligne avec creation, edition, navigation contextuelle candidat et retour de liste
 - module ateliers TRE aligne avec detail navigable, multi-selection candidats et edition des presences
+- modules prepa / declic maintenant repris avec suivi nominatif, exports, emargement et commentaires enrichis
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- types prepa
-- hooks prepa
-- pages prepa
-- types declic
-- hooks declic
-- pages declic
 - types stats
 - hooks stats
 - finaliser dashboards

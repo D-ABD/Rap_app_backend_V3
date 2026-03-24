@@ -15,6 +15,8 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Declic } from "src/types/declic";
+import { useExportParticipantsDeclic } from "src/hooks/useParticipantsDeclic";
+import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ─────────── Helpers ─────────── */
 const dtfFR =
@@ -51,6 +53,9 @@ export default function DeclicDetailModal({
   loading = false,
   onEdit,
 }: Props) {
+  const { exportPresence, exportEmargement } = useExportParticipantsDeclic();
+  const exportSearch = declic?.id ? `?declic_origine=${declic.id}` : "";
+
   if (!open) return null;
 
   return (
@@ -119,7 +124,12 @@ export default function DeclicDetailModal({
                       )}
                     </Typography>
                   </Grid>
-                  <Field label="Commentaire" value={nn(declic.commentaire)} />
+                  <Grid item xs={12}>
+                    <Typography variant="body2" component="div">
+                      <strong>Commentaire :</strong>
+                    </Typography>
+                    <CommentaireContent html={declic.commentaire || "<em>—</em>"} />
+                  </Grid>
                 </Section>
               </Grid>
 
@@ -129,6 +139,31 @@ export default function DeclicDetailModal({
                   <Field label="Inscrits" value={declic.nb_inscrits_declic} />
                   <Field label="Présents" value={declic.nb_presents_declic} />
                   <Field label="Absents" value={declic.nb_absents_declic} />
+                </Section>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Section title="Participants Déclic liés">
+                  {declic.participants_declic?.length ? (
+                    <Grid item xs={12}>
+                      <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
+                        {declic.participants_declic.map((participant, index) => (
+                          <li key={participant.id ?? `${participant.nom}-${participant.prenom}-${index}`}>
+                            <Typography variant="body2">
+                              <strong>
+                                {nn(participant.prenom)} {nn(participant.nom)}
+                              </strong>
+                              {participant.telephone ? ` - ${participant.telephone}` : ""}
+                              {participant.email ? ` - ${participant.email}` : ""}
+                              {participant.present !== undefined ? ` - ${participant.present ? "Présent" : "Absent"}` : ""}
+                            </Typography>
+                          </li>
+                        ))}
+                      </Box>
+                    </Grid>
+                  ) : (
+                    <Field label="Participants" value="Aucun participant Déclic renseigné" />
+                  )}
                 </Section>
               </Grid>
 
@@ -189,6 +224,26 @@ export default function DeclicDetailModal({
                 Voir les objectifs du centre
               </Button>
             ) : null}
+            <Button
+              component={RouterLink}
+              to={`/participants-declic?declic_origine=${declic.id}`}
+              variant="outlined"
+            >
+              Voir les participants Déclic
+            </Button>
+            <Button
+              component={RouterLink}
+              to={`/participants-declic/create?declic_origine=${declic.id}`}
+              variant="outlined"
+            >
+              Ajouter un participant
+            </Button>
+            <Button variant="outlined" onClick={() => exportPresence(undefined, exportSearch)}>
+              Feuille de présence
+            </Button>
+            <Button variant="outlined" onClick={() => exportEmargement(undefined, exportSearch)}>
+              Feuille d'émargement
+            </Button>
             <Button
               startIcon={<EditIcon />}
               color="primary"

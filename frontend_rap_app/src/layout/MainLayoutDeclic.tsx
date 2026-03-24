@@ -62,6 +62,7 @@ export default function MainLayoutDeclic() {
   const menuItems = [
     { label: "Tableau de bord", path: "/dashboard/declic", icon: <BarChartRoundedIcon /> },
     { label: "Ateliers Déclic", path: "/declic", icon: <HomeIcon /> },
+    { label: "Participants Déclic", path: "/participants-declic", icon: <AccountCircleIcon /> },
     { label: "Mon profil", path: "/mon-profil", icon: <AccountCircleIcon /> },
   ];
 

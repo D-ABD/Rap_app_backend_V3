@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from ..models.centres import Centre
-from ..models.declic import Declic, ObjectifDeclic
+from ..models.declic import Declic, ObjectifDeclic, ParticipantDeclic
 
 logger = logging.getLogger("rap_app.admin.declic")
 
@@ -217,3 +217,33 @@ class DeclicAdmin(admin.ModelAdmin):
             f'<span style="color:white; background:#6a1b9a; padding:2px 8px; border-radius:5px;">'
             f"{obj.get_type_declic_display()}</span>"
         )
+
+
+class ParticipantDeclicInline(admin.TabularInline):
+    model = ParticipantDeclic
+    extra = 1
+    fields = ("nom", "prenom", "telephone", "email", "present", "commentaire_presence")
+
+
+DeclicAdmin.inlines = [ParticipantDeclicInline]
+
+
+@admin.register(ParticipantDeclic)
+class ParticipantDeclicAdmin(admin.ModelAdmin):
+    list_display = ("nom", "prenom", "centre", "declic_origine", "present", "updated_at_display")
+    list_filter = ("present", "centre", "declic_origine__type_declic")
+    search_fields = ("nom", "prenom", "telephone", "email", "centre__nom")
+    autocomplete_fields = ("centre", "declic_origine")
+    readonly_fields = ("created_at", "updated_at", "created_by", "updated_by")
+
+    fieldsets = (
+        ("Identité", {"fields": ("nom", "prenom", "telephone", "email")}),
+        ("Contexte", {"fields": ("centre", "declic_origine")}),
+        ("Présence", {"fields": ("present", "commentaire_presence")}),
+        ("Métadonnées", {"fields": ("created_at", "updated_at", "created_by", "updated_by")}),
+    )
+
+    def updated_at_display(self, obj):
+        return localtime(obj.updated_at).strftime("%d/%m/%Y %H:%M") if obj.updated_at else "—"
+
+    updated_at_display.short_description = "Modifié le"

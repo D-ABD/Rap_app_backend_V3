@@ -24,6 +24,7 @@ import {
 import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 
 import type { Partenaire, PartenaireChoicesResponse } from "../../types/partenaire";
+import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
 
 type FormProps = {
   initialValues?: Partial<Partenaire>;
@@ -275,14 +276,12 @@ export default function PartenaireCandidatForm({
         </AccordionSummary>
 
         <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={4}
+          <RichHtmlEditorField
             label={`Informations complémentaires (${count(form.description)}/2000)`}
             value={form.description || ""}
-            onChange={(e) => handleChange("description", e.target.value)}
-            inputProps={{ maxLength: 2000 }}
+            onChange={(value) => handleChange("description", value)}
+            placeholder="Décrire le partenaire et les informations utiles…"
+            minHeight={140}
           />
         </AccordionDetails>
       </Accordion>

@@ -28,6 +28,7 @@ import {
   useAppairageCommentGrouped,
   AppairageCommentGroupRow,
 } from "../../../types/appairageCommentStats";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 export default function AppairageCommentStatsDashboard({
   title = "Derniers commentaires d’appairage",
@@ -205,8 +206,7 @@ export default function AppairageCommentStatsDashboard({
                       </Typography>
                       {c.is_recent && <Chip size="small" label="Récent" sx={{ ml: 1 }} />}
                       {c.is_edited && <Chip size="small" label="Édité" sx={{ ml: 1 }} />}
-                      <Typography
-                        variant="body2"
+                      <Box
                         sx={{
                           display: "-webkit-box",
                           WebkitLineClamp: 3,
@@ -216,10 +216,9 @@ export default function AppairageCommentStatsDashboard({
                           mt: 0.5,
                           maxWidth: 400,
                         }}
-                        title={c.body}
                       >
-                        {c.body}
-                      </Typography>
+                        <CommentaireContent html={c.body || "<em>—</em>"} />
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}

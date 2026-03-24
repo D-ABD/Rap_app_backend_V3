@@ -141,7 +141,22 @@ Etat courant :
   - multi-selection de candidats via modale
   - presences mieux gerees en creation et edition
   - navigation detail vers candidats et centre
-- prochaine cible : poursuivre l'alignement de `prepa / declic`
+- modules `prepa` et `declic` maintenant suffisamment repris avec :
+  - suivi nominatif adapte a chaque logique metier
+  - exports liste / presence / emargement
+  - detail, creation, edition et navigation relies
+  - commentaires et champs texte libre enrichis
+- enrichissement texte maintenant mieux aligne dans l'app avec :
+  - commentaires `formation`, `prospection`, `appairage`
+  - champs libres `prospection`, `prepa`, `declic`, `objectifs`, `partenaires`
+  - rendu enrichi dans les modales detail et les principaux ecrans repris
+  - dashboards commentaires `prospection` et `appairage` corriges
+  - exports PDF commentaires corriges pour conserver le rendu enrichi
+  - exports XLSX commentaires nettoyes pour sortir un texte lisible sans balises HTML brutes
+  - regle de sortie maintenant clarifiee :
+    - PDF = preservation du rendu enrichi
+    - XLSX = texte lisible propre sans balises HTML brutes
+- prochaine cible : finaliser les derniers ecarts stats / dashboards puis rapports / logs
 
 ## 3. Modules metier principaux
 
@@ -198,11 +213,9 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. remettre a niveau prepa / declic
-2. finaliser les derniers ecarts stats / dashboards
-3. remettre a niveau rapports / logs
-4. finaliser les derniers ecarts stats / dashboards
-5. remettre a niveau rapports / logs
+1. finaliser les derniers ecarts stats / dashboards
+2. remettre a niveau rapports / logs
+3. faire une passe finale d'harmonisation UX / messages / responsive
 
 ---
 

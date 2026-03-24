@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
+import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
 
 interface Props {
@@ -28,7 +29,15 @@ interface Props {
 }
 
 /* ===================== CHOIX PAR DÉFAUT ===================== */
-const TYPE_PREPA_CHOICES_FALLBACK = [{ value: "atelier_1", label: "Atelier 1" }];
+const TYPE_PREPA_CHOICES_FALLBACK = [
+  { value: "atelier_1", label: "Atelier 1" },
+  { value: "atelier_2", label: "Atelier 2" },
+  { value: "atelier_3", label: "Atelier 3" },
+  { value: "atelier_4", label: "Atelier 4" },
+  { value: "atelier_5", label: "Atelier 5" },
+  { value: "atelier_6", label: "Atelier 6" },
+  { value: "autre", label: "Autre activité Prépa" },
+];
 
 /* ===================== FORMULAIRE PRÉPA ===================== */
 export default function PrepaFormAteliers({
@@ -40,7 +49,7 @@ export default function PrepaFormAteliers({
   onCentreChange,
 }: Props) {
   const [form, setForm] = useState<Partial<Prepa>>({
-    type_prepa: initialValues?.type_prepa ?? "info_collective",
+    type_prepa: initialValues?.type_prepa ?? "atelier_1",
     date_prepa: initialValues?.date_prepa ?? "",
     centre_id: initialValues?.centre_id ?? undefined,
     formateur_animateur: initialValues?.formateur_animateur ?? "",
@@ -61,8 +70,12 @@ export default function PrepaFormAteliers({
 
   /* ===================== CHOIX DYNAMIQUES ===================== */
   const typeChoices = useMemo(
-    () =>
-      meta?.type_prepa_choices?.length ? meta.type_prepa_choices : TYPE_PREPA_CHOICES_FALLBACK,
+    () => {
+      const source = meta?.type_prepa_choices?.length
+        ? meta.type_prepa_choices
+        : TYPE_PREPA_CHOICES_FALLBACK;
+      return source.filter((choice) => choice.value !== "info_collective");
+    },
     [meta?.type_prepa_choices]
   );
 
@@ -116,7 +129,7 @@ export default function PrepaFormAteliers({
 
   /* ===================== DÉTERMINER LE TYPE ===================== */
   const isInfoCollective = form.type_prepa === "info_collective";
-  const isAtelier = form.type_prepa?.startsWith("atelier");
+  const isAtelier = form.type_prepa?.startsWith("atelier") || form.type_prepa === "autre";
 
   return (
     <>
@@ -283,13 +296,11 @@ export default function PrepaFormAteliers({
         {/* --- Commentaire --- */}
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="h6">Commentaire</Typography>
-          <TextField
-            multiline
-            fullWidth
-            minRows={3}
-            placeholder="Ajouter un commentaire (facultatif)…"
+          <RichHtmlEditorField
+            label="Commentaire"
             value={form.commentaire ?? ""}
-            onChange={(e) => handleChange("commentaire", e.target.value)}
+            onChange={(value) => handleChange("commentaire", value)}
+            placeholder="Ajouter un commentaire enrichi…"
           />
         </Paper>
 

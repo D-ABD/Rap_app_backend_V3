@@ -1,5 +1,6 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Typography } from "@mui/material";
 import type { StagiairePrepa } from "src/types/prepa";
+import CommentaireContent from "../commentaires/CommentaireContent";
 
 interface Props {
   open: boolean;
@@ -39,9 +40,10 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
               <Field label="Dernier atelier" value={stagiaire.dernier_atelier_label} />
               <Field label="Motif abandon" value={stagiaire.motif_abandon} />
               <Grid item xs={12}>
-                <Typography variant="body2">
-                  <strong>Commentaire :</strong> {stagiaire.commentaire_suivi || "—"}
+                <Typography variant="body2" component="div">
+                  <strong>Commentaire :</strong>
                 </Typography>
+                <CommentaireContent html={stagiaire.commentaire_suivi || "<em>—</em>"} />
               </Grid>
             </Grid>
           </Paper>

@@ -9,6 +9,7 @@ from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.partenaires import Partenaire
+from .rich_text_utils import sanitize_rich_text
 
 
 class CentreLiteSerializer(serializers.ModelSerializer):
@@ -265,6 +266,12 @@ class PartenaireSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+    def validate_description(self, value):
+        return sanitize_rich_text(value)
+
+    def validate_action_description(self, value):
+        return sanitize_rich_text(value)
 
 
 class PartenaireChoiceSerializer(serializers.Serializer):

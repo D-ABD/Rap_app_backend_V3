@@ -58,6 +58,11 @@ export const sidebarItems: SidebarItem[] = [
         path: "/declic/objectifs",
         icon: <TrackChangesIcon sx={{ color: "warning.main" }} />,
       },
+      {
+        label: "Participants Déclic",
+        path: "/participants-declic",
+        icon: <PeopleIcon sx={{ color: "warning.main" }} />,
+      },
     ],
   },
 

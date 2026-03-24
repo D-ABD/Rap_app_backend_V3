@@ -1,6 +1,8 @@
 // pages/prospection/ProspectionComment/ProspectionCommentForm.tsx
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, Stack, TextField, Typography } from "@mui/material";
+import { useQuill } from "react-quilljs";
+import "quill/dist/quill.snow.css";
 import ProspectionSelectModal, {
   ProspectionLite,
 } from "../../../components/modals/ProspectionSelectModal";
@@ -8,6 +10,7 @@ import type {
   ProspectionCommentCreateInput,
   ProspectionCommentDTO,
 } from "../../../types/prospectionComment";
+import { colorOptions } from "../../../utils/registerQuillFormats";
 
 interface Props {
   initial?: ProspectionCommentDTO | null;
@@ -17,6 +20,11 @@ interface Props {
 }
 
 const MAX_BODY_LEN = 4000;
+const TOOLBAR = [
+  ["bold", "italic", "strike"],
+  [{ color: colorOptions }, { background: colorOptions }],
+  ["clean"],
+];
 
 export default function ProspectionCommentForm({
   initial = null,
@@ -33,8 +41,15 @@ export default function ProspectionCommentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProspectionModal, setShowProspectionModal] = useState(false);
-
-  const bodyId = useId();
+  const { quill, quillRef } = useQuill({
+    theme: "snow",
+    modules: {
+      toolbar: { container: TOOLBAR },
+      history: { delay: 500, maxStack: 100, userOnly: true },
+      clipboard: { matchVisual: false },
+    },
+    formats: ["bold", "italic", "strike", "color", "background"],
+  });
 
   useEffect(() => {
     if (prospectionId != null) setProspection(prospectionId);
@@ -58,14 +73,32 @@ export default function ProspectionCommentForm({
 
   const remainingChars = MAX_BODY_LEN - body.length;
 
+  useEffect(() => {
+    if (!quill) return;
+    const isEmpty = quill.root.innerHTML === "<p><br></p>" || quill.getText().trim() === "";
+    if (initial?.body && isEmpty) {
+      quill.clipboard.dangerouslyPasteHTML(initial.body);
+    }
+  }, [quill, initial?.body]);
+
+  useEffect(() => {
+    if (!quill) return;
+    const sync = () => {
+      const html = quill.root.innerHTML ?? "";
+      setBody(html);
+      if (html.length > MAX_BODY_LEN) {
+        quill.deleteText(MAX_BODY_LEN, quill.getLength());
+      }
+    };
+    quill.on("text-change", sync);
+    return () => {
+      quill.off("text-change", sync);
+    };
+  }, [quill]);
+
   const resetSelection = useCallback(() => {
     setSelectedProspection(null);
     setProspection("");
-  }, []);
-
-  const handleChangeBody = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value;
-    if (next.length <= MAX_BODY_LEN) setBody(next);
   }, []);
 
   const handleChangeProspectionManual = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,8 +117,9 @@ export default function ProspectionCommentForm({
       e.preventDefault();
       setError(null);
 
-      const bodyTrimmed = body.trim();
-      if (prospection === "" || bodyTrimmed.length === 0) {
+      const bodyHtml = (quill?.root.innerHTML ?? body).trim();
+      const bodyText = (quill?.getText() ?? "").trim();
+      if (prospection === "" || bodyText.length === 0) {
         setError("Veuillez renseigner tous les champs obligatoires.");
         return;
       }
@@ -93,7 +127,7 @@ export default function ProspectionCommentForm({
       setSubmitting(true);
       const payload: ProspectionCommentCreateInput = {
         prospection_id: Number(prospection),
-        body: bodyTrimmed,
+        body: bodyHtml,
         ...(canSetInternal ? { is_internal: isInternal } : {}),
       };
 
@@ -107,7 +141,7 @@ export default function ProspectionCommentForm({
         setSubmitting(false);
       }
     },
-    [body, canSetInternal, isInternal, onSubmit, prospection]
+    [body, canSetInternal, isInternal, onSubmit, prospection, quill]
   );
 
   const handleKeyDownBody = useCallback(
@@ -169,22 +203,31 @@ export default function ProspectionCommentForm({
         )}
 
         {/* Commentaire */}
-        <TextField
-          id={bodyId}
-          label="Commentaire"
-          name="body"
-          value={body}
-          onChange={handleChangeBody}
-          onKeyDown={handleKeyDownBody}
-          required
-          multiline
-          minRows={5}
-          disabled={disabled}
-          helperText={`${remainingChars} caractères restants`}
-          inputProps={{ maxLength: MAX_BODY_LEN }}
-          fullWidth
-          error={!!(error && body.trim().length === 0)}
-        />
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
+            Commentaire
+          </Typography>
+          <Box
+            onKeyDown={handleKeyDownBody}
+            sx={{
+              "& .ql-editor": {
+                minHeight: 160,
+                maxHeight: 320,
+                overflowY: "auto",
+                backgroundColor: "#fff",
+                borderRadius: 1,
+                padding: "0.5rem",
+                fontSize: "0.95rem",
+                lineHeight: 1.5,
+              },
+            }}
+          >
+            <div ref={quillRef} />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {remainingChars} caractères restants
+          </Typography>
+        </Box>
 
         {/* Erreur */}
         {error && (

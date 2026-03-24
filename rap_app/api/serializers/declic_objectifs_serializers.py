@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.declic import ObjectifDeclic
+from .rich_text_utils import sanitize_rich_text
 
 
 @extend_schema_serializer(
@@ -128,6 +129,9 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
     def get_reste_a_faire(self, obj):
         """Retourne la propriété reste_a_faire du modèle."""
         return getattr(obj, "reste_a_faire", None)
+
+    def validate_commentaire(self, value):
+        return sanitize_rich_text(value)
 
     def create(self, validated_data):
         """Crée l'objectif ; departement est déduit des deux premiers caractères du code_postal du centre. Passe request.user à save(user=user)."""

@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.templatetags.static import static
+from django.utils.html import strip_tags
 from django.utils import timezone as dj_timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -272,7 +273,7 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
                     getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
                     getattr(getattr(c.appairage, "formation", None), "nom", "—"),
                     getattr(c.created_by, "username", "—"),
-                    c.body or "",
+                    strip_tags(c.body or ""),
                     c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "—",
                 ]
             )

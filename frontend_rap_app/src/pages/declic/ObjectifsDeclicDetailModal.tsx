@@ -18,6 +18,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useObjectifsDeclic } from "src/hooks/useDeclicObjectifs";
+import CommentaireContent from "../commentaires/CommentaireContent";
 import type { ObjectifDeclic } from "src/types/declic";
 
 // ─────────────────────────────────────────────
@@ -220,9 +221,7 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 Commentaire
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {objectif.commentaire}
-              </Typography>
+              <CommentaireContent html={objectif.commentaire} />
             </Box>
           )}
         </Paper>

@@ -15,6 +15,8 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Prepa } from "src/types/prepa";
+import { useExportStagiairesPrepa } from "src/hooks/useStagiairesPrepa";
+import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ─────────── Helpers ─────────── */
 const dtfFR =
@@ -45,6 +47,11 @@ interface Props {
 
 /* ─────────── Component ─────────── */
 export default function PrepaDetailModal({ open, onClose, prepa, loading = false, onEdit }: Props) {
+  const { exportPresence, exportEmargement } = useExportStagiairesPrepa();
+  const isAtelierPrepa =
+    prepa?.type_prepa?.startsWith("atelier") || prepa?.type_prepa === "autre";
+  const exportSearch = prepa?.id ? `?prepa_origine=${prepa.id}` : "";
+
   if (!open) return null;
 
   return (
@@ -114,7 +121,12 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
                       )}
                     </Typography>
                   </Grid>
-                  <Field label="Commentaire" value={nn(prepa.commentaire)} />
+                  <Grid item xs={12}>
+                    <Typography variant="body2" component="div">
+                      <strong>Commentaire :</strong>
+                    </Typography>
+                    <CommentaireContent html={prepa.commentaire || "<em>—</em>"} />
+                  </Grid>
                 </Section>
               </Grid>
 
@@ -264,6 +276,16 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
             >
               Ajouter un stagiaire
             </Button>
+            {isAtelierPrepa && prepa.id != null ? (
+              <Button variant="outlined" onClick={() => exportPresence(undefined, exportSearch)}>
+                Feuille de présence
+              </Button>
+            ) : null}
+            {isAtelierPrepa && prepa.id != null ? (
+              <Button variant="outlined" onClick={() => exportEmargement(undefined, exportSearch)}>
+                Feuille d'émargement
+              </Button>
+            ) : null}
             <Button
               startIcon={<EditIcon />}
               color="primary"

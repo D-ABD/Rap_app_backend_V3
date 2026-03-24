@@ -18,6 +18,7 @@ import AddCommentIcon from "@mui/icons-material/AddComment";
 import LaunchIcon from "@mui/icons-material/Launch";
 import { useProspection } from "../../hooks/useProspection";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -240,7 +241,18 @@ export default function ProspectionDetailModalCandidat({
                   <Field label="Date prospection" value={fmt(prospection.date_prospection)} />
                   <Field label="Active" value={yn(prospection.is_active)} />
                   <Field label="Relance nécessaire" value={yn(prospection.relance_necessaire)} />
-                  <Field label="Commentaire" value={nn(prospection.commentaire)} />
+                  <Field
+                    label="Commentaire"
+                    value={
+                      prospection.commentaire ? (
+                        <Box sx={{ minWidth: 0, width: "100%" }}>
+                          <CommentaireContent html={prospection.commentaire} />
+                        </Box>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
                 </Section>
               </Grid>
 

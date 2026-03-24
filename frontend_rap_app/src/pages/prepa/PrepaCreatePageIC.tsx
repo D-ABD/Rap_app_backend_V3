@@ -69,7 +69,7 @@ export default function PrepaCreatePageIC() {
 
   if (loadingMeta) {
     return (
-      <PageTemplate title="➕ Nouvelle activité Prépa" centered>
+      <PageTemplate title="➕ Nouvelle information collective Prépa" centered>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
       </PageTemplate>
@@ -77,7 +77,7 @@ export default function PrepaCreatePageIC() {
   }
 
   return (
-    <PageTemplate title="➕ Nouvelle activité Prépa" backButton onBack={() => navigate(-1)}>
+    <PageTemplate title="➕ Nouvelle information collective Prépa" backButton onBack={() => navigate(-1)}>
       {/* ✅ Affichage du centre sélectionné */}
       {selectedCentre && (
         <Typography variant="subtitle1" sx={{ mb: 2, color: "text.secondary", fontWeight: 500 }}>

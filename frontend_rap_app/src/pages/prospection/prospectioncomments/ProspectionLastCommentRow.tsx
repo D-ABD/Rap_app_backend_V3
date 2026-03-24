@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Box, Stack, Typography, Button, Skeleton, Paper } from "@mui/material";
 import { useListProspectionComments } from "../../../hooks/useProspectionComments";
 import type { ProspectionCommentDTO } from "../../../types/prospectionComment";
+import CommentaireContent from "../../commentaires/CommentaireContent";
 
 type Props = {
   prospectionId: number;
@@ -73,19 +74,9 @@ export default function ProspectionLastCommentRow({
 
         {!loading && !error && effectiveLastBody && (
           <Stack spacing={0.5}>
-            <Typography
-              variant="body2"
-              noWrap
-              title={effectiveLastBody}
-              sx={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {effectiveLastBody}
-            </Typography>
+            <Box sx={{ maxHeight: 56, overflow: "hidden" }}>
+              <CommentaireContent html={effectiveLastBody} />
+            </Box>
             <Typography variant="caption" color="text.secondary">
               {typeof effectiveCount === "number" && effectiveCount > 1
                 ? `(${effectiveCount} au total)`

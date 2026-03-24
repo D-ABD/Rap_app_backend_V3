@@ -127,7 +127,7 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
 
     serializer_class = DeclicSerializer
     permission_classes = [IsDeclicStaffOrAbove]
-    queryset = Declic.objects.select_related("centre").all()
+    queryset = Declic.objects.select_related("centre").prefetch_related("participants_declic").all()
 
     # -------------------------------------------------------------------------
     # 🎛️ OPTIONS FILTRES
@@ -208,7 +208,7 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
 
         Retourne uniquement les objets autorisés et filtrés.
         """
-        qs = Declic.objects.select_related("centre")
+        qs = Declic.objects.select_related("centre").prefetch_related("participants_declic")
         qs = self._scope_qs_to_user_centres(qs)
 
         p = self.request.query_params
