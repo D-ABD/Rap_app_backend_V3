@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import api from "../../api/axios";
 import { toApiError } from "../../api/httpClient";
 
@@ -55,14 +55,14 @@ export default function FormationsEditPage() {
       if (archived) {
         await api.post(`/formations/${formationId}/desarchiver/`);
         setLocalDetail({ ...formation, est_archivee: false, activite: "active" });
-        toast.success("♻️ Formation désarchivée");
+        toast.success("Formation désarchivée.");
       } else {
         await api.post(`/formations/${formationId}/archiver/`);
         setLocalDetail({ ...formation, est_archivee: true, activite: "archivee" });
-        toast.info("📦 Formation archivée");
+        toast.info("Formation archivée.");
       }
     } catch (err) {
-      toast.error(`❌ ${toApiError(err).message || "Échec de l’opération d’archivage"}`);
+      toast.error(toApiError(err).message || "Le changement d'archivage a échoué.");
     }
   };
 
@@ -75,10 +75,10 @@ export default function FormationsEditPage() {
 
     try {
       await deleteFormation();
-      toast.success("🗑️ Formation supprimée");
+      toast.success("Formation supprimée avec succès.");
       navigate("/formations");
     } catch (err) {
-      toast.error(`❌ ${toApiError(err).message || "Échec de la suppression"}`);
+      toast.error(toApiError(err).message || "La formation n'a pas pu être supprimée.");
     }
   };
 
@@ -91,12 +91,12 @@ export default function FormationsEditPage() {
     try {
       const updated = await updateFormation(values);
       setLocalDetail(updated);
-      toast.success("✅ Formation mise à jour");
+      toast.success("Formation mise à jour avec succès.");
 
       // 🔁 Redirige vers la liste
       navigate("/formations");
     } catch (error: unknown) {
-      toast.error(`❌ ${toApiError(error).message || "Échec de la mise à jour"}`);
+      toast.error(toApiError(error).message || "La formation n'a pas pu être mise à jour.");
       throw error;
     }
   };
@@ -107,7 +107,7 @@ export default function FormationsEditPage() {
   if (!formationId) {
     return (
       <PageTemplate title="Formation — détail">
-        <Typography color="error">❌ Identifiant invalide.</Typography>
+        <Alert severity="error">L'identifiant de la formation est invalide.</Alert>
       </PageTemplate>
     );
   }
@@ -115,8 +115,9 @@ export default function FormationsEditPage() {
   if (loading || loadingChoices || !formation) {
     return (
       <PageTemplate title={`Formation #${formationId}`}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="40vh" gap={2}>
           <CircularProgress />
+          <Typography>Chargement de la formation...</Typography>
         </Box>
       </PageTemplate>
     );
@@ -125,7 +126,7 @@ export default function FormationsEditPage() {
   if (error || !detail) {
     return (
       <PageTemplate title={`Formation #${formationId}`}>
-        <Typography color="error">❌ Impossible de charger la formation.</Typography>
+        <Alert severity="error">La formation n'a pas pu être chargée.</Alert>
       </PageTemplate>
     );
   }
@@ -148,7 +149,7 @@ export default function FormationsEditPage() {
             onClick={toggleArchive}
             disabled={saving || removing}
           >
-            {archived ? "♻️ Désarchiver" : "📦 Archiver"}
+            {archived ? "Désarchiver" : "Archiver"}
           </Button>
 
           <Button variant="outlined" color="error" onClick={deleteCurrent} disabled={removing}>
@@ -174,7 +175,7 @@ export default function FormationsEditPage() {
           loadingChoices={loadingChoices}
           onSubmit={submitFormation}
           onCancel={() => navigate("/formations")}
-          submitLabel="💾 Mettre à jour"
+          submitLabel="Mettre à jour"
         />
 
         {/* 📅 Footer d'infos */}

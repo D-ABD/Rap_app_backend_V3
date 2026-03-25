@@ -167,6 +167,7 @@ Etat courant :
   - reset de filtres et garde-fous UX ajoutes sur les pages admin recentes
   - plusieurs pages d'edition critiques ont maintenant des messages de chargement et d'erreur plus lisibles
   - modales de selection principales et derniers widgets overview harmonises
+  - dernier lot de formulaires creation / edition nettoye sur les pages encore un peu brutes
 - nettoyage legacy maintenant commence pour de vrai :
   - `AppRoute copy.tsx` supprime
   - `useFetch copy.ts` supprime

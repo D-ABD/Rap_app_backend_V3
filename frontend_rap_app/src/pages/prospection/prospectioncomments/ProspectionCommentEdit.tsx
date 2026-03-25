@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 
 import PageTemplate from "../../../components/PageTemplate";
 import ProspectionCommentForm from "./ProspectionCommentForm";
@@ -28,10 +28,10 @@ export default function ProspectionCommentEditPage() {
   const handleSubmit = async (data: { body: string; is_internal?: boolean }) => {
     try {
       await update({ body: data.body, is_internal: data.is_internal });
-      toast.success(`💬 Commentaire #${numericId} mis à jour`);
+      toast.success(`Commentaire #${numericId} mis à jour.`);
       navigate("/prospection-commentaires");
     } catch {
-      toast.error("Erreur lors de la mise à jour du commentaire");
+      toast.error("Le commentaire n'a pas pu être mis à jour.");
     }
   };
 
@@ -43,19 +43,19 @@ export default function ProspectionCommentEditPage() {
       const isArchived = initial.activite === "archive";
       const newState = await toggleArchive(isArchived);
       toast.success(
-        newState === "archive" ? "📦 Commentaire archivé" : "♻️ Commentaire désarchivé"
+        newState === "archive" ? "Commentaire archivé." : "Commentaire désarchivé."
       );
       // ✅ maj locale cohérente
       initial.activite = newState;
     } catch {
-      toast.error("❌ Échec de l’opération d’archivage");
+      toast.error("Le changement d'archivage a échoué.");
     }
   };
 
   if (!hasValidId) {
     return (
       <PageTemplate title="Modifier commentaire" centered>
-        <Typography color="error">❌ Paramètre invalide.</Typography>
+        <Alert severity="error">L'identifiant du commentaire est invalide.</Alert>
       </PageTemplate>
     );
   }
@@ -64,6 +64,7 @@ export default function ProspectionCommentEditPage() {
     return (
       <PageTemplate title={`Modifier commentaire #${numericId}`} centered>
         <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Chargement du commentaire...</Typography>
       </PageTemplate>
     );
   }
@@ -71,7 +72,7 @@ export default function ProspectionCommentEditPage() {
   if (error) {
     return (
       <PageTemplate title={`Modifier commentaire #${numericId}`} centered>
-        <Typography color="error">❌ Erreur de chargement.</Typography>
+        <Alert severity="error">Le commentaire n'a pas pu être chargé.</Alert>
       </PageTemplate>
     );
   }
@@ -99,12 +100,12 @@ export default function ProspectionCommentEditPage() {
             onClick={handleArchiveToggle}
             disabled={archiving}
           >
-            {archiving ? "⏳ En cours…" : isArchived ? "♻️ Désarchiver" : "📦 Archiver"}
+            {archiving ? "En cours..." : isArchived ? "Désarchiver" : "Archiver"}
           </Button>
 
           {/* ✅ Boutons de navigation */}
           <Button variant="outlined" onClick={() => navigate("/prospection-commentaires")}>
-            ← Retour
+            Retour
           </Button>
 
           <Button variant="outlined" onClick={() => navigate("/prospection-commentaires")}>
@@ -115,7 +116,7 @@ export default function ProspectionCommentEditPage() {
     >
       {updateError && (
         <Box mb={2}>
-          <Typography color="error">❌ Impossible de mettre à jour le commentaire.</Typography>
+          <Typography color="error">Le commentaire n'a pas pu être mis à jour.</Typography>
         </Box>
       )}
 

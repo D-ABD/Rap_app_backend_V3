@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Typography } from "@mui/material";
+import { Alert } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
 import ProspectionForm from "./ProspectionForm";
@@ -139,7 +139,7 @@ export default function ProspectionCreatePage() {
   const handleSubmit = async (formData: ProspectionFormData) => {
     try {
       const created = await create(formData);
-      toast.success("✅ Prospection créée avec succès");
+      toast.success("Prospection créée avec succès.");
 
       const wantsComment = window.confirm("Souhaitez-vous ajouter un commentaire maintenant ?");
       const createdId = extractCreatedId(created);
@@ -150,14 +150,14 @@ export default function ProspectionCreatePage() {
         navigate(returnUrl);
       }
     } catch (err) {
-      toast.error(toApiError(err).message || "❌ Erreur lors de la création");
+      toast.error(toApiError(err).message || "La prospection n'a pas pu être créée.");
     }
   };
 
   return (
-    <PageTemplate title="➕ Nouvelle prospection" backButton onBack={() => navigate(-1)}>
+    <PageTemplate title="Nouvelle prospection" backButton onBack={() => navigate(-1)}>
       {createError ? (
-        <Typography color="error">❌ Impossible d’initialiser le formulaire.</Typography>
+        <Alert severity="error">Le formulaire de prospection n'a pas pu être initialisé.</Alert>
       ) : (
         <ProspectionForm
           key={`create-${presetPartenaire ?? "none"}-${partenaireNom ?? ""}-${presetFormation ?? "none"}-${formationNom ?? ""}`}

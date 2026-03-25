@@ -87,6 +87,7 @@
   - messages de chargement et d'erreur plus clairs sur plusieurs pages d'edition
   - modales de selection principales avec messages plus propres
   - widgets overview restants harmonises
+  - dernier lot de creation / edition nettoye sur `formations`, `prospection`, `commentaires`, `prepa`
 - nettoyage legacy deja entame :
   - suppression de `AppRoute copy.tsx`
   - suppression de `useFetch copy.ts`

@@ -1,7 +1,7 @@
 // src/pages/appairages/appairage_comments/AppairageCommentEditPage.tsx
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 
 import AppairageCommentForm from "./AppairageCommentForm";
 import {
@@ -29,10 +29,10 @@ export default function AppairageCommentEditPage() {
   const handleSubmit = async (data: AppairageCommentUpdateInput) => {
     try {
       await update(data);
-      toast.success(`💬 Commentaire #${numericId} mis à jour`);
+      toast.success(`Commentaire #${numericId} mis à jour.`);
       navigate("/appairage-commentaires");
     } catch {
-      toast.error("Erreur lors de la mise à jour du commentaire");
+      toast.error("Le commentaire n'a pas pu être mis à jour.");
     }
   };
 
@@ -43,18 +43,18 @@ export default function AppairageCommentEditPage() {
       const isArchived = initial.activite === "archive";
       const newState = await toggleArchive(isArchived);
       toast.success(
-        newState === "archive" ? "📦 Commentaire archivé" : "♻️ Commentaire désarchivé"
+        newState === "archive" ? "Commentaire archivé." : "Commentaire désarchivé."
       );
       initial.activite = newState;
     } catch {
-      toast.error("❌ Échec de l’opération d’archivage");
+      toast.error("Le changement d'archivage a échoué.");
     }
   };
 
   if (!hasValidId) {
     return (
       <PageTemplate title="Modifier commentaire d’appairage" centered>
-        <Typography color="error">❌ Paramètre invalide.</Typography>
+        <Alert severity="error">L'identifiant du commentaire d'appairage est invalide.</Alert>
       </PageTemplate>
     );
   }
@@ -63,7 +63,7 @@ export default function AppairageCommentEditPage() {
     return (
       <PageTemplate title={`Modifier commentaire #${numericId}`} centered>
         <CircularProgress />
-        <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
+        <Typography sx={{ mt: 2 }}>Chargement du commentaire...</Typography>
       </PageTemplate>
     );
   }
@@ -71,7 +71,7 @@ export default function AppairageCommentEditPage() {
   if (error || !initial) {
     return (
       <PageTemplate title={`Modifier commentaire #${numericId}`} centered>
-        <Typography color="error">❌ Erreur de chargement.</Typography>
+        <Alert severity="error">Le commentaire d'appairage n'a pas pu être chargé.</Alert>
       </PageTemplate>
     );
   }
@@ -90,12 +90,12 @@ export default function AppairageCommentEditPage() {
             onClick={handleArchiveToggle}
             disabled={archiving}
           >
-            {archiving ? "⏳ En cours…" : isArchived ? "♻️ Désarchiver" : "📦 Archiver"}
+            {archiving ? "En cours..." : isArchived ? "Désarchiver" : "Archiver"}
           </Button>
 
           {/* Navigation */}
           <Button variant="outlined" onClick={() => navigate("/appairage-commentaires")}>
-            ← Retour
+            Retour
           </Button>
           <Button variant="outlined" onClick={() => navigate("/appairage-commentaires")}>
             Liste
@@ -105,7 +105,7 @@ export default function AppairageCommentEditPage() {
     >
       {updateError && (
         <Box mb={2}>
-          <Typography color="error">❌ Impossible de mettre à jour le commentaire.</Typography>
+          <Typography color="error">Le commentaire d'appairage n'a pas pu être mis à jour.</Typography>
         </Box>
       )}
 
