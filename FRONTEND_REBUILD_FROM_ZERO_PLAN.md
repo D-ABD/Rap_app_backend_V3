@@ -166,6 +166,7 @@ Etat courant :
   - ecrans `rapports` et `logs` ameliores en confort d'usage
   - reset de filtres et garde-fous UX ajoutes sur les pages admin recentes
   - plusieurs pages d'edition critiques ont maintenant des messages de chargement et d'erreur plus lisibles
+  - modales de selection principales et derniers widgets overview harmonises
 - nettoyage legacy maintenant commence pour de vrai :
   - `AppRoute copy.tsx` supprime
   - `useFetch copy.ts` supprime
@@ -245,8 +246,8 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. finaliser les derniers ecarts stats / dashboards visibles
-2. faire une passe finale d'harmonisation UX / messages / responsive
+1. verifier les derniers ecarts visibles en tests UI reels
+2. finaliser la passe responsive
 3. finaliser la documentation front
 
 ---
@@ -266,10 +267,6 @@ Le chantier sera termine quand :
 
 ## Prochaine Etape Concrete
 
-Reprendre les modules metier dans cet ordre :
-
-1. finaliser les derniers ecarts stats / dashboards
-2. passe finale UX / responsive
-3. documentation finale
-
-Ensuite seulement, remettre a niveau les autres modules.
+1. valider les derniers ecrans en usage reel
+2. corriger les eventuels ecarts responsive restants
+3. figer la documentation finale

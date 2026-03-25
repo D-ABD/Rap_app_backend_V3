@@ -127,7 +127,7 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
             <CircularProgress />
           </Box>
         ) : err ? (
-          <Typography color="error">❌ {err}</Typography>
+          <Typography color="error">{err}</Typography>
         ) : (
           <>
             <TextField
@@ -138,7 +138,7 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
               margin="normal"
             />
             {filtered.length === 0 ? (
-              <Typography>Aucun centre.</Typography>
+              <Typography>Aucun centre trouvé.</Typography>
             ) : (
               <List>
                 {filtered.map((c) => (
@@ -155,7 +155,7 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">
-          ❌ Fermer
+          Fermer
         </Button>
       </DialogActions>
     </Dialog>

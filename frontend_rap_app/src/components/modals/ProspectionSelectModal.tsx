@@ -103,7 +103,7 @@ export default function ProspectionSelectModal({ show, onClose, onSelect }: Prop
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Typography color="error">❌ Erreur lors du chargement des prospections.</Typography>
+          <Typography color="error">Les prospections n'ont pas pu être chargées.</Typography>
         ) : (
           <>
             <TextField
@@ -142,7 +142,7 @@ export default function ProspectionSelectModal({ show, onClose, onSelect }: Prop
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">
-          ❌ Fermer
+          Fermer
         </Button>
       </DialogActions>
     </Dialog>

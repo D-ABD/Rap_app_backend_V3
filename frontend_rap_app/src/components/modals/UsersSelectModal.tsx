@@ -193,7 +193,7 @@ export default function UsersSelectModal({
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Typography color="error">❌ {error}</Typography>
+          <Typography color="error">{error}</Typography>
         ) : (
           <List>
             {filtered.map((u) => (
@@ -235,7 +235,7 @@ export default function UsersSelectModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">
-          ❌ Fermer
+          Fermer
         </Button>
       </DialogActions>
     </Dialog>

@@ -170,7 +170,7 @@ export default function PartenaireSelectModal({
         return;
       }
 
-      toast.success("✅ Partenaire créé et sélectionné");
+      toast.success("Partenaire créé et sélectionné.");
       onSelect(created as Partenaire);
       onClose();
     } catch (err: unknown) {
@@ -179,15 +179,15 @@ export default function PartenaireSelectModal({
         const detail = (err as AxiosError<{ detail?: string }>).response?.data?.detail;
         if (typeof detail === "string") {
           if (detail.toLowerCase().includes("centre")) {
-            toast.error(`❌ ${detail} — contactez votre administrateur.`);
+            toast.error(`${detail} Contacte un administrateur si besoin.`);
           } else {
-            toast.error(`❌ ${detail}`);
+            toast.error(detail);
           }
         } else {
-          toast.error("❌ Échec de la création du partenaire.");
+          toast.error("Le partenaire n'a pas pu être créé.");
         }
       } else {
-        toast.error("❌ Échec de la création du partenaire.");
+        toast.error("Le partenaire n'a pas pu être créé.");
       }
     } finally {
       setCreating(false);
@@ -203,7 +203,7 @@ export default function PartenaireSelectModal({
             <CircularProgress />
           </Box>
         ) : error ? (
-          <Typography color="error">❌ Erreur lors du chargement des partenaires.</Typography>
+          <Typography color="error">Les partenaires n'ont pas pu être chargés.</Typography>
         ) : (
           <>
             <TextField
@@ -290,7 +290,7 @@ export default function PartenaireSelectModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">
-          ❌ Fermer
+          Fermer
         </Button>
       </DialogActions>
     </Dialog>

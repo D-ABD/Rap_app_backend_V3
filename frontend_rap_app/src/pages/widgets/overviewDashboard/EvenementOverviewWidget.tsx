@@ -28,7 +28,7 @@ type Props = {
 };
 
 export default function EvenementOverviewWidget({
-  title = "Overview Événements",
+  title = "Vue d'ensemble Evenements",
   initialFilters,
 }: Props) {
   const [filters, setFilters] = React.useState<EvenementStatsFilters>(initialFilters ?? {});

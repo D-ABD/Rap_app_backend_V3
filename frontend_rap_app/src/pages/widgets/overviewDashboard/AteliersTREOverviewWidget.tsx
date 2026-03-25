@@ -122,7 +122,7 @@ export default function AteliersTREOverviewWidget() {
       <Box display="flex" alignItems="center" gap={1}>
         <InventoryIcon color="primary" fontSize="small" />
         <Typography variant="subtitle2" fontWeight="bold">
-          Overview Ateliers TRE
+          Vue d'ensemble Ateliers TRE
         </Typography>
       </Box>
 

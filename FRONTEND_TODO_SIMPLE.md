@@ -85,6 +85,8 @@
   - exports desactives quand non pertinents
   - validation simple des plages de dates sur `logs`
   - messages de chargement et d'erreur plus clairs sur plusieurs pages d'edition
+  - modales de selection principales avec messages plus propres
+  - widgets overview restants harmonises
 - nettoyage legacy deja entame :
   - suppression de `AppRoute copy.tsx`
   - suppression de `useFetch copy.ts`
@@ -96,11 +98,7 @@
 
 ## A faire
 
-- finaliser les derniers ecarts dashboards
-- exports
-- uniformiser les derniers messages d'erreur UI
-- nettoyer et documenter le code au fil de l'eau
-- error handling UI
-- verifier le responsive au fil de l'eau
+- verifier les derniers ecarts visuels au fil des tests UI
 - finaliser la passe responsive
-- documentation front finale
+- eventuels derniers ajustements d'exports si un cas reel remonte
+- documentation front finale de cloture
