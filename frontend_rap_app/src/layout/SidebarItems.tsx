@@ -204,20 +204,22 @@ export function useSidebarItems(): SidebarItem[] {
     Partenaires: ["/partenaires", "/partenaires/candidat"],
   };
 
-  return sidebarItems.map((item: SidebarItem) => {
-    if (item.label === "CRM" && item.children) {
-      return {
-        ...item,
-        children: item.children.map((child: SidebarItem) => {
-          const redirect = redirectMap[child.label];
-          if (redirect) {
-            const [staffPath, candidatPath] = redirect;
-            return { ...child, path: isStaff ? staffPath : candidatPath };
-          }
-          return child;
-        }),
-      };
-    }
-    return item;
-  });
+  return sidebarItems
+    .map((item: SidebarItem) => {
+      if (item.label === "CRM" && item.children) {
+        return {
+          ...item,
+          children: item.children.map((child: SidebarItem) => {
+            const redirect = redirectMap[child.label];
+            if (redirect) {
+              const [staffPath, candidatPath] = redirect;
+              return { ...child, path: isStaff ? staffPath : candidatPath };
+            }
+            return child;
+          }),
+        };
+      }
+      return item;
+    })
+    .filter((item) => !item.children || item.children.length > 0);
 }

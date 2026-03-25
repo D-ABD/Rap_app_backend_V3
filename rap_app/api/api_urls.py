@@ -28,7 +28,7 @@ from .viewsets.documents_viewsets import DocumentViewSet
 from .viewsets.evenements_viewsets import EvenementViewSet
 from .viewsets.formations_viewsets import FormationViewSet
 from .viewsets.health_viewset import HealthViewSet
-from .viewsets.logs_viewsets import LogUtilisateurViewSet
+from .viewsets.logs_viewsets import LogChoicesView, LogUtilisateurViewSet
 from .viewsets.me_viewsets import DemandeCompteCandidatView, MeAPIView, RoleChoicesView
 from .viewsets.partenaires_viewsets import PartenaireViewSet
 from .viewsets.prepa_objectifs_viewsets import ObjectifPrepaViewSet
@@ -121,6 +121,7 @@ urlpatterns = [
     path("roles/", RoleChoicesView.as_view(), name="roles"),
     path("me/demande-compte/", DemandeCompteCandidatView.as_view(), name="demande_compte_candidat"),
     path("rapports/choices/", RapportChoicesView.as_view(), name="rapport-choices"),
+    path("logs/choices/", LogChoicesView.as_view(), name="log-choices"),
 ]
 
 # Ajout des routes générées par le router DRF

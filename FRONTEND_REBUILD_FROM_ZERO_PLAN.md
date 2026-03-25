@@ -146,6 +146,20 @@ Etat courant :
   - exports liste / presence / emargement
   - detail, creation, edition et navigation relies
   - commentaires et champs texte libre enrichis
+- module `rapports` maintenant repris avec :
+  - types / hooks / pages
+  - liste / detail / creation / edition
+  - exports individuels et export liste
+  - lecture plus metier dans la table et la modale detail
+- module `logs` maintenant repris avec :
+  - types / hooks / pages
+  - consultation admin, filtres et detail
+  - exports `xlsx` / `csv` / `pdf`
+  - acces deplace sous `Parametres` pour rester reserve aux admins
+- diagnostic logs mis a jour :
+  - pas de besoin de suppression manuelle reguliere
+  - index et pagination deja presents
+  - vrai besoin futur = retention / purge automatique si le volume grossit
 - enrichissement texte maintenant mieux aligne dans l'app avec :
   - commentaires `formation`, `prospection`, `appairage`
   - champs libres `prospection`, `prepa`, `declic`, `objectifs`, `partenaires`
@@ -157,6 +171,12 @@ Etat courant :
     - PDF = preservation du rendu enrichi
     - XLSX = texte lisible propre sans balises HTML brutes
 - prochaine cible : finaliser les derniers ecarts stats / dashboards puis rapports / logs
+- scan global back/front du 24 mars 2026 :
+  - les hooks / types / pages des modules metier principaux sont globalement realignes avec le backend actuel
+  - les hooks / types `stats` sont deja presents sur la plupart des modules principaux
+  - le vrai retard principal ne concerne plus les pages / hooks / types des modules metier majeurs
+  - l'effort restant est surtout transverse : dashboards, UX, responsive, nettoyage legacy
+  - quelques reliquats legacy existent encore et devront etre nettoyes en fin de chantier
 
 ## 3. Modules metier principaux
 
@@ -214,8 +234,9 @@ Etat courant :
 ## Ordre Recommande
 
 1. finaliser les derniers ecarts stats / dashboards
-2. remettre a niveau rapports / logs
-3. faire une passe finale d'harmonisation UX / messages / responsive
+2. faire une passe finale d'harmonisation UX / messages / responsive
+3. nettoyer les reliquats legacy du front
+4. finaliser la documentation front
 
 ---
 
@@ -236,8 +257,8 @@ Le chantier sera termine quand :
 
 Reprendre les modules metier dans cet ordre :
 
-1. prepa / declic
-2. finaliser les derniers ecarts stats / dashboards
-3. rapports / logs
+1. finaliser les derniers ecarts stats / dashboards
+2. passe finale UX / responsive / nettoyage legacy
+3. documentation finale
 
 Ensuite seulement, remettre a niveau les autres modules.

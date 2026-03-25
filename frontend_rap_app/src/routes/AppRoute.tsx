@@ -77,9 +77,13 @@ import ProspectionCommentEditPage from "../pages/prospection/prospectioncomments
 import DocumentsPage from "src/pages/Documents/DocumentsPage";
 import DocumentsCreatePage from "src/pages/Documents/DocumentsCreatePage";
 import DocumentsEditPage from "src/pages/Documents/DocumentsEditPage";
+import LogsPage from "src/pages/logs/LogsPage";
 import EvenementsPage from "../pages/evenements/EvenementsPage";
 import EvenementsCreatePage from "../pages/evenements/EvenementsCreatePage";
 import EvenementsEditPage from "../pages/evenements/EvenementsEditPage";
+import RapportsCreatePage from "src/pages/rapports/RapportsCreatePage";
+import RapportsEditPage from "src/pages/rapports/RapportsEditPage";
+import RapportsPage from "src/pages/rapports/RapportsPage";
 
 import DeclicPages from "src/pages/declic/DeclicPages";
 import DeclicCreatePage from "src/pages/declic/DeclicCreatePage";
@@ -422,6 +426,21 @@ export default function AppRoute() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/create" element={<DocumentsCreatePage />} />
         <Route path="/documents/edit/:id" element={<DocumentsEditPage />} />
+
+        {/* Rapports */}
+        <Route path="/rapports" element={secure(<RapportsPage />)} />
+        <Route path="/rapports/create" element={secure(<RapportsCreatePage />)} />
+        <Route path="/rapports/:id/edit" element={secure(<RapportsEditPage />)} />
+
+        {/* Logs */}
+        <Route
+          path="/logs"
+          element={
+            <AdminOnlyRoute>
+              <LogsPage />
+            </AdminOnlyRoute>
+          }
+        />
 
         {/* Utilisateurs */}
         <Route path="/users" element={secure(<UsersPage />)} />

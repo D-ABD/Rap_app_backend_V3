@@ -24,6 +24,16 @@ const ParametresPage = () => {
       link: "/statuts",
     },
     {
+      title: "Rapports",
+      text: "Créer, modifier et exporter les rapports métier.",
+      link: "/rapports",
+    },
+    {
+      title: "Logs",
+      text: "Consulter et exporter les journaux d'activité.",
+      link: "/logs",
+    },
+    {
       title: "Administration",
       text: "Accès à l'interface d’administration Django.",
       link: `${env.backendProxyTarget.replace(/\/$/, "")}/admin/`,

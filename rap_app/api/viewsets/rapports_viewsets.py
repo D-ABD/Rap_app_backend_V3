@@ -1,5 +1,14 @@
+import csv
+import io
+import json
+
+from django.http import HttpResponse
+from openpyxl import Workbook
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ...api.paginations import RapAppPagination
@@ -8,11 +17,15 @@ from ...api.serializers.rapports_serializers import (
     RapportChoiceGroupSerializer,
     RapportSerializer,
 )
+from ...models.centres import Centre
+from ...models.formations import Formation
 from ...models.logs import LogUtilisateur
 from ...models.rapports import Rapport
 from ...models.candidat import Candidat
+from ...models.statut import Statut
+from ...models.types_offre import TypeOffre
 from ...services.report_builders import RapportDataBuilderService
-from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
+from ..roles import get_staff_centre_ids_cached, is_admin_like
 
 
 @extend_schema_view(
@@ -70,6 +83,135 @@ class RapportViewSet(viewsets.ModelViewSet):
     search_fields = ["nom", "type_rapport", "periode"]
     ordering_fields = ["created_at", "date_debut", "date_fin"]
     ordering = ["-created_at"]
+
+    def _flatten_report_data(self, value, prefix=""):
+        rows = []
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_prefix = f"{prefix}.{key}" if prefix else str(key)
+                rows.extend(self._flatten_report_data(child, child_prefix))
+            return rows
+        if isinstance(value, list):
+            for index, child in enumerate(value):
+                child_prefix = f"{prefix}[{index}]"
+                rows.extend(self._flatten_report_data(child, child_prefix))
+            return rows
+        rows.append((prefix or "valeur", value))
+        return rows
+
+    def _report_export_format(self, request, instance: Rapport):
+        requested = (request.query_params.get("format") or instance.format or Rapport.FORMAT_HTML).lower()
+        return {
+            "xlsx": Rapport.FORMAT_EXCEL,
+            "excel": Rapport.FORMAT_EXCEL,
+        }.get(requested, requested)
+
+    def _export_report_csv(self, instance: Rapport):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="rapport_{instance.pk}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["Champ", "Valeur"])
+        writer.writerow(["Nom", instance.nom])
+        writer.writerow(["Type", instance.get_type_rapport_display()])
+        writer.writerow(["Période", instance.get_periode_display()])
+        writer.writerow(["Date début", instance.date_debut])
+        writer.writerow(["Date fin", instance.date_fin])
+        writer.writerow(["Format", instance.get_format_display()])
+        writer.writerow(["Centre", instance.centre.nom if instance.centre else ""])
+        writer.writerow(["Type offre", instance.type_offre.nom if instance.type_offre else ""])
+        writer.writerow(["Statut", instance.statut.nom if instance.statut else ""])
+        writer.writerow(["Formation", instance.formation.nom if instance.formation else ""])
+        for key, value in self._flatten_report_data(instance.donnees or {}):
+            writer.writerow([key, json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else value])
+        return response
+
+    def _export_report_excel(self, instance: Rapport):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Rapport"
+        ws.append(["Champ", "Valeur"])
+        rows = [
+            ("Nom", instance.nom),
+            ("Type", instance.get_type_rapport_display()),
+            ("Période", instance.get_periode_display()),
+            ("Date début", str(instance.date_debut)),
+            ("Date fin", str(instance.date_fin)),
+            ("Format", instance.get_format_display()),
+            ("Centre", instance.centre.nom if instance.centre else ""),
+            ("Type offre", instance.type_offre.nom if instance.type_offre else ""),
+            ("Statut", instance.statut.nom if instance.statut else ""),
+            ("Formation", instance.formation.nom if instance.formation else ""),
+        ]
+        rows.extend(
+            (
+                key,
+                json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else value,
+            )
+            for key, value in self._flatten_report_data(instance.donnees or {})
+        )
+        for row in rows:
+            ws.append(list(row))
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = f'attachment; filename="rapport_{instance.pk}.xlsx"'
+        return response
+
+    def _export_report_pdf(self, instance: Rapport):
+        buffer = io.BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        y = height - 40
+
+        def draw_line(label, value):
+            nonlocal y
+            text = f"{label}: {value}"
+            for start in range(0, len(text), 100):
+                if y < 40:
+                    pdf.showPage()
+                    y = height - 40
+                pdf.drawString(40, y, text[start : start + 100])
+                y -= 16
+
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(40, y, f"Rapport - {instance.nom}")
+        y -= 24
+        pdf.setFont("Helvetica", 10)
+        draw_line("Type", instance.get_type_rapport_display())
+        draw_line("Période", instance.get_periode_display())
+        draw_line("Date début", instance.date_debut)
+        draw_line("Date fin", instance.date_fin)
+        draw_line("Format", instance.get_format_display())
+        draw_line("Centre", instance.centre.nom if instance.centre else "")
+        draw_line("Type offre", instance.type_offre.nom if instance.type_offre else "")
+        draw_line("Statut", instance.statut.nom if instance.statut else "")
+        draw_line("Formation", instance.formation.nom if instance.formation else "")
+        for key, value in self._flatten_report_data(instance.donnees or {}):
+            draw_line(key, json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else value)
+        pdf.save()
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="rapport_{instance.pk}.pdf"'
+        return response
+
+    def _export_report_html(self, instance: Rapport):
+        return Response(
+            {
+                "success": True,
+                "message": "Rapport exporté en HTML.",
+                "data": {
+                    "rapport": instance.to_serializable_dict(),
+                    "donnees_lignes": [
+                        {"cle": key, "valeur": value}
+                        for key, value in self._flatten_report_data(instance.donnees or {})
+                    ],
+                },
+            }
+        )
 
     def get_queryset(self):
         """
@@ -216,6 +358,74 @@ class RapportViewSet(viewsets.ModelViewSet):
             {"success": True, "message": "Liste des rapports récupérée avec succès.", "data": serializer.data}
         )
 
+    @action(detail=True, methods=["get"], url_path="export")
+    def export(self, request, pk=None):
+        """
+        Exporte un rapport individuel selon son format courant ou le query param
+        `format` (`pdf`, `excel`/`xlsx`, `csv`, `html`).
+        """
+        instance = self.get_object()
+        fmt = self._report_export_format(request, instance)
+        if fmt == Rapport.FORMAT_PDF:
+            return self._export_report_pdf(instance)
+        if fmt == Rapport.FORMAT_EXCEL:
+            return self._export_report_excel(instance)
+        if fmt == Rapport.FORMAT_CSV:
+            return self._export_report_csv(instance)
+        return self._export_report_html(instance)
+
+    @action(detail=False, methods=["get"], url_path="export-xlsx")
+    def export_xlsx(self, request):
+        """
+        Exporte la liste filtrée des rapports en XLSX.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Rapports"
+        ws.append(
+            [
+                "ID",
+                "Nom",
+                "Type",
+                "Période",
+                "Date début",
+                "Date fin",
+                "Format",
+                "Centre",
+                "Type offre",
+                "Statut",
+                "Formation",
+                "Créé le",
+            ]
+        )
+        for rapport in queryset:
+            ws.append(
+                [
+                    rapport.pk,
+                    rapport.nom,
+                    rapport.get_type_rapport_display(),
+                    rapport.get_periode_display(),
+                    str(rapport.date_debut),
+                    str(rapport.date_fin),
+                    rapport.get_format_display(),
+                    rapport.centre.nom if rapport.centre else "",
+                    rapport.type_offre.nom if rapport.type_offre else "",
+                    rapport.statut.nom if rapport.statut else "",
+                    rapport.formation.nom if rapport.formation else "",
+                    rapport.created_at.strftime("%Y-%m-%d %H:%M") if rapport.created_at else "",
+                ]
+            )
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="rapports.xlsx"'
+        return response
+
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -245,12 +455,25 @@ class RapportChoicesView(APIView):
         def serialize_choices(choices):
             return [{"value": k, "label": v} for k, v in choices]
 
+        centre_ids = None if is_admin_like(request.user) else get_staff_centre_ids_cached(request)
+        centres_qs = Centre.objects.all().order_by("nom")
+        type_offres_qs = TypeOffre.objects.all().order_by("nom")
+        statuts_qs = Statut.objects.all().order_by("nom")
+        formations_qs = Formation.objects.select_related("centre").order_by("nom")
+        if centre_ids is not None:
+            centres_qs = centres_qs.filter(id__in=centre_ids)
+            formations_qs = formations_qs.filter(centre_id__in=centre_ids)
+
         return Response(
             {
                 "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
                 "periode": serialize_choices(Rapport.PERIODE_CHOICES),
                 "format": serialize_choices(Rapport.FORMAT_CHOICES),
                 "parcours_phase": serialize_choices(Candidat.ParcoursPhase.choices),
+                "centres": [{"value": c.id, "label": c.nom} for c in centres_qs],
+                "type_offres": [{"value": t.id, "label": t.nom} for t in type_offres_qs],
+                "statuts": [{"value": s.id, "label": s.nom} for s in statuts_qs],
+                "formations": [{"value": f.id, "label": f.nom} for f in formations_qs],
                 "reporting_contract": {
                     "legacy_candidate_status_field": "statut",
                     "recommended_candidate_phase_field": "parcours_phase",

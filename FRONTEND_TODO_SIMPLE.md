@@ -61,25 +61,36 @@
 - module cvtheque aligne avec creation, edition, navigation contextuelle candidat et retour de liste
 - module ateliers TRE aligne avec detail navigable, multi-selection candidats et edition des presences
 - modules prepa / declic maintenant repris avec suivi nominatif, exports, emargement et commentaires enrichis
+- types et hooks `stats` deja largement presents pour les modules metier principaux
+- module `rapports` maintenant branche avec :
+  - types / hooks / pages
+  - liste / detail / creation / edition
+  - exports liste et export individuel
+  - lecture plus claire des donnees dans la table et la modale
+- module `logs` maintenant branche avec :
+  - types / hooks / pages
+  - liste / detail / filtres
+  - exports `xlsx` / `csv` / `pdf`
+  - acces reserve via `Parametres`
+- strategie logs clarifiee :
+  - pas de suppression manuelle au fil de l'eau
+  - pagination + index existants suffisants a court terme
+  - prevoir plus tard une retention / purge automatique
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- types stats
-- hooks stats
 - finaliser dashboards
-- types rapports
-- hooks rapports
-- pages rapports
-- types logs
-- hooks logs
-- pages logs
 - exports
 - uniformiser les messages d'erreur UI
 - nettoyer et documenter le code au fil de l'eau
 - error handling UI
 - verifier le responsive au fil de l'eau
 - responsive pass complete
-- nettoyage ancien front
+- nettoyer les reliquats legacy / doublons du front :
+  - `AppRoute copy.tsx`
+  - `useFetch copy.ts`
+  - `CommentaireStatsDashboard copy.tsx`
+  - widgets / noms legacy encore ambigus (`FormationOverviewWidget2`, `SarurationDashboard`)
 - documentation front finale
