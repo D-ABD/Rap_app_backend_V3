@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 
 import type { Declic } from "src/types/declic";
 import {
@@ -69,12 +69,12 @@ export default function DeclicEditPage() {
       ) as Partial<Declic>;
 
       await update(id, payload);
-      toast.success("✅ Séance Déclic mise à jour avec succès");
+      toast.success("Séance Declic mise à jour avec succès.");
       navigate("/declic");
     } catch (e) {
       const axiosErr = e as AxiosError<unknown>;
       const parsed = axiosErr.response?.data ? extractApiMessage(axiosErr.response.data) : null;
-      toast.error(parsed ?? axiosErr.message ?? "Erreur lors de la mise à jour");
+      toast.error(parsed ?? axiosErr.message ?? "La séance Declic n'a pas pu être mise à jour.");
     } finally {
       setSubmitting(false);
     }
@@ -88,10 +88,10 @@ export default function DeclicEditPage() {
     if (!window.confirm("Supprimer cette séance Déclic ?")) return;
     try {
       await remove(id);
-      toast.success("🗑️ Séance supprimée avec succès");
+      toast.success("Séance Declic supprimée avec succès.");
       navigate("/declic");
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("La séance Declic n'a pas pu être supprimée.");
     }
   };
 
@@ -101,7 +101,7 @@ export default function DeclicEditPage() {
   if (Number.isNaN(id)) {
     return (
       <PageTemplate title="Modifier une séance Déclic">
-        <Typography color="error">❌ ID invalide</Typography>
+        <Alert severity="error">L'identifiant de la séance Declic est invalide.</Alert>
       </PageTemplate>
     );
   }
@@ -110,7 +110,7 @@ export default function DeclicEditPage() {
     return (
       <PageTemplate title={`Modifier Déclic #${id}`} centered>
         <CircularProgress />
-        <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
+        <Typography sx={{ mt: 2 }}>Chargement de la séance Declic...</Typography>
       </PageTemplate>
     );
   }
@@ -118,7 +118,9 @@ export default function DeclicEditPage() {
   if (error) {
     return (
       <PageTemplate title={`Modifier Déclic #${id}`}>
-        <Typography color="error">❌ Erreur de chargement des données.</Typography>
+        <Alert severity="error">
+          Les données de la séance Declic n'ont pas pu être chargées.
+        </Alert>
       </PageTemplate>
     );
   }
@@ -126,7 +128,7 @@ export default function DeclicEditPage() {
   if (!data) {
     return (
       <PageTemplate title={`Modifier Déclic #${id}`}>
-        <Typography color="error">❌ Séance Déclic introuvable.</Typography>
+        <Alert severity="error">La séance Declic demandée est introuvable.</Alert>
       </PageTemplate>
     );
   }
@@ -150,7 +152,7 @@ export default function DeclicEditPage() {
   /* ─────────────────────────────── */
   return (
     <PageTemplate
-      title={`✏️ Modifier la séance Déclic #${id}`}
+      title={`Modifier la séance Declic #${id}`}
       backButton
       onBack={() => navigate(-1)}
       actions={
@@ -162,7 +164,7 @@ export default function DeclicEditPage() {
       {/* ✅ Affichage du centre sélectionné */}
       {selectedCentre && (
         <Typography variant="subtitle1" sx={{ mb: 2, color: "text.secondary", fontWeight: 500 }}>
-          🏫 Centre sélectionné : <strong>{selectedCentre}</strong>
+          Centre sélectionné : <strong>{selectedCentre}</strong>
         </Typography>
       )}
 

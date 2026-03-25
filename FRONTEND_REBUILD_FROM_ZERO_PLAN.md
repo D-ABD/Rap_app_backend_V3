@@ -165,10 +165,13 @@ Etat courant :
   - `grouped dashboard` complete avec `prepa` et `declic`
   - ecrans `rapports` et `logs` ameliores en confort d'usage
   - reset de filtres et garde-fous UX ajoutes sur les pages admin recentes
+  - plusieurs pages d'edition critiques ont maintenant des messages de chargement et d'erreur plus lisibles
 - nettoyage legacy maintenant commence pour de vrai :
   - `AppRoute copy.tsx` supprime
   - `useFetch copy.ts` supprime
   - `CommentaireStatsDashboard copy.tsx` supprime
+  - `FormationOverviewWidget2` renomme en `FormationFinanceursOverviewWidget`
+  - `SarurationDashboard` renomme en `SaturationDashboard`
 - enrichissement texte maintenant mieux aligne dans l'app avec :
   - commentaires `formation`, `prospection`, `appairage`
   - champs libres `prospection`, `prepa`, `declic`, `objectifs`, `partenaires`
@@ -185,7 +188,7 @@ Etat courant :
   - les hooks / types `stats` sont deja presents sur la plupart des modules principaux
   - le vrai retard principal ne concerne plus les pages / hooks / types des modules metier majeurs
   - l'effort restant est surtout transverse : dashboards, UX, responsive, nettoyage legacy
-  - quelques reliquats legacy et noms ambigus existent encore et devront etre nettoyes en fin de chantier
+  - les reliquats legacy restants sont maintenant marginaux
 
 ## 3. Modules metier principaux
 
@@ -244,8 +247,7 @@ Etat courant :
 
 1. finaliser les derniers ecarts stats / dashboards visibles
 2. faire une passe finale d'harmonisation UX / messages / responsive
-3. nettoyer les derniers reliquats legacy et noms ambigus du front
-4. finaliser la documentation front
+3. finaliser la documentation front
 
 ---
 
@@ -267,7 +269,7 @@ Le chantier sera termine quand :
 Reprendre les modules metier dans cet ordre :
 
 1. finaliser les derniers ecarts stats / dashboards
-2. passe finale UX / responsive / nettoyage legacy
+2. passe finale UX / responsive
 3. documentation finale
 
 Ensuite seulement, remettre a niveau les autres modules.

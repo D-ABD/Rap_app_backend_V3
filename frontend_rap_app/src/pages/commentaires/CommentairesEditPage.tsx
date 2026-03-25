@@ -81,7 +81,7 @@ export default function CommentairesEditPage() {
   /* ---------- Chargement du commentaire ---------- */
   useEffect(() => {
     if (!id) {
-      toast.error("ID du commentaire manquant");
+      toast.error("L'identifiant du commentaire est manquant.");
       navigate(returnToListUrl);
       return;
     }
@@ -103,7 +103,7 @@ export default function CommentairesEditPage() {
         setFormationIdFromComment(data.formation_id ?? data.formation ?? null);
       })
       .catch(() => {
-        toast.error("Erreur lors du chargement du commentaire");
+        toast.error("Le commentaire n'a pas pu être chargé.");
         navigate(returnToListUrl);
       })
       .finally(() => setLoading(false));
@@ -119,7 +119,7 @@ export default function CommentairesEditPage() {
       return;
     }
     if (values.formation == null) {
-      toast.error("Formation manquante");
+      toast.error("La formation liée au commentaire est manquante.");
       return;
     }
 
@@ -128,10 +128,10 @@ export default function CommentairesEditPage() {
         contenu,
         formation: values.formation,
       });
-      toast.success("✅ Commentaire mis à jour");
+      toast.success("Commentaire mis à jour avec succès.");
       setShowNavigationModal(true);
     } catch {
-      toast.error("Erreur lors de la modification");
+      toast.error("Le commentaire n'a pas pu être modifié.");
     }
   };
 
@@ -152,10 +152,10 @@ export default function CommentairesEditPage() {
       setIsArchived(updated?.statut_commentaire === "archive");
 
       toast.success(
-        isArchived ? "💬 Commentaire désarchivé avec succès" : "📦 Commentaire archivé avec succès"
+        isArchived ? "Commentaire désarchivé avec succès." : "Commentaire archivé avec succès."
       );
     } catch {
-      toast.error("Erreur lors du changement de statut");
+      toast.error("Le changement de statut du commentaire a échoué.");
     } finally {
       setBusyArchive(false);
     }
@@ -181,7 +181,10 @@ export default function CommentairesEditPage() {
       }
     >
       {loading ? (
-        <CircularProgress />
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2} py={4}>
+          <CircularProgress />
+          <Typography>Chargement du commentaire...</Typography>
+        </Box>
       ) : (
         <Paper sx={{ p: 3 }}>
           <Stack spacing={2} component="form" onSubmit={handleSubmit}>

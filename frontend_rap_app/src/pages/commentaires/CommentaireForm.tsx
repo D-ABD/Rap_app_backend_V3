@@ -106,7 +106,7 @@ export default function CommentaireForm({
     api
       .get(`/formations/${scopedFormationId}/`)
       .then((res) => setFormationNom(res.data.nom))
-      .catch(() => toast.error("Formation introuvable"))
+      .catch(() => toast.error("La formation sélectionnée est introuvable."))
       .finally(() => setLoading(false));
   }, [scopedFormationId]);
 
@@ -136,7 +136,7 @@ export default function CommentaireForm({
     setSubmitting(true);
     try {
       await api.post("/commentaires/", payload);
-      toast.success("✅ Commentaire créé avec succès");
+      toast.success("Commentaire créé avec succès.");
       if (onSubmit) onSubmit(payload);
       navigate(returnToListUrl);
     } catch (err: unknown) {
@@ -152,9 +152,9 @@ export default function CommentaireForm({
           }
         }
         setErrors(formattedErrors);
-        toast.error("Erreur lors de la création du commentaire");
+        toast.error("Le commentaire n'a pas pu être créé.");
       } else {
-        toast.error("Une erreur est survenue lors de l’envoi.");
+        toast.error("Une erreur est survenue pendant l'enregistrement du commentaire.");
       }
     } finally {
       setSubmitting(false);
@@ -165,7 +165,10 @@ export default function CommentaireForm({
   return (
     <Paper sx={{ p: 3 }}>
       {loading ? (
-        <CircularProgress />
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2} py={4}>
+          <CircularProgress />
+          <Typography>Chargement de la formation...</Typography>
+        </Box>
       ) : (
         <Box component="form" onSubmit={handleSubmit}>
           {/* --- Sélecteur de formation --- */}

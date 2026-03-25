@@ -1,4 +1,4 @@
-// src/pages/widgets/overviewDashboard/FormationOverviewWidget2.tsx
+// src/pages/widgets/overviewDashboard/FormationFinanceursOverviewWidget.tsx
 import * as React from "react";
 import {
   Card,
@@ -55,7 +55,7 @@ const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: an
   );
 };
 
-export default function FormationOverviewWidget2({
+export default function FormationFinanceursOverviewWidget({
   title = "Répartition des places par offre et financeur",
   filters,
 }: {

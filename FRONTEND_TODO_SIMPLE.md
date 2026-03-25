@@ -84,10 +84,13 @@
   - reset des filtres sur `rapports` et `logs`
   - exports desactives quand non pertinents
   - validation simple des plages de dates sur `logs`
+  - messages de chargement et d'erreur plus clairs sur plusieurs pages d'edition
 - nettoyage legacy deja entame :
   - suppression de `AppRoute copy.tsx`
   - suppression de `useFetch copy.ts`
   - suppression de `CommentaireStatsDashboard copy.tsx`
+  - renommage de `FormationOverviewWidget2` vers `FormationFinanceursOverviewWidget`
+  - renommage de `SarurationDashboard` vers `SaturationDashboard`
 - dependances frontend assainies
 - build frontend validee
 
@@ -100,6 +103,4 @@
 - error handling UI
 - verifier le responsive au fil de l'eau
 - finaliser la passe responsive
-- nettoyer les reliquats legacy / doublons du front :
-  - widgets / noms legacy encore ambigus (`FormationOverviewWidget2`, `SarurationDashboard`)
 - documentation front finale

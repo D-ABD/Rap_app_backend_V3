@@ -29,7 +29,7 @@ import ProspectionConversionKpi from "./widgets/saturationdashboard/ProspectionC
 import AppairageConversionKpi from "./widgets/saturationdashboard/AppairageSaturationWidget";
 
 import FormationOverviewWidget from "./widgets/overviewDashboard/FormationOverviewWidget";
-import FormationOverviewWidget2 from "./widgets/overviewDashboard/FormationOverviewWidget2";
+import FormationFinanceursOverviewWidget from "./widgets/overviewDashboard/FormationFinanceursOverviewWidget";
 import FormationPlacesWidget from "./widgets/overviewDashboard/FormationPlacesWidget";
 
 import CandidatOverviewWidget from "./widgets/overviewDashboard/CandidatOverviewWidget";
@@ -225,7 +225,7 @@ export default function DashboardPage() {
               <FormationOverviewWidget title="Répartition formations" />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
-              <FormationOverviewWidget2 title="Types d’offres" />
+              <FormationFinanceursOverviewWidget title="Types d’offres" />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <FormationPlacesWidget title="Places disponibles" />

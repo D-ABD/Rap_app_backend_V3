@@ -3,6 +3,7 @@ import { useRef, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -113,12 +114,12 @@ export default function ProspectionEditPage() {
     try {
       const updated = await update(data);
       setLocalDetail(updated as ProspectionDetailDTO);
-      toast.success("✅ Prospection mise à jour");
+      toast.success("Prospection mise à jour avec succès.");
       setTimeout(() => {
         navigate(buildReturnUrl());
       }, 400);
     } catch (err) {
-      toast.error(toApiError(err).message || "❌ Échec de la mise à jour");
+      toast.error(toApiError(err).message || "La prospection n'a pas pu être mise à jour.");
     }
   };
 
@@ -126,10 +127,10 @@ export default function ProspectionEditPage() {
     if (!prospectionId) return;
     try {
       await remove();
-      toast.success("🗑️ Prospection supprimée");
+      toast.success("Prospection supprimée avec succès.");
       navigate(buildReturnUrl());
     } catch (err) {
-      toast.error(toApiError(err).message || "❌ Échec de la suppression");
+      toast.error(toApiError(err).message || "La prospection n'a pas pu être supprimée.");
     }
   };
 
@@ -139,7 +140,7 @@ export default function ProspectionEditPage() {
     try {
       if (localDetail.activite === "archivee") {
         await api.post(`/prospections/${prospectionId}/desarchiver/`);
-        toast.success("♻️ Prospection désarchivée");
+        toast.success("Prospection désarchivée.");
         setLocalDetail({
           ...localDetail,
           activite: "active",
@@ -147,7 +148,7 @@ export default function ProspectionEditPage() {
         });
       } else {
         await api.post(`/prospections/${prospectionId}/archiver/`);
-        toast.info("📦 Prospection archivée");
+        toast.info("Prospection archivée.");
         setLocalDetail({
           ...localDetail,
           activite: "archivee",
@@ -155,7 +156,7 @@ export default function ProspectionEditPage() {
         });
       }
     } catch (err) {
-      toast.error(toApiError(err).message || "❌ Échec de l’opération d’archivage");
+      toast.error(toApiError(err).message || "Le changement d'état d'archivage a échoué.");
     }
   };
 
@@ -164,8 +165,23 @@ export default function ProspectionEditPage() {
   };
 
   if (!prospectionId) return null;
-  if (loading) return <CircularProgress />;
-  if (error || !localDetail) return <Box>Erreur de chargement</Box>;
+  if (loading) {
+    return (
+      <PageTemplate title={`Prospection #${prospectionId}`} centered>
+        <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Chargement de la prospection...</Typography>
+      </PageTemplate>
+    );
+  }
+  if (error || !localDetail) {
+    return (
+      <PageTemplate title={`Prospection #${prospectionId}`}>
+        <Alert severity="error">
+          La prospection n'a pas pu être chargée. Vérifie l'identifiant ou recharge la page.
+        </Alert>
+      </PageTemplate>
+    );
+  }
 
   /* ──────────────────────────────────────────────────────────────── */
   const initialValues: ProspectionFormDataWithId = {

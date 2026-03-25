@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Grid, Box } from "@mui/material";
 import FormationOverviewWidget from "./FormationOverviewWidget";
-import FormationOverviewWidget2 from "./FormationOverviewWidget2";
+import FormationFinanceursOverviewWidget from "./FormationFinanceursOverviewWidget";
 import FormationPlacesWidget from "./FormationPlacesWidget";
 import CandidatOverviewWidget from "./CandidatOverviewWidget";
 import CandidatContratOverviewWidget from "./CandidatContratOverviewWidget";
@@ -21,7 +21,7 @@ export default function OverviewDashboard() {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <FormationOverviewWidget2 title="Types d'offres" />
+          <FormationFinanceursOverviewWidget title="Types d'offres" />
         </Grid>
 
         <Grid item xs={12} md={4}>
