@@ -15,31 +15,31 @@ export default function OverviewDashboard() {
   return (
     <Box sx={{ p: { xs: 1, md: 2 }, width: "100%" }}>
       <Grid container spacing={2} alignItems="stretch">
-        {/* 🟦 Formations */}
+        {/* Formations */}
         <Grid item xs={12} md={4}>
-          <FormationOverviewWidget title="Overview Formations" />
+          <FormationOverviewWidget title="Vue d'ensemble Formations" />
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <FormationOverviewWidget2 title="Overview Formations2" />
+          <FormationOverviewWidget2 title="Types d'offres" />
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <FormationPlacesWidget title="Overview Formations places" />
+          <FormationPlacesWidget title="Places disponibles" />
         </Grid>
 
-        {/* 🟩 Candidats */}
+        {/* Candidats */}
         <Grid item xs={12} md={4}>
-          <CandidatOverviewWidget title="Overview Candidats" />
+          <CandidatOverviewWidget title="Statuts candidats" />
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <CandidatContratOverviewWidget title="Overview Candidats Contrats" />
+          <CandidatContratOverviewWidget title="Repartition contrats" />
         </Grid>
 
-        {/* 🟧 Prospection & appairages */}
+        {/* Prospections, appairages, ateliers, evenements */}
         <Grid item xs={12} md={4}>
-          <ProspectionOverviewWidget title="Overview Prospections" />
+          <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
         </Grid>
 
         <Grid item xs={12} md={4}>
@@ -51,7 +51,7 @@ export default function OverviewDashboard() {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <EvenementOverviewWidget title="Overview Événements" />
+          <EvenementOverviewWidget title="Vue d'ensemble Evenements" />
         </Grid>
       </Grid>
     </Box>

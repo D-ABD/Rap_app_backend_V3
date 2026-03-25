@@ -76,21 +76,30 @@
   - pas de suppression manuelle au fil de l'eau
   - pagination + index existants suffisants a court terme
   - prevoir plus tard une retention / purge automatique
+- dashboards principaux nettoyes :
+  - libelles plus coherents
+  - grouped dashboard complete avec `prepa` et `declic`
+  - vues `rapports` et `logs` plus confortables
+- passe UX recente :
+  - reset des filtres sur `rapports` et `logs`
+  - exports desactives quand non pertinents
+  - validation simple des plages de dates sur `logs`
+- nettoyage legacy deja entame :
+  - suppression de `AppRoute copy.tsx`
+  - suppression de `useFetch copy.ts`
+  - suppression de `CommentaireStatsDashboard copy.tsx`
 - dependances frontend assainies
 - build frontend validee
 
 ## A faire
 
-- finaliser dashboards
+- finaliser les derniers ecarts dashboards
 - exports
-- uniformiser les messages d'erreur UI
+- uniformiser les derniers messages d'erreur UI
 - nettoyer et documenter le code au fil de l'eau
 - error handling UI
 - verifier le responsive au fil de l'eau
-- responsive pass complete
+- finaliser la passe responsive
 - nettoyer les reliquats legacy / doublons du front :
-  - `AppRoute copy.tsx`
-  - `useFetch copy.ts`
-  - `CommentaireStatsDashboard copy.tsx`
   - widgets / noms legacy encore ambigus (`FormationOverviewWidget2`, `SarurationDashboard`)
 - documentation front finale

@@ -136,8 +136,8 @@ export default function DashboardPage() {
           </Typography>
 
           <Typography variant="body1" color="text.secondary" mt={0.5}>
-            Suivez vos formations, candidats, prospections, ateliers, et vos dispositifs Prépa /
-            Déclic.
+            Suivez vos formations, candidats, prospections, ateliers et vos dispositifs Prepa /
+            Declic.
           </Typography>
 
           <Stack direction="row" spacing={2} mt={3} flexWrap="wrap">
@@ -147,7 +147,6 @@ export default function DashboardPage() {
             <Button variant="contained" component={RouterLink} to="/candidats">
               Candidats
             </Button>
-            
             <Button variant="contained" component={RouterLink} to="/prospections">
               Prospections
             </Button>
@@ -157,20 +156,18 @@ export default function DashboardPage() {
             <Button variant="contained" component={RouterLink} to="/evenements">
               Événements
             </Button>
-
             <Button variant="contained" component={RouterLink} to="/cvtheque">
-              Cvtheque
+              CVtheque
             </Button>
 
-            
             <Button variant="contained" component={RouterLink} to="/prepa">
-              Prépa
+              Prepa
             </Button>
             <Button variant="contained" component={RouterLink} to="/declic">
-              Déclic
+              Declic
             </Button>
-            <Button  variant="contained"component={RouterLink} to="/parametres">
-              Paramètres
+            <Button variant="contained" component={RouterLink} to="/parametres">
+              Parametres
             </Button>
           </Stack>
         </Box>
@@ -183,15 +180,15 @@ export default function DashboardPage() {
 
         <Grid container spacing={2} mb={10}>
           <Grid item xs={8} md={6} lg={4}>
-            <DeclicStatsSummary title="Déclic — Synthèse" />
+            <DeclicStatsSummary title="Declic - Synthese" />
           </Grid>
 
           <Grid item xs={8} md={6} lg={4}>
-            <PrepaStatsSummary title="Prépa — Synthèse" />
+            <PrepaStatsSummary title="Prepa - Synthese" />
           </Grid>
 
           <Grid item xs={8} md={6} lg={4}>
-            <PrepaStatsOperations title="Indicateurs opérationnels Prépa" />
+            <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
           </Grid>
         </Grid>
 
@@ -203,17 +200,17 @@ export default function DashboardPage() {
         {styledAccordion(
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormationStatsSummary title="Formations — Synthèse" />
+              <FormationStatsSummary title="Formations - Synthese" />
             </Grid>
 
             <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
               <FormationSaturationWidget title="Saturation Formations" />
             </Grid>
             <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
-              <ProspectionConversionKpi title="Tx transformation Prospections" />
+              <ProspectionConversionKpi title="Taux de transformation Prospections" />
             </Grid>
             <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
-              <AppairageConversionKpi title="Tx transformation Appairages" />
+              <AppairageConversionKpi title="Taux de transformation Appairages" />
             </Grid>
           </Grid>,
           "Indicateurs clés",
@@ -256,7 +253,7 @@ export default function DashboardPage() {
         {styledAccordion(
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={4}>
-              <ProspectionOverviewWidget title="Overview Prospections" />
+              <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <AppairageOverviewWidget />
@@ -265,13 +262,13 @@ export default function DashboardPage() {
               <AteliersTREOverviewWidget />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
-              <EvenementOverviewWidget title="Overview Événements" />
+              <EvenementOverviewWidget title="Vue d'ensemble Evenements" />
             </Grid>
             <Grid item xs={12}>
               <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
             </Grid>
           </Grid>,
-          "Suivi Prospection / Appairage / TRE / Événements",
+          "Suivi Prospection / Appairage / TRE / Evenements",
           "info"
         )}
 

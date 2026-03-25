@@ -160,6 +160,15 @@ Etat courant :
   - pas de besoin de suppression manuelle reguliere
   - index et pagination deja presents
   - vrai besoin futur = retention / purge automatique si le volume grossit
+- passe de finition maintenant bien engagee :
+  - dashboards principaux nettoyes et libelles harmonises
+  - `grouped dashboard` complete avec `prepa` et `declic`
+  - ecrans `rapports` et `logs` ameliores en confort d'usage
+  - reset de filtres et garde-fous UX ajoutes sur les pages admin recentes
+- nettoyage legacy maintenant commence pour de vrai :
+  - `AppRoute copy.tsx` supprime
+  - `useFetch copy.ts` supprime
+  - `CommentaireStatsDashboard copy.tsx` supprime
 - enrichissement texte maintenant mieux aligne dans l'app avec :
   - commentaires `formation`, `prospection`, `appairage`
   - champs libres `prospection`, `prepa`, `declic`, `objectifs`, `partenaires`
@@ -176,7 +185,7 @@ Etat courant :
   - les hooks / types `stats` sont deja presents sur la plupart des modules principaux
   - le vrai retard principal ne concerne plus les pages / hooks / types des modules metier majeurs
   - l'effort restant est surtout transverse : dashboards, UX, responsive, nettoyage legacy
-  - quelques reliquats legacy existent encore et devront etre nettoyes en fin de chantier
+  - quelques reliquats legacy et noms ambigus existent encore et devront etre nettoyes en fin de chantier
 
 ## 3. Modules metier principaux
 
@@ -233,9 +242,9 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. finaliser les derniers ecarts stats / dashboards
+1. finaliser les derniers ecarts stats / dashboards visibles
 2. faire une passe finale d'harmonisation UX / messages / responsive
-3. nettoyer les reliquats legacy du front
+3. nettoyer les derniers reliquats legacy et noms ambigus du front
 4. finaliser la documentation front
 
 ---

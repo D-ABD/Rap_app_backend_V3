@@ -60,7 +60,7 @@ export default function RapportsPage() {
       refreshButton
       onRefresh={() => void refresh()}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
           <TextField
             size="small"
             placeholder="Rechercher un rapport"
@@ -84,7 +84,17 @@ export default function RapportsPage() {
               </MenuItem>
             ))}
           </Select>
-          <Button variant="outlined" onClick={() => void exportListXlsx(params)}>
+          <Button
+            variant="text"
+            disabled={!search}
+            onClick={() => {
+              setSearch("");
+              setPage(1);
+            }}
+          >
+            Réinitialiser
+          </Button>
+          <Button variant="outlined" disabled={loading || rapports.length === 0} onClick={() => void exportListXlsx(params)}>
             Exporter la liste
           </Button>
           <Button variant="contained" onClick={() => navigate("/rapports/create")}>

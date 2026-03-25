@@ -1,4 +1,4 @@
-// src/components/dashboard/OverviewDashboard.tsx
+// src/pages/widgets/groupeddashboard/GroupedDashboard.tsx
 import * as React from "react";
 import { Box } from "@mui/material";
 import FormationGroupedWidget from "./FormationGroupedWidget";
@@ -7,33 +7,41 @@ import AppairageGroupedTableWidget from "./AppairageGroupedTableWidget";
 import CandidatGroupedTableWidget from "./CandidatGroupedTableWidget";
 import AteliersTREGroupedWidget from "./AteliersTREGroupedWidget";
 import EvenementGroupedWidget from "./EvenementGroupedWidget";
+import PrepaGroupedWidget from "../../prepa/PrepaGroupedWidget";
+import DeclicGroupedWidget from "../../declic/DeclicGroupedWidget";
 
 export default function GroupedDashboard() {
   return (
     <Box
       display="flex"
-      flexDirection="column" // 👈 un widget par ligne
+      flexDirection="column"
       gap={2}
       width="100%"
-      overflow="hidden" // évite le scroll horizontal global
+      overflow="hidden"
     >
-      {/* 🎯 Formation */}
+      {/* Formations */}
       <FormationGroupedWidget />
 
-      {/* 🎯 Prospection */}
+      {/* Prospections */}
       <ProspectionGroupedWidget />
 
-      {/* 🎯 Événements */}
+      {/* Evenements */}
       <EvenementGroupedWidget />
 
-      {/* 🎯 Appairage */}
+      {/* Appairages */}
       <AppairageGroupedTableWidget />
 
-      {/* 🎯 Candidats */}
+      {/* Candidats */}
       <CandidatGroupedTableWidget />
 
-      {/* 🎯 Ateliers TRE */}
+      {/* Ateliers TRE */}
       <AteliersTREGroupedWidget />
+
+      {/* Prepa */}
+      <PrepaGroupedWidget />
+
+      {/* Declic */}
+      <DeclicGroupedWidget />
     </Box>
   );
 }
