@@ -129,12 +129,6 @@ export default function PartenaireForm({
       component="form"
       onSubmit={(e) => {
         e.preventDefault();
-
-        if (!form.default_centre_id) {
-          alert("❌ Vous devez sélectionner un centre avant de créer le partenaire.");
-          return;
-        }
-
         onSubmit(form);
       }}
       aria-busy={loading || undefined}
@@ -223,7 +217,6 @@ export default function PartenaireForm({
               <Stack direction="row" spacing={1} alignItems="center">
                 <TextField
                   select
-                  required
                   fullWidth
                   label="Centre par défaut"
                   value={
@@ -233,12 +226,7 @@ export default function PartenaireForm({
                   }
                   onChange={(e) => handleDefaultCentreChange(e.target.value)}
                   disabled={loading || !centreOptions || centreOptions.length === 0}
-                  error={!form.default_centre_id}
-                  helperText={
-                    !form.default_centre_id
-                      ? "Sélection obligatoire avant enregistrement"
-                      : undefined
-                  }
+                  helperText="Si vide, le centre sera deduit automatiquement quand c'est possible."
                 >
                   <MenuItem value="">Aucun</MenuItem>
                   {centreOptions?.map((c) => (

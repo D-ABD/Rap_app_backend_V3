@@ -105,6 +105,19 @@ function buildCandidateAppairageCreateUrl(candidat?: CandidatWithFormation | nul
   return `/appairages/create?${params.toString()}`;
 }
 
+function buildCandidateCerfaCreateUrl(candidat?: CandidatWithFormation | null): string | null {
+  if (!candidat?.id) return null;
+
+  const params = new URLSearchParams();
+  params.set("candidat", String(candidat.id));
+  params.set(
+    "candidat_nom",
+    nn(candidat.nom_complet || `${candidat.prenom ?? ""} ${candidat.nom ?? ""}`.trim())
+  );
+
+  return `/cerfa?${params.toString()}`;
+}
+
 function uiPhaseLabel(candidat?: CandidatWithFormation | null): string {
   return getCandidatBusinessStatusLabel(candidat);
 }
@@ -317,6 +330,7 @@ export default function CandidatDetailModal({
   const canClearAppairage = !!candidat?.en_appairage;
   const createProspectionUrl = buildCandidateProspectionCreateUrl(candidat);
   const createAppairageUrl = buildCandidateAppairageCreateUrl(candidat);
+  const createCerfaUrl = buildCandidateCerfaCreateUrl(candidat);
   const openCandidateAppairages = () => {
     if (!candidat?.id) return;
     onClose();
@@ -549,6 +563,18 @@ export default function CandidatDetailModal({
                             }}
                           >
                             Créer une prospection
+                          </Button>
+                        )}
+                        {createCerfaUrl && (
+                          <Button
+                            variant="contained"
+                            color="info"
+                            onClick={() => {
+                              onClose();
+                              navigate(createCerfaUrl);
+                            }}
+                          >
+                            Créer un CERFA
                           </Button>
                         )}
                         {canMarkAdmissible && (

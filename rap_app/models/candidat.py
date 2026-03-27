@@ -212,7 +212,7 @@ class Candidat(BaseModel):
         max_length=100, blank=True, null=True, verbose_name=_("Pays de naissance"), default="France"
     )
     nationalite = models.CharField(max_length=100, blank=True, null=True, default="Française")
-    nir = models.CharField(max_length=15, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)"))
+    nir = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)"))
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
     phone_regex = RegexValidator(
@@ -976,8 +976,8 @@ class Candidat(BaseModel):
 
         if self.nir:
             normalized_nir = re.sub(r"\s+", "", str(self.nir))
-            if not normalized_nir.isdigit() or len(normalized_nir) not in (13, 15):
-                errors["nir"] = _("Le NIR doit contenir 13 ou 15 chiffres.")
+            if not normalized_nir.isdigit():
+                errors["nir"] = _("Le NIR doit contenir uniquement des chiffres.")
             else:
                 self.nir = normalized_nir
 

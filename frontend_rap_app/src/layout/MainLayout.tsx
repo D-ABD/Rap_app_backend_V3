@@ -289,9 +289,9 @@ export default function MainLayout() {
                 <MenuItem component={Link} to="/partenaires">
                   Partenaires
                 </MenuItem>
-                {/*
-  <MenuItem component={Link} to="/cerfa">Contrats CERFA</MenuItem> 
-  */}
+                <MenuItem component={Link} to="/cerfa">
+                  Contrats CERFA
+                </MenuItem>
 
                 {canSeeAdvanced && (
                   <>

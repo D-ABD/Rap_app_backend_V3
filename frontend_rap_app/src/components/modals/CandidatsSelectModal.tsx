@@ -56,6 +56,14 @@ export type CandidatPick = {
   formation_num_offre?: string | null;
   formation_type_offre?: string | null;
   centre_nom?: string | null;
+  entreprise_placement?: number | null;
+  entreprise_placement_nom?: string | null;
+  entreprise_validee?: number | null;
+  entreprise_validee_nom?: string | null;
+  last_appairage?: {
+    partenaire?: number | null;
+    partenaire_nom?: string | null;
+  } | null;
   compte_utilisateur_id?: number | null;
   compte_utilisateur?: {
     id?: number | null;
@@ -94,6 +102,18 @@ type CandidatApi = {
   formation_num_offre?: string | null;
   formation_type_offre?: string | null;
   centre_nom?: string | null;
+  entreprise_placement?: number | null;
+  entreprise_placement_nom?: string | null;
+  entreprise_validee?: number | null;
+  entreprise_validee_nom?: string | null;
+  placement_appairage_partenaire?: number | null;
+  placement_appairage_partenaire_nom?: string | null;
+  last_appairage?:
+    | {
+        partenaire?: number | null;
+        partenaire_nom?: string | null;
+      }
+    | null;
   compte_utilisateur?: number | Partial<CompteUtilisateurLite> | null;
   compte_utilisateur_id?: number | null;
 };
@@ -195,6 +215,20 @@ function normalizeCandidat(x: CandidatApi): CandidatPick {
     formation_num_offre: x.formation_num_offre ?? null,
     formation_type_offre: x.formation_type_offre ?? null,
     centre_nom: x.centre_nom ?? null,
+    entreprise_placement: x.entreprise_placement ?? null,
+    entreprise_placement_nom: x.entreprise_placement_nom ?? null,
+    entreprise_validee: x.entreprise_validee ?? null,
+    entreprise_validee_nom: x.entreprise_validee_nom ?? null,
+    placement_appairage_partenaire: x.placement_appairage_partenaire ?? null,
+    placement_appairage_partenaire_nom: x.placement_appairage_partenaire_nom ?? null,
+    last_appairage: x.last_appairage
+      ? x.last_appairage
+      : x.placement_appairage_partenaire
+        ? {
+            partenaire: x.placement_appairage_partenaire,
+            partenaire_nom: x.placement_appairage_partenaire_nom ?? null,
+          }
+        : null,
     compte_utilisateur_id: userId ?? undefined,
     compte_utilisateur: { id: userId ?? undefined, role, is_active },
   };

@@ -26,7 +26,6 @@ const dtfFR =
   typeof Intl !== "undefined"
     ? new Intl.DateTimeFormat("fr-FR", {
         dateStyle: "medium",
-        timeStyle: "short",
       })
     : undefined;
 
@@ -38,6 +37,7 @@ const fmt = (iso?: string | null): string => {
 
 const nn = (s?: string | number | null) =>
   s === null || s === undefined || s === "" ? "—" : String(s);
+const yn = (value?: boolean | null) => (value === null || value === undefined ? "—" : value ? "Oui" : "Non");
 
 /* ---------- Props ---------- */
 type Props = {
@@ -78,8 +78,7 @@ export default function CerfaDetailModal({
     Prénom: contrat.apprenti_prenom,
     "Nom employeur": contrat.employeur_nom,
     "SIRET employeur": contrat.employeur_siret,
-    Formation: contrat.formation,
-    "Diplôme visé": contrat.diplome_vise,
+    "Diplôme visé": contrat.diplome_vise || contrat.diplome_intitule,
   };
 
   const missingFields = Object.entries(requiredFields)
@@ -155,7 +154,7 @@ export default function CerfaDetailModal({
                 color="secondary"
                 size="small"
                 startIcon={isGenerating ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-                disabled={isGenerating || hasMissingFields}
+                disabled={isGenerating}
                 onClick={handleGeneratePdf}
               >
                 {isGenerating ? "Génération..." : "Générer PDF"}
@@ -205,23 +204,116 @@ export default function CerfaDetailModal({
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Section title="Apprenti">
-                <Field label="Nom" value={nn(contrat.apprenti_nom_naissance)} />
+                <Field label="Nom de naissance" value={nn(contrat.apprenti_nom_naissance)} />
+                <Field label="Nom d'usage" value={nn(contrat.apprenti_nom_usage)} />
                 <Field label="Prénom" value={nn(contrat.apprenti_prenom)} />
+                <Field label="NIR" value={nn(contrat.apprenti_nir)} />
                 <Field label="Email" value={nn(contrat.apprenti_email)} />
+                <Field label="Téléphone" value={nn(contrat.apprenti_telephone)} />
+                <Field label="Date de naissance" value={fmt(contrat.apprenti_date_naissance)} />
+                <Field label="Sexe" value={nn(contrat.apprenti_sexe)} />
+                <Field label="Département de naissance" value={nn(contrat.apprenti_departement_naissance)} />
+                <Field label="Commune de naissance" value={nn(contrat.apprenti_commune_naissance)} />
+                <Field label="Nationalité" value={nn(contrat.apprenti_nationalite)} />
+                <Field label="Régime social" value={nn(contrat.apprenti_regime_social)} />
+                <Field label="Numéro" value={nn(contrat.apprenti_numero)} />
+                <Field label="Voie" value={nn(contrat.apprenti_voie)} />
+                <Field label="Complément" value={nn(contrat.apprenti_complement)} />
+                <Field label="Code postal" value={nn(contrat.apprenti_code_postal)} />
+                <Field label="Commune" value={nn(contrat.apprenti_commune)} />
+                <Field label="Sportif haut niveau" value={yn(contrat.apprenti_sportif_haut_niveau)} />
+                <Field label="RQTH" value={yn(contrat.apprenti_rqth)} />
+                <Field label="Droits attachés RQTH" value={yn(contrat.apprenti_droits_rqth)} />
+                <Field label="Équivalence jeunes" value={yn(contrat.apprenti_equivalence_jeunes)} />
+                <Field label="Extension BOE" value={yn(contrat.apprenti_extension_boe)} />
+                <Field label="Situation avant contrat" value={nn(contrat.apprenti_situation_avant)} />
+                <Field label="Dernier diplôme préparé" value={nn(contrat.apprenti_dernier_diplome_prepare)} />
+                <Field label="Dernière année suivie" value={nn(contrat.apprenti_derniere_annee_suivie)} />
+                <Field label="Intitulé dernier diplôme" value={nn(contrat.apprenti_intitule_dernier_diplome)} />
+                <Field label="Plus haut diplôme" value={nn(contrat.apprenti_plus_haut_diplome)} />
+                <Field label="Projet création / reprise" value={yn(contrat.apprenti_projet_entreprise)} />
               </Section>
             </Grid>
 
             <Grid item xs={12}>
               <Section title="Employeur">
+                <Field label="Employeur prive" value={yn(contrat.employeur_prive)} />
+                <Field label="Employeur public" value={yn(contrat.employeur_public)} />
                 <Field label="Nom" value={nn(contrat.employeur_nom)} />
                 <Field label="SIRET" value={nn(contrat.employeur_siret)} />
+                <Field label="Telephone" value={nn(contrat.employeur_telephone)} />
+                <Field label="Courriel" value={nn(contrat.employeur_email)} />
+                <Field label="Numero" value={nn(contrat.employeur_adresse_numero)} />
+                <Field label="Voie" value={nn(contrat.employeur_adresse_voie)} />
+                <Field label="Complement" value={nn(contrat.employeur_adresse_complement)} />
+                <Field label="Code postal" value={nn(contrat.employeur_code_postal)} />
+                <Field label="Commune" value={nn(contrat.employeur_commune)} />
+                <Field label="Type employeur" value={nn(contrat.employeur_type)} />
+                <Field label="Employeur specifique" value={nn(contrat.employeur_specifique)} />
+                <Field label="Code APE" value={nn(contrat.employeur_code_ape)} />
+                <Field label="Effectif" value={nn(contrat.employeur_effectif)} />
+                <Field label="Code IDCC" value={nn(contrat.employeur_code_idcc)} />
+                <Field
+                  label="Regime assurance chomage specifique"
+                  value={yn(contrat.employeur_regime_assurance_chomage)}
+                />
               </Section>
             </Grid>
 
             <Grid item xs={12}>
               <Section title="Formation / Diplôme">
                 <Field label="Diplôme visé" value={nn(contrat.diplome_vise)} />
-                <Field label="Date début" value={fmt(contrat.formation_debut)} />
+                <Field label="Intitule precis" value={nn(contrat.diplome_intitule)} />
+                <Field label="Code diplome" value={nn(contrat.code_diplome)} />
+                <Field label="Code RNCP" value={nn(contrat.code_rncp)} />
+                <Field label="Date debut formation" value={fmt(contrat.formation_debut)} />
+                <Field label="Date debut formation CFA" value={fmt(contrat.date_debut_formation)} />
+                <Field label="Date fin epreuves / examens" value={fmt(contrat.formation_fin)} />
+                <Field label="Duree formation (heures)" value={nn(contrat.formation_duree_heures)} />
+                <Field label="Heures a distance" value={nn(contrat.formation_distance_heures)} />
+              </Section>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Section title="CFA / lieu de formation">
+                <Field label="CFA d'entreprise" value={yn(contrat.cfa_entreprise)} />
+                <Field label="Denomination CFA" value={nn(contrat.cfa_denomination)} />
+                <Field label="UAI CFA" value={nn(contrat.cfa_uai)} />
+                <Field label="SIRET CFA" value={nn(contrat.cfa_siret)} />
+                <Field label="Numero CFA" value={nn(contrat.cfa_numero)} />
+                <Field label="Voie CFA" value={nn(contrat.cfa_voie)} />
+                <Field label="Complement CFA" value={nn(contrat.cfa_complement)} />
+                <Field label="Code postal CFA" value={nn(contrat.cfa_code_postal)} />
+                <Field label="Commune CFA" value={nn(contrat.cfa_commune)} />
+                <Field label="CFA = lieu principal" value={yn(contrat.cfa_lieu_principal)} />
+                <Field label="Lieu principal - denomination" value={nn(contrat.formation_lieu_denomination)} />
+                <Field label="Lieu principal - UAI" value={nn(contrat.formation_lieu_uai)} />
+                <Field label="Lieu principal - SIRET" value={nn(contrat.formation_lieu_siret)} />
+                <Field label="Lieu principal - numero" value={nn(contrat.formation_lieu_numero)} />
+                <Field label="Lieu principal - voie" value={nn(contrat.formation_lieu_voie)} />
+                <Field label="Lieu principal - complement" value={nn(contrat.formation_lieu_complement)} />
+                <Field label="Lieu principal - code postal" value={nn(contrat.formation_lieu_code_postal)} />
+                <Field label="Lieu principal - commune" value={nn(contrat.formation_lieu_commune)} />
+              </Section>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Section title="Maitres d'apprentissage">
+                <Field label="Maitre eligible" value={yn(contrat.maitre_eligible)} />
+                <Field label="Maitre 1 - nom" value={nn(contrat.maitre1_nom)} />
+                <Field label="Maitre 1 - prenom" value={nn(contrat.maitre1_prenom)} />
+                <Field label="Maitre 1 - naissance" value={fmt(contrat.maitre1_date_naissance)} />
+                <Field label="Maitre 1 - courriel" value={nn(contrat.maitre1_email)} />
+                <Field label="Maitre 1 - emploi" value={nn(contrat.maitre1_emploi)} />
+                <Field label="Maitre 1 - diplome" value={nn(contrat.maitre1_diplome)} />
+                <Field label="Maitre 1 - niveau" value={nn(contrat.maitre1_niveau_diplome)} />
+                <Field label="Maitre 2 - nom" value={nn(contrat.maitre2_nom)} />
+                <Field label="Maitre 2 - prenom" value={nn(contrat.maitre2_prenom)} />
+                <Field label="Maitre 2 - naissance" value={fmt(contrat.maitre2_date_naissance)} />
+                <Field label="Maitre 2 - courriel" value={nn(contrat.maitre2_email)} />
+                <Field label="Maitre 2 - emploi" value={nn(contrat.maitre2_emploi)} />
+                <Field label="Maitre 2 - diplome" value={nn(contrat.maitre2_diplome)} />
+                <Field label="Maitre 2 - niveau" value={nn(contrat.maitre2_niveau_diplome)} />
               </Section>
             </Grid>
           </Grid>

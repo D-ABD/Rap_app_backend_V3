@@ -14,6 +14,10 @@ import {
   Box,
   Button,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs, { Dayjs } from "dayjs";
 
 import type { CandidatFormData, CandidatMeta } from "../../../types/candidat";
 import { formatFormation } from "./utils";
@@ -61,6 +65,22 @@ function SectionIdentite({
     (key: keyof CandidatFormData) =>
       (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((f) => ({ ...f, [key]: e.target.checked })),
+    [setForm]
+  );
+
+  const dateNaissanceValue = useMemo(() => {
+    if (!form.date_naissance) return null;
+    const value = dayjs(form.date_naissance);
+    return value.isValid() ? value : null;
+  }, [form.date_naissance]);
+
+  const handleDateNaissanceChange = useCallback(
+    (value: Dayjs | null) => {
+      setForm((f) => ({
+        ...f,
+        date_naissance: value && value.isValid() ? value.format("YYYY-MM-DD") : undefined,
+      }));
+    },
     [setForm]
   );
 
@@ -150,14 +170,22 @@ function SectionIdentite({
 
           {/* Date naissance */}
           <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Date de naissance"
-              InputLabelProps={{ shrink: true }}
-              value={form.date_naissance ?? ""}
-              onChange={updateField("date_naissance")}
-            />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Date de naissance"
+                value={dateNaissanceValue}
+                onChange={handleDateNaissanceChange}
+                views={["year", "month", "day"]}
+                openTo="year"
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    helperText: "Le calendrier permet de choisir facilement l'annee.",
+                  },
+                }}
+              />
+            </LocalizationProvider>
           </Grid>
 
           {/* RQTH / Permis B */}

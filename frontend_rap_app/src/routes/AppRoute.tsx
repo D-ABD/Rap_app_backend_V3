@@ -50,6 +50,8 @@ import CommentairesPage from "../pages/commentaires/CommentairesPage";
 import CommentairesCreatePage from "../pages/commentaires/CommentairesCreatePage";
 import CommentairesCreateFromFormationPage from "../pages/commentaires/CommentairesCreateFromFormationPage";
 import CommentairesEditPage from "../pages/commentaires/CommentairesEditPage";
+import CerfaPage from "../pages/cerfa/CerfaPage";
+import CerfaEditPage from "../pages/cerfa/CerfaEditPage";
 
 import FormationsPage from "../pages/formations/FormationsPage";
 import FormationsCreatePage from "../pages/formations/FormationsCreatePage";
@@ -408,6 +410,10 @@ export default function AppRoute() {
           element={secure(<CommentairesCreateFromFormationPage />)}
         />
         <Route path="/commentaires/:id/edit" element={secure(<CommentairesEditPage />)} />
+
+        {/* CERFA */}
+        <Route path="/cerfa" element={secure(<CerfaPage />)} />
+        <Route path="/cerfa/:id/edit" element={secure(<CerfaEditPage />)} />
 
         {/* Formations */}
         <Route path="/formations" element={secure(<FormationsPage />)} />

@@ -1,7 +1,7 @@
 // ======================================================
 // src/utils/registerQuillFormats.ts
 // Patch global Quill : texte riche complet
-// (includes bullet/ordered for list support + expose window.Quill)
+// (list support + expose window.Quill)
 // ======================================================
 
 import Quill from "quill";
@@ -130,7 +130,7 @@ export const defaultModules = {
   history: { delay: 1500, maxStack: 100, userOnly: true },
 };
 
-/* ---------- Formats autorisés (includes bullet & ordered) ---------- */
+/* ---------- Formats autorisés ---------- */
 export const defaultFormats = [
   "header",
   "bold",
@@ -140,8 +140,6 @@ export const defaultFormats = [
   "blockquote",
   "code-block",
   "list",
-  "bullet", // ✅ nécessaire pour les listes à puces
-  "ordered", // ✅ nécessaire pour les listes numérotées
   "indent",
   "align",
   "link",

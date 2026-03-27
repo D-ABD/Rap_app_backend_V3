@@ -18,6 +18,7 @@ from .viewsets.auth_viewset import EmailTokenObtainPairView
 from .viewsets.candidat_viewsets import CandidatViewSet
 from .viewsets.centres_viewsets import CentreViewSet
 from .viewsets.commentaires_viewsets import CommentaireViewSet
+from .viewsets.cerfa_viewsets import CerfaContratViewSet
 
 # Imports des ViewSets et vues nécessaires aux routes
 from .viewsets.cvtheque_viewset import CVThequeViewSet
@@ -73,6 +74,7 @@ router.register(r"documents", DocumentViewSet, basename="document")
 router.register(r"evenements", EvenementViewSet, basename="evenement")
 router.register(r"commentaires", CommentaireViewSet, basename="commentaire")
 router.register(r"candidats", CandidatViewSet, basename="candidat")
+router.register(r"cerfa-contrats", CerfaContratViewSet, basename="cerfa-contrat")
 router.register(r"appairages", AppairageViewSet, basename="appairage")
 router.register(r"appairage-commentaires", CommentaireAppairageViewSet, basename="appairage-commentaire")
 router.register(r"ateliers-tre", AtelierTREViewSet, basename="ateliers-tre")

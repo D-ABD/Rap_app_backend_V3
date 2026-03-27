@@ -1,5 +1,5 @@
 // src/pages/partenaires/PartenairesCreatePage.tsx
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Box, Typography, CircularProgress } from "@mui/material";
@@ -30,6 +30,7 @@ export default function PartenaireCreatePage() {
   const { create, loading, error } = useCreatePartenaire();
   const { data: rawChoices } = usePartenaireChoices();
   const { user } = useAuth();
+  const fallbackCentreId = user?.centre?.id ?? user?.centres?.[0]?.id;
 
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [lastCreated, setLastCreated] = useState<{ id: number; nom: string } | null>(null);
@@ -39,21 +40,37 @@ export default function PartenaireCreatePage() {
     [rawChoices]
   );
 
-  const initialValuesRef = useRef({
-    is_active: true,
-    country: "France",
-    default_centre_id: undefined,
-  });
+  const initialValues = useMemo(
+    () => ({
+      is_active: true,
+      country: "France",
+      default_centre_id: fallbackCentreId,
+      default_centre:
+        typeof fallbackCentreId === "number"
+          ? {
+              id: fallbackCentreId,
+              nom:
+                user?.centre?.id === fallbackCentreId
+                  ? user.centre.nom
+                  : user?.centres?.find((c) => c.id === fallbackCentreId)?.nom ?? `Centre #${fallbackCentreId}`,
+            }
+          : undefined,
+      default_centre_nom:
+        typeof fallbackCentreId === "number"
+          ? (
+              user?.centre?.id === fallbackCentreId
+                ? user.centre.nom
+                : user?.centres?.find((c) => c.id === fallbackCentreId)?.nom
+            ) ?? undefined
+          : undefined,
+    }),
+    [fallbackCentreId, user]
+  );
 
   const handleSubmit = useCallback(
     async (values: Partial<Partenaire>) => {
       try {
         const payload = preparePayload(values);
-
-        if (!payload.default_centre_id) {
-          toast.error("❌ Vous devez sélectionner un centre avant de créer le partenaire.");
-          return;
-        }
 
         const created = await create(payload);
 
@@ -111,7 +128,7 @@ export default function PartenaireCreatePage() {
 
       <Box>
         <PartenaireForm
-          initialValues={initialValuesRef.current}
+          initialValues={initialValues}
           onSubmit={handleSubmit}
           loading={loading}
           choices={choices}

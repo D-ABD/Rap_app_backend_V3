@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   Box,
   Accordion,
@@ -20,12 +20,14 @@ import SectionIndicateurs from "./FormSections/SectionInSuvi";
 import SectionNotes from "./FormSections/SectionNotes";
 import ActionsBar from "./FormSections/ActionsBar";
 import SectionAssignations from "./FormSections/SectionAssignations";
+import SectionInfosContrat from "./FormSections/SectionInfosContrat";
 
 // ------------------ MEMO ------------------
 const MemoIdentite = React.memo(SectionIdentite);
 const MemoIndicateurs = React.memo(SectionIndicateurs);
 const MemoNotes = React.memo(SectionNotes);
 const MemoAssignations = React.memo(SectionAssignations);
+const MemoInfosContrat = React.memo(SectionInfosContrat);
 
 type Props = {
   initialValues?: CandidatFormData;
@@ -106,6 +108,134 @@ export default function CandidatForm({
     !!currentUser &&
     ["admin", "superadmin", "staff"].includes(currentUser.role) &&
     !!meta?.rgpd_legal_basis_choices?.length;
+  const effectiveFormation = form.formation ?? initialValues?.formation;
+
+  const identiteForm = useMemo(
+    () => ({
+      nom: form.nom,
+      prenom: form.prenom,
+      sexe: form.sexe,
+      email: form.email,
+      telephone: form.telephone,
+      date_naissance: form.date_naissance,
+      rqth: form.rqth,
+      permis_b: form.permis_b,
+      numero_osia: form.numero_osia,
+      street_number: form.street_number,
+      street_name: form.street_name,
+      street_complement: form.street_complement,
+      code_postal: form.code_postal,
+      ville: form.ville,
+      formation: form.formation,
+    }),
+    [
+      form.code_postal,
+      form.date_naissance,
+      form.email,
+      form.formation,
+      form.nom,
+      form.numero_osia,
+      form.permis_b,
+      form.prenom,
+      form.rqth,
+      form.sexe,
+      form.street_complement,
+      form.street_name,
+      form.street_number,
+      form.telephone,
+      form.ville,
+    ]
+  );
+
+  const suiviForm = useMemo(
+    () => ({
+      cv_statut: form.cv_statut,
+      type_contrat: form.type_contrat,
+      contrat_signe: form.contrat_signe,
+      disponibilite: form.disponibilite,
+      entretien_done: form.entretien_done,
+      test_is_ok: form.test_is_ok,
+      admissible: form.admissible,
+      inscrit_gespers: form.inscrit_gespers,
+      en_accompagnement_tre: form.en_accompagnement_tre,
+      en_appairage: form.en_appairage,
+      courrier_rentree: form.courrier_rentree,
+      rgpd_legal_basis: form.rgpd_legal_basis,
+      rgpd_consent_obtained: form.rgpd_consent_obtained,
+      parcours_phase: form.parcours_phase,
+    }),
+    [
+      form.admissible,
+      form.contrat_signe,
+      form.courrier_rentree,
+      form.cv_statut,
+      form.disponibilite,
+      form.en_accompagnement_tre,
+      form.en_appairage,
+      form.entretien_done,
+      form.inscrit_gespers,
+      form.parcours_phase,
+      form.rgpd_consent_obtained,
+      form.rgpd_legal_basis,
+      form.test_is_ok,
+      form.type_contrat,
+    ]
+  );
+
+  const assignationsForm = useMemo(
+    () => ({
+      vu_par: form.vu_par,
+    }),
+    [form.vu_par]
+  );
+
+  const cerfaForm = useMemo(
+    () => ({
+      nom_naissance: form.nom_naissance,
+      departement_naissance: form.departement_naissance,
+      commune_naissance: form.commune_naissance,
+      pays_naissance: form.pays_naissance,
+      nationalite: form.nationalite,
+      nir: form.nir,
+      situation_avant_contrat: form.situation_avant_contrat,
+      dernier_diplome_prepare: form.dernier_diplome_prepare,
+      diplome_plus_eleve_obtenu: form.diplome_plus_eleve_obtenu,
+      derniere_classe: form.derniere_classe,
+      intitule_diplome_prepare: form.intitule_diplome_prepare,
+      regime_social: form.regime_social,
+      situation_actuelle: form.situation_actuelle,
+      sportif_haut_niveau: form.sportif_haut_niveau,
+      equivalence_jeunes: form.equivalence_jeunes,
+      extension_boe: form.extension_boe,
+      projet_creation_entreprise: form.projet_creation_entreprise,
+    }),
+    [
+      form.commune_naissance,
+      form.departement_naissance,
+      form.derniere_classe,
+      form.dernier_diplome_prepare,
+      form.diplome_plus_eleve_obtenu,
+      form.equivalence_jeunes,
+      form.extension_boe,
+      form.intitule_diplome_prepare,
+      form.nationalite,
+      form.nir,
+      form.nom_naissance,
+      form.pays_naissance,
+      form.projet_creation_entreprise,
+      form.regime_social,
+      form.situation_actuelle,
+      form.situation_avant_contrat,
+      form.sportif_haut_niveau,
+    ]
+  );
+
+  const notesForm = useMemo(
+    () => ({
+      notes: form.notes,
+    }),
+    [form.notes]
+  );
 
   // ---------------------------------------------------------------------
   // toggleSection
@@ -126,7 +256,7 @@ export default function CandidatForm({
       setErrors({});
       setGlobalError(null);
 
-      if (!form.formation) {
+      if (!effectiveFormation) {
         setOpenSection("identite");
         setGlobalError("Veuillez sélectionner une formation.");
         return;
@@ -165,13 +295,35 @@ export default function CandidatForm({
             setGlobalError(nonFieldErrors.join(", "));
           } else if (typeof responseData?.message === "string") {
             setGlobalError(responseData.message);
+          } else {
+            const [firstField, firstMessages] = Object.entries(parsedErrors)[0] ?? [];
+            if (firstField && firstMessages?.length) {
+              if (
+                [
+                  "nom",
+                  "prenom",
+                  "email",
+                  "telephone",
+                  "formation",
+                  "date_naissance",
+                  "nir",
+                  "code_postal",
+                  "ville",
+                ].includes(firstField)
+              ) {
+                setOpenSection("identite");
+              } else if (firstField.startsWith("rgpd_")) {
+                setOpenSection("suivi");
+              }
+              setGlobalError(firstMessages.join(", "));
+            }
           }
         } else {
           setGlobalError("Une erreur inattendue est survenue.");
         }
       }
     },
-    [extractApiErrors, form, onSubmit, requiresRgpdForManualCreate]
+    [effectiveFormation, extractApiErrors, form, onSubmit, requiresRgpdForManualCreate]
   );
 
   // ---------------------------------------------------------------------
@@ -208,7 +360,7 @@ export default function CandidatForm({
       <Accordion
         expanded={openSection === "identite"}
         onChange={() => toggleSection("identite")}
-        TransitionProps={{ unmountOnExit: false }}
+        TransitionProps={{ unmountOnExit: true }}
         sx={{ borderLeft: errors.nom || errors.prenom ? "3px solid red" : undefined }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -217,7 +369,7 @@ export default function CandidatForm({
 
         <AccordionDetails>
           <MemoIdentite
-            form={form}
+            form={identiteForm}
             setForm={setForm}
             meta={meta}
 
@@ -233,13 +385,13 @@ export default function CandidatForm({
       <Accordion
         expanded={openSection === "suivi"}
         onChange={() => toggleSection("suivi")}
-        TransitionProps={{ unmountOnExit: false }}
+        TransitionProps={{ unmountOnExit: true }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography fontWeight={600}>Suivi administratif</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <MemoIndicateurs form={form} setForm={setForm} meta={meta} errors={errors} />
+          <MemoIndicateurs form={suiviForm} setForm={setForm} meta={meta} errors={errors} />
         </AccordionDetails>
       </Accordion>
 
@@ -247,14 +399,14 @@ export default function CandidatForm({
       <Accordion
         expanded={openSection === "assignations"}
         onChange={() => toggleSection("assignations")}
-        TransitionProps={{ unmountOnExit: false }}
+        TransitionProps={{ unmountOnExit: true }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography fontWeight={600}>Assignations / visibilité</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <MemoAssignations
-            form={form}
+            form={assignationsForm}
             setForm={setForm}
             showUsersModal={showUsersModal}
             setShowUsersModal={setShowUsersModal}
@@ -262,17 +414,31 @@ export default function CandidatForm({
         </AccordionDetails>
       </Accordion>
 
+      {/* CERFA / contrat */}
+      <Accordion
+        expanded={openSection === "cerfa"}
+        onChange={() => toggleSection("cerfa")}
+        TransitionProps={{ unmountOnExit: true }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight={600}>Informations CERFA / contrat</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <MemoInfosContrat form={cerfaForm} setForm={setForm} />
+        </AccordionDetails>
+      </Accordion>
+
       {/* Notes */}
       <Accordion
         expanded={openSection === "notes"}
         onChange={() => toggleSection("notes")}
-        TransitionProps={{ unmountOnExit: false }}
+        TransitionProps={{ unmountOnExit: true }}
       >
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography fontWeight={600}>Notes internes</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <MemoNotes form={form} setForm={setForm} />
+          <MemoNotes form={notesForm} setForm={setForm} />
         </AccordionDetails>
       </Accordion>
 

@@ -12,6 +12,7 @@ import {
   useUpdatePartenaire,
   usePartenaireChoices,
 } from "../../hooks/usePartenaires";
+import { useAuth } from "../../hooks/useAuth";
 import PartenaireForm from "./PartenaireForm";
 import type { Partenaire } from "../../types/partenaire";
 import CandidatsSelectModal, {
@@ -46,6 +47,18 @@ function preparePayload(values: Partial<Partenaire>): Partial<Partenaire> {
   return payload;
 }
 
+function formatBackendMessages(messages: unknown): string {
+  if (Array.isArray(messages)) {
+    return messages.map((msg) => String(msg)).join(", ");
+  }
+  if (messages && typeof messages === "object") {
+    return Object.entries(messages as Record<string, unknown>)
+      .map(([key, value]) => `${key}: ${formatBackendMessages(value)}`)
+      .join(", ");
+  }
+  return String(messages ?? "");
+}
+
 const enc = encodeURIComponent;
 
 /* ---------- Page ---------- */
@@ -57,6 +70,7 @@ export default function PartenaireEditPage() {
   const { data, loading: loadingData, error: loadError } = usePartenaire(partenaireId);
   const { update, loading, error } = useUpdatePartenaire(partenaireId);
   const { data: choices } = usePartenaireChoices();
+  const { user } = useAuth();
 
   const [openCandModal, setOpenCandModal] = useState(false);
 
@@ -72,7 +86,25 @@ export default function PartenaireEditPage() {
     return partenaireNom ? `${base}&partenaire_nom=${enc(partenaireNom)}` : base;
   }, [partenaireId, partenaireNom]);
 
-  const initialValues = useMemo<Partial<Partenaire> | undefined>(() => data ?? undefined, [data]);
+  const fallbackCentreId = user?.centre?.id ?? user?.centres?.[0]?.id;
+
+  const initialValues = useMemo<Partial<Partenaire> | undefined>(() => {
+    if (!data) return undefined;
+    if (data.default_centre_id) return data;
+    if (typeof fallbackCentreId !== "number") return data;
+
+    const fallbackCentreNom =
+      user?.centre?.id === fallbackCentreId
+        ? user.centre.nom
+        : user?.centres?.find((c) => c.id === fallbackCentreId)?.nom ?? `Centre #${fallbackCentreId}`;
+
+    return {
+      ...data,
+      default_centre_id: fallbackCentreId,
+      default_centre: { id: fallbackCentreId, nom: fallbackCentreNom },
+      default_centre_nom: fallbackCentreNom,
+    };
+  }, [data, fallbackCentreId, user]);
 
   const handleSubmit = async (values: Partial<Partenaire>) => {
     try {
@@ -86,11 +118,25 @@ export default function PartenaireEditPage() {
       if (axios.isAxiosError(_err)) {
         // ✅ Typage explicite de la réponse d’erreur attendue (DRF)
         const data = _err.response?.data as
-          | { detail?: string; non_field_errors?: string[] }
+          | { detail?: string; non_field_errors?: string[]; errors?: Record<string, unknown> }
+          | Record<string, unknown>
           | undefined;
 
-        const detail = data?.detail;
-        const nonField = data?.non_field_errors;
+        const detail =
+          data && typeof data === "object" && "detail" in data && typeof data.detail === "string"
+            ? data.detail
+            : undefined;
+        const nonField =
+          data &&
+          typeof data === "object" &&
+          "non_field_errors" in data &&
+          Array.isArray(data.non_field_errors)
+            ? data.non_field_errors
+            : undefined;
+        const nestedErrors =
+          data && typeof data === "object" && "errors" in data && data.errors
+            ? data.errors
+            : undefined;
 
         if (typeof detail === "string") {
           if (detail.toLowerCase().includes("centre")) {
@@ -103,6 +149,14 @@ export default function PartenaireEditPage() {
         } else if (Array.isArray(nonField) && nonField.length > 0) {
           const joined = nonField.filter((x): x is string => typeof x === "string").join(", ");
           if (joined) message = `❌ ${joined}`;
+        } else if (nestedErrors && typeof nestedErrors === "object") {
+          message = `❌ ${Object.entries(nestedErrors)
+            .map(([field, messages]) => `${field}: ${formatBackendMessages(messages)}`)
+            .join(" | ")}`;
+        } else if (data && typeof data === "object") {
+          message = `❌ ${Object.entries(data)
+            .map(([field, messages]) => `${field}: ${formatBackendMessages(messages)}`)
+            .join(" | ")}`;
         } else {
           message = "❌ Échec de la mise à jour du partenaire.";
         }

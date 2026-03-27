@@ -1006,10 +1006,21 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
 class CandidatLiteSerializer(serializers.ModelSerializer):
     """Candidat compact pour modale/sélection : id, nom, prenom, formation, centre, compte_utilisateur (read_only)."""
 
+    formation_id = serializers.IntegerField(source="formation.id", read_only=True)
     formation_nom = serializers.CharField(source="formation.nom", read_only=True)
     formation_num_offre = serializers.CharField(source="formation.num_offre", read_only=True)
     formation_type_offre = serializers.CharField(source="formation.type_offre.nom", read_only=True)
     centre_nom = serializers.CharField(source="formation.centre.nom", read_only=True)
+    entreprise_placement = serializers.IntegerField(source="entreprise_placement.id", read_only=True)
+    entreprise_placement_nom = serializers.CharField(source="entreprise_placement.nom", read_only=True)
+    entreprise_validee = serializers.IntegerField(source="entreprise_validee.id", read_only=True)
+    entreprise_validee_nom = serializers.CharField(source="entreprise_validee.nom", read_only=True)
+    placement_appairage_partenaire = serializers.IntegerField(
+        source="placement_appairage.partenaire.id", read_only=True
+    )
+    placement_appairage_partenaire_nom = serializers.CharField(
+        source="placement_appairage.partenaire.nom", read_only=True
+    )
 
     compte_utilisateur_id = serializers.IntegerField(source="compte_utilisateur.id", read_only=True)
     compte_utilisateur = serializers.SerializerMethodField()
@@ -1030,10 +1041,17 @@ class CandidatLiteSerializer(serializers.ModelSerializer):
             "id",
             "nom",
             "prenom",
+            "formation_id",
             "formation_nom",
             "formation_num_offre",
             "formation_type_offre",
             "centre_nom",
+            "entreprise_placement",
+            "entreprise_placement_nom",
+            "entreprise_validee",
+            "entreprise_validee_nom",
+            "placement_appairage_partenaire",
+            "placement_appairage_partenaire_nom",
             "compte_utilisateur_id",
             "compte_utilisateur",
         ]

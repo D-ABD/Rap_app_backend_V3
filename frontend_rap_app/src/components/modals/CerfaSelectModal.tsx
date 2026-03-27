@@ -88,7 +88,7 @@ export default function CerfaSelectModal({ show, onClose, onSelect, onCreate }: 
       try {
         const params: Record<string, unknown> = { page_size: 50 };
         if (search.trim()) params.search = search.trim();
-        const res = await api.get<DRFEnvelope<CerfaContrat>>("/cerfas/", { params });
+        const res = await api.get<DRFEnvelope<CerfaContrat>>("/cerfa-contrats/", { params });
         const page = asPaginated<CerfaContrat>(res.data);
         const normalized = page.results.map(normalizeCerfa);
         if (!cancelled) setItems(normalized);

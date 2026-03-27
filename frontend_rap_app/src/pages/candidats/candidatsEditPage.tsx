@@ -10,6 +10,80 @@ import type { Candidat, CandidatFormData } from "../../types/candidat";
 import PageTemplate from "../../components/PageTemplate";
 import CandidatForm from "./CandidatForm";
 
+function areFieldValuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null && b === "") return true;
+  if (b == null && a === "") return true;
+  return false;
+}
+
+const BASE_EDITABLE_FIELDS: Array<keyof CandidatFormData> = [
+  "nom",
+  "prenom",
+  "sexe",
+  "nom_naissance",
+  "email",
+  "telephone",
+  "date_naissance",
+  "departement_naissance",
+  "commune_naissance",
+  "pays_naissance",
+  "nationalite",
+  "nir",
+  "rqth",
+  "permis_b",
+  "street_number",
+  "street_name",
+  "street_complement",
+  "code_postal",
+  "ville",
+  "formation",
+  "type_contrat",
+  "disponibilite",
+  "regime_social",
+  "sportif_haut_niveau",
+  "equivalence_jeunes",
+  "extension_boe",
+  "situation_actuelle",
+  "dernier_diplome_prepare",
+  "diplome_plus_eleve_obtenu",
+  "derniere_classe",
+  "intitule_diplome_prepare",
+  "situation_avant_contrat",
+  "projet_creation_entreprise",
+  "representant_lien",
+  "representant_nom_naissance",
+  "representant_prenom",
+  "representant_email",
+  "representant_street_name",
+  "representant_zip_code",
+  "representant_city",
+  "origine_sourcing",
+  "rgpd_legal_basis",
+  "rgpd_notice_status",
+  "rgpd_consent_obtained",
+];
+
+const STAFF_ONLY_FIELDS: Array<keyof CandidatFormData> = [
+  "numero_osia",
+  "admissible",
+  "inscrit_gespers",
+  "en_accompagnement_tre",
+  "en_appairage",
+];
+
+const ADMIN_ONLY_FIELDS: Array<keyof CandidatFormData> = [
+  "notes",
+  "resultat_placement",
+  "responsable_placement",
+  "date_placement",
+  "entreprise_placement",
+  "contrat_signe",
+  "entreprise_validee",
+  "courrier_rentree",
+  "vu_par",
+];
+
 export default function CandidatEditPage() {
   const { id } = useParams();
   const candidatId = Number(id);
@@ -29,7 +103,33 @@ export default function CandidatEditPage() {
    */
   const handleSubmit = async (values: CandidatFormData) => {
     try {
-      await update(values);
+      const editableFields = new Set<keyof CandidatFormData>(BASE_EDITABLE_FIELDS);
+
+      if (me?.role && ["admin", "superadmin", "staff"].includes(me.role)) {
+        STAFF_ONLY_FIELDS.forEach((field) => editableFields.add(field));
+        editableFields.add("formation");
+      }
+
+      if (me?.role && ["admin", "superadmin"].includes(me.role)) {
+        ADMIN_ONLY_FIELDS.forEach((field) => editableFields.add(field));
+      }
+
+      const payload = Object.fromEntries(
+        Object.entries(values).filter(([key, value]) => {
+          if (!editableFields.has(key as keyof CandidatFormData)) return false;
+          if (value === undefined) return false;
+          if (areFieldValuesEqual(value, data[key as keyof Candidat])) return false;
+          return value !== undefined;
+        })
+      ) as CandidatFormData;
+
+      if (Object.keys(payload).length === 0) {
+        toast.success("Aucune modification a enregistrer.");
+        navigate("/candidats");
+        return;
+      }
+
+      await update(payload);
       toast.success("✅ Candidat mis à jour");
       navigate("/candidats");
     } catch (error: any) {
@@ -75,6 +175,7 @@ export default function CandidatEditPage() {
 
         <CandidatForm
           initialValues={data as Candidat}
+          initialFormationInfo={data.formation_info ?? null}
           meta={meta}
           currentUser={me}
           canEditFormation={canEditFormation}

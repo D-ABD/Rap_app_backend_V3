@@ -115,6 +115,11 @@ export const sidebarItems: SidebarItem[] = [
         icon: <BusinessIcon sx={{ color: "info.main" }} />,
       },
       {
+        label: "Contrats CERFA",
+        path: "/cerfa",
+        icon: <DescriptionIcon sx={{ color: "info.main" }} />,
+      },
+      {
         label: "Appairage",
         path: "/appairages",
         icon: <WorkIcon sx={{ color: "info.main" }} />,

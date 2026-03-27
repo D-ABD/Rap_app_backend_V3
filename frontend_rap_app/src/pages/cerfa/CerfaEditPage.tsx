@@ -24,6 +24,18 @@ export default function CerfaEditPage() {
     }
   }, [isError, navigate]);
 
+  const formatBackendMessages = (messages: unknown): string => {
+    if (Array.isArray(messages)) {
+      return messages.map((msg) => String(msg)).join(", ");
+    }
+    if (messages && typeof messages === "object") {
+      return Object.entries(messages as Record<string, unknown>)
+        .map(([key, value]) => `${key}: ${formatBackendMessages(value)}`)
+        .join(", ");
+    }
+    return String(messages ?? "");
+  };
+
   // ✅ Gestion homogène des erreurs backend (même logique que dans CerfaPage)
   const handleSubmit = async (data: CerfaContratCreate) => {
     try {
@@ -46,7 +58,7 @@ export default function CerfaEditPage() {
         message = errorData.detail;
       } else if (errorData && typeof errorData === "object") {
         const errors = Object.entries(errorData)
-          .map(([field, messages]) => `${field}: ${(messages as string[]).join(", ")}`)
+          .map(([field, messages]) => `${field}: ${formatBackendMessages(messages)}`)
           .join(" | ");
         message = `⚠️ Erreur de validation : ${errors}`;
       }
