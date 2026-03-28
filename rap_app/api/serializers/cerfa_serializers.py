@@ -291,6 +291,8 @@ class CerfaContratSerializer(serializers.ModelSerializer):
     pdf_url = serializers.SerializerMethodField()
     pdf_status = serializers.SerializerMethodField()
     missing_fields = serializers.SerializerMethodField()
+    created_by_nom = serializers.SerializerMethodField()
+    updated_by_nom = serializers.SerializerMethodField()
 
     class Meta:
         model = CerfaContrat
@@ -315,6 +317,26 @@ class CerfaContratSerializer(serializers.ModelSerializer):
             "date_conclusion": obj.date_conclusion,
         }
         return [label for label, value in required_pairs.items() if value in (None, "")]
+
+    def _user_label(self, user: Any) -> str | None:
+        if not user:
+            return None
+        full_name_getter = getattr(user, "get_full_name", None)
+        if callable(full_name_getter):
+            full_name = (full_name_getter() or "").strip()
+            if full_name:
+                return full_name
+        for attr in ("username", "email"):
+            value = getattr(user, attr, None)
+            if value:
+                return value
+        return str(user)
+
+    def get_created_by_nom(self, obj: CerfaContrat) -> str | None:
+        return self._user_label(getattr(obj, "created_by", None))
+
+    def get_updated_by_nom(self, obj: CerfaContrat) -> str | None:
+        return self._user_label(getattr(obj, "updated_by", None))
 
     def to_representation(self, instance: CerfaContrat) -> dict[str, Any]:
         data = super().to_representation(instance)
@@ -349,6 +371,10 @@ class CerfaContratSerializer(serializers.ModelSerializer):
         merged["candidat"] = candidat_obj
         merged["formation"] = inferred_formation
         merged["employeur"] = inferred_employeur
+        request = self.context.get("request")
+        if request is not None and getattr(request, "user", None) and request.user.is_authenticated:
+            merged["created_by"] = request.user
+            merged["updated_by"] = request.user
         instance = CerfaContrat.objects.create(**merged)
         _sync_source_models_from_cerfa(instance)
         return instance
@@ -383,6 +409,9 @@ class CerfaContratSerializer(serializers.ModelSerializer):
             merged["employeur"] = employeur_obj
         elif "employeur" not in merged and instance.employeur_id:
             merged["employeur"] = instance.employeur
+        request = self.context.get("request")
+        if request is not None and getattr(request, "user", None) and request.user.is_authenticated:
+            merged["updated_by"] = request.user
         for field, value in merged.items():
             setattr(instance, field, value)
         instance.save()

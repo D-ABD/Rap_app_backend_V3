@@ -186,6 +186,7 @@ export type CerfaContratBase = {
   formation_lieu_voie: string | null;
   formation_lieu_code_postal: string | null;
   formation_lieu_commune: string | null;
+  pieces_justificatives_ok: boolean;
 
   // CONTRAT
   type_contrat: string | null;
@@ -218,6 +219,10 @@ export type CerfaContrat = CerfaContratBase & {
   id: number;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
+  created_by?: number | null;
+  updated_by?: number | null;
+  created_by_nom?: string | null;
+  updated_by_nom?: string | null;
 
   // champs calculés côté serializer
   pdf_url: string | null;

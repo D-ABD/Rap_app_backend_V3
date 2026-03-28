@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 
+from django.conf import settings
 from django.db import models
 
 from .cerfa_codes import (
@@ -819,6 +820,10 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Commune du lieu principal de formation.",
     )
+    pieces_justificatives_ok = models.BooleanField(
+        default=True,
+        help_text="Indique que l'employeur atteste disposer de l'ensemble des pieces justificatives necessaires au depot du contrat.",
+    )
 
     # ───────────────────────── CONTRAT ─────────────────────────
     type_contrat = models.CharField(
@@ -922,6 +927,23 @@ class CerfaContrat(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
         help_text="Date de dernière mise à jour de l’enregistrement.",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="created_cerfacontrat_set",
+        help_text="Utilisateur ayant cree le CERFA.",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_cerfacontrat_set",
+        help_text="Utilisateur ayant modifie le CERFA en dernier.",
     )
 
     class Meta:

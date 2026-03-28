@@ -43,6 +43,12 @@ def _candidate_overlay_values(cerfa_contrat):
     naissance_jour, naissance_mois, naissance_annee = _split_date_parts(
         getattr(cerfa_contrat, "apprenti_date_naissance", None)
     )
+    maitre1_naissance_jour, maitre1_naissance_mois, maitre1_naissance_annee = _split_date_parts(
+        getattr(cerfa_contrat, "maitre1_date_naissance", None)
+    )
+    maitre2_naissance_jour, maitre2_naissance_mois, maitre2_naissance_annee = _split_date_parts(
+        getattr(cerfa_contrat, "maitre2_date_naissance", None)
+    )
 
     return {
         # Bloc employeur (cases a cocher page 1)
@@ -159,6 +165,28 @@ def _candidate_overlay_values(cerfa_contrat):
         "Case #C3#A0 cocher 5_10": _checkbox_mark(
             getattr(cerfa_contrat, "apprenti_projet_entreprise", None), False
         ),
+        # Bloc maitres d'apprentissage
+        "Zone de texte 8_42": format_value(getattr(cerfa_contrat, "maitre1_nom", None)),
+        "Zone de texte 8_43": format_value(getattr(cerfa_contrat, "maitre1_prenom", None)),
+        "Zone de texte 21_4": maitre1_naissance_jour,
+        "Zone de texte 21_5": maitre1_naissance_mois,
+        "Zone de texte 21_6": maitre1_naissance_annee,
+        "Zone de texte 8_44": format_value(getattr(cerfa_contrat, "maitre1_email", None)),
+        "Zone de texte 8_45": format_value(getattr(cerfa_contrat, "maitre1_emploi", None)),
+        "Zone de texte 8_50": format_value(getattr(cerfa_contrat, "maitre1_diplome", None)),
+        "Zone de texte 8_52": format_value(getattr(cerfa_contrat, "maitre1_niveau_diplome", None)),
+        "Zone de texte 8_46": format_value(getattr(cerfa_contrat, "maitre2_nom", None)),
+        "Zone de texte 8_47": format_value(getattr(cerfa_contrat, "maitre2_prenom", None)),
+        "Zone de texte 21": maitre2_naissance_jour,
+        "Zone de texte 21_2": maitre2_naissance_mois,
+        "Zone de texte 21_3": maitre2_naissance_annee,
+        "Zone de texte 8_48": format_value(getattr(cerfa_contrat, "maitre2_email", None)),
+        "Zone de texte 8_49": format_value(getattr(cerfa_contrat, "maitre2_emploi", None)),
+        "Zone de texte 8_51": format_value(getattr(cerfa_contrat, "maitre2_diplome", None)),
+        "Zone de texte 8_53": format_value(getattr(cerfa_contrat, "maitre2_niveau_diplome", None)),
+        "Case #C3#A0 cocher 6": _checkbox_mark(
+            getattr(cerfa_contrat, "maitre_eligible", None), True
+        ),
     }
 
 
@@ -180,6 +208,9 @@ def _formation_overlay_values(cerfa_contrat):
         ),
         "Case #C3#A0 cocher 7": _checkbox_mark(
             getattr(cerfa_contrat, "cfa_est_lieu_formation_principal", None), True
+        ),
+        "Case #C3#A0 cocher 8": _checkbox_mark(
+            getattr(cerfa_contrat, "pieces_justificatives_ok", None), True
         ),
         # Dates decoupees
         "Zone de texte 21_25": debut_jour,
@@ -405,9 +436,25 @@ def _build_summary_rows(cerfa_contrat):
         ("Formation - debut", getattr(cerfa_contrat, "formation_debut", None)),
         ("Formation - fin", getattr(cerfa_contrat, "formation_fin", None)),
         ("Formation - duree heures", getattr(cerfa_contrat, "formation_duree_heures", None)),
+        ("Pieces justificatives OK", getattr(cerfa_contrat, "pieces_justificatives_ok", None)),
         ("CFA - denomination", getattr(cerfa_contrat, "cfa_denomination", None)),
         ("CFA - UAI", getattr(cerfa_contrat, "cfa_uai", None)),
         ("CFA - SIRET", getattr(cerfa_contrat, "cfa_siret", None)),
+        ("Maitre 1 - nom", getattr(cerfa_contrat, "maitre1_nom", None)),
+        ("Maitre 1 - prenom", getattr(cerfa_contrat, "maitre1_prenom", None)),
+        ("Maitre 1 - naissance", getattr(cerfa_contrat, "maitre1_date_naissance", None)),
+        ("Maitre 1 - courriel", getattr(cerfa_contrat, "maitre1_email", None)),
+        ("Maitre 1 - emploi", getattr(cerfa_contrat, "maitre1_emploi", None)),
+        ("Maitre 1 - diplome", getattr(cerfa_contrat, "maitre1_diplome", None)),
+        ("Maitre 1 - niveau", getattr(cerfa_contrat, "maitre1_niveau_diplome", None)),
+        ("Maitre 2 - nom", getattr(cerfa_contrat, "maitre2_nom", None)),
+        ("Maitre 2 - prenom", getattr(cerfa_contrat, "maitre2_prenom", None)),
+        ("Maitre 2 - naissance", getattr(cerfa_contrat, "maitre2_date_naissance", None)),
+        ("Maitre 2 - courriel", getattr(cerfa_contrat, "maitre2_email", None)),
+        ("Maitre 2 - emploi", getattr(cerfa_contrat, "maitre2_emploi", None)),
+        ("Maitre 2 - diplome", getattr(cerfa_contrat, "maitre2_diplome", None)),
+        ("Maitre 2 - niveau", getattr(cerfa_contrat, "maitre2_niveau_diplome", None)),
+        ("Maitre eligible", getattr(cerfa_contrat, "maitre_eligible", None)),
         ("Type contrat", getattr(cerfa_contrat, "type_contrat", None)),
         ("Date conclusion", getattr(cerfa_contrat, "date_conclusion", None)),
     ]

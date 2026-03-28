@@ -320,6 +320,10 @@ export default function CerfaDetailModal({
                 <Field label="Lieu principal - voie" value={nn(contrat.formation_lieu_voie)} />
                 <Field label="Lieu principal - code postal" value={nn(contrat.formation_lieu_code_postal)} />
                 <Field label="Lieu principal - commune" value={nn(contrat.formation_lieu_commune)} />
+                <Field
+                  label="Pieces justificatives necessaires au depot"
+                  value={yn(contrat.pieces_justificatives_ok)}
+                />
               </Section>
             </Grid>
 

@@ -179,7 +179,9 @@ export function CerfaForm({
   onSubmit,
   readOnly = false,
 }: CerfaFormProps) {
-  const [form, setForm] = useState<Partial<CerfaContratCreate>>({});
+  const [form, setForm] = useState<Partial<CerfaContratCreate>>({
+    pieces_justificatives_ok: true,
+  });
   const [selectedCandidat, setSelectedCandidat] = useState<any>(null);
   const [selectedFormation, setSelectedFormation] = useState<any>(null);
   const [selectedPartenaire, setSelectedPartenaire] = useState<any>(null);
@@ -378,6 +380,7 @@ export function CerfaForm({
     formation_lieu_voie: contrat.formation_lieu_voie,
     formation_lieu_code_postal: contrat.formation_lieu_code_postal,
     formation_lieu_commune: contrat.formation_lieu_commune,
+    pieces_justificatives_ok: contrat.pieces_justificatives_ok ?? true,
     type_contrat: contrat.type_contrat,
     type_contrat_code: contrat.type_contrat_code,
     type_derogation: contrat.type_derogation,
@@ -424,7 +427,7 @@ export function CerfaForm({
       );
       setPrefillInfo("Les informations du CERFA existant ont ete rechargees.");
     } else if (initialContext) {
-      setForm(initialContext);
+      setForm({ pieces_justificatives_ok: true, ...initialContext });
       setSelectedCandidat(
         initialSelections?.candidat?.id
           ? {
@@ -463,7 +466,7 @@ export function CerfaForm({
       );
       setPrefillInfo("Le contexte CERFA a ete initialise depuis la fiche candidat.");
     } else {
-      setForm({});
+      setForm({ pieces_justificatives_ok: true });
       setSelectedCandidat(null);
       setSelectedFormation(null);
       setSelectedPartenaire(null);
@@ -1159,6 +1162,15 @@ export function CerfaForm({
               </Grid>
               <Grid item xs={12} md={9}>
                 <TextField fullWidth label="Lieu formation - commune" value={form.formation_lieu_commune ?? ""} onChange={(e) => setField("formation_lieu_commune", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12}>
+                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+                  {renderCheckbox(
+                    "pieces_justificatives_ok",
+                    "L'employeur atteste disposer de l'ensemble des pieces justificatives necessaires au depot du contrat",
+                    form.pieces_justificatives_ok
+                  )}
+                </Stack>
               </Grid>
             </Grid>
 

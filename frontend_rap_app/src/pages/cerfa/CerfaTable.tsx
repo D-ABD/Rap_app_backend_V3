@@ -60,14 +60,22 @@ export default function CerfaTable({
     },
     {
       key: "apprenti_nom_naissance",
-      label: "Apprenti",
+      label: "Nom de naissance",
       sticky: "left",
-      width: 200,
-      render: (c) => (
-        <strong>
-          {c.apprenti_prenom} {c.apprenti_nom_naissance}
-        </strong>
-      ),
+      width: 180,
+      render: (c) => <strong>{c.apprenti_nom_naissance || "—"}</strong>,
+    },
+    {
+      key: "apprenti_nom_usage",
+      label: "Nom d'usage",
+      width: 170,
+      render: (c) => c.apprenti_nom_usage || "—",
+    },
+    {
+      key: "apprenti_prenom",
+      label: "Prenom",
+      width: 160,
+      render: (c) => c.apprenti_prenom || "—",
     },
     { key: "employeur_nom", label: "Employeur", width: 220 },
     { key: "diplome_vise", label: "Diplôme visé", width: 200 },
@@ -131,6 +139,18 @@ export default function CerfaTable({
       key: "created_at",
       label: "Créé le",
       render: (c) => formatDate(c.created_at),
+    },
+    {
+      key: "created_by_nom",
+      label: "Created by",
+      width: 180,
+      render: (c) => c.created_by_nom || "—",
+    },
+    {
+      key: "updated_by_nom",
+      label: "Updated by",
+      width: 180,
+      render: (c) => c.updated_by_nom || "—",
     },
   ];
 
