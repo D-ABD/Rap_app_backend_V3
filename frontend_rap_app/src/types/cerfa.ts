@@ -154,12 +154,12 @@ export type CerfaContratBase = {
   cfa_denomination: string | null;
   cfa_uai: string | null;
   cfa_siret: string | null;
-  cfa_numero: string | null;
-  cfa_voie: string | null;
-  cfa_complement: string | null;
+  cfa_adresse_numero: string | null;
+  cfa_adresse_voie: string | null;
+  cfa_adresse_complement: string | null;
   cfa_code_postal: string | null;
   cfa_commune: string | null;
-  cfa_lieu_principal: boolean;
+  cfa_est_lieu_formation_principal: boolean;
 
   diplome_vise: string | null;
   diplome_intitule: string | null;
@@ -172,9 +172,7 @@ export type CerfaContratBase = {
   formation_lieu_denomination: string | null;
   formation_lieu_uai: string | null;
   formation_lieu_siret: string | null;
-  formation_lieu_numero: string | null;
   formation_lieu_voie: string | null;
-  formation_lieu_complement: string | null;
   formation_lieu_code_postal: string | null;
   formation_lieu_commune: string | null;
 
@@ -185,7 +183,6 @@ export type CerfaContratBase = {
   numero_contrat_precedent: string | null;
   date_conclusion: string | null;
   date_debut_execution: string | null;
-  date_debut_formation: string | null;
   date_fin_contrat: string | null;
   date_effet_avenant: string | null;
   duree_hebdo_heures: number | null;

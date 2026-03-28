@@ -137,6 +137,35 @@ def _candidate_overlay_values(cerfa_contrat):
     }
 
 
+def _formation_overlay_values(cerfa_contrat):
+    debut_jour, debut_mois, debut_annee = _split_date_parts(
+        getattr(cerfa_contrat, "formation_debut", None)
+    )
+    fin_jour, fin_mois, fin_annee = _split_date_parts(
+        getattr(cerfa_contrat, "formation_fin", None)
+    )
+
+    return {
+        # Cases a cocher
+        "Case #C3#A0 cocher 5_11": _checkbox_mark(
+            getattr(cerfa_contrat, "cfa_entreprise", None), True
+        ),
+        "Case #C3#A0 cocher 5_12": _checkbox_mark(
+            getattr(cerfa_contrat, "cfa_entreprise", None), False
+        ),
+        "Case #C3#A0 cocher 7": _checkbox_mark(
+            getattr(cerfa_contrat, "cfa_est_lieu_formation_principal", None), True
+        ),
+        # Dates decoupees
+        "Zone de texte 21_25": debut_jour,
+        "Zone de texte 21_26": debut_mois,
+        "Zone de texte 21_27": debut_annee,
+        "Zone de texte 21_28": fin_jour,
+        "Zone de texte 21_29": fin_mois,
+        "Zone de texte 21_30": fin_annee,
+    }
+
+
 def _draw_text_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_size=8):
     text = format_value(text)
     if not text:
@@ -169,6 +198,23 @@ def _draw_text_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_siz
         draw_y -= line_height
 
 
+def _draw_single_line_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_size=7):
+    text = format_value(text)
+    if not text:
+        return
+
+    max_width = max((x2 - x1) - 3, 8)
+    fitted_font_size = float(font_size)
+    while fitted_font_size > 5 and stringWidth(text, font_name, fitted_font_size) > max_width:
+        fitted_font_size -= 0.25
+
+    draw_x = x1 + 1.5
+    draw_y = y1 + max(((y2 - y1) - fitted_font_size) / 2, 0.5) - 0.5
+
+    pdf.setFont(font_name, fitted_font_size)
+    pdf.drawString(draw_x, draw_y, text)
+
+
 def _draw_checkbox_mark(pdf, text, x1, y1, x2, y2, font_name="Helvetica-Bold", font_size=9):
     text = format_value(text)
     if not text:
@@ -186,7 +232,74 @@ def _draw_checkbox_mark(pdf, text, x1, y1, x2, y2, font_name="Helvetica-Bold", f
     pdf.drawString(draw_x, draw_y, mark)
 
 
+def _draw_manual_single_line(pdf, text, rect, font_name="Helvetica", font_size=7.5):
+    text = format_value(text)
+    if not text:
+        return
+    x1, y1, x2, y2 = rect
+    _draw_single_line_in_box(pdf, text, x1, y1, x2, y2, font_name=font_name, font_size=font_size)
+
+
+def _build_cfa_manual_overlay(page, cerfa_contrat):
+    media_box = page.MediaBox
+    width = float(media_box[2]) - float(media_box[0])
+    height = float(media_box[3]) - float(media_box[1])
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=(width, height))
+    formation = getattr(cerfa_contrat, "formation", None)
+    centre = getattr(formation, "centre", None) if formation is not None else None
+
+    manual_rects = {
+        "diplome_vise": (461.849, 547.34, 524.601, 558.738),
+        "cfa_denomination": (19.649, 519.54, 279.451, 530.938),
+        "cfa_uai": (99.099, 505.64, 279.451, 517.038),
+        "cfa_siret": (97.949, 491.74, 279.451, 503.138),
+        "diplome_intitule": (294.299, 519.54, 565.001, 530.938),
+        "code_diplome": (382.449, 505.64, 565.001, 517.038),
+        "code_rncp": (363.749, 491.74, 565.001, 503.138),
+        "formation_duree_heures": (404.049, 400.84, 449.451, 412.238),
+        "formation_distance_heures": (322.299, 386.94, 370.801, 398.338),
+        "formation_lieu_denomination": (294.299, 331.34, 565.001, 342.738),
+        "formation_lieu_uai": (335.249, 317.44, 565.001, 328.838),
+        "formation_lieu_siret": (347.849, 303.54, 565.001, 314.938),
+        "formation_lieu_numero": (314.849, 275.74, 351.501, 287.138),
+        "formation_lieu_voie": (384.149, 275.74, 565.001, 287.138),
+        "formation_lieu_complement": (362.599, 261.84, 565.001, 273.238),
+        "formation_lieu_code_postal": (359.099, 247.94, 409.351, 259.338),
+        "formation_lieu_commune": (350.799, 234.04, 565.001, 245.438),
+        "cfa_adresse_numero": (40.199, 456.44, 76.851, 467.838),
+        "cfa_adresse_voie": (109.499, 456.44, 281.901, 467.838),
+        "cfa_adresse_complement": (87.949, 442.54, 282.701, 453.938),
+        "cfa_code_postal": (84.449, 428.64, 134.701, 440.038),
+        "cfa_commune": (76.149, 414.74, 281.451, 426.138),
+    }
+
+    for field_name, rect in manual_rects.items():
+        if field_name == "formation_lieu_numero":
+            value = getattr(centre, "numero_voie", None)
+        elif field_name == "formation_lieu_complement":
+            value = getattr(centre, "complement_adresse", None)
+        else:
+            value = getattr(cerfa_contrat, field_name, None)
+        _draw_manual_single_line(pdf, value, rect)
+
+    pdf.save()
+    buffer.seek(0)
+    return PdfReader(buffer)
+
+
 def _build_candidate_overlay(page, cerfa_contrat):
+    return _build_overlay(page, _candidate_overlay_values(cerfa_contrat))
+
+
+def _build_overlay(
+    page,
+    values,
+    *,
+    text_font_size=8,
+    checkbox_font_size=9,
+    single_line_text=False,
+):
     annots = getattr(page, "Annots", []) or []
     field_rects = {}
     for annot in annots:
@@ -198,7 +311,6 @@ def _build_candidate_overlay(page, cerfa_contrat):
             continue
         field_rects[field_name] = [float(v) for v in rect]
 
-    values = _candidate_overlay_values(cerfa_contrat)
     if not values:
         return None
 
@@ -212,9 +324,12 @@ def _build_candidate_overlay(page, cerfa_contrat):
         rect = field_rects.get(field_name)
         if rect and text:
             if field_name.startswith("Case "):
-                _draw_checkbox_mark(pdf, text, *rect)
+                _draw_checkbox_mark(pdf, text, *rect, font_size=checkbox_font_size)
             else:
-                _draw_text_in_box(pdf, text, *rect)
+                if single_line_text:
+                    _draw_single_line_in_box(pdf, text, *rect, font_size=text_font_size)
+                else:
+                    _draw_text_in_box(pdf, text, *rect, font_size=text_font_size)
 
     pdf.save()
     buffer.seek(0)
@@ -350,6 +465,22 @@ def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
         candidate_overlay = _build_candidate_overlay(template_pdf.pages[0], cerfa_contrat)
         if candidate_overlay and candidate_overlay.pages:
             PageMerge(template_pdf.pages[0]).add(candidate_overlay.pages[0]).render()
+
+    # 5quater - superpose directement les donnees formation / CFA sur la page 2
+    if len(template_pdf.pages) > 1:
+        formation_overlay = _build_overlay(
+            template_pdf.pages[1],
+            _formation_overlay_values(cerfa_contrat),
+            text_font_size=7.5,
+            checkbox_font_size=8,
+            single_line_text=True,
+        )
+        if formation_overlay and formation_overlay.pages:
+            PageMerge(template_pdf.pages[1]).add(formation_overlay.pages[0]).render()
+
+        cfa_overlay = _build_cfa_manual_overlay(template_pdf.pages[1], cerfa_contrat)
+        if cfa_overlay and cfa_overlay.pages:
+            PageMerge(template_pdf.pages[1]).add(cfa_overlay.pages[0]).render()
 
     # 5bis - ajoute une annexe lisible avec les donnees deja pre-remplies
     summary_pdf = _build_summary_pdf(cerfa_contrat)

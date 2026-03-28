@@ -22,6 +22,10 @@ def _merge_prefill_data(
         except (TypeError, ValueError):
             return None
 
+    legacy_date_debut_formation = validated_data.pop("date_debut_formation", None)
+    if legacy_date_debut_formation and "formation_debut" not in validated_data:
+        validated_data["formation_debut"] = legacy_date_debut_formation
+
     candidat_id = _as_int(candidat_id)
     formation_id = _as_int(formation_id)
     employeur_id = _as_int(employeur_id)
@@ -39,13 +43,21 @@ def _merge_prefill_data(
         if candidat_id
         else None
     )
+    inferred_formation = None
+    if formation_id:
+        inferred_formation = Formation.objects.filter(pk=formation_id).first()
+    elif candidat and getattr(candidat, "formation_id", None):
+        inferred_formation = candidat.formation
+
     prefill = CerfaContrat.build_prefill_payload(
         candidat=candidat,
-        formation=None,
+        formation=inferred_formation,
         partenaire=None,
     )
 
     merged = {**prefill, **validated_data}
+    if "formation" not in merged and inferred_formation is not None:
+        merged["formation"] = inferred_formation
     if candidat_id or formation_id or employeur_id:
         merged["auto_generated"] = True
     return merged
@@ -84,6 +96,14 @@ class CerfaContratSerializer(serializers.ModelSerializer):
         }
         return [label for label, value in required_pairs.items() if value in (None, "")]
 
+    def to_representation(self, instance: CerfaContrat) -> dict[str, Any]:
+        data = super().to_representation(instance)
+        diplome_source = data.get("diplome_vise") or data.get("diplome_intitule")
+        if diplome_source:
+            data["diplome_vise"] = data.get("diplome_vise") or diplome_source
+            data["diplome_intitule"] = data.get("diplome_intitule") or diplome_source
+        return data
+
     def create(self, validated_data: dict[str, Any]) -> CerfaContrat:
         candidat_id = validated_data.pop("candidat_id", None)
         formation_id = validated_data.pop("formation_id", None)
@@ -95,7 +115,11 @@ class CerfaContratSerializer(serializers.ModelSerializer):
             formation_id=formation_id,
             employeur_id=employeur_id,
         )
-        inferred_formation = Formation.objects.filter(pk=formation_id).first() if formation_id else None
+        inferred_formation = (
+            Formation.objects.filter(pk=formation_id).first()
+            if formation_id
+            else getattr(candidat_obj, "formation", None)
+        )
         inferred_employeur = Partenaire.objects.filter(pk=employeur_id).first() if employeur_id else None
         merged["candidat"] = candidat_obj
         merged["formation"] = inferred_formation
@@ -110,7 +134,11 @@ class CerfaContratSerializer(serializers.ModelSerializer):
         formation_id = raw_formation_id if raw_formation_id is not None else getattr(instance.formation, "pk", None)
         employeur_id = raw_employeur_id if raw_employeur_id is not None else getattr(instance.employeur, "pk", None)
         candidat_obj = Candidat.objects.filter(pk=candidat_id).first() if candidat_id else None
-        formation_obj = Formation.objects.filter(pk=formation_id).first() if formation_id else None
+        formation_obj = (
+            Formation.objects.filter(pk=formation_id).first()
+            if formation_id
+            else getattr(candidat_obj, "formation", None)
+        )
         employeur_obj = Partenaire.objects.filter(pk=employeur_id).first() if employeur_id else None
         merged = _merge_prefill_data(
             validated_data=validated_data,

@@ -115,10 +115,12 @@ export default function CerfaPage() {
   }, [selectedContrat, selectedId]);
 
   useEffect(() => {
-    if (candidateContext && !selectedContrat) {
+    if (candidateContext) {
+      setSelectedContrat(null);
+      setSelectedId(null);
       setShowForm(true);
     }
-  }, [candidateContext, selectedContrat]);
+  }, [candidateContext]);
 
   const handleRowClick = (id: number) => {
     const contrat = contrats.find((c) => c.id === id);
@@ -150,6 +152,8 @@ export default function CerfaPage() {
       await createCerfa(data);
       toast.success("✅ Contrat CERFA créé avec succès !");
       setShowForm(false);
+      setSelectedContrat(null);
+      setSelectedId(null);
       setReloadKey((k) => k + 1);
     } catch (_err: any) {
       const errorData = _err?.response?.data;
@@ -199,7 +203,15 @@ export default function CerfaPage() {
               setPage(1);
             }}
           />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowForm(true)}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setSelectedContrat(null);
+              setSelectedId(null);
+              setShowForm(true);
+            }}
+          >
             Nouveau CERFA
           </Button>
           {selectedIds.length > 0 && (
@@ -283,6 +295,7 @@ export default function CerfaPage() {
         onClose={() => {
           setShowForm(false);
           setSelectedContrat(null);
+          setSelectedId(null);
           if (candidateContext) {
             setSearchParams((prev) => {
               const next = new URLSearchParams(prev);

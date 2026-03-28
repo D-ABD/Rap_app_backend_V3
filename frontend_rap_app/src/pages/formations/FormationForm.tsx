@@ -265,6 +265,12 @@ function FormationForm({
       ) : null}
 
       <Section icon={<AssignmentIcon color="primary" />} title="Informations principales">
+        <Grid item xs={12}>
+          <Alert severity="info">
+            Les dates de formation et les informations diplôme ci-dessous sont utilisées pour le
+            pré-remplissage du CERFA.
+          </Alert>
+        </Grid>
         <Input
           label="Nom"
           name="nom"
@@ -381,7 +387,13 @@ function FormationForm({
       </Section>
 
       {/* Section 3 */}
-      <Section icon={<SchoolIcon color="primary" />} title="Diplôme ou titre visé">
+      <Section icon={<SchoolIcon color="primary" />} title="Diplôme ou titre visé (CERFA)">
+        <Grid item xs={12}>
+          <Alert severity="info">
+            Ces champs alimentent le bloc formation du CERFA : diplôme visé, code diplôme, RNCP
+            et durée de formation.
+          </Alert>
+        </Grid>
         <Input
           label="Intitulé précis"
           name="intitule_diplome"

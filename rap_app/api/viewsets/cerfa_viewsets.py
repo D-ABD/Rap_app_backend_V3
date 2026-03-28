@@ -78,9 +78,15 @@ class CerfaContratViewSet(BaseApiViewSet):
             if candidat_id
             else None
         )
+        formation = None
+        if formation_id:
+            formation = Formation.objects.filter(pk=formation_id).first()
+        elif candidat and getattr(candidat, "formation_id", None):
+            formation = candidat.formation
+
         payload = CerfaContrat.build_prefill_payload(
             candidat=candidat,
-            formation=None,
+            formation=formation,
             partenaire=None,
         )
         return self.success_response(

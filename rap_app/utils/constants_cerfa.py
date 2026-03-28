@@ -21,4 +21,9 @@ CERFA_FIELD_MAP = {
     "Zone de texte 8_13": "employeur_telephone",
     "Zone de texte 8_14": "employeur_email",
     "Zone de texte 8_15": "employeur_regime_assurance_chomage",
+    # ======================================================
+    # 🎓 FORMATION / CFA
+    # ======================================================
+    "Zone de texte 8_73": "cfa_uai",
+    "Zone de texte 8_74": "cfa_siret",
 }

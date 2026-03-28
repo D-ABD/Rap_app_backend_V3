@@ -267,7 +267,7 @@ export default function CerfaDetailModal({
                 <Field label="Code diplome" value={nn(contrat.code_diplome)} />
                 <Field label="Code RNCP" value={nn(contrat.code_rncp)} />
                 <Field label="Date debut formation" value={fmt(contrat.formation_debut)} />
-                <Field label="Date debut formation CFA" value={fmt(contrat.date_debut_formation)} />
+                <Field label="Date debut formation CFA" value={fmt(contrat.formation_debut)} />
                 <Field label="Date fin epreuves / examens" value={fmt(contrat.formation_fin)} />
                 <Field label="Duree formation (heures)" value={nn(contrat.formation_duree_heures)} />
                 <Field label="Heures a distance" value={nn(contrat.formation_distance_heures)} />
@@ -280,18 +280,19 @@ export default function CerfaDetailModal({
                 <Field label="Denomination CFA" value={nn(contrat.cfa_denomination)} />
                 <Field label="UAI CFA" value={nn(contrat.cfa_uai)} />
                 <Field label="SIRET CFA" value={nn(contrat.cfa_siret)} />
-                <Field label="Numero CFA" value={nn(contrat.cfa_numero)} />
-                <Field label="Voie CFA" value={nn(contrat.cfa_voie)} />
-                <Field label="Complement CFA" value={nn(contrat.cfa_complement)} />
+                <Field label="Numero CFA" value={nn(contrat.cfa_adresse_numero)} />
+                <Field label="Voie CFA" value={nn(contrat.cfa_adresse_voie)} />
+                <Field label="Complement CFA" value={nn(contrat.cfa_adresse_complement)} />
                 <Field label="Code postal CFA" value={nn(contrat.cfa_code_postal)} />
                 <Field label="Commune CFA" value={nn(contrat.cfa_commune)} />
-                <Field label="CFA = lieu principal" value={yn(contrat.cfa_lieu_principal)} />
+                <Field
+                  label="CFA = lieu principal"
+                  value={yn(contrat.cfa_est_lieu_formation_principal)}
+                />
                 <Field label="Lieu principal - denomination" value={nn(contrat.formation_lieu_denomination)} />
                 <Field label="Lieu principal - UAI" value={nn(contrat.formation_lieu_uai)} />
                 <Field label="Lieu principal - SIRET" value={nn(contrat.formation_lieu_siret)} />
-                <Field label="Lieu principal - numero" value={nn(contrat.formation_lieu_numero)} />
                 <Field label="Lieu principal - voie" value={nn(contrat.formation_lieu_voie)} />
-                <Field label="Lieu principal - complement" value={nn(contrat.formation_lieu_complement)} />
                 <Field label="Lieu principal - code postal" value={nn(contrat.formation_lieu_code_postal)} />
                 <Field label="Lieu principal - commune" value={nn(contrat.formation_lieu_commune)} />
               </Section>

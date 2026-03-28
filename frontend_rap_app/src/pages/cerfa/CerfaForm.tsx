@@ -158,12 +158,12 @@ export function CerfaForm({
     cfa_denomination: contrat.cfa_denomination,
     cfa_uai: contrat.cfa_uai,
     cfa_siret: contrat.cfa_siret,
-    cfa_numero: contrat.cfa_numero,
-    cfa_voie: contrat.cfa_voie,
-    cfa_complement: contrat.cfa_complement,
+    cfa_adresse_numero: contrat.cfa_adresse_numero,
+    cfa_adresse_voie: contrat.cfa_adresse_voie,
+    cfa_adresse_complement: contrat.cfa_adresse_complement,
     cfa_code_postal: contrat.cfa_code_postal,
     cfa_commune: contrat.cfa_commune,
-    cfa_lieu_principal: contrat.cfa_lieu_principal,
+    cfa_est_lieu_formation_principal: contrat.cfa_est_lieu_formation_principal,
     diplome_vise: contrat.diplome_vise,
     diplome_intitule: contrat.diplome_intitule,
     code_diplome: contrat.code_diplome,
@@ -175,9 +175,7 @@ export function CerfaForm({
     formation_lieu_denomination: contrat.formation_lieu_denomination,
     formation_lieu_uai: contrat.formation_lieu_uai,
     formation_lieu_siret: contrat.formation_lieu_siret,
-    formation_lieu_numero: contrat.formation_lieu_numero,
     formation_lieu_voie: contrat.formation_lieu_voie,
-    formation_lieu_complement: contrat.formation_lieu_complement,
     formation_lieu_code_postal: contrat.formation_lieu_code_postal,
     formation_lieu_commune: contrat.formation_lieu_commune,
     type_contrat: contrat.type_contrat,
@@ -185,7 +183,6 @@ export function CerfaForm({
     numero_contrat_precedent: contrat.numero_contrat_precedent,
     date_conclusion: contrat.date_conclusion,
     date_debut_execution: contrat.date_debut_execution,
-    date_debut_formation: contrat.date_debut_formation,
     date_fin_contrat: contrat.date_fin_contrat,
     date_effet_avenant: contrat.date_effet_avenant,
     duree_hebdo_heures: contrat.duree_hebdo_heures,
@@ -299,6 +296,19 @@ export function CerfaForm({
           return;
         }
         setForm((current) => mergePrefillIntoForm(current, payload));
+        if (typeof payload.formation === "number") {
+          setSelectedFormation((current: any) =>
+            current?.id === payload.formation
+              ? current
+              : {
+                  id: payload.formation,
+                  nom:
+                    (typeof payload.diplome_vise === "string" && payload.diplome_vise) ||
+                    (typeof payload.diplome_intitule === "string" && payload.diplome_intitule) ||
+                    `Formation #${payload.formation}`,
+                }
+          );
+        }
         setPrefillInfo(message);
       } catch (_err) {
         toast.error("Erreur lors du pre-remplissage candidat du CERFA.");
@@ -919,8 +929,8 @@ export function CerfaForm({
                   label="Date debut de formation en CFA"
                   type="date"
                   InputLabelProps={{ shrink: true }}
-                  value={form.date_debut_formation ?? ""}
-                  onChange={(e) => setField("date_debut_formation", e.target.value)}
+                  value={form.formation_debut ?? ""}
+                  onChange={(e) => setField("formation_debut", e.target.value)}
                   disabled={readOnly}
                 />
               </Grid>
@@ -972,7 +982,11 @@ export function CerfaForm({
               <Grid item xs={12}>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                   {renderCheckbox("cfa_entreprise", "CFA d'entreprise", form.cfa_entreprise)}
-                  {renderCheckbox("cfa_lieu_principal", "CFA = lieu principal", form.cfa_lieu_principal)}
+                  {renderCheckbox(
+                    "cfa_est_lieu_formation_principal",
+                    "CFA = lieu principal",
+                    form.cfa_est_lieu_formation_principal
+                  )}
                 </Stack>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -985,13 +999,13 @@ export function CerfaForm({
                 <TextField fullWidth label="SIRET CFA" value={form.cfa_siret ?? ""} onChange={(e) => setField("cfa_siret", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Numero CFA" value={form.cfa_numero ?? ""} onChange={(e) => setField("cfa_numero", e.target.value)} disabled={readOnly} />
+                <TextField fullWidth label="Numero CFA" value={form.cfa_adresse_numero ?? ""} onChange={(e) => setField("cfa_adresse_numero", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={5}>
-                <TextField fullWidth label="Voie CFA" value={form.cfa_voie ?? ""} onChange={(e) => setField("cfa_voie", e.target.value)} disabled={readOnly} />
+                <TextField fullWidth label="Voie CFA" value={form.cfa_adresse_voie ?? ""} onChange={(e) => setField("cfa_adresse_voie", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField fullWidth label="Complement CFA" value={form.cfa_complement ?? ""} onChange={(e) => setField("cfa_complement", e.target.value)} disabled={readOnly} />
+                <TextField fullWidth label="Complement CFA" value={form.cfa_adresse_complement ?? ""} onChange={(e) => setField("cfa_adresse_complement", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={3}>
                 <TextField fullWidth label="CP CFA" value={form.cfa_code_postal ?? ""} onChange={(e) => setField("cfa_code_postal", e.target.value)} disabled={readOnly} />
@@ -1008,14 +1022,8 @@ export function CerfaForm({
               <Grid item xs={12} md={3}>
                 <TextField fullWidth label="Lieu formation - SIRET" value={form.formation_lieu_siret ?? ""} onChange={(e) => setField("formation_lieu_siret", e.target.value)} disabled={readOnly} />
               </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Lieu formation - numero" value={form.formation_lieu_numero ?? ""} onChange={(e) => setField("formation_lieu_numero", e.target.value)} disabled={readOnly} />
-              </Grid>
               <Grid item xs={12} md={5}>
                 <TextField fullWidth label="Lieu formation - voie" value={form.formation_lieu_voie ?? ""} onChange={(e) => setField("formation_lieu_voie", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="Lieu formation - complement" value={form.formation_lieu_complement ?? ""} onChange={(e) => setField("formation_lieu_complement", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={3}>
                 <TextField fullWidth label="Lieu formation - CP" value={form.formation_lieu_code_postal ?? ""} onChange={(e) => setField("formation_lieu_code_postal", e.target.value)} disabled={readOnly} />
@@ -1131,9 +1139,13 @@ export function CerfaForm({
         onClose={() => setShowCandidatModal(false)}
         onSelect={async (c) => {
           setSelectedCandidat(c);
+          if (c?.formation?.id) {
+            setSelectedFormation(c.formation);
+          }
           setForm((f) => ({
             ...f,
             candidat: c.id,
+            formation: c?.formation?.id ?? f.formation,
             apprenti_nom_naissance: c.nom_naissance ?? undefined,
             apprenti_nom_usage: c.nom ?? undefined,
             apprenti_prenom: c.prenom || undefined,
@@ -1142,7 +1154,7 @@ export function CerfaForm({
           setShowCandidatModal(false);
           await applyCandidateOnlyPrefill(
             c.id,
-            "Le CERFA a ete pre-rempli automatiquement avec les donnees du candidat."
+            "Le CERFA a ete pre-rempli automatiquement avec les donnees du candidat et sa formation."
           );
         }}
       />

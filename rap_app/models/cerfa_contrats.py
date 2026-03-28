@@ -81,6 +81,11 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "cfa_code_postal": {"source": "formation.centre.cfa_responsable_code_postal"},
     "cfa_commune": {"source": "formation.centre.cfa_responsable_commune"},
     "cfa_entreprise": {"source": "formation.centre.cfa_entreprise"},
+    "cfa_est_lieu_formation_principal": {"source": "formation.centre.cfa_responsable_est_lieu_principal"},
+    # Le modele Formation ne distingue pas aujourd'hui "diplome vise" et
+    # "intitule precis" : les deux champs CERFA sont alimentes depuis
+    # `formation.intitule_diplome`, puis peuvent etre ajustes manuellement.
+    "diplome_vise": {"source": "formation.intitule_diplome"},
     "diplome_intitule": {"source": "formation.intitule_diplome"},
     "code_diplome": {"source": "formation.code_diplome"},
     "code_rncp": {"source": "formation.code_rncp"},
@@ -103,8 +108,6 @@ CERFA_AUTOFILL_MISSING_FIELDS: Dict[str, str] = {
     "employeur_public": "Dérivable seulement si on normalise clairement le mapping du type employeur vers la case CERFA.",
     "maitre_eligible": "Aucune règle métier explicite actuelle pour calculer l'éligibilité.",
     "apprenti_droits_rqth": "Aucun champ source équivalent dans candidat.",
-    "diplome_vise": "Pas de champ dédié distinct de l'intitulé diplôme côté formation.",
-    "cfa_est_lieu_formation_principal": "Le centre a `cfa_responsable_est_lieu_principal`, mais le lien exact au CERFA doit être validé métier.",
     "type_derogation": "Pas de champ métier source.",
     "numero_contrat_precedent": "Pas de gestion native des avenants/contrats précédents.",
     "date_conclusion": "Pas de champ métier source explicite.",

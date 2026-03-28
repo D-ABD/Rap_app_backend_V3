@@ -8,6 +8,7 @@ import {
   FormControlLabel,
   Paper,
   Divider,
+  Alert,
 } from "@mui/material";
 import useForm from "../../hooks/useForm";
 import type { CentreFormData } from "../../types/centre";
@@ -68,6 +69,10 @@ export default function CentreForm({
             Informations générales
           </Typography>
           <Divider />
+
+          <Alert severity="info">
+            Les informations du centre et du CFA responsable servent au pré-remplissage du CERFA.
+          </Alert>
 
           <TextField
             label="Nom du centre"
@@ -150,6 +155,10 @@ export default function CentreForm({
             CFA Responsable
           </Typography>
           <Divider />
+
+          <Alert severity="info">
+            Ce bloc alimente la partie CFA / lieu principal de formation du CERFA.
+          </Alert>
 
           <FormControlLabel
             control={
