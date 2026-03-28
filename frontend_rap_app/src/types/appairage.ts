@@ -208,6 +208,8 @@ export interface AppairageFormData {
   activite?: AppairageActivite | null;
 
   commentaire: string;
+  retour_partenaire: string | null;
+  date_retour: string | null;
 
   last_commentaire: string | null;
   commentaires: {

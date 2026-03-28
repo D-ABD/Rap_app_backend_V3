@@ -43,6 +43,10 @@ class PartenaireAdmin(admin.ModelAdmin):
 
     created_at_display.short_description = "Créé le"
 
+    @admin.display(description="Type employeur CERFA")
+    def type_employeur_code_display(self, obj):
+        return obj.get_type_employeur_code_display() if obj.type_employeur_code else "—"
+
     # === Listes / filtres / recherche ==================================================
     list_display = (
         "nom",
@@ -52,7 +56,7 @@ class PartenaireAdmin(admin.ModelAdmin):
         "city",
         "default_centre",
         "siret",
-        "type_employeur",
+        "type_employeur_code_display",
         "nb_formations",
         "nb_prospections",
         "nb_appairages",
@@ -66,7 +70,7 @@ class PartenaireAdmin(admin.ModelAdmin):
         "secteur_activite",
         "city",
         "actions",
-        "type_employeur",
+        "type_employeur_code",
         "assurance_chomage_speciale",
         "default_centre",
         "created_at",
@@ -137,8 +141,8 @@ class PartenaireAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "siret",
-                    "type_employeur",
-                    "employeur_specifique",
+                    "type_employeur_code",
+                    "employeur_specifique_code",
                     "code_ape",
                     "effectif_total",
                     "idcc",
@@ -156,7 +160,7 @@ class PartenaireAdmin(admin.ModelAdmin):
                     "maitre1_courriel",
                     "maitre1_emploi_occupe",
                     "maitre1_diplome_titre",
-                    "maitre1_niveau_diplome",
+                    "maitre1_niveau_diplome_code",
                 ),
             },
         ),
@@ -170,7 +174,7 @@ class PartenaireAdmin(admin.ModelAdmin):
                     "maitre2_courriel",
                     "maitre2_emploi_occupe",
                     "maitre2_diplome_titre",
-                    "maitre2_niveau_diplome",
+                    "maitre2_niveau_diplome_code",
                 ),
             },
         ),
@@ -235,7 +239,7 @@ class PartenaireAdmin(admin.ModelAdmin):
                     p.get_type_display(),
                     p.secteur_activite or "",
                     p.siret or "",
-                    p.get_type_employeur_display() if p.type_employeur else "",
+                    p.get_type_employeur_code_display() if p.type_employeur_code else "",
                     p.code_ape or "",
                     p.effectif_total or "",
                     p.idcc or "",

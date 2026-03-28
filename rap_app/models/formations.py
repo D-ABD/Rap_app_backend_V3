@@ -30,6 +30,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
+from .cerfa_codes import CerfaDiplomeCode
 from .centres import Centre
 from .statut import Statut, get_default_color
 from .types_offre import TypeOffre
@@ -404,6 +405,14 @@ class Formation(BaseModel):
         blank=True,
         verbose_name=_("Diplôme ou titre visé par l’apprenti"),
         help_text=_("Intitulé précis du diplôme ou titre préparé"),
+    )
+    diplome_vise_code = models.CharField(
+        max_length=2,
+        null=True,
+        blank=True,
+        choices=CerfaDiplomeCode.choices,
+        verbose_name=_("Diplome vise CERFA"),
+        help_text=_("Code CERFA du diplome ou titre vise par l'apprenti."),
     )
     code_diplome = models.CharField(
         max_length=50,

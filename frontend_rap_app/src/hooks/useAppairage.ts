@@ -65,7 +65,10 @@ export function useAppairage(id?: number | null) {
 
     api
       .get(`/appairages/${id}/`)
-      .then((res) => setData(res.data as Appairage))
+      .then((res) => {
+        const actualData = res.data.data || res.data;
+        setData(actualData as Appairage);
+      })
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }, [id]);
@@ -82,7 +85,7 @@ export function useCreateAppairage() {
     setLoading(true);
     try {
       const res = await api.post("/appairages/", payload);
-      return res.data as Appairage;
+      return (res.data.data || res.data) as Appairage;
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -103,7 +106,7 @@ export function useUpdateAppairage(id: number) {
     setLoading(true);
     try {
       const res = await api.patch(`/appairages/${id}/`, payload);
-      return res.data as Appairage;
+      return (res.data.data || res.data) as Appairage;
     } catch (err) {
       setError(err as Error);
       throw err;

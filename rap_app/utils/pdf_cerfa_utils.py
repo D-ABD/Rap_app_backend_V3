@@ -45,6 +45,31 @@ def _candidate_overlay_values(cerfa_contrat):
     )
 
     return {
+        # Bloc employeur (cases a cocher page 1)
+        "Case #C3#A0 cocher 1": _checkbox_mark(
+            getattr(cerfa_contrat, "employeur_prive", None), True
+        ),
+        "Case #C3#A0 cocher 2": _checkbox_mark(
+            getattr(cerfa_contrat, "employeur_public", None), True
+        ),
+        "Case #C3#A0 cocher 2_2": _checkbox_mark(
+            getattr(cerfa_contrat, "employeur_regime_assurance_chomage", None), True
+        ),
+        # Bloc employeur (texte page 1)
+        "Zone de texte 8": format_value(getattr(cerfa_contrat, "employeur_nom", None)),
+        "Zone de texte 8_2": format_value(getattr(cerfa_contrat, "employeur_siret", None)),
+        "Zone de texte 8_3": format_value(getattr(cerfa_contrat, "employeur_type", None)),
+        "Zone de texte 8_4": format_value(getattr(cerfa_contrat, "employeur_specifique", None)),
+        "Zone de texte 8_5": format_value(getattr(cerfa_contrat, "employeur_effectif", None)),
+        "Zone de texte 8_6": format_value(getattr(cerfa_contrat, "employeur_code_idcc", None)),
+        "Zone de texte 8_7": format_value(getattr(cerfa_contrat, "employeur_code_ape", None)),
+        "Zone de texte 8_14": format_value(getattr(cerfa_contrat, "employeur_adresse_numero", None)),
+        "Zone de texte 8_13": format_value(getattr(cerfa_contrat, "employeur_adresse_voie", None)),
+        "Zone de texte 8_8": format_value(getattr(cerfa_contrat, "employeur_adresse_complement", None)),
+        "Zone de texte 8_9": format_value(getattr(cerfa_contrat, "employeur_code_postal", None)),
+        "Zone de texte 8_10": format_value(getattr(cerfa_contrat, "employeur_commune", None)),
+        "Zone de texte 8_11": format_value(getattr(cerfa_contrat, "employeur_telephone", None)),
+        "Zone de texte 8_12": format_value(getattr(cerfa_contrat, "employeur_email", None)),
         # Bloc identite de l'apprenti
         "Zone de texte 8_15": format_value(getattr(cerfa_contrat, "apprenti_nom_naissance", None)),
         "Zone de texte 8_16": format_value(getattr(cerfa_contrat, "apprenti_nom_usage", None)),
@@ -462,7 +487,13 @@ def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
 
     # 5ter - superpose directement les donnees apprenti sur la page 1
     if template_pdf.pages:
-        candidate_overlay = _build_candidate_overlay(template_pdf.pages[0], cerfa_contrat)
+        candidate_overlay = _build_overlay(
+            template_pdf.pages[0],
+            _candidate_overlay_values(cerfa_contrat),
+            text_font_size=7.5,
+            checkbox_font_size=8,
+            single_line_text=True,
+        )
         if candidate_overlay and candidate_overlay.pages:
             PageMerge(template_pdf.pages[0]).add(candidate_overlay.pages[0]).render()
 

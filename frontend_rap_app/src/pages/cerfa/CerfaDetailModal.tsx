@@ -214,8 +214,8 @@ export default function CerfaDetailModal({
                 <Field label="Sexe" value={nn(contrat.apprenti_sexe)} />
                 <Field label="Département de naissance" value={nn(contrat.apprenti_departement_naissance)} />
                 <Field label="Commune de naissance" value={nn(contrat.apprenti_commune_naissance)} />
-                <Field label="Nationalité" value={nn(contrat.apprenti_nationalite)} />
-                <Field label="Régime social" value={nn(contrat.apprenti_regime_social)} />
+                <Field label="Nationalité CERFA" value={nn(contrat.apprenti_nationalite)} />
+                <Field label="Régime social CERFA" value={nn(contrat.apprenti_regime_social)} />
                 <Field label="Numéro" value={nn(contrat.apprenti_numero)} />
                 <Field label="Voie" value={nn(contrat.apprenti_voie)} />
                 <Field label="Complément" value={nn(contrat.apprenti_complement)} />
@@ -226,11 +226,11 @@ export default function CerfaDetailModal({
                 <Field label="Droits attachés RQTH" value={yn(contrat.apprenti_droits_rqth)} />
                 <Field label="Équivalence jeunes" value={yn(contrat.apprenti_equivalence_jeunes)} />
                 <Field label="Extension BOE" value={yn(contrat.apprenti_extension_boe)} />
-                <Field label="Situation avant contrat" value={nn(contrat.apprenti_situation_avant)} />
-                <Field label="Dernier diplôme préparé" value={nn(contrat.apprenti_dernier_diplome_prepare)} />
-                <Field label="Dernière année suivie" value={nn(contrat.apprenti_derniere_annee_suivie)} />
+                <Field label="Situation avant contrat CERFA" value={nn(contrat.apprenti_situation_avant)} />
+                <Field label="Dernier diplôme préparé CERFA" value={nn(contrat.apprenti_dernier_diplome_prepare)} />
+                <Field label="Dernière année suivie CERFA" value={nn(contrat.apprenti_derniere_annee_suivie)} />
                 <Field label="Intitulé dernier diplôme" value={nn(contrat.apprenti_intitule_dernier_diplome)} />
-                <Field label="Plus haut diplôme" value={nn(contrat.apprenti_plus_haut_diplome)} />
+                <Field label="Plus haut diplôme CERFA" value={nn(contrat.apprenti_plus_haut_diplome)} />
                 <Field label="Projet création / reprise" value={yn(contrat.apprenti_projet_entreprise)} />
               </Section>
             </Grid>
@@ -239,8 +239,8 @@ export default function CerfaDetailModal({
               <Section title="Employeur">
                 <Field label="Employeur prive" value={yn(contrat.employeur_prive)} />
                 <Field label="Employeur public" value={yn(contrat.employeur_public)} />
-                <Field label="Nom" value={nn(contrat.employeur_nom)} />
-                <Field label="SIRET" value={nn(contrat.employeur_siret)} />
+                <Field label="Nom et prenom ou denomination" value={nn(contrat.employeur_nom)} />
+                <Field label="N° SIRET de l'etablissement" value={nn(contrat.employeur_siret)} />
                 <Field label="Telephone" value={nn(contrat.employeur_telephone)} />
                 <Field label="Courriel" value={nn(contrat.employeur_email)} />
                 <Field label="Numero" value={nn(contrat.employeur_adresse_numero)} />
@@ -248,11 +248,11 @@ export default function CerfaDetailModal({
                 <Field label="Complement" value={nn(contrat.employeur_adresse_complement)} />
                 <Field label="Code postal" value={nn(contrat.employeur_code_postal)} />
                 <Field label="Commune" value={nn(contrat.employeur_commune)} />
-                <Field label="Type employeur" value={nn(contrat.employeur_type)} />
-                <Field label="Employeur specifique" value={nn(contrat.employeur_specifique)} />
+                <Field label="Type d'employeur CERFA" value={nn(contrat.employeur_type)} />
+                <Field label="Employeur specifique CERFA" value={nn(contrat.employeur_specifique)} />
                 <Field label="Code APE" value={nn(contrat.employeur_code_ape)} />
-                <Field label="Effectif" value={nn(contrat.employeur_effectif)} />
-                <Field label="Code IDCC" value={nn(contrat.employeur_code_idcc)} />
+                <Field label="Effectif total salaries de l'entreprise" value={nn(contrat.employeur_effectif)} />
+                <Field label="Code IDCC de la convention collective applicable" value={nn(contrat.employeur_code_idcc)} />
                 <Field
                   label="Regime assurance chomage specifique"
                   value={yn(contrat.employeur_regime_assurance_chomage)}
@@ -262,7 +262,7 @@ export default function CerfaDetailModal({
 
             <Grid item xs={12}>
               <Section title="Formation / Diplôme">
-                <Field label="Diplôme visé" value={nn(contrat.diplome_vise)} />
+                <Field label="Diplôme visé CERFA" value={nn(contrat.diplome_vise)} />
                 <Field label="Intitule precis" value={nn(contrat.diplome_intitule)} />
                 <Field label="Code diplome" value={nn(contrat.code_diplome)} />
                 <Field label="Code RNCP" value={nn(contrat.code_rncp)} />
@@ -271,6 +271,31 @@ export default function CerfaDetailModal({
                 <Field label="Date fin epreuves / examens" value={fmt(contrat.formation_fin)} />
                 <Field label="Duree formation (heures)" value={nn(contrat.formation_duree_heures)} />
                 <Field label="Heures a distance" value={nn(contrat.formation_distance_heures)} />
+              </Section>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Section title="Contrat">
+                <Field label="Type de contrat CERFA" value={nn(contrat.type_contrat)} />
+                <Field label="Type de derogation CERFA" value={nn(contrat.type_derogation)} />
+                <Field label="Numero contrat precedent" value={nn(contrat.numero_contrat_precedent)} />
+                <Field label="Date conclusion" value={fmt(contrat.date_conclusion)} />
+                <Field label="Date debut execution" value={fmt(contrat.date_debut_execution)} />
+                <Field label="Date fin contrat" value={fmt(contrat.date_fin_contrat)} />
+                <Field
+                  label="Date debut formation pratique employeur"
+                  value={fmt(contrat.date_debut_formation_pratique_employeur)}
+                />
+                <Field label="Date effet avenant" value={fmt(contrat.date_effet_avenant)} />
+                <Field
+                  label="Travail sur machines dangereuses"
+                  value={yn(contrat.travail_machines_dangereuses)}
+                />
+                <Field label="Duree hebdo (heures)" value={nn(contrat.duree_hebdo_heures)} />
+                <Field label="Duree hebdo (minutes)" value={nn(contrat.duree_hebdo_minutes)} />
+                <Field label="Salaire brut mensuel" value={nn(contrat.salaire_brut_mensuel)} />
+                <Field label="Caisse retraite" value={nn(contrat.caisse_retraite)} />
+                <Field label="Lieu de signature" value={nn(contrat.lieu_signature)} />
               </Section>
             </Grid>
 
@@ -307,14 +332,14 @@ export default function CerfaDetailModal({
                 <Field label="Maitre 1 - courriel" value={nn(contrat.maitre1_email)} />
                 <Field label="Maitre 1 - emploi" value={nn(contrat.maitre1_emploi)} />
                 <Field label="Maitre 1 - diplome" value={nn(contrat.maitre1_diplome)} />
-                <Field label="Maitre 1 - niveau" value={nn(contrat.maitre1_niveau_diplome)} />
+                <Field label="Maitre 1 - niveau CERFA" value={nn(contrat.maitre1_niveau_diplome)} />
                 <Field label="Maitre 2 - nom" value={nn(contrat.maitre2_nom)} />
                 <Field label="Maitre 2 - prenom" value={nn(contrat.maitre2_prenom)} />
                 <Field label="Maitre 2 - naissance" value={fmt(contrat.maitre2_date_naissance)} />
                 <Field label="Maitre 2 - courriel" value={nn(contrat.maitre2_email)} />
                 <Field label="Maitre 2 - emploi" value={nn(contrat.maitre2_emploi)} />
                 <Field label="Maitre 2 - diplome" value={nn(contrat.maitre2_diplome)} />
-                <Field label="Maitre 2 - niveau" value={nn(contrat.maitre2_niveau_diplome)} />
+                <Field label="Maitre 2 - niveau CERFA" value={nn(contrat.maitre2_niveau_diplome)} />
               </Section>
             </Grid>
           </Grid>

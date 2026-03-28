@@ -106,8 +106,8 @@ export default function AppairageForm({
           : (initialValues?.formation ?? null),
       statut: initialValues?.statut ?? "transmis",
       commentaire: initialValues?.commentaire ?? null,
-      retour_partenaire: null,
-      date_retour: null,
+      retour_partenaire: initialValues?.retour_partenaire ?? null,
+      date_retour: initialValues?.date_retour ?? null,
     }),
     [initialValues, fixedFormationId]
   );

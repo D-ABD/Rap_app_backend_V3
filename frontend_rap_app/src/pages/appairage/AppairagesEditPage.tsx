@@ -148,6 +148,8 @@ export default function AppairagesEditPage() {
     statut: appairageDetail.statut,
     activite: appairageDetail.activite ?? null,
     commentaire: appairageDetail.commentaire ?? "",
+    retour_partenaire: appairageDetail.retour_partenaire ?? null,
+    date_retour: appairageDetail.date_retour ?? null,
     last_commentaire: null,
     commentaires:
       appairageDetail.commentaires?.map((c) => ({

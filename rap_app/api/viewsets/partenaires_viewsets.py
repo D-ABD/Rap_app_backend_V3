@@ -718,8 +718,8 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
                     p.contact_telephone or "",
                     # Employeur
                     p.siret or "",
-                    p.get_type_employeur_display() if p.type_employeur else "",
-                    p.employeur_specifique or "",
+                    p.get_type_employeur_code_display() if p.type_employeur_code else "",
+                    p.get_employeur_specifique_code_display() if p.employeur_specifique_code else "",
                     p.code_ape or "",
                     p.effectif_total or "",
                     p.idcc or "",
@@ -731,7 +731,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
                     p.maitre1_courriel or "",
                     p.maitre1_emploi_occupe or "",
                     p.maitre1_diplome_titre or "",
-                    p.maitre1_niveau_diplome or "",
+                    p.get_maitre1_niveau_diplome_code_display() if p.maitre1_niveau_diplome_code else "",
                     # Maître 2
                     p.maitre2_nom_naissance or "",
                     p.maitre2_prenom or "",
@@ -739,7 +739,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
                     p.maitre2_courriel or "",
                     p.maitre2_emploi_occupe or "",
                     p.maitre2_diplome_titre or "",
-                    p.maitre2_niveau_diplome or "",
+                    p.get_maitre2_niveau_diplome_code_display() if p.maitre2_niveau_diplome_code else "",
                     # Web & Actions
                     p.website or "",
                     p.social_network_url or "",

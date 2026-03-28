@@ -17,8 +17,22 @@ import {
 import type {
   CandidatFormData,
   CandidatMeta,
-
 } from "../../../types/candidat";
+
+const TYPE_CONTRAT_CERFA_OPTIONS = [
+  { value: "11", label: "11 - Premier contrat d'apprentissage" },
+  { value: "21", label: "21 - Nouveau contrat meme employeur" },
+  { value: "22", label: "22 - Nouveau contrat autre employeur" },
+  { value: "23", label: "23 - Nouveau contrat apres rupture" },
+  { value: "31", label: "31 - Modification situation juridique employeur" },
+  { value: "32", label: "32 - Changement d'employeur contrat saisonnier" },
+  { value: "33", label: "33 - Prolongation suite echec examen" },
+  { value: "34", label: "34 - Prolongation suite RQTH" },
+  { value: "35", label: "35 - Diplome supplementaire prepare" },
+  { value: "36", label: "36 - Autres changements" },
+  { value: "37", label: "37 - Modification lieu d'execution" },
+  { value: "38", label: "38 - Modification lieu principal de formation" },
+];
 
 interface Props {
   form: CandidatFormData;
@@ -139,6 +153,24 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
           </Grid>
 
           {/* Type de contrat */}
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <FormLabel>Type de contrat CERFA</FormLabel>
+              <Select
+                value={form.type_contrat_code ?? ""}
+                onChange={updateSelect("type_contrat_code")}
+                displayEmpty
+              >
+                <MenuItem value="">—</MenuItem>
+                {TYPE_CONTRAT_CERFA_OPTIONS.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
           <Grid item xs={12} md={6}>
             <FormControl fullWidth>
               <FormLabel>Type de contrat du stagiaire</FormLabel>

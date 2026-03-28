@@ -55,6 +55,73 @@ const TYPE_CONTRAT_LABELS: Record<string, string> = {
   autre: "Autre",
 };
 
+const CERFA_CODE_LABELS: Record<string, Record<string, string>> = {
+  nationalite_code: {
+    "1": "1 - Francaise",
+    "2": "2 - Union europeenne",
+    "3": "3 - Etranger hors Union europeenne",
+  },
+  regime_social_code: {
+    "1": "1 - MSA",
+    "2": "2 - URSSAF",
+  },
+  situation_avant_contrat_code: {
+    "1": "1 - Scolaire",
+    "2": "2 - Prepa apprentissage",
+    "3": "3 - Etudiant",
+    "4": "4 - Contrat d'apprentissage",
+    "5": "5 - Contrat de professionnalisation",
+    "6": "6 - Contrat aide",
+    "7": "7 - Stagiaire avant contrat",
+    "8": "8 - Stagiaire apres rupture",
+    "9": "9 - Autre stagiaire formation pro",
+    "10": "10 - Salarie",
+    "11": "11 - Recherche d'emploi",
+    "12": "12 - Inactif",
+  },
+  dernier_diplome_prepare_code: {
+    "13": "13 - Aucun diplome ni titre professionnel",
+    "25": "25 - Diplome national du Brevet",
+    "26": "26 - Certificat de formation generale",
+    "33": "33 - CAP",
+    "34": "34 - BEP",
+    "35": "35 - Certificat de specialisation",
+    "38": "38 - Autre CAP/BEP",
+    "41": "41 - Baccalaureat professionnel",
+    "42": "42 - Baccalaureat general",
+    "43": "43 - Baccalaureat technologique",
+    "44": "44 - Diplome de specialisation professionnelle",
+    "49": "49 - Autre niveau bac",
+    "54": "54 - BTS",
+    "55": "55 - DUT",
+    "58": "58 - Autre niveau bac+2",
+    "62": "62 - Licence professionnelle",
+    "63": "63 - Licence generale",
+    "64": "64 - BUT",
+    "69": "69 - Autre niveau bac+3 ou 4",
+    "73": "73 - Master",
+    "75": "75 - Diplome d'ingenieur",
+    "76": "76 - Diplome d'ecole de commerce",
+    "79": "79 - Autre niveau bac+5 ou plus",
+    "80": "80 - Doctorat",
+  },
+  diplome_plus_eleve_obtenu_code: {},
+  derniere_classe_code: {
+    "01": "01 - Derniere annee validee et diplome obtenu",
+    "11": "11 - 1ere annee validee",
+    "12": "12 - 1ere annee non validee",
+    "21": "21 - 2e annee validee",
+    "22": "22 - 2e annee non validee",
+    "31": "31 - 3e annee validee",
+    "32": "32 - 3e annee non validee",
+    "40": "40 - 1er cycle secondaire acheve",
+    "41": "41 - Interruption en 3e",
+    "42": "42 - Interruption en 4e",
+  },
+};
+
+CERFA_CODE_LABELS.diplome_plus_eleve_obtenu_code = CERFA_CODE_LABELS.dernier_diplome_prepare_code;
+
 function typeContratLabel(value?: string | null): string {
   if (!value) return "—";
   return TYPE_CONTRAT_LABELS[value] ?? value;
@@ -164,7 +231,7 @@ const SECTIONS: {
       { key: "departement_naissance", label: "Département de naissance" },
       { key: "commune_naissance", label: "Commune de naissance" },
       { key: "pays_naissance", label: "Pays de naissance" },
-      { key: "nationalite", label: "Nationalité" },
+      { key: "nationalite_code", label: "Nationalité CERFA" },
       { key: "nir", label: "NIR" },
     ],
   },
@@ -241,17 +308,16 @@ const SECTIONS: {
   {
     title: "Infos pour CERFA : Parcours scolaire et projet...",
     fields: [
-      { key: "dernier_diplome_prepare", label: "Dernier diplôme préparé" },
-      { key: "diplome_plus_eleve_obtenu", label: "Diplôme le plus élevé obtenu" },
-      { key: "derniere_classe", label: "Dernière classe fréquentée" },
+      { key: "dernier_diplome_prepare_code", label: "Dernier diplôme préparé CERFA" },
+      { key: "diplome_plus_eleve_obtenu_code", label: "Diplôme le plus élevé obtenu CERFA" },
+      { key: "derniere_classe_code", label: "Dernière classe CERFA" },
       { key: "intitule_diplome_prepare", label: "Intitulé du diplôme préparé" },
-      { key: "situation_avant_contrat", label: "Situation avant contrat" },
+      { key: "situation_avant_contrat_code", label: "Situation avant contrat CERFA" },
       { key: "projet_creation_entreprise", label: "Projet création entreprise" },
-      { key: "regime_social", label: "Régime social" },
+      { key: "regime_social_code", label: "Régime social CERFA" },
       { key: "sportif_haut_niveau", label: "Sportif de haut niveau" },
       { key: "equivalence_jeunes", label: "Équivalence jeunes" },
       { key: "extension_boe", label: "Extension BOE" },
-      { key: "situation_actuelle", label: "Situation actuelle" },
     ],
   },
   {
@@ -506,8 +572,10 @@ export default function CandidatDetailModal({
                           )
                         ) : typeof val === "boolean"
                           ? yn(val)
-                          : key === "type_contrat"
-                            ? typeContratLabel(val as string | null)
+                        : key === "type_contrat"
+                          ? typeContratLabel(val as string | null)
+                          : key in CERFA_CODE_LABELS
+                            ? nn(CERFA_CODE_LABELS[key as string]?.[String(val ?? "")] ?? (val as string | null))
                           : key === "parcours_phase_display" || key === "statut_metier_display"
                             ? uiPhaseLabel(candidat)
                           : key.toLowerCase().includes("date")

@@ -1,8 +1,9 @@
-"""Modèle métier des candidats et de leur historique de placement.
+"""Modele metier des candidats et de leur historique de placement.
 
-Le modèle porte les données métier persistantes ; les créations de compte,
-liaisons utilisateur et synchronisations cross-modules sont désormais pilotées
-par les services applicatifs plutôt que par des effets implicites de signaux.
+Le modele porte les donnees metier persistantes. Pour les champs CERFA a choix
+fermes, la source metier est volontairement normalisee via des champs `_code`
+afin d'eviter les variantes de saisie. Les cas hors liste restent saisissables
+directement dans le module CERFA via le snapshot de contrat.
 """
 
 import logging
@@ -20,6 +21,14 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
+from .cerfa_codes import (
+    CerfaDerniereClasseCode,
+    CerfaDiplomeCode,
+    CerfaNationaliteCode,
+    CerfaRegimeSocialCode,
+    CerfaSituationAvantContratCode,
+    CerfaTypeContratCode,
+)
 from .custom_user import CustomUser
 from ..services.historique_service import (
     PLACEMENT_FIELDS,
@@ -211,7 +220,14 @@ class Candidat(BaseModel):
     pays_naissance = models.CharField(
         max_length=100, blank=True, null=True, verbose_name=_("Pays de naissance"), default="France"
     )
-    nationalite = models.CharField(max_length=100, blank=True, null=True, default="Française")
+    nationalite_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaNationaliteCode.choices,
+        verbose_name=_("Nationalite CERFA"),
+        help_text=_("Code CERFA de la nationalite de l'apprenti."),
+    )
     nir = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)"))
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
@@ -302,6 +318,14 @@ class Candidat(BaseModel):
     type_contrat = models.CharField(
         max_length=30, choices=TypeContrat.choices, blank=True, null=True, verbose_name=_("Type de contrat")
     )
+    type_contrat_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaTypeContratCode.choices,
+        verbose_name=_("Type de contrat CERFA"),
+        help_text=_("Code CERFA du type de contrat ou avenant."),
+    )
     disponibilite = models.CharField(
         max_length=30, choices=Disponibilite.choices, blank=True, null=True, verbose_name=_("Disponibilité")
     )
@@ -337,33 +361,51 @@ class Candidat(BaseModel):
     )
 
     # Champs complémentaires
-    regime_social = models.CharField(
-        max_length=100, blank=True, null=True, verbose_name=_("Régime social (Sécurité sociale)")
+    regime_social_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaRegimeSocialCode.choices,
+        verbose_name=_("Regime social CERFA"),
+        help_text=_("Code CERFA du regime social de rattachement."),
     )
     sportif_haut_niveau = models.BooleanField(default=False, verbose_name=_("Sportif de haut niveau?"))
     equivalence_jeunes = models.BooleanField(default=False, verbose_name=_("Equivalence jeune?"))
     extension_boe = models.BooleanField(default=False, verbose_name=_("Extension BOE?"))
-    situation_actuelle = models.CharField(
-        max_length=255,
+    dernier_diplome_prepare_code = models.CharField(
+        max_length=2,
         blank=True,
         null=True,
-        verbose_name=_("Situation avant ce contrat"),
-        help_text=_("Ex. demandeur d’emploi, lycéen, salarié…"),
+        choices=CerfaDiplomeCode.choices,
+        verbose_name=_("Dernier diplome prepare CERFA"),
+        help_text=_("Code CERFA du dernier diplome ou titre prepare par le candidat."),
     )
-    dernier_diplome_prepare = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name=_("Dernier diplôme préparé")
+    diplome_plus_eleve_obtenu_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDiplomeCode.choices,
+        verbose_name=_("Plus haut diplome obtenu CERFA"),
+        help_text=_("Code CERFA du diplome ou titre le plus eleve obtenu."),
     )
-    diplome_plus_eleve_obtenu = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name=_("Diplôme ou titre le plus élevé obtenu")
-    )
-    derniere_classe = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name=_("Dernière classe fréquentée")
+    derniere_classe_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDerniereClasseCode.choices,
+        verbose_name=_("Derniere classe CERFA"),
+        help_text=_("Code CERFA de la derniere classe ou annee suivie."),
     )
     intitule_diplome_prepare = models.CharField(
         max_length=255, blank=True, null=True, verbose_name=_("Intitulé du diplôme préparé")
     )
-    situation_avant_contrat = models.CharField(
-        max_length=255, blank=True, null=True, verbose_name=_("Situation avant le contrat")
+    situation_avant_contrat_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaSituationAvantContratCode.choices,
+        verbose_name=_("Situation avant contrat CERFA"),
+        help_text=_("Code CERFA de la situation avant contrat."),
     )
     projet_creation_entreprise = models.BooleanField(default=False)
     representant_lien = models.CharField(

@@ -85,7 +85,9 @@ export type CerfaContratBase = {
   employeur_email: string | null;
   employeur_siret: string | null;
   employeur_type: string | null;
+  employeur_type_code: string | null;
   employeur_specifique: string | null;
+  employeur_specifique_code: string | null;
   employeur_code_ape: string | null;
   employeur_effectif: number | null;
   employeur_code_idcc: string | null;
@@ -99,6 +101,7 @@ export type CerfaContratBase = {
   maitre1_emploi: string | null;
   maitre1_diplome: string | null;
   maitre1_niveau_diplome: string | null;
+  maitre1_niveau_diplome_code: string | null;
 
   maitre2_nom: string | null;
   maitre2_prenom: string | null;
@@ -107,6 +110,7 @@ export type CerfaContratBase = {
   maitre2_emploi: string | null;
   maitre2_diplome: string | null;
   maitre2_niveau_diplome: string | null;
+  maitre2_niveau_diplome_code: string | null;
   maitre_eligible: boolean;
 
   // APPRENTI
@@ -136,17 +140,23 @@ export type CerfaContratBase = {
   apprenti_departement_naissance: string | null;
   apprenti_commune_naissance: string | null;
   apprenti_nationalite: string | null;
+  apprenti_nationalite_code: string | null;
   apprenti_regime_social: string | null;
+  apprenti_regime_social_code: string | null;
   apprenti_sportif_haut_niveau: boolean;
   apprenti_rqth: boolean;
   apprenti_droits_rqth: boolean;
   apprenti_equivalence_jeunes: boolean;
   apprenti_extension_boe: boolean;
   apprenti_situation_avant: string | null;
+  apprenti_situation_avant_code: string | null;
   apprenti_dernier_diplome_prepare: string | null;
+  apprenti_dernier_diplome_prepare_code: string | null;
   apprenti_derniere_annee_suivie: string | null;
+  apprenti_derniere_annee_suivie_code: string | null;
   apprenti_intitule_dernier_diplome: string | null;
   apprenti_plus_haut_diplome: string | null;
+  apprenti_plus_haut_diplome_code: string | null;
   apprenti_projet_entreprise: boolean;
 
   // FORMATION / CFA
@@ -162,6 +172,7 @@ export type CerfaContratBase = {
   cfa_est_lieu_formation_principal: boolean;
 
   diplome_vise: string | null;
+  diplome_vise_code: string | null;
   diplome_intitule: string | null;
   code_diplome: string | null;
   code_rncp: string | null;
@@ -178,38 +189,26 @@ export type CerfaContratBase = {
 
   // CONTRAT
   type_contrat: string | null;
+  type_contrat_code: string | null;
   type_derogation: string | null;
+  type_derogation_code: string | null;
   motif_derogation: string | null;
   numero_contrat_precedent: string | null;
   date_conclusion: string | null;
   date_debut_execution: string | null;
   date_fin_contrat: string | null;
+  date_debut_formation_pratique_employeur: string | null;
   date_effet_avenant: string | null;
   duree_hebdo_heures: number | null;
   duree_hebdo_minutes: number | null;
-  duree_totale_contrat_mois: number | null;
-  travail_dangereux: boolean;
-  age_apprenti: number | null;
+  travail_machines_dangereuses: boolean;
 
   // REMUNERATION
-  ref_salaire: string | null;
   salaire_brut_mensuel: number | null;
   caisse_retraite: string | null;
-  avantage_nourriture: number | null;
-  avantage_logement: number | null;
-  avantage_autre: string | null;
-  avantages_en_nature_total: number | null;
-
-  // ATTESTATION EMPLOYEUR
-  attestation_pieces_justificatives: boolean;
 
   // SIGNATURES
   lieu_signature: string | null;
-  date_signature_apprenti: string | null;
-  date_signature_employeur: string | null;
-  signature_apprenti: boolean;
-  signature_employeur: boolean;
-  signature_representant_legal: boolean;
 
   // Rémunérations liées (imbriquées côté serializer)
   remunerations?: CerfaRemuneration[];

@@ -9,6 +9,11 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
+from .cerfa_codes import (
+    CerfaEmployeurSpecifiqueCode,
+    CerfaMaitreNiveauDiplomeCode,
+    CerfaTypeEmployeurCode,
+)
 
 logger = logging.getLogger("application.partenaires")
 
@@ -89,7 +94,11 @@ class PartenaireManager(models.Manager):
 
 class Partenaire(BaseModel):
     """
-    Modèle représentant un partenaire externe.
+    Modele representant un partenaire externe.
+
+    Pour l'alimentation du CERFA, les champs de reference a liste fermee sont
+    portes par des champs `_code`. Les cas plus atypiques ou hors nomenclature
+    restent saisissables au niveau du contrat CERFA lui-meme.
     """
 
     TYPE_ENTREPRISE = "entreprise"
@@ -271,29 +280,25 @@ class Partenaire(BaseModel):
         validators=[RegexValidator(r"^\d{14}$", _("Le SIRET doit comporter 14 chiffres."))],
     )
 
-    TYPE_EMPLOYEUR_CHOICES = [
-        ("prive", _("Privé")),
-        ("public", _("Public")),
-    ]
-    type_employeur = models.CharField(
-        max_length=20,
+    type_employeur_code = models.CharField(
+        max_length=2,
         blank=True,
         null=True,
-        choices=TYPE_EMPLOYEUR_CHOICES,
-        verbose_name=_("Type d'employeur"),
-        help_text=_("Définit si l'employeur est privé ou public"),
+        choices=CerfaTypeEmployeurCode.choices,
+        verbose_name=_("Type d'employeur CERFA"),
+        help_text=_("Code CERFA complet du type d'employeur."),
     )
-
-    employeur_specifique = models.CharField(
-        max_length=255,
+    employeur_specifique_code = models.CharField(
+        max_length=1,
         blank=True,
         null=True,
-        verbose_name=_("Employeur spécifique"),
-        help_text=_("Ex: artisan, profession libérale…"),
+        choices=CerfaEmployeurSpecifiqueCode.choices,
+        verbose_name=_("Employeur specifique CERFA"),
+        help_text=_("Code CERFA de l'employeur specifique."),
     )
 
     code_ape = models.CharField(
-        max_length=10, blank=True, null=True, verbose_name=_("Code APE"), help_text=_("Code APE de l'entreprise")
+        max_length=50, blank=True, null=True, verbose_name=_("Code APE"), help_text=_("Code APE de l'entreprise")
     )
 
     effectif_total = models.PositiveIntegerField(
@@ -301,7 +306,7 @@ class Partenaire(BaseModel):
     )
 
     idcc = models.CharField(
-        max_length=10, blank=True, null=True, verbose_name=_("IDCC"), help_text=_("Code convention collective")
+        max_length=50, blank=True, null=True, verbose_name=_("IDCC"), help_text=_("Code convention collective")
     )
 
     assurance_chomage_speciale = models.BooleanField(
@@ -348,11 +353,13 @@ class Partenaire(BaseModel):
         verbose_name=_("Maître d’apprentissage n°1 - Diplôme ou titre le plus élevé obtenu"),
     )
 
-    maitre1_niveau_diplome = models.CharField(
-        max_length=50,
+    maitre1_niveau_diplome_code = models.CharField(
+        max_length=1,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°1 - Niveau de diplôme ou titre le plus élevé obtenu"),
+        choices=CerfaMaitreNiveauDiplomeCode.choices,
+        verbose_name=_("Maître d’apprentissage n°1 - Niveau CERFA"),
+        help_text=_("Code CERFA du niveau de diplome du maitre d'apprentissage n°1."),
     )
 
     maitre2_nom_naissance = models.CharField(
@@ -380,11 +387,13 @@ class Partenaire(BaseModel):
         verbose_name=_("Maître d’apprentissage n°2 - Diplôme ou titre le plus élevé obtenu"),
     )
 
-    maitre2_niveau_diplome = models.CharField(
-        max_length=50,
+    maitre2_niveau_diplome_code = models.CharField(
+        max_length=1,
         blank=True,
         null=True,
-        verbose_name=_("Maître d’apprentissage n°2 - Niveau de diplôme ou titre le plus élevé obtenu"),
+        choices=CerfaMaitreNiveauDiplomeCode.choices,
+        verbose_name=_("Maître d’apprentissage n°2 - Niveau CERFA"),
+        help_text=_("Code CERFA du niveau de diplome du maitre d'apprentissage n°2."),
     )
 
     slug = models.SlugField(

@@ -132,7 +132,7 @@ export interface Candidat {
   departement_naissance?: string | null;
   commune_naissance?: string | null;
   pays_naissance?: string | null;
-  nationalite?: string | null;
+  nationalite_code?: string | null;
   nir?: string | null; // Numéro de sécurité sociale (15 chiffres)
   rqth: boolean;
   permis_b: boolean;
@@ -158,18 +158,17 @@ export interface Candidat {
   formation_date_debut?: string | null;
   formation_date_fin?: string | null;
 
-  // ───── Infos pour contrats ─────
-  situation_avant_contrat?: string | null;
-  dernier_diplome_prepare?: string | null;
-  diplome_plus_eleve_obtenu?: string | null;
-  derniere_classe?: string | null;
+  // ───── Infos CERFA source : listes codees cote metier ─────
+  situation_avant_contrat_code?: string | null;
+  dernier_diplome_prepare_code?: string | null;
+  diplome_plus_eleve_obtenu_code?: string | null;
+  derniere_classe_code?: string | null;
   intitule_diplome_prepare?: string | null;
   numero_osia?: string | null;
-  regime_social?: string | null;
+  regime_social_code?: string | null;
   sportif_haut_niveau?: boolean;
   equivalence_jeunes?: boolean;
   extension_boe?: boolean;
-  situation_actuelle?: string | null;
   projet_creation_entreprise?: boolean;
   // ───── Représentant légal ─────
   representant_lien?: string | null;
@@ -194,6 +193,7 @@ export interface Candidat {
   cv_statut?: CVStatutValue | null;
   cv_statut_display?: string | null;
   type_contrat?: string | null;
+  type_contrat_code?: string | null;
   disponibilite?: string | null;
 
   entretien_done: boolean;
@@ -263,7 +263,8 @@ export interface CandidatListResponse {
   results: Candidat[];
 }
 
-// Payload d'édition/création côté front (on omet les champs calculés/serveur)
+// Payload d'edition/creation cote front. Les champs CERFA source exposes ici
+// sont volontairement les versions codees pour garder une saisie normalisee.
 export type CandidatFormData = Partial<
   Omit<
     Candidat,
@@ -320,7 +321,6 @@ export interface CandidatMeta {
 
   // ✅ nouveaux possibles selon backend/meta
   regime_social_choices?: Choice[];
-  situation_actuelle_choices?: Choice[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

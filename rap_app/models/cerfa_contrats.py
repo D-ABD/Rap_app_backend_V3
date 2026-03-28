@@ -2,6 +2,19 @@ from typing import Any, Dict, Optional
 
 from django.db import models
 
+from .cerfa_codes import (
+    CerfaDerniereClasseCode,
+    CerfaDiplomeCode,
+    CerfaEmployeurSpecifiqueCode,
+    CerfaMaitreNiveauDiplomeCode,
+    CerfaNationaliteCode,
+    CerfaRegimeSocialCode,
+    CerfaSituationAvantContratCode,
+    CerfaTypeContratCode,
+    CerfaTypeDerogationCode,
+    CerfaTypeEmployeurCode,
+)
+
 
 CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     # Employeur / entreprise
@@ -14,8 +27,8 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "employeur_telephone": {"source": "partenaire.telephone"},
     "employeur_email": {"source": "partenaire.email"},
     "employeur_siret": {"source": "partenaire.siret"},
-    "employeur_type": {"source": "partenaire.type_employeur"},
-    "employeur_specifique": {"source": "partenaire.employeur_specifique"},
+    "employeur_type": {"source": "partenaire.type_employeur_code"},
+    "employeur_specifique": {"source": "partenaire.employeur_specifique_code"},
     "employeur_code_ape": {"source": "partenaire.code_ape"},
     "employeur_effectif": {"source": "partenaire.effectif_total"},
     "employeur_code_idcc": {"source": "partenaire.idcc"},
@@ -27,14 +40,14 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "maitre1_email": {"source": "partenaire.maitre1_courriel"},
     "maitre1_emploi": {"source": "partenaire.maitre1_emploi_occupe"},
     "maitre1_diplome": {"source": "partenaire.maitre1_diplome_titre"},
-    "maitre1_niveau_diplome": {"source": "partenaire.maitre1_niveau_diplome"},
+    "maitre1_niveau_diplome": {"source": "partenaire.maitre1_niveau_diplome_code"},
     "maitre2_nom": {"source": "partenaire.maitre2_nom_naissance"},
     "maitre2_prenom": {"source": "partenaire.maitre2_prenom"},
     "maitre2_date_naissance": {"source": "partenaire.maitre2_date_naissance"},
     "maitre2_email": {"source": "partenaire.maitre2_courriel"},
     "maitre2_emploi": {"source": "partenaire.maitre2_emploi_occupe"},
     "maitre2_diplome": {"source": "partenaire.maitre2_diplome_titre"},
-    "maitre2_niveau_diplome": {"source": "partenaire.maitre2_niveau_diplome"},
+    "maitre2_niveau_diplome": {"source": "partenaire.maitre2_niveau_diplome_code"},
     # Apprenti
     "apprenti_nom_naissance": {"source": "candidat.nom_naissance"},
     "apprenti_nom_usage": {"source": "candidat.nom"},
@@ -51,18 +64,18 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "apprenti_sexe": {"source": "candidat.sexe"},
     "apprenti_departement_naissance": {"source": "candidat.departement_naissance"},
     "apprenti_commune_naissance": {"source": "candidat.commune_naissance"},
-    "apprenti_nationalite": {"source": "candidat.nationalite"},
-    "apprenti_regime_social": {"source": "candidat.regime_social"},
+    "apprenti_nationalite": {"source": "candidat.nationalite_code"},
+    "apprenti_regime_social": {"source": "candidat.regime_social_code"},
     "apprenti_sportif_haut_niveau": {"source": "candidat.sportif_haut_niveau"},
     "apprenti_rqth": {"source": "candidat.rqth"},
     "apprenti_equivalence_jeunes": {"source": "candidat.equivalence_jeunes"},
     "apprenti_extension_boe": {"source": "candidat.extension_boe"},
     "apprenti_projet_entreprise": {"source": "candidat.projet_creation_entreprise"},
-    "apprenti_situation_avant": {"source": "candidat.situation_avant_contrat"},
-    "apprenti_dernier_diplome_prepare": {"source": "candidat.dernier_diplome_prepare"},
-    "apprenti_derniere_annee_suivie": {"source": "candidat.derniere_classe"},
+    "apprenti_situation_avant": {"source": "candidat.situation_avant_contrat_code"},
+    "apprenti_dernier_diplome_prepare": {"source": "candidat.dernier_diplome_prepare_code"},
+    "apprenti_derniere_annee_suivie": {"source": "candidat.derniere_classe_code"},
     "apprenti_intitule_dernier_diplome": {"source": "candidat.intitule_diplome_prepare"},
-    "apprenti_plus_haut_diplome": {"source": "candidat.diplome_plus_eleve_obtenu"},
+    "apprenti_plus_haut_diplome": {"source": "candidat.diplome_plus_eleve_obtenu_code"},
     # Representant legal
     "representant_nom": {"source": "candidat.representant_nom_naissance"},
     "representant_prenom": {"source": "candidat.representant_prenom"},
@@ -135,6 +148,15 @@ def _resolve_attr(obj: Any, path: str) -> Any:
 
 def _compact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
     return {key: value for key, value in data.items() if value not in (None, "", [], {}, ())}
+
+
+def _pick_code(root_obj: Any, code_attr: str, text_attr: str) -> Any:
+    if root_obj is None:
+        return None
+    code_value = getattr(root_obj, code_attr, None)
+    if code_value not in (None, ""):
+        return code_value
+    return getattr(root_obj, text_attr, None)
 
 
 class CerfaContrat(models.Model):
@@ -254,11 +276,25 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Type d’employeur ou catégorie administrative utile au CERFA.",
     )
+    employeur_type_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaTypeEmployeurCode.choices,
+        help_text="Code CERFA du type d'employeur.",
+    )
     employeur_specifique = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         help_text="Précision complémentaire sur la nature de l’employeur si nécessaire.",
+    )
+    employeur_specifique_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaEmployeurSpecifiqueCode.choices,
+        help_text="Code CERFA de l'employeur specifique.",
     )
     employeur_code_ape = models.CharField(
         max_length=10,
@@ -323,6 +359,13 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Niveau de diplôme du premier maître d’apprentissage.",
     )
+    maitre1_niveau_diplome_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaMaitreNiveauDiplomeCode.choices,
+        help_text="Code CERFA du niveau de diplome du maitre 1.",
+    )
 
     maitre2_nom = models.CharField(
         max_length=255,
@@ -363,6 +406,13 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Niveau de diplôme du second maître d’apprentissage.",
+    )
+    maitre2_niveau_diplome_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaMaitreNiveauDiplomeCode.choices,
+        help_text="Code CERFA du niveau de diplome du maitre 2.",
     )
     maitre_eligible = models.BooleanField(
         default=True,
@@ -465,11 +515,25 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Nationalité de l’apprenti.",
     )
+    apprenti_nationalite_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaNationaliteCode.choices,
+        help_text="Code CERFA de nationalite.",
+    )
     apprenti_regime_social = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         help_text="Régime social applicable à l’apprenti.",
+    )
+    apprenti_regime_social_code = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaRegimeSocialCode.choices,
+        help_text="Code CERFA du regime social.",
     )
     apprenti_sportif_haut_niveau = models.BooleanField(
         default=False,
@@ -501,17 +565,38 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Situation de l’apprenti avant le contrat.",
     )
+    apprenti_situation_avant_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaSituationAvantContratCode.choices,
+        help_text="Code CERFA de la situation avant contrat.",
+    )
     apprenti_dernier_diplome_prepare = models.CharField(
         max_length=255,
         blank=True,
         null=True,
         help_text="Dernier diplôme ou titre préparé par l’apprenti.",
     )
+    apprenti_dernier_diplome_prepare_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDiplomeCode.choices,
+        help_text="Code CERFA du dernier diplome prepare.",
+    )
     apprenti_derniere_annee_suivie = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         help_text="Dernière classe / année suivie.",
+    )
+    apprenti_derniere_annee_suivie_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDerniereClasseCode.choices,
+        help_text="Code CERFA de la derniere classe ou annee suivie.",
     )
     apprenti_intitule_dernier_diplome = models.CharField(
         max_length=255,
@@ -524,6 +609,13 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Plus haut diplôme ou titre obtenu.",
+    )
+    apprenti_plus_haut_diplome_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDiplomeCode.choices,
+        help_text="Code CERFA du plus haut diplome obtenu.",
     )
 
     # ───────────────────── REPRÉSENTANT LÉGAL ─────────────────────
@@ -641,6 +733,13 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Diplôme ou titre visé.",
     )
+    diplome_vise_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaDiplomeCode.choices,
+        help_text="Code CERFA du diplome ou titre vise.",
+    )
     diplome_intitule = models.CharField(
         max_length=255,
         blank=True,
@@ -728,11 +827,25 @@ class CerfaContrat(models.Model):
         null=True,
         help_text="Type de contrat ou type d’avenant selon le CERFA.",
     )
+    type_contrat_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaTypeContratCode.choices,
+        help_text="Code CERFA du type de contrat ou avenant.",
+    )
     type_derogation = models.CharField(
         max_length=255,
         blank=True,
         null=True,
         help_text="Type de dérogation applicable, si concerné.",
+    )
+    type_derogation_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        choices=CerfaTypeDerogationCode.choices,
+        help_text="Code CERFA du type de derogation.",
     )
     numero_contrat_precedent = models.CharField(
         max_length=100,
@@ -859,6 +972,42 @@ class CerfaContrat(models.Model):
             if root_obj is None or not attr_path:
                 continue
             payload[cerfa_field] = _resolve_attr(root_obj, attr_path)
+
+        if partenaire is not None:
+            payload["employeur_type_code"] = getattr(partenaire, "type_employeur_code", None)
+            payload["employeur_specifique_code"] = getattr(partenaire, "employeur_specifique_code", None)
+            payload["maitre1_niveau_diplome_code"] = getattr(partenaire, "maitre1_niveau_diplome_code", None)
+            payload["maitre2_niveau_diplome_code"] = getattr(partenaire, "maitre2_niveau_diplome_code", None)
+            payload["employeur_type"] = getattr(partenaire, "type_employeur_code", None)
+            payload["employeur_specifique"] = getattr(partenaire, "employeur_specifique_code", None)
+            payload["maitre1_niveau_diplome"] = getattr(partenaire, "maitre1_niveau_diplome_code", None)
+            payload["maitre2_niveau_diplome"] = getattr(partenaire, "maitre2_niveau_diplome_code", None)
+
+        if candidat is not None:
+            payload["apprenti_nationalite_code"] = getattr(candidat, "nationalite_code", None)
+            payload["apprenti_regime_social_code"] = getattr(candidat, "regime_social_code", None)
+            payload["apprenti_situation_avant_code"] = getattr(candidat, "situation_avant_contrat_code", None)
+            payload["apprenti_dernier_diplome_prepare_code"] = getattr(
+                candidat, "dernier_diplome_prepare_code", None
+            )
+            payload["apprenti_plus_haut_diplome_code"] = getattr(
+                candidat, "diplome_plus_eleve_obtenu_code", None
+            )
+            payload["apprenti_derniere_annee_suivie_code"] = getattr(candidat, "derniere_classe_code", None)
+            payload["type_contrat_code"] = getattr(candidat, "type_contrat_code", None)
+
+            payload["apprenti_nationalite"] = getattr(candidat, "nationalite_code", None)
+            payload["apprenti_regime_social"] = getattr(candidat, "regime_social_code", None)
+            payload["apprenti_situation_avant"] = getattr(candidat, "situation_avant_contrat_code", None)
+            payload["apprenti_dernier_diplome_prepare"] = getattr(candidat, "dernier_diplome_prepare_code", None)
+            payload["apprenti_plus_haut_diplome"] = getattr(candidat, "diplome_plus_eleve_obtenu_code", None)
+            payload["apprenti_derniere_annee_suivie"] = getattr(candidat, "derniere_classe_code", None)
+            payload["type_contrat"] = _pick_code(candidat, "type_contrat_code", "type_contrat")
+
+        if formation is not None:
+            payload["diplome_vise_code"] = getattr(formation, "diplome_vise_code", None)
+            payload["diplome_vise"] = _pick_code(formation, "diplome_vise_code", "intitule_diplome")
+            payload["diplome_intitule"] = getattr(formation, "intitule_diplome", None)
         return _compact_dict(payload)
 
     @classmethod

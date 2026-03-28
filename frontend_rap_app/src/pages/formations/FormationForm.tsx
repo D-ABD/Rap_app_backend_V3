@@ -105,6 +105,33 @@ function FormationForm({
   onCancel,
   submitLabel = "💾 Enregistrer",
 }: FormationFormProps) {
+  const diplomeCodeOptions = [
+    { value: "13", label: "13 - Aucun diplome ni titre professionnel" },
+    { value: "25", label: "25 - Diplome national du Brevet" },
+    { value: "26", label: "26 - Certificat de formation generale" },
+    { value: "33", label: "33 - CAP" },
+    { value: "34", label: "34 - BEP" },
+    { value: "35", label: "35 - Certificat de specialisation" },
+    { value: "38", label: "38 - Autre CAP/BEP" },
+    { value: "41", label: "41 - Baccalaureat professionnel" },
+    { value: "42", label: "42 - Baccalaureat general" },
+    { value: "43", label: "43 - Baccalaureat technologique" },
+    { value: "44", label: "44 - Diplome de specialisation professionnelle" },
+    { value: "49", label: "49 - Autre niveau bac" },
+    { value: "54", label: "54 - BTS" },
+    { value: "55", label: "55 - DUT" },
+    { value: "58", label: "58 - Autre niveau bac+2" },
+    { value: "62", label: "62 - Licence professionnelle" },
+    { value: "63", label: "63 - Licence generale" },
+    { value: "64", label: "64 - BUT" },
+    { value: "69", label: "69 - Autre niveau bac+3 ou 4" },
+    { value: "73", label: "73 - Master" },
+    { value: "75", label: "75 - Diplome d'ingenieur" },
+    { value: "76", label: "76 - Diplome d'ecole de commerce" },
+    { value: "79", label: "79 - Autre niveau bac+5 ou plus" },
+    { value: "80", label: "80 - Doctorat" },
+  ];
+
   const [values, setValues] = useState<FormationFormDataRaw>(() => ({
     nom: "",
     centre_id: null,
@@ -126,6 +153,7 @@ function FormationForm({
     nombre_candidats: 0,
     nombre_entretiens: 0,
     intitule_diplome: "",
+    diplome_vise_code: "",
     code_diplome: "",
     code_rncp: "",
     total_heures: 0,
@@ -160,6 +188,7 @@ function FormationForm({
       nombre_candidats: initialValues.nombre_candidats ?? 0,
       nombre_entretiens: initialValues.nombre_entretiens ?? 0,
       intitule_diplome: initialValues.intitule_diplome ?? "",
+      diplome_vise_code: initialValues.diplome_vise_code ?? "",
       code_diplome: initialValues.code_diplome ?? "",
       code_rncp: initialValues.code_rncp ?? "",
       total_heures: initialValues.total_heures ?? 0,
@@ -400,6 +429,26 @@ function FormationForm({
           value={values.intitule_diplome}
           onChange={handleChange}
         />
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <InputLabel id="diplome-vise-code-label">Code diplome CERFA</InputLabel>
+            <Select
+              labelId="diplome-vise-code-label"
+              label="Code diplome CERFA"
+              name="diplome_vise_code"
+              value={values.diplome_vise_code ?? ""}
+              onChange={handleChange}
+            >
+              <MenuItem value="">Non defini</MenuItem>
+              {diplomeCodeOptions.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Codification CERFA du diplome vise, sans remplacer l'intitule libre.</FormHelperText>
+          </FormControl>
+        </Grid>
         <Input
           label="Code diplôme"
           name="code_diplome"

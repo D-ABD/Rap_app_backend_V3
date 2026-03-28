@@ -1,5 +1,5 @@
 // src/pages/partenaires/PartenaireForm.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -18,6 +18,10 @@ import {
   Accordion,
   AccordionSummary,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs, { Dayjs } from "dayjs";
 import {
   Business as BusinessIcon,
   Work as WorkIcon,
@@ -85,6 +89,41 @@ export default function PartenaireForm({
   choices,
   centreOptions,
 }: FormProps) {
+  const typeEmployeurCodeOptions = [
+    { value: "11", label: "11 - Repertoire des metiers" },
+    { value: "12", label: "12 - RCS" },
+    { value: "13", label: "13 - MSA" },
+    { value: "14", label: "14 - Profession liberale" },
+    { value: "15", label: "15 - Association" },
+    { value: "16", label: "16 - Autre employeur prive" },
+    { value: "21", label: "21 - Service de l'Etat" },
+    { value: "22", label: "22 - Commune" },
+    { value: "23", label: "23 - Departement" },
+    { value: "24", label: "24 - Region" },
+    { value: "25", label: "25 - Etablissement public hospitalier" },
+    { value: "26", label: "26 - EPLE" },
+    { value: "27", label: "27 - EPA Etat" },
+    { value: "28", label: "28 - EPA local" },
+    { value: "29", label: "29 - Autre employeur public" },
+    { value: "30", label: "30 - EPIC" },
+  ];
+  const employeurSpecifiqueCodeOptions = [
+    { value: "0", label: "0 - Aucun de ces cas" },
+    { value: "1", label: "1 - Entreprise de travail temporaire" },
+    { value: "2", label: "2 - Groupement d'employeurs" },
+    { value: "3", label: "3 - Employeur saisonnier" },
+    { value: "4", label: "4 - Apprentissage familial" },
+  ];
+  const niveauDiplomeCodeOptions = [
+    { value: "0", label: "0 - Aucun" },
+    { value: "3", label: "3 - CAP / BEP" },
+    { value: "4", label: "4 - Baccalaureat" },
+    { value: "5", label: "5 - DEUG / BTS / DUT / DEUST" },
+    { value: "6", label: "6 - Licence / Licence pro / BUT / Maitrise" },
+    { value: "7", label: "7 - Master / DEA / DESS / Ingenieur" },
+    { value: "8", label: "8 - Doctorat / HDR" },
+  ];
+
   const [form, setForm] = useState<Partial<Partenaire>>(() => initialValues);
   const [openCentreModal, setOpenCentreModal] = useState(false);
 
@@ -97,6 +136,34 @@ export default function PartenaireForm({
 
   const handleChange = <K extends keyof Partenaire>(field: K, value: Partenaire[K] | undefined) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const getDateValue = useCallback((value?: string | null) => {
+    if (!value) return null;
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed : null;
+  }, []);
+
+  const renderDateField = (field: keyof Partenaire, label: string) => (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <DatePicker
+        label={label}
+        value={getDateValue(form[field] as string | null | undefined)}
+        onChange={(value: Dayjs | null) =>
+          handleChange(field, (value && value.isValid() ? value.format("YYYY-MM-DD") : null) as Partenaire[keyof Partenaire])
+        }
+        views={["year", "month", "day"]}
+        openTo="year"
+        format="DD/MM/YYYY"
+        disabled={loading}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            helperText: "Le calendrier permet de choisir facilement l'annee.",
+          },
+        }}
+      />
+    </LocalizationProvider>
+  );
 
   const handleDefaultCentreChange = (val: string) => {
     const id = val ? Number(val) : null;
@@ -366,33 +433,42 @@ export default function PartenaireForm({
             <Grid item xs={12} md={4}>
               <TextField
                 select
-                label="Type d’employeur"
-                value={form.type_employeur ?? ""}
-                onChange={(e) =>
-                  handleChange("type_employeur", e.target.value as "prive" | "public")
-                }
+                label="Type d’employeur CERFA"
+                value={form.type_employeur_code ?? ""}
+                onChange={(e) => handleChange("type_employeur_code", e.target.value)}
                 fullWidth
               >
-                <MenuItem value="">Non défini</MenuItem>
-                <MenuItem value="prive">Privé</MenuItem>
-                <MenuItem value="public">Public</MenuItem>
+                <MenuItem value="">Non defini</MenuItem>
+                {typeEmployeurCodeOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
               </TextField>
             </Grid>
 
             <Grid item xs={12} md={4}>
               <TextField
-                label="Employeur spécifique"
-                value={form.employeur_specifique || ""}
-                onChange={(e) => handleChange("employeur_specifique", e.target.value)}
+                select
+                label="Employeur spécifique CERFA"
+                value={form.employeur_specifique_code ?? ""}
+                onChange={(e) => handleChange("employeur_specifique_code", e.target.value)}
                 fullWidth
-              />
+              >
+                <MenuItem value="">Non defini</MenuItem>
+                {employeurSpecifiqueCodeOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
 
             <Grid item xs={12} md={4}>
               <TextField
                 label="Code APE"
                 value={form.code_ape || ""}
-                onChange={(e) => handleChange("code_ape", e.target.value.toUpperCase())}
+                onChange={(e) => handleChange("code_ape", e.target.value)}
                 fullWidth
               />
             </Grid>
@@ -479,16 +555,7 @@ export default function PartenaireForm({
                 ))}
 
                 <Grid item xs={12} md={4}>
-                  <TextField
-                    type="date"
-                    label="Date de naissance"
-                    InputLabelProps={{ shrink: true }}
-                    value={(form as any)[`maitre${n}_date_naissance`] || ""}
-                    onChange={(e) =>
-                      handleChange(`maitre${n}_date_naissance` as any, e.target.value)
-                    }
-                    fullWidth
-                  />
+                  {renderDateField(`maitre${n}_date_naissance` as keyof Partenaire, "Date de naissance")}
                 </Grid>
 
                 <Grid item xs={12} md={8}>
@@ -504,7 +571,6 @@ export default function PartenaireForm({
                 {[
                   ["Emploi occupé", `maitre${n}_emploi_occupe`],
                   ["Diplôme ou titre le plus élevé", `maitre${n}_diplome_titre`],
-                  ["Niveau du diplôme ou titre", `maitre${n}_niveau_diplome`],
                 ].map(([label, key]) => (
                   <Grid item xs={12} md={4} key={key}>
                     <TextField
@@ -515,6 +581,25 @@ export default function PartenaireForm({
                     />
                   </Grid>
                 ))}
+
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    select
+                    label="Niveau du diplôme CERFA"
+                    value={(form as any)[`maitre${n}_niveau_diplome_code`] || ""}
+                    onChange={(e) =>
+                      handleChange(`maitre${n}_niveau_diplome_code` as any, e.target.value)
+                    }
+                    fullWidth
+                  >
+                    <MenuItem value="">Non defini</MenuItem>
+                    {niveauDiplomeCodeOptions.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
               </Grid>
             </AccordionDetails>
           </Accordion>

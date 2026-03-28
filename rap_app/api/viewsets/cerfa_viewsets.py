@@ -13,8 +13,9 @@ from rest_framework.permissions import IsAuthenticated
 from ...api.paginations import RapAppPagination
 from ...api.permissions import IsStaffOrAbove
 from ...models import Candidat, CerfaContrat, Formation, Partenaire
+from ...services.placement_services import AppairagePlacementService
 from ...utils.pdf_cerfa_utils import generer_pdf_cerfa
-from ..serializers.cerfa_serializers import CerfaContratSerializer
+from ..serializers.cerfa_serializers import CerfaContratSerializer, _sync_choice_labels
 from .base import BaseApiViewSet
 
 
@@ -84,11 +85,23 @@ class CerfaContratViewSet(BaseApiViewSet):
         elif candidat and getattr(candidat, "formation_id", None):
             formation = candidat.formation
 
+        partenaire = None
+        if employeur_id:
+            partenaire = Partenaire.objects.filter(pk=employeur_id).first()
+        elif candidat is not None:
+            reference_appairage = AppairagePlacementService.get_preferred_appairage_for_candidate(candidat)
+            partenaire = getattr(reference_appairage, "partenaire", None)
+            if partenaire is None:
+                partenaire = getattr(candidat, "entreprise_validee", None)
+            if partenaire is None:
+                partenaire = getattr(candidat, "entreprise_placement", None)
+
         payload = CerfaContrat.build_prefill_payload(
             candidat=candidat,
             formation=formation,
-            partenaire=None,
+            partenaire=partenaire,
         )
+        payload = _sync_choice_labels(payload)
         return self.success_response(
             data=payload,
             message="Pre-remplissage CERFA calcule avec succes.",

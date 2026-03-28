@@ -13,7 +13,12 @@ import {
   Divider,
   FormControlLabel,
   Checkbox,
+  MenuItem,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs, { Dayjs } from "dayjs";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import { toast } from "react-toastify";
 import { CerfaContrat, CerfaContratCreate } from "../../types/cerfa";
@@ -21,6 +26,135 @@ import { useCerfaPrefill } from "../../hooks/useCerfa";
 import CandidatsSelectModal from "../../components/modals/CandidatsSelectModal";
 import FormationSelectModal from "../../components/modals/FormationSelectModal";
 import PartenaireSelectModal from "../../components/modals/PartenairesSelectModal";
+
+type CodeOption = { value: string; label: string };
+
+const NATIONALITE_OPTIONS: CodeOption[] = [
+  { value: "1", label: "1 - Francaise" },
+  { value: "2", label: "2 - Union europeenne" },
+  { value: "3", label: "3 - Etranger hors Union europeenne" },
+];
+
+const REGIME_SOCIAL_OPTIONS: CodeOption[] = [
+  { value: "1", label: "1 - MSA" },
+  { value: "2", label: "2 - URSSAF" },
+];
+
+const SITUATION_AVANT_OPTIONS: CodeOption[] = [
+  { value: "1", label: "1 - Scolaire" },
+  { value: "2", label: "2 - Prepa apprentissage" },
+  { value: "3", label: "3 - Etudiant" },
+  { value: "4", label: "4 - Contrat d'apprentissage" },
+  { value: "5", label: "5 - Contrat de professionnalisation" },
+  { value: "6", label: "6 - Contrat aide" },
+  { value: "7", label: "7 - Stagiaire avant contrat" },
+  { value: "8", label: "8 - Stagiaire apres rupture" },
+  { value: "9", label: "9 - Autre stagiaire formation pro" },
+  { value: "10", label: "10 - Salarie" },
+  { value: "11", label: "11 - Recherche d'emploi" },
+  { value: "12", label: "12 - Inactif" },
+];
+
+const DIPLOME_OPTIONS: CodeOption[] = [
+  { value: "13", label: "13 - Aucun diplome ni titre professionnel" },
+  { value: "25", label: "25 - Diplome national du Brevet" },
+  { value: "26", label: "26 - Certificat de formation generale" },
+  { value: "33", label: "33 - CAP" },
+  { value: "34", label: "34 - BEP" },
+  { value: "35", label: "35 - Certificat de specialisation" },
+  { value: "38", label: "38 - Autre CAP/BEP" },
+  { value: "41", label: "41 - Baccalaureat professionnel" },
+  { value: "42", label: "42 - Baccalaureat general" },
+  { value: "43", label: "43 - Baccalaureat technologique" },
+  { value: "44", label: "44 - Diplome de specialisation professionnelle" },
+  { value: "49", label: "49 - Autre niveau bac" },
+  { value: "54", label: "54 - BTS" },
+  { value: "55", label: "55 - DUT" },
+  { value: "58", label: "58 - Autre niveau bac+2" },
+  { value: "62", label: "62 - Licence professionnelle" },
+  { value: "63", label: "63 - Licence generale" },
+  { value: "64", label: "64 - BUT" },
+  { value: "69", label: "69 - Autre niveau bac+3 ou 4" },
+  { value: "73", label: "73 - Master" },
+  { value: "75", label: "75 - Diplome d'ingenieur" },
+  { value: "76", label: "76 - Diplome d'ecole de commerce" },
+  { value: "79", label: "79 - Autre niveau bac+5 ou plus" },
+  { value: "80", label: "80 - Doctorat" },
+];
+
+const DERNIERE_CLASSE_OPTIONS: CodeOption[] = [
+  { value: "01", label: "01 - Derniere annee validee et diplome obtenu" },
+  { value: "11", label: "11 - 1ere annee validee" },
+  { value: "12", label: "12 - 1ere annee non validee" },
+  { value: "21", label: "21 - 2e annee validee" },
+  { value: "22", label: "22 - 2e annee non validee" },
+  { value: "31", label: "31 - 3e annee validee" },
+  { value: "32", label: "32 - 3e annee non validee" },
+  { value: "40", label: "40 - 1er cycle secondaire acheve" },
+  { value: "41", label: "41 - Interruption en 3e" },
+  { value: "42", label: "42 - Interruption en 4e" },
+];
+
+const TYPE_EMPLOYEUR_OPTIONS: CodeOption[] = [
+  { value: "11", label: "11 - Repertoire des metiers" },
+  { value: "12", label: "12 - RCS" },
+  { value: "13", label: "13 - MSA" },
+  { value: "14", label: "14 - Profession liberale" },
+  { value: "15", label: "15 - Association" },
+  { value: "16", label: "16 - Autre employeur prive" },
+  { value: "21", label: "21 - Service de l'Etat" },
+  { value: "22", label: "22 - Commune" },
+  { value: "23", label: "23 - Departement" },
+  { value: "24", label: "24 - Region" },
+  { value: "25", label: "25 - Etablissement public hospitalier" },
+  { value: "26", label: "26 - EPLE" },
+  { value: "27", label: "27 - EPA Etat" },
+  { value: "28", label: "28 - EPA local" },
+  { value: "29", label: "29 - Autre employeur public" },
+  { value: "30", label: "30 - EPIC" },
+];
+
+const EMPLOYEUR_SPECIFIQUE_OPTIONS: CodeOption[] = [
+  { value: "0", label: "0 - Aucun de ces cas" },
+  { value: "1", label: "1 - Entreprise de travail temporaire" },
+  { value: "2", label: "2 - Groupement d'employeurs" },
+  { value: "3", label: "3 - Employeur saisonnier" },
+  { value: "4", label: "4 - Apprentissage familial" },
+];
+
+const MAITRE_NIVEAU_OPTIONS: CodeOption[] = [
+  { value: "0", label: "0 - Aucun" },
+  { value: "3", label: "3 - CAP / BEP" },
+  { value: "4", label: "4 - Baccalaureat" },
+  { value: "5", label: "5 - DEUG / BTS / DUT / DEUST" },
+  { value: "6", label: "6 - Licence / Licence pro / BUT / Maitrise" },
+  { value: "7", label: "7 - Master / DEA / DESS / Ingenieur" },
+  { value: "8", label: "8 - Doctorat / HDR" },
+];
+
+const TYPE_CONTRAT_OPTIONS: CodeOption[] = [
+  { value: "11", label: "11 - Premier contrat d'apprentissage" },
+  { value: "21", label: "21 - Nouveau contrat meme employeur" },
+  { value: "22", label: "22 - Nouveau contrat autre employeur" },
+  { value: "23", label: "23 - Nouveau contrat apres rupture" },
+  { value: "31", label: "31 - Modification situation juridique" },
+  { value: "32", label: "32 - Changement employeur saisonnier" },
+  { value: "33", label: "33 - Prolongation suite a echec" },
+  { value: "34", label: "34 - Prolongation suite a RQTH" },
+  { value: "35", label: "35 - Diplome supplementaire" },
+  { value: "36", label: "36 - Autres changements" },
+  { value: "37", label: "37 - Modification lieu d'execution" },
+  { value: "38", label: "38 - Modification lieu principal de formation" },
+];
+
+const TYPE_DEROGATION_OPTIONS: CodeOption[] = [
+  { value: "11", label: "11 - Age inferieur a 16 ans" },
+  { value: "12", label: "12 - Age superieur a 29 ans" },
+  { value: "21", label: "21 - Reduction de duree" },
+  { value: "22", label: "22 - Allongement de duree" },
+  { value: "50", label: "50 - Cumul de derogations" },
+  { value: "60", label: "60 - Autre derogation" },
+];
 
 type CerfaFormProps = {
   open: boolean;
@@ -57,6 +191,61 @@ export function CerfaForm({
   const { mutateAsync: prefillCerfa, isPending: isPrefilling } = useCerfaPrefill();
   const setField = (field: keyof CerfaContratCreate, value: unknown) =>
     setForm((current) => ({ ...current, [field]: value }));
+
+  const getDateValue = useCallback((value?: string | null) => {
+    if (!value) return null;
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed : null;
+  }, []);
+
+  const renderDateField = (
+    field: keyof CerfaContratCreate,
+    label: string,
+    helperText?: string
+  ) => (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <DatePicker
+        label={label}
+        value={getDateValue(form[field] as string | null | undefined)}
+        onChange={(value: Dayjs | null) =>
+          setField(field, value && value.isValid() ? value.format("YYYY-MM-DD") : null)
+        }
+        views={["year", "month", "day"]}
+        openTo="year"
+        format="DD/MM/YYYY"
+        disabled={readOnly}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            helperText,
+          },
+        }}
+      />
+    </LocalizationProvider>
+  );
+
+  const renderSelectField = (
+    field: keyof CerfaContratCreate,
+    label: string,
+    options: CodeOption[]
+  ) => (
+    <TextField
+      select
+      fullWidth
+      label={label}
+      value={(form[field] as string | null | undefined) ?? ""}
+      onChange={(e) => setField(field, e.target.value || null)}
+      disabled={readOnly}
+      helperText="Liste CERFA codifiee."
+    >
+      <MenuItem value="">Non defini</MenuItem>
+      {options.map((option) => (
+        <MenuItem key={option.value} value={option.value}>
+          {option.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
 
   const hasValue = (value: unknown) => {
     if (value === null || value === undefined) return false;
@@ -98,7 +287,9 @@ export function CerfaForm({
     employeur_email: contrat.employeur_email,
     employeur_siret: contrat.employeur_siret,
     employeur_type: contrat.employeur_type,
+    employeur_type_code: contrat.employeur_type_code,
     employeur_specifique: contrat.employeur_specifique,
+    employeur_specifique_code: contrat.employeur_specifique_code,
     employeur_code_ape: contrat.employeur_code_ape,
     employeur_effectif: contrat.employeur_effectif,
     employeur_code_idcc: contrat.employeur_code_idcc,
@@ -110,6 +301,7 @@ export function CerfaForm({
     maitre1_emploi: contrat.maitre1_emploi,
     maitre1_diplome: contrat.maitre1_diplome,
     maitre1_niveau_diplome: contrat.maitre1_niveau_diplome,
+    maitre1_niveau_diplome_code: contrat.maitre1_niveau_diplome_code,
     maitre2_nom: contrat.maitre2_nom,
     maitre2_prenom: contrat.maitre2_prenom,
     maitre2_date_naissance: contrat.maitre2_date_naissance,
@@ -117,6 +309,7 @@ export function CerfaForm({
     maitre2_emploi: contrat.maitre2_emploi,
     maitre2_diplome: contrat.maitre2_diplome,
     maitre2_niveau_diplome: contrat.maitre2_niveau_diplome,
+    maitre2_niveau_diplome_code: contrat.maitre2_niveau_diplome_code,
     maitre_eligible: contrat.maitre_eligible,
     apprenti_nom_naissance: contrat.apprenti_nom_naissance,
     apprenti_nom_usage: contrat.apprenti_nom_usage,
@@ -142,17 +335,23 @@ export function CerfaForm({
     apprenti_departement_naissance: contrat.apprenti_departement_naissance,
     apprenti_commune_naissance: contrat.apprenti_commune_naissance,
     apprenti_nationalite: contrat.apprenti_nationalite,
+    apprenti_nationalite_code: contrat.apprenti_nationalite_code,
     apprenti_regime_social: contrat.apprenti_regime_social,
+    apprenti_regime_social_code: contrat.apprenti_regime_social_code,
     apprenti_sportif_haut_niveau: contrat.apprenti_sportif_haut_niveau,
     apprenti_rqth: contrat.apprenti_rqth,
     apprenti_droits_rqth: contrat.apprenti_droits_rqth,
     apprenti_equivalence_jeunes: contrat.apprenti_equivalence_jeunes,
     apprenti_extension_boe: contrat.apprenti_extension_boe,
     apprenti_situation_avant: contrat.apprenti_situation_avant,
+    apprenti_situation_avant_code: contrat.apprenti_situation_avant_code,
     apprenti_dernier_diplome_prepare: contrat.apprenti_dernier_diplome_prepare,
+    apprenti_dernier_diplome_prepare_code: contrat.apprenti_dernier_diplome_prepare_code,
     apprenti_derniere_annee_suivie: contrat.apprenti_derniere_annee_suivie,
+    apprenti_derniere_annee_suivie_code: contrat.apprenti_derniere_annee_suivie_code,
     apprenti_intitule_dernier_diplome: contrat.apprenti_intitule_dernier_diplome,
     apprenti_plus_haut_diplome: contrat.apprenti_plus_haut_diplome,
+    apprenti_plus_haut_diplome_code: contrat.apprenti_plus_haut_diplome_code,
     apprenti_projet_entreprise: contrat.apprenti_projet_entreprise,
     cfa_entreprise: contrat.cfa_entreprise,
     cfa_denomination: contrat.cfa_denomination,
@@ -165,6 +364,7 @@ export function CerfaForm({
     cfa_commune: contrat.cfa_commune,
     cfa_est_lieu_formation_principal: contrat.cfa_est_lieu_formation_principal,
     diplome_vise: contrat.diplome_vise,
+    diplome_vise_code: contrat.diplome_vise_code,
     diplome_intitule: contrat.diplome_intitule,
     code_diplome: contrat.code_diplome,
     code_rncp: contrat.code_rncp,
@@ -179,12 +379,16 @@ export function CerfaForm({
     formation_lieu_code_postal: contrat.formation_lieu_code_postal,
     formation_lieu_commune: contrat.formation_lieu_commune,
     type_contrat: contrat.type_contrat,
+    type_contrat_code: contrat.type_contrat_code,
     type_derogation: contrat.type_derogation,
+    type_derogation_code: contrat.type_derogation_code,
     numero_contrat_precedent: contrat.numero_contrat_precedent,
     date_conclusion: contrat.date_conclusion,
     date_debut_execution: contrat.date_debut_execution,
     date_fin_contrat: contrat.date_fin_contrat,
+    date_debut_formation_pratique_employeur: contrat.date_debut_formation_pratique_employeur,
     date_effet_avenant: contrat.date_effet_avenant,
+    travail_machines_dangereuses: contrat.travail_machines_dangereuses,
     duree_hebdo_heures: contrat.duree_hebdo_heures,
     duree_hebdo_minutes: contrat.duree_hebdo_minutes,
     salaire_brut_mensuel: contrat.salaire_brut_mensuel,
@@ -421,14 +625,11 @@ export function CerfaForm({
                   : "Sélectionner un partenaire"}
             </Button>
 
-            <TextField
-              label="Date de conclusion"
-              type="date"
-              InputLabelProps={{ shrink: true }}
-              value={form.date_conclusion ?? ""}
-              onChange={(e) => setField("date_conclusion", e.target.value)}
-              disabled={readOnly}
-            />
+            {renderDateField(
+              "date_conclusion",
+              "Date de conclusion",
+              "Le calendrier permet de choisir facilement l'annee."
+            )}
 
             <Button
               variant="contained"
@@ -499,33 +700,28 @@ export function CerfaForm({
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Date de naissance"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.apprenti_date_naissance ?? ""}
-                  onChange={(e) => setField("apprenti_date_naissance", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderDateField(
+                  "apprenti_date_naissance",
+                  "Date de naissance",
+                  "Le calendrier permet de choisir facilement l'annee."
+                )}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
+                  select
                   fullWidth
                   label="Sexe"
                   value={form.apprenti_sexe ?? ""}
-                  onChange={(e) => setField("apprenti_sexe", e.target.value as "M" | "F" | null)}
+                  onChange={(e) => setField("apprenti_sexe", (e.target.value || null) as "M" | "F" | null)}
                   disabled={readOnly}
-                />
+                >
+                  <MenuItem value="">Non defini</MenuItem>
+                  <MenuItem value="M">M</MenuItem>
+                  <MenuItem value="F">F</MenuItem>
+                </TextField>
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Nationalite"
-                  value={form.apprenti_nationalite ?? ""}
-                  onChange={(e) => setField("apprenti_nationalite", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_nationalite_code", "Nationalite CERFA", NATIONALITE_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -591,13 +787,7 @@ export function CerfaForm({
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Regime social"
-                  value={form.apprenti_regime_social ?? ""}
-                  onChange={(e) => setField("apprenti_regime_social", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_regime_social_code", "Regime social CERFA", REGIME_SOCIAL_OPTIONS)}
               </Grid>
               <Grid item xs={12}>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
@@ -630,40 +820,16 @@ export function CerfaForm({
                 </Stack>
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Situation avant contrat"
-                  value={form.apprenti_situation_avant ?? ""}
-                  onChange={(e) => setField("apprenti_situation_avant", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_situation_avant_code", "Situation avant contrat CERFA", SITUATION_AVANT_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Dernier diplome prepare"
-                  value={form.apprenti_dernier_diplome_prepare ?? ""}
-                  onChange={(e) => setField("apprenti_dernier_diplome_prepare", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_dernier_diplome_prepare_code", "Dernier diplome prepare CERFA", DIPLOME_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Derniere annee suivie"
-                  value={form.apprenti_derniere_annee_suivie ?? ""}
-                  onChange={(e) => setField("apprenti_derniere_annee_suivie", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_derniere_annee_suivie_code", "Derniere annee suivie CERFA", DERNIERE_CLASSE_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Plus haut diplome"
-                  value={form.apprenti_plus_haut_diplome ?? ""}
-                  onChange={(e) => setField("apprenti_plus_haut_diplome", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("apprenti_plus_haut_diplome_code", "Plus haut diplome CERFA", DIPLOME_OPTIONS)}
               </Grid>
               <Grid item xs={12}>
                 <TextField
@@ -692,7 +858,7 @@ export function CerfaForm({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Nom employeur"
+                  label="Nom et prenom ou denomination"
                   value={form.employeur_nom ?? ""}
                   onChange={(e) => setField("employeur_nom", e.target.value)}
                   disabled={readOnly}
@@ -701,16 +867,21 @@ export function CerfaForm({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="SIRET employeur"
+                  label="N° SIRET de l'etablissement"
                   value={form.employeur_siret ?? ""}
                   onChange={(e) => setField("employeur_siret", e.target.value)}
                   disabled={readOnly}
                 />
               </Grid>
+              <Grid item xs={12}>
+                <Typography variant="caption" color="text.secondary">
+                  Adresse de l'etablissement d'execution du contrat
+                </Typography>
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Email employeur"
+                  label="Courriel"
                   value={form.employeur_email ?? ""}
                   onChange={(e) => setField("employeur_email", e.target.value)}
                   disabled={readOnly}
@@ -719,7 +890,7 @@ export function CerfaForm({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Telephone employeur"
+                  label="Telephone"
                   value={form.employeur_telephone ?? ""}
                   onChange={(e) => setField("employeur_telephone", e.target.value)}
                   disabled={readOnly}
@@ -771,22 +942,10 @@ export function CerfaForm({
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Type employeur"
-                  value={form.employeur_type ?? ""}
-                  onChange={(e) => setField("employeur_type", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("employeur_type_code", "Type d'employeur CERFA", TYPE_EMPLOYEUR_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Employeur specifique"
-                  value={form.employeur_specifique ?? ""}
-                  onChange={(e) => setField("employeur_specifique", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("employeur_specifique_code", "Employeur specifique CERFA", EMPLOYEUR_SPECIFIQUE_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
@@ -800,7 +959,7 @@ export function CerfaForm({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Effectif"
+                  label="Effectif total salaries de l'entreprise"
                   type="number"
                   value={form.employeur_effectif ?? ""}
                   onChange={(e) =>
@@ -815,7 +974,7 @@ export function CerfaForm({
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Code IDCC"
+                  label="Code IDCC de la convention collective applicable"
                   value={form.employeur_code_idcc ?? ""}
                   onChange={(e) => setField("employeur_code_idcc", e.target.value)}
                   disabled={readOnly}
@@ -837,7 +996,7 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 1 - prenom" value={form.maitre1_prenom ?? ""} onChange={(e) => setField("maitre1_prenom", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Maitre 1 - naissance" value={form.maitre1_date_naissance ?? ""} onChange={(e) => setField("maitre1_date_naissance", e.target.value)} disabled={readOnly} />
+                {renderDateField("maitre1_date_naissance", "Maitre 1 - naissance")}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField fullWidth label="Maitre 1 - email" value={form.maitre1_email ?? ""} onChange={(e) => setField("maitre1_email", e.target.value)} disabled={readOnly} />
@@ -849,7 +1008,7 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 1 - diplome" value={form.maitre1_diplome ?? ""} onChange={(e) => setField("maitre1_diplome", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Maitre 1 - niveau diplome" value={form.maitre1_niveau_diplome ?? ""} onChange={(e) => setField("maitre1_niveau_diplome", e.target.value)} disabled={readOnly} />
+                {renderSelectField("maitre1_niveau_diplome_code", "Maitre 1 - niveau diplome CERFA", MAITRE_NIVEAU_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField fullWidth label="Maitre 2 - nom" value={form.maitre2_nom ?? ""} onChange={(e) => setField("maitre2_nom", e.target.value)} disabled={readOnly} />
@@ -858,7 +1017,7 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 2 - prenom" value={form.maitre2_prenom ?? ""} onChange={(e) => setField("maitre2_prenom", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Maitre 2 - naissance" value={form.maitre2_date_naissance ?? ""} onChange={(e) => setField("maitre2_date_naissance", e.target.value)} disabled={readOnly} />
+                {renderDateField("maitre2_date_naissance", "Maitre 2 - naissance")}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField fullWidth label="Maitre 2 - email" value={form.maitre2_email ?? ""} onChange={(e) => setField("maitre2_email", e.target.value)} disabled={readOnly} />
@@ -870,20 +1029,14 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 2 - diplome" value={form.maitre2_diplome ?? ""} onChange={(e) => setField("maitre2_diplome", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Maitre 2 - niveau diplome" value={form.maitre2_niveau_diplome ?? ""} onChange={(e) => setField("maitre2_niveau_diplome", e.target.value)} disabled={readOnly} />
+                {renderSelectField("maitre2_niveau_diplome_code", "Maitre 2 - niveau diplome CERFA", MAITRE_NIVEAU_OPTIONS)}
               </Grid>
             </Grid>
 
             <Typography variant="subtitle2">Formation</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Diplome vise"
-                  value={form.diplome_vise ?? ""}
-                  onChange={(e) => setField("diplome_vise", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("diplome_vise_code", "Diplome vise CERFA", DIPLOME_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -913,37 +1066,13 @@ export function CerfaForm({
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date debut formation"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.formation_debut ?? ""}
-                  onChange={(e) => setField("formation_debut", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderDateField("formation_debut", "Date debut formation")}
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date debut de formation en CFA"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.formation_debut ?? ""}
-                  onChange={(e) => setField("formation_debut", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderDateField("formation_debut", "Date debut de formation en CFA")}
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Date fin formation"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.formation_fin ?? ""}
-                  onChange={(e) => setField("formation_fin", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderDateField("formation_fin", "Date fin formation")}
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -1036,26 +1165,41 @@ export function CerfaForm({
             <Typography variant="subtitle2">Contrat</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Date debut execution"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.date_debut_execution ?? ""}
-                  onChange={(e) => setField("date_debut_execution", e.target.value)}
-                  disabled={readOnly}
-                />
+                {renderSelectField("type_contrat_code", "Type de contrat CERFA", TYPE_CONTRAT_OPTIONS)}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderSelectField("type_derogation_code", "Type de derogation CERFA", TYPE_DEROGATION_OPTIONS)}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Date fin contrat"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.date_fin_contrat ?? ""}
-                  onChange={(e) => setField("date_fin_contrat", e.target.value)}
+                  label="Numero contrat precedent"
+                  value={form.numero_contrat_precedent ?? ""}
+                  onChange={(e) => setField("numero_contrat_precedent", e.target.value)}
                   disabled={readOnly}
                 />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderDateField("date_debut_execution", "Date debut execution")}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderDateField(
+                  "date_debut_formation_pratique_employeur",
+                  "Date debut formation pratique employeur"
+                )}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderDateField("date_fin_contrat", "Date fin contrat")}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderDateField("date_effet_avenant", "Date effet avenant")}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                {renderCheckbox(
+                  "travail_machines_dangereuses",
+                  "Travail sur machines dangereuses",
+                  form.travail_machines_dangereuses
+                )}
               </Grid>
               <Grid item xs={12} md={4}>
                 <TextField

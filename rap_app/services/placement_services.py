@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
+from django.db.models import Case, IntegerField, Value, When
 from django.db import transaction
 from django.utils import timezone
 
@@ -42,6 +43,50 @@ class AppairagePlacementService:
     Ce service est la source de vérité métier pour la synchronisation
     Appairage -> Candidat.
     """
+
+    STATUS_PRIORITY = {
+        "contrat_a_signer": 0,
+        "contrat_en_attente": 1,
+        "appairage_ok": 2,
+        "accepte": 3,
+        "en_attente": 4,
+        "transmis": 5,
+        "a_faire": 6,
+        "refuse": 7,
+        "annule": 8,
+    }
+
+    @classmethod
+    def get_preferred_appairage_for_candidate(cls, candidat: Candidat | None):
+        """
+        Retourne l'appairage actif de reference pour un candidat, en priorisant
+        les statuts les plus utiles au placement et au CERFA.
+        """
+        if candidat is None:
+            return None
+
+        from ..models.appairage import Appairage as AppairageModel
+        from ..models.appairage import AppairageActivite
+
+        priority_case = Case(
+            *[
+                When(statut=statut, then=Value(priority))
+                for statut, priority in cls.STATUS_PRIORITY.items()
+            ],
+            default=Value(999),
+            output_field=IntegerField(),
+        )
+
+        return (
+            AppairageModel.objects.filter(
+                candidat_id=candidat.pk,
+                activite=AppairageActivite.ACTIF,
+            )
+            .annotate(_status_priority=priority_case)
+            .order_by("_status_priority", "-date_appairage", "-pk")
+            .select_related("partenaire", "created_by", "updated_by", "formation")
+            .first()
+        )
 
     @classmethod
     @transaction.atomic
@@ -119,20 +164,9 @@ class AppairagePlacementService:
         appairage: Appairage | None = None,
     ) -> Appairage | None:
         if appairage is not None and getattr(appairage, "candidat_id", None) == getattr(candidat, "pk", None):
-            return appairage._last_appairage_for(candidat)
+            return cls.get_preferred_appairage_for_candidate(candidat)
 
-        from ..models.appairage import Appairage as AppairageModel
-        from ..models.appairage import AppairageActivite
-
-        return (
-            AppairageModel.objects.filter(
-                candidat_id=candidat.pk,
-                activite=AppairageActivite.ACTIF,
-            )
-            .order_by("-date_appairage", "-pk")
-            .select_related("partenaire", "created_by", "updated_by")
-            .first()
-        )
+        return cls.get_preferred_appairage_for_candidate(candidat)
 
     @classmethod
     def build_snapshot_from_appairage(

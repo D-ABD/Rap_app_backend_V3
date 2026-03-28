@@ -155,6 +155,7 @@ export interface FormationFormData {
 
   // 🎓 Diplôme ou titre visé
   intitule_diplome?: string;
+  diplome_vise_code?: string;
   code_diplome?: string;
   code_rncp?: string;
   total_heures?: number;

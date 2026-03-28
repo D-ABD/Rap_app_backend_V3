@@ -57,32 +57,32 @@ export interface Partenaire {
   action_description?: string | null;
   description?: string | null;
 
-  // 🏢 Données employeur
+  // 🏢 Donnees employeur source CERFA : listes codees cote metier
   siret?: string | null;
-  type_employeur?: "prive" | "public" | null;
-  employeur_specifique?: string | null;
+  type_employeur_code?: string | null;
+  employeur_specifique_code?: string | null;
   code_ape?: string | null;
   effectif_total?: number | null;
   idcc?: string | null;
   assurance_chomage_speciale?: boolean;
 
-  // 🎓 Maîtres d’apprentissage n°1
+  // 🎓 Maitres d'apprentissage n°1
   maitre1_nom_naissance?: string | null;
   maitre1_prenom?: string | null;
   maitre1_date_naissance?: string | null; // ISO string
   maitre1_courriel?: string | null;
   maitre1_emploi_occupe?: string | null;
   maitre1_diplome_titre?: string | null;
-  maitre1_niveau_diplome?: string | null;
+  maitre1_niveau_diplome_code?: string | null;
 
-  // 🎓 Maîtres d’apprentissage n°2
+  // 🎓 Maitres d'apprentissage n°2
   maitre2_nom_naissance?: string | null;
   maitre2_prenom?: string | null;
   maitre2_date_naissance?: string | null; // ISO string
   maitre2_courriel?: string | null;
   maitre2_emploi_occupe?: string | null;
   maitre2_diplome_titre?: string | null;
-  maitre2_niveau_diplome?: string | null;
+  maitre2_niveau_diplome_code?: string | null;
 
   // 🕓 Métadonnées
   slug: string;

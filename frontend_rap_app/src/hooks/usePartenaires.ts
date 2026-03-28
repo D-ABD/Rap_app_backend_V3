@@ -73,10 +73,10 @@ type PartenaireWritePayload = {
   action_description?: string | null;
   description?: string | null;
 
-  // 🏢 Données employeur
+  // 🏢 Données employeur codifiées pour le CERFA
   siret?: string | null;
-  type_employeur?: "prive" | "public" | null;
-  employeur_specifique?: string | null;
+  type_employeur_code?: string | null;
+  employeur_specifique_code?: string | null;
   code_ape?: string | null;
   effectif_total?: number | null;
   idcc?: string | null;
@@ -89,7 +89,7 @@ type PartenaireWritePayload = {
   maitre1_courriel?: string | null;
   maitre1_emploi_occupe?: string | null;
   maitre1_diplome_titre?: string | null;
-  maitre1_niveau_diplome?: string | null;
+  maitre1_niveau_diplome_code?: string | null;
 
   // 🎓 Maître d’apprentissage n°2
   maitre2_nom_naissance?: string | null;
@@ -98,7 +98,7 @@ type PartenaireWritePayload = {
   maitre2_courriel?: string | null;
   maitre2_emploi_occupe?: string | null;
   maitre2_diplome_titre?: string | null;
-  maitre2_niveau_diplome?: string | null;
+  maitre2_niveau_diplome_code?: string | null;
 
   is_active?: boolean;
 };
@@ -152,8 +152,8 @@ function cleanPartenairePayload(input: Partial<Partenaire>): PartenaireWritePayl
 
     // Données employeur
     "siret",
-    "type_employeur",
-    "employeur_specifique",
+    "type_employeur_code",
+    "employeur_specifique_code",
     "code_ape",
     "effectif_total",
     "idcc",
@@ -166,7 +166,7 @@ function cleanPartenairePayload(input: Partial<Partenaire>): PartenaireWritePayl
     "maitre1_courriel",
     "maitre1_emploi_occupe",
     "maitre1_diplome_titre",
-    "maitre1_niveau_diplome",
+    "maitre1_niveau_diplome_code",
 
     "maitre2_nom_naissance",
     "maitre2_prenom",
@@ -174,7 +174,7 @@ function cleanPartenairePayload(input: Partial<Partenaire>): PartenaireWritePayl
     "maitre2_courriel",
     "maitre2_emploi_occupe",
     "maitre2_diplome_titre",
-    "maitre2_niveau_diplome",
+    "maitre2_niveau_diplome_code",
 
     "is_active",
   ];

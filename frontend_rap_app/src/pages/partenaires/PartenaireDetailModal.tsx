@@ -39,6 +39,43 @@ const nn = (s?: string | number | null) =>
 
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
 
+const TYPE_EMPLOYEUR_CODE_LABELS: Record<string, string> = {
+  "11": "11 - Repertoire des metiers",
+  "12": "12 - RCS",
+  "13": "13 - MSA",
+  "14": "14 - Profession liberale",
+  "15": "15 - Association",
+  "16": "16 - Autre employeur prive",
+  "21": "21 - Service de l'Etat",
+  "22": "22 - Commune",
+  "23": "23 - Departement",
+  "24": "24 - Region",
+  "25": "25 - Etablissement public hospitalier",
+  "26": "26 - EPLE",
+  "27": "27 - EPA Etat",
+  "28": "28 - EPA local",
+  "29": "29 - Autre employeur public",
+  "30": "30 - EPIC",
+};
+
+const EMPLOYEUR_SPECIFIQUE_CODE_LABELS: Record<string, string> = {
+  "0": "0 - Aucun de ces cas",
+  "1": "1 - Entreprise de travail temporaire",
+  "2": "2 - Groupement d'employeurs",
+  "3": "3 - Employeur saisonnier",
+  "4": "4 - Apprentissage familial",
+};
+
+const NIVEAU_DIPLOME_CODE_LABELS: Record<string, string> = {
+  "0": "0 - Aucun",
+  "3": "3 - CAP / BEP",
+  "4": "4 - Baccalaureat",
+  "5": "5 - DEUG / BTS / DUT / DEUST",
+  "6": "6 - Licence / Licence pro / BUT / Maitrise",
+  "7": "7 - Master / DEA / DESS / Ingenieur",
+  "8": "8 - Doctorat / HDR",
+};
+
 /* ---------- Props ---------- */
 type Props = {
   open: boolean;
@@ -225,7 +262,23 @@ export default function PartenaireDetailModal({
             <Grid item xs={12}>
               <Section title="Données employeur">
                 <Field label="SIRET" value={nn(partenaire.siret)} />
-                <Field label="Type employeur" value={nn(partenaire.type_employeur)} />
+                <Field
+                  label="Type employeur CERFA"
+                  value={nn(
+                    partenaire.type_employeur_code
+                      ? TYPE_EMPLOYEUR_CODE_LABELS[partenaire.type_employeur_code] ?? partenaire.type_employeur_code
+                      : null
+                  )}
+                />
+                <Field
+                  label="Employeur spécifique CERFA"
+                  value={nn(
+                    partenaire.employeur_specifique_code
+                      ? EMPLOYEUR_SPECIFIQUE_CODE_LABELS[partenaire.employeur_specifique_code] ??
+                          partenaire.employeur_specifique_code
+                      : null
+                  )}
+                />
                 <Field label="Code APE" value={nn(partenaire.code_ape)} />
                 <Field label="Effectif total" value={nn(partenaire.effectif_total)} />
                 <Field label="IDCC" value={nn(partenaire.idcc)} />
@@ -242,6 +295,35 @@ export default function PartenaireDetailModal({
                 <Field label="Créé le" value={fmt(partenaire.created_at)} />
                 <Field label="Mis à jour le" value={fmt(partenaire.updated_at)} />
                 <Field label="Créé par" value={partenaire.created_by?.full_name ?? "—"} />
+              </Section>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Section title="Maîtres d’apprentissage">
+                <Field label="Maitre 1 - nom" value={nn(partenaire.maitre1_nom_naissance)} />
+                <Field label="Maitre 1 - prénom" value={nn(partenaire.maitre1_prenom)} />
+                <Field label="Maitre 1 - diplôme" value={nn(partenaire.maitre1_diplome_titre)} />
+                <Field
+                  label="Maitre 1 - niveau CERFA"
+                  value={nn(
+                    partenaire.maitre1_niveau_diplome_code
+                      ? NIVEAU_DIPLOME_CODE_LABELS[partenaire.maitre1_niveau_diplome_code] ??
+                          partenaire.maitre1_niveau_diplome_code
+                      : null
+                  )}
+                />
+                <Field label="Maitre 2 - nom" value={nn(partenaire.maitre2_nom_naissance)} />
+                <Field label="Maitre 2 - prénom" value={nn(partenaire.maitre2_prenom)} />
+                <Field label="Maitre 2 - diplôme" value={nn(partenaire.maitre2_diplome_titre)} />
+                <Field
+                  label="Maitre 2 - niveau CERFA"
+                  value={nn(
+                    partenaire.maitre2_niveau_diplome_code
+                      ? NIVEAU_DIPLOME_CODE_LABELS[partenaire.maitre2_niveau_diplome_code] ??
+                          partenaire.maitre2_niveau_diplome_code
+                      : null
+                  )}
+                />
               </Section>
             </Grid>
 
