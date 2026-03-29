@@ -35,6 +35,7 @@ function asPaginated<T>(data: DRFEnvelope<T>): DRFPaginated<T> {
 /* ---------- Types pour la sélection ---------- */
 export type CerfaPick = {
   id: number;
+  cerfa_type?: "apprentissage" | "professionnalisation" | null;
   apprenti_nom_naissance: string | null;
   apprenti_prenom: string | null;
   employeur_nom?: string | null;
@@ -55,6 +56,7 @@ interface Props {
 function normalizeCerfa(x: CerfaContrat): CerfaPick {
   return {
     id: x.id,
+    cerfa_type: x.cerfa_type ?? "apprentissage",
     apprenti_nom_naissance: x.apprenti_nom_naissance ?? null,
     apprenti_prenom: x.apprenti_prenom ?? null,
     employeur_nom: x.employeur_nom ?? null,
@@ -62,6 +64,12 @@ function normalizeCerfa(x: CerfaContrat): CerfaPick {
     date_conclusion: x.date_conclusion ?? null,
     pdf_url: x.pdf_url ?? null,
   };
+}
+
+function cerfaTypeLabel(value?: "apprentissage" | "professionnalisation" | string | null): string {
+  if (value === "professionnalisation") return "Contrat de professionnalisation";
+  if (value === "apprentissage") return "Contrat apprentissage";
+  return "Type inconnu";
 }
 
 /* ---------- Component ---------- */
@@ -182,7 +190,8 @@ export default function CerfaSelectModal({ show, onClose, onSelect, onCreate }: 
                     }
                     secondary={
                       <>
-                        {c.employeur_nom && `🏢 ${c.employeur_nom}`}
+                        {`🧾 ${cerfaTypeLabel(c.cerfa_type)}`}
+                        {c.employeur_nom && ` • 🏢 ${c.employeur_nom}`}
                         {c.formation_nom && ` • 🎓 ${c.formation_nom}`}
                         {c.date_conclusion && ` • 📅 ${c.date_conclusion}`}
                       </>

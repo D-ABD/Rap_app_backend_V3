@@ -40,6 +40,9 @@ export interface Centre {
   /** Numéro SIRET du centre */
   siret_centre: string | null;
 
+  /** Numéro de déclaration d'activité de l'organisme de formation */
+  organisme_declaration_activite: string | null;
+
   /** Indique si c’est un CFA d’entreprise */
   cfa_entreprise: boolean;
 

@@ -299,6 +299,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             "crif_pct": self._pct(agg["total_inscrits_crif"], agg["total_inscrits"]),
             "mp_pct": self._pct(agg["total_inscrits_mp"], agg["total_inscrits"]),
         }
+        agg["total_inscrits_saisis"] = int(agg["total_inscrits"])
         return agg
 
     @staticmethod
@@ -434,6 +435,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
             nb_admissibles=Count("id", filter=Q(admissible=True), distinct=True),
         )
         cand = {k: int(v or 0) for k, v in cand_agg.items()}
+        cand["ecart_inscrits_vs_gespers"] = int(base["total_inscrits"]) - int(cand["nb_inscrits_gespers"])
 
         # ----- Appairages (scopés aux formations du qs)
         app_qs = Appairage.objects.filter(formation__in=qs)
@@ -485,6 +487,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 "nb_evenements": int(activite_qs.get("nb_evenements") or 0),
                 "nb_prospections": int(activite_qs.get("nb_prospections") or 0),
                 "candidats": cand,
+                "ecart_inscrits_vs_gespers": cand["ecart_inscrits_vs_gespers"],
                 "appairages": appairages,
             },
             "filters_echo": {k: v for k, v in request.query_params.items()},
@@ -662,6 +665,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         for r in rows:
             r["total_disponibles"] = int(r["total_dispo_crif"]) + int(r["total_dispo_mp"])
             r["taux_saturation"] = self._pct(r["total_inscrits"], r["total_places"])
+            r["total_inscrits_saisis"] = int(r["total_inscrits"])
+            r["ecart_inscrits_vs_gespers"] = int(r["total_inscrits"]) - int(r.get("nb_inscrits_gespers") or 0)
             r["repartition_financeur"] = {
                 "crif": int(r["total_inscrits_crif"]),
                 "mp": int(r["total_inscrits_mp"]),

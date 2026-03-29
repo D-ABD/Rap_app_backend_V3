@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import AddDocumentButton from "../../pages/formations/componentsFormations/AddDocumentButton";
 import FormationCommentsModal from "../../components/modals/FormationCommentsModal";
 import { Commentaire } from "src/types/commentaire";
+import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
 
 /* ---------- Types ---------- */
 type Props = {
@@ -74,6 +75,17 @@ const nn = (s?: string | number | null) =>
   s === null || s === undefined || s === "" ? "—" : String(s);
 
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
+const QUALIFICATION_VISEE_LABELS: Record<string, string> = {
+  "1": "1 - Certification enregistree au RNCP autre qu'un CQP",
+  "2": "2 - Certificat de qualification professionnelle (CQP)",
+  "3": "3 - Qualification reconnue dans les classifications d'une convention collective nationale",
+  "4": "4 - Action delivree dans le cadre du contrat de professionnalisation experimental",
+  "5": "5 - Action de pre-qualification ou de pre-formation abroge",
+  "6": "6 - Certification inscrite au repertoire specifique abroge",
+  "7": "7 - Autre abroge",
+  "8": "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation VAE 2022",
+};
+const qualificationLabel = (value?: string | null) => (value ? QUALIFICATION_VISEE_LABELS[value] ?? value : "—");
 const buildCandidatesUrl = (id: number) => `/candidats?formation=${id}`;
 const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_phase=stagiaire_en_formation`;
 const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
@@ -179,6 +191,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field label="Centre" value={formation.centre?.nom ?? "—"} />
                 <Field label="Type d’offre" value={formation.type_offre?.libelle ?? "—"} />
                 <Field label="Statut" value={formation.statut?.libelle ?? "—"} />
+                <Field label="Est archivée" value={yn(formation.est_archivee)} />
                 <Field
                   label="Activité"
                   value={
@@ -189,9 +202,6 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                         : "—"
                   }
                 />
-                <Field label="Active" value={yn(formation.is_active)} />
-                <Field label="Statut temporel" value={nn(formation.status_temporel)} />
-                <Field label="À recruter" value={yn(formation.is_a_recruter)} />
               </Section>
             </Grid>
 
@@ -200,6 +210,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
               <Section title="Dates">
                 <Field label="Date de début" value={fmt(formation.start_date)} />
                 <Field label="Date de fin" value={fmt(formation.end_date)} />
+                <Field label="Terminée" value={yn(formation.is_past)} />
                 <Field label="Créée le" value={fmt(formation.created_at)} />
                 <Field label="Mise à jour le" value={fmt(formation.updated_at)} />
               </Section>
@@ -220,9 +231,19 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
             <Grid item xs={12}>
               <Section title="Diplôme ou titre visé">
                 <Field label="Intitulé" value={nn(formation.intitule_diplome)} />
+                <Field label="Code diplôme CERFA" value={nn(formation.diplome_vise_code)} />
+                <Field label="Type qualification visée" value={qualificationLabel(formation.type_qualification_visee)} />
+                <Field
+                  label="Code NSF spécialité de formation"
+                  value={nsfSpecialiteLabel(formation.specialite_formation)}
+                />
                 <Field label="Code diplôme" value={nn(formation.code_diplome)} />
                 <Field label="Code RNCP" value={nn(formation.code_rncp)} />
                 <Field label="Total heures" value={nn(formation.total_heures)} />
+                <Field
+                  label="Heures d'enseignements généraux"
+                  value={nn(formation.heures_enseignements_generaux)}
+                />
                 <Field label="Heures distanciel" value={nn(formation.heures_distanciel)} />
               </Section>
             </Grid>
@@ -233,11 +254,16 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field label="Capacité" value={nn(formation.cap)} />
                 <Field label="Prévu CRIF" value={nn(formation.prevus_crif)} />
                 <Field label="Prévu MP" value={nn(formation.prevus_mp)} />
+                <Field label="Total places" value={nn(formation.total_places)} />
                 <Field label="Inscrits CRIF" value={nn(formation.inscrits_crif)} />
                 <Field label="Inscrits MP" value={nn(formation.inscrits_mp)} />
                 <Field label="Inscrits total" value={nn(formation.inscrits_total)} />
+                <Field label="Total inscrits" value={nn(formation.total_inscrits)} />
                 <Field label="Prévu total" value={nn(formation.prevus_total)} />
                 <Field label="Places restantes" value={nn(formation.places_restantes)} />
+                <Field label="Places disponibles" value={nn(formation.places_disponibles)} />
+                <Field label="Places restantes CRIF" value={nn(formation.places_restantes_crif)} />
+                <Field label="Places restantes MP" value={nn(formation.places_restantes_mp)} />
                 <Field label="À recruter (nb)" value={nn(formation.a_recruter)} />
               </Section>
             </Grid>
@@ -272,10 +298,10 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                   }
                 />
                 <Field label="Saturation" value={nn(formation.saturation)} />
-                <Field label="Badge saturation" value={nn(formation.saturation_badge)} />
-                <Field label="Badge label" value={nn(formation.saturation_badge_label)} />
+                <Field label="Taux saturation" value={nn(formation.taux_saturation)} />
                 <Field label="Taux de transformation" value={nn(formation.taux_transformation)} />
-                <Field label="Badge transformation" value={nn(formation.transformation_badge)} />
+                <Field label="Nombre prospections" value={nn(formation.nombre_prospections)} />
+                <Field label="Nombre appairages" value={nn(formation.nombre_appairages)} />
               </Section>
             </Grid>
 
@@ -309,9 +335,15 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Appairages"
                   value={
-                    <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
-                      Voir les appairages liés
-                    </Button>
+                    formation.appairages?.length ? (
+                      <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
+                        {formation.appairages.length} appairage(s)
+                      </Button>
+                    ) : (
+                      <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
+                        Voir les appairages liés
+                      </Button>
+                    )
                   }
                 />
                 <Field
@@ -467,6 +499,14 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                     )
                   }
                 />
+                <Field
+                  label="Historique"
+                  value={
+                    formation.historique?.length
+                      ? `${formation.historique.length} entrée(s) d'historique`
+                      : "—"
+                  }
+                />
               </Section>
             </Grid>
           </Grid>
@@ -481,7 +521,10 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
         <Button
           variant="contained"
           color="primary"
-          onClick={() => navigate(`/formations/${formation.id}/edit`)}
+          onClick={() => {
+            onClose();
+            navigate(`/formations/${formation.id}/edit`);
+          }}
         >
           Modifier
         </Button>

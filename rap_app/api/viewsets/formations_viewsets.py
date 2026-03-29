@@ -7,7 +7,8 @@ from pathlib import Path
 import pytz
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, ExpressionWrapper, F, IntegerField, Prefetch, Q
+from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, Prefetch, Q, Value, When
+from django.db.models.functions import Greatest
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -40,6 +41,7 @@ from ...models.formations import Formation
 from ...models.commentaires import Commentaire
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
+from ...models.candidat import Candidat
 from .scoped_viewset import ScopedModelViewSet
 from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
 
@@ -63,6 +65,20 @@ def strip_html_tags_pretty(html: str) -> str:
     text = re.sub(r"\s*\n\s*", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+FORMATION_COUNTED_CANDIDATE_Q = (
+    Q(candidats__inscrit_gespers=True)
+    | Q(candidats__date_validation_inscription__isnull=False)
+    | Q(candidats__date_entree_formation_effective__isnull=False)
+    | Q(
+        candidats__parcours_phase__in=[
+            Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            Candidat.ParcoursPhase.SORTI,
+        ]
+    )
+)
 
 
 class FormationSearchFilter(filters.SearchFilter):
@@ -95,14 +111,38 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     centre_lookup_paths = ("centre_id",)
 
     filter_backends = [DjangoFilterBackend, FormationSearchFilter, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["centre", "type_offre", "statut", "created_by", "start_date"]
+    filterset_fields = ["centre", "type_offre", "statut", "created_by", "start_date", "end_date"]
     serializer_class = FormationListSerializer
     search_fields = [
         "nom",
-        "num_offre",
-        "centre__nom",
-        "type_offre__nom",
+        "intitule_diplome",
+        "code_diplome",
+        "code_rncp",
         "assistante",
+        "num_kairos",
+        "num_offre",
+        "num_produit",
+        "centre__nom",
+        "centre__commune",
+        "centre__code_postal",
+        "centre__numero_voie",
+        "centre__nom_voie",
+        "centre__complement_adresse",
+        "centre__numero_uai_centre",
+        "centre__siret_centre",
+        "centre__cfa_responsable_denomination",
+        "centre__cfa_responsable_uai",
+        "centre__cfa_responsable_siret",
+        "centre__cfa_responsable_numero",
+        "centre__cfa_responsable_voie",
+        "centre__cfa_responsable_complement",
+        "centre__cfa_responsable_code_postal",
+        "centre__cfa_responsable_commune",
+        "type_offre__nom",
+        "type_offre__autre",
+        "statut__nom",
+        "statut__description_autre",
+        "created_by__username",
     ]
     ordering_fields = ["start_date", "end_date", "nom", "centre__nom", "created_at"]
     ordering = ["start_date"]
@@ -254,14 +294,49 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
     def get_queryset(self):
         """Retourne le queryset de base enrichi avec les relations FK utiles."""
-        return self._build_base_queryset().annotate(
-            places_disponibles_calc=ExpressionWrapper(
-                (F("prevus_crif") + F("prevus_mp")) - (F("inscrits_crif") + F("inscrits_mp")),
-                output_field=IntegerField(),
-            ),
-            nombre_prospections=Count("prospections", distinct=True),
-            nombre_appairages=Count("appairages", distinct=True),
-        ).select_related("centre", "type_offre", "statut")
+        return (
+            self._build_base_queryset()
+            .annotate(
+                counted_candidates=Count("candidats", filter=FORMATION_COUNTED_CANDIDATE_Q, distinct=True),
+            )
+            .annotate(
+                inscrits_crif_calc=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates")),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+                inscrits_mp_calc=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=Value(0)),
+                    default=F("counted_candidates"),
+                    output_field=IntegerField(),
+                ),
+            )
+            .annotate(
+                total_places_calc=F("prevus_crif") + F("prevus_mp"),
+                places_disponibles_calc=ExpressionWrapper(
+                    Greatest(
+                        Value(0),
+                        F("total_places_calc") - (F("inscrits_crif_calc") + F("inscrits_mp_calc")),
+                    ),
+                    output_field=IntegerField(),
+                ),
+                taux_saturation_calc=Case(
+                    When(
+                        total_places_calc__gt=0,
+                        then=ExpressionWrapper(
+                            100.0 * (F("inscrits_crif_calc") + F("inscrits_mp_calc")) / F("total_places_calc"),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(0.0),
+                    output_field=FloatField(),
+                ),
+                saturation_calc=F("taux_saturation_calc"),
+                nombre_prospections=Count("prospections", distinct=True),
+                nombre_appairages=Count("appairages", distinct=True),
+            )
+            .select_related("centre", "type_offre", "statut")
+        )
 
     def get_object(self):
         """
@@ -271,6 +346,43 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         pk = self.kwargs.get(self.lookup_field, None)
         qs = (
             Formation.objects.all_including_archived()
+            .annotate(
+                counted_candidates=Count("candidats", filter=FORMATION_COUNTED_CANDIDATE_Q, distinct=True),
+            )
+            .annotate(
+                inscrits_crif_calc=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates")),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+                inscrits_mp_calc=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=Value(0)),
+                    default=F("counted_candidates"),
+                    output_field=IntegerField(),
+                ),
+            )
+            .annotate(
+                total_places_calc=F("prevus_crif") + F("prevus_mp"),
+                taux_saturation_calc=Case(
+                    When(
+                        total_places_calc__gt=0,
+                        then=ExpressionWrapper(
+                            100.0 * (F("inscrits_crif_calc") + F("inscrits_mp_calc")) / F("total_places_calc"),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(0.0),
+                    output_field=FloatField(),
+                ),
+                saturation_calc=F("taux_saturation_calc"),
+                places_disponibles_calc=ExpressionWrapper(
+                    Greatest(
+                        Value(0),
+                        F("total_places_calc") - (F("inscrits_crif_calc") + F("inscrits_mp_calc")),
+                    ),
+                    output_field=IntegerField(),
+                ),
+            )
             .select_related("centre", "type_offre", "statut")
             .prefetch_related("commentaires", "documents", "evenements", "partenaires", "prospections")
         )

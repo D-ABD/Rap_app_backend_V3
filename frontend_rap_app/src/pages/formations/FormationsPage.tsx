@@ -8,6 +8,7 @@ import {
   Button,
   CircularProgress,
   Typography,
+  TextField,
   Select,
   MenuItem,
   Pagination,
@@ -75,9 +76,11 @@ export default function FormationsPage() {
   const apiFilters = useMemo(() => {
     const { texte, ...rest } =
       (effectiveFilters as typeof effectiveFilters & { texte?: string }) || {};
+    const freeText = texte?.trim() || undefined;
     return {
       ...rest,
-      search: texte?.trim() || undefined,
+      search: freeText,
+      texte: freeText,
     };
   }, [effectiveFilters]);
 
@@ -112,6 +115,31 @@ export default function FormationsPage() {
 
   const clearSelection = () => setSelectedIds([]);
   const selectAll = () => setSelectedIds(formations.map((f) => f.id));
+
+  const handleSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFilters((prev) => ({
+        ...prev,
+        texte: event.target.value,
+      }));
+      setPage(1);
+    },
+    [setPage]
+  );
+
+  const handleSearchKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Escape" && filters.texte) {
+        event.preventDefault();
+        setFilters((prev) => ({
+          ...prev,
+          texte: "",
+        }));
+        setPage(1);
+      }
+    },
+    [filters.texte, setPage]
+  );
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -230,6 +258,29 @@ export default function FormationsPage() {
         )
       }
     >
+      <Stack direction="row" spacing={1} alignItems="center" mb={2} flexWrap={{ xs: "wrap", md: "nowrap" }}>
+        <TextField
+          type="search"
+          size="small"
+          fullWidth
+          value={filters.texte ?? ""}
+          onChange={handleSearchChange}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="🔎 Recherche libre (nom, numeros, diplome, centre, CFA, type, statut, assistante…)"
+        />
+        {filters.texte && (
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => ({ ...prev, texte: "" }));
+              setPage(1);
+            }}
+          >
+            ✕
+          </Button>
+        )}
+      </Stack>
+
       {loading ? (
         <CircularProgress />
       ) : error ? (

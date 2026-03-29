@@ -52,6 +52,7 @@ const COLUMNS = [
   "En accompagnement TRE",
   "En appairage",
   "Inscrits GESPERS",
+  "Ecart inscrits",
   "Sortie / fin de formation",
   "Abandons",
   "Contrats Appr.",
@@ -117,6 +118,7 @@ export default function FormationGroupedWidget({
       totalAccompagnementTre: sum("nb_en_accompagnement_tre"),
       totalEnAppairage: sum("nb_en_appairage"),
       totalGespers: sum("nb_inscrits_gespers"),
+      totalEcartInscrits: sum("ecart_inscrits_vs_gespers"),
       totalSortis: sum("nb_sortis"),
       totalAbandons: sum("nb_abandons_phase"),
       totalAppr: sum("nb_contrats_apprentissage"),
@@ -363,6 +365,7 @@ export default function FormationGroupedWidget({
                     <TableCell align="right">{toFixed0(r.nb_en_accompagnement_tre)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_en_appairage)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_inscrits_gespers)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.ecart_inscrits_vs_gespers)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_sortis)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_abandons_phase)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_contrats_apprentissage)}</TableCell>
@@ -405,6 +408,7 @@ export default function FormationGroupedWidget({
                   <TableCell align="right">{toFixed0(totals.totalAccompagnementTre)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalEnAppairage)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalGespers)}</TableCell>
+                  <TableCell align="right">{toFixed0(totals.totalEcartInscrits)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalSortis)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAbandons)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalAppr)}</TableCell>

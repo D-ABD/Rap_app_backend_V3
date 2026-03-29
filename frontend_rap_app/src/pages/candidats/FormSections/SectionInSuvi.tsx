@@ -34,6 +34,29 @@ const TYPE_CONTRAT_CERFA_OPTIONS = [
   { value: "38", label: "38 - Modification lieu principal de formation" },
 ];
 
+const TYPE_CONTRAT_CERFA_PRO_OPTIONS = [
+  { value: "11", label: "11 - Contrat initial (cas general)" },
+  {
+    value: "12",
+    label: "12 - Contrat initial conclu conjointement avec deux employeurs pour l'exercice d'une activite saisonniere",
+  },
+  { value: "21", label: "21 - Nouveau contrat en raison de l'echec aux epreuves d'evaluation" },
+  { value: "22", label: "22 - Nouveau contrat en raison de la defaillance de l'organisme de formation" },
+  { value: "23", label: "23 - Nouveau contrat en raison de la maternite, de la maladie ou d'un accident de travail" },
+  {
+    value: "24",
+    label: "24 - Nouveau contrat pour l'obtention d'une qualification superieure ou complementaire",
+  },
+  { value: "30", label: "30 - Avenant" },
+];
+
+const APPRENTISSAGE_TYPE_CONTRAT_CERFA_CODES = new Set(
+  TYPE_CONTRAT_CERFA_OPTIONS.map((opt) => opt.value)
+);
+const PROFESSIONNALISATION_TYPE_CONTRAT_CERFA_CODES = new Set(
+  TYPE_CONTRAT_CERFA_PRO_OPTIONS.map((opt) => opt.value)
+);
+
 interface Props {
   form: CandidatFormData;
   setForm: React.Dispatch<React.SetStateAction<CandidatFormData>>;
@@ -103,6 +126,30 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
     typeof form.rgpd_legal_basis === "string" && form.rgpd_legal_basis === "consentement";
   const isFormationActive = form.parcours_phase === "stagiaire_en_formation";
 
+  const typeContratCerfaOptions =
+    form.type_contrat === "professionnalisation"
+      ? TYPE_CONTRAT_CERFA_PRO_OPTIONS
+      : TYPE_CONTRAT_CERFA_OPTIONS;
+
+  const updateTypeContrat = useCallback(
+    (e: any) => {
+      const nextTypeContrat = e.target.value || undefined;
+      setForm((f) => {
+        const currentCode = f.type_contrat_code ?? undefined;
+        const allowedCodes =
+          nextTypeContrat === "professionnalisation"
+            ? PROFESSIONNALISATION_TYPE_CONTRAT_CERFA_CODES
+            : APPRENTISSAGE_TYPE_CONTRAT_CERFA_CODES;
+        return {
+          ...f,
+          type_contrat: nextTypeContrat,
+          type_contrat_code: currentCode && allowedCodes.has(currentCode) ? currentCode : undefined,
+        };
+      });
+    },
+    [setForm]
+  );
+
   return (
     <Card variant="outlined">
       <CardHeader
@@ -155,19 +202,22 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
           {/* Type de contrat */}
           <Grid item xs={12} md={6}>
             <FormControl fullWidth>
-              <FormLabel>Type de contrat CERFA</FormLabel>
+              <FormLabel>Type de contrat CERFA (code notice)</FormLabel>
               <Select
                 value={form.type_contrat_code ?? ""}
                 onChange={updateSelect("type_contrat_code")}
                 displayEmpty
               >
                 <MenuItem value="">—</MenuItem>
-                {TYPE_CONTRAT_CERFA_OPTIONS.map((opt) => (
+                {typeContratCerfaOptions.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </MenuItem>
                 ))}
               </Select>
+              <FormHelperText>
+                Champ de pre-remplissage du CERFA : code officiel apprentissage ou professionnalisation selon le type choisi.
+              </FormHelperText>
             </FormControl>
           </Grid>
 
@@ -176,7 +226,7 @@ function SectionIndicateurs({ form, setForm, meta, errors }: Props) {
               <FormLabel>Type de contrat du stagiaire</FormLabel>
               <Select
                 value={form.type_contrat ?? ""}
-                onChange={updateSelect("type_contrat")}
+                onChange={updateTypeContrat}
                 displayEmpty
               >
                 <MenuItem value="">—</MenuItem>

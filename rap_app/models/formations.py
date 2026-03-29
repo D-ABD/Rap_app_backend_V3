@@ -30,7 +30,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
-from .cerfa_codes import CerfaDiplomeCode
+from .cerfa_codes import CerfaDiplomeCode, CerfaNsfSpecialiteCode, CerfaProTypeQualificationViseeCode
 from .centres import Centre
 from .statut import Statut, get_default_color
 from .types_offre import TypeOffre
@@ -428,11 +428,37 @@ class Formation(BaseModel):
         verbose_name=_("Code RNCP"),
         help_text=_("Code RNCP du diplôme"),
     )
+    type_qualification_visee = models.CharField(
+        max_length=1,
+        null=True,
+        blank=True,
+        choices=CerfaProTypeQualificationViseeCode.choices,
+        verbose_name=_("Type de qualification visée"),
+        help_text=_(
+            "Code de qualification visée utile au pré-remplissage du CERFA professionnalisation."
+        ),
+    )
+    specialite_formation = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True,
+        choices=CerfaNsfSpecialiteCode.choices,
+        verbose_name=_("Code NSF spécialité de formation"),
+        help_text=_(
+            "Code NSF à 3 chiffres utilisé pour la spécialité de formation dans le CERFA professionnalisation."
+        ),
+    )
     total_heures = models.PositiveIntegerField(
         null=True,
         blank=True,
         verbose_name=_("Durée totale (heures)"),
         help_text=_("Nombre total d'heures de formation en présentiel + distanciel"),
+    )
+    heures_enseignements_generaux = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Heures d'enseignements généraux"),
+        help_text=_("Volume d'heures à reporter dans le CERFA professionnalisation pour les enseignements généraux."),
     )
     heures_distanciel = models.PositiveIntegerField(
         null=True,

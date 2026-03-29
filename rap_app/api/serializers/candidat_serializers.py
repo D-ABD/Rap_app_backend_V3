@@ -19,11 +19,15 @@ from ...models.candidat import (
 )
 from ...models.centres import Centre
 from ...models.formations import Formation
+from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...services.french_text_normalizer import normalize_candidate_payload
 from ..mixins import FieldMaskingMixin
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
 )
+
+APPRENTISSAGE_TYPE_CONTRAT_CODES = {"11", "21", "22", "23", "31", "32", "33", "34", "35", "36", "37", "38"}
+PROFESSIONNALISATION_TYPE_CONTRAT_CODES = {"11", "12", "21", "22", "23", "24", "30"}
 
 
 def _normalize_nom_prenom(instance):
@@ -276,6 +280,9 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
             "pays_naissance",
             "nationalite_code",
             "nir",
+            "inscrit_france_travail",
+            "numero_inscription_france_travail",
+            "duree_inscription_france_travail_mois",
             "email",
             "telephone",
             "street_number",
@@ -790,7 +797,11 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("compte_utilisateur", None)
         self._apply_rgpd_defaults(validated_data)
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        CandidateLifecycleService.sync_candidate_formation_inscrits(instance, actor=actor)
+        return instance
 
     def validate(self, data):
         request = self.context.get("request")
@@ -859,12 +870,43 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
                     {"rgpd_consent_obtained": "Le consentement explicite est requis avec cette base légale."}
                 )
 
+        type_contrat = data.get("type_contrat", getattr(self.instance, "type_contrat", None))
+        type_contrat_code = data.get("type_contrat_code", getattr(self.instance, "type_contrat_code", None))
+        if type_contrat_code not in (None, ""):
+            code = str(type_contrat_code)
+            allowed_codes = (
+                PROFESSIONNALISATION_TYPE_CONTRAT_CODES
+                if type_contrat == "professionnalisation"
+                else APPRENTISSAGE_TYPE_CONTRAT_CODES
+            )
+            if code not in allowed_codes:
+                raise serializers.ValidationError(
+                    {
+                        "type_contrat_code": (
+                            "Code CERFA incompatible avec le type de contrat choisi."
+                        )
+                    }
+                )
+
         return data
 
     def update(self, instance, validated_data):
+        previous_formation_id = instance.formation_id
+        previous_was_counted = CandidateLifecycleService._counts_in_formation_inscrits(instance)
+        previous_was_crif = CandidateLifecycleService._is_crif_formation(instance) if previous_formation_id else False
         validated_data.pop("compte_utilisateur", None)
         self._apply_rgpd_notice_tracking(validated_data)
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        request = self.context.get("request")
+        actor = request.user if request and request.user.is_authenticated else None
+        CandidateLifecycleService.sync_candidate_formation_inscrits(
+            instance,
+            previous_formation_id=previous_formation_id,
+            previous_was_counted=previous_was_counted,
+            previous_was_crif=previous_was_crif,
+            actor=actor,
+        )
+        return instance
 
     def validate_formation(self, value):
         request = self.context.get("request")

@@ -28,6 +28,8 @@ import {
 import type { Formation, FormationFormDataRaw } from "../../types/formation";
 import type { NomId } from "../../types/formation";
 import { toApiError } from "../../api/httpClient";
+import { NSF_SPECIALITE_OPTIONS } from "../../constants/nsfOptions";
+import { suggestNsfSpecialite } from "../../constants/nsfSuggestions";
 
 /* =========================================
  * Sous-composants au niveau module
@@ -131,6 +133,22 @@ function FormationForm({
     { value: "79", label: "79 - Autre niveau bac+5 ou plus" },
     { value: "80", label: "80 - Doctorat" },
   ];
+  const qualificationViseeOptions = [
+    { value: "1", label: "1 - Certification enregistree au RNCP autre qu'un CQP" },
+    { value: "2", label: "2 - Certificat de qualification professionnelle (CQP)" },
+    { value: "3", label: "3 - Qualification reconnue dans les classifications d'une convention collective nationale" },
+    {
+      value: "4",
+      label: "4 - Action delivree dans le cadre du contrat de professionnalisation experimental",
+    },
+    { value: "5", label: "5 - Action de pre-qualification ou de pre-formation abroge" },
+    { value: "6", label: "6 - Certification inscrite au repertoire specifique abroge" },
+    { value: "7", label: "7 - Autre abroge" },
+    {
+      value: "8",
+      label: "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation VAE 2022",
+    },
+  ];
 
   const [values, setValues] = useState<FormationFormDataRaw>(() => ({
     nom: "",
@@ -156,12 +174,16 @@ function FormationForm({
     diplome_vise_code: "",
     code_diplome: "",
     code_rncp: "",
+    type_qualification_visee: "",
+    specialite_formation: "",
     total_heures: 0,
+    heures_enseignements_generaux: 0,
     heures_distanciel: 0,
   }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string>("");
+  const suggestedNsf = suggestNsfSpecialite(values.nom, values.intitule_diplome);
 
   // ✅ Initialisation — exécution une seule fois au montage
   useEffect(() => {
@@ -191,7 +213,10 @@ function FormationForm({
       diplome_vise_code: initialValues.diplome_vise_code ?? "",
       code_diplome: initialValues.code_diplome ?? "",
       code_rncp: initialValues.code_rncp ?? "",
+      type_qualification_visee: initialValues.type_qualification_visee ?? "",
+      specialite_formation: initialValues.specialite_formation ?? "",
       total_heures: initialValues.total_heures ?? 0,
+      heures_enseignements_generaux: initialValues.heures_enseignements_generaux ?? 0,
       heures_distanciel: initialValues.heures_distanciel ?? 0,
     });
   }, [initialValues]);
@@ -461,11 +486,65 @@ function FormationForm({
           value={values.code_rncp}
           onChange={handleChange}
         />
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <InputLabel id="type-qualification-visee-label">Type de qualification visée</InputLabel>
+            <Select
+              labelId="type-qualification-visee-label"
+              label="Type de qualification visée"
+              name="type_qualification_visee"
+              value={values.type_qualification_visee ?? ""}
+              onChange={handleChange}
+            >
+              <MenuItem value="">Non defini</MenuItem>
+              {qualificationViseeOptions.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>
+              Source metier pour pre-remplir le CERFA professionnalisation.
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <InputLabel id="specialite-formation-label">Code NSF spécialité de formation</InputLabel>
+            <Select
+              labelId="specialite-formation-label"
+              label="Code NSF spécialité de formation"
+              name="specialite_formation"
+              value={values.specialite_formation ?? ""}
+              onChange={handleChange}
+            >
+              <MenuItem value="">Non defini</MenuItem>
+              {NSF_SPECIALITE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Code NSF a 3 chiffres pour le CERFA professionnalisation.</FormHelperText>
+          </FormControl>
+        </Grid>
+        {suggestedNsf && suggestedNsf.code !== (values.specialite_formation ?? "") && (
+          <Grid item xs={12}>
+            <Alert severity="info">Suggestion NSF : {suggestedNsf.label}</Alert>
+          </Grid>
+        )}
         <Input
           label="Total heures"
           name="total_heures"
           type="number"
           value={values.total_heures}
+          onChange={handleChange}
+        />
+        <Input
+          label="Heures d'enseignements généraux"
+          name="heures_enseignements_generaux"
+          type="number"
+          value={values.heures_enseignements_generaux}
           onChange={handleChange}
         />
         <Input

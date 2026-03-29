@@ -3,12 +3,15 @@ from typing import Any, Dict, Optional
 from django.conf import settings
 from django.db import models
 
+from ..services.cerfa_mapping_service import sync_cerfa_choice_labels
 from .cerfa_codes import (
     CerfaDerniereClasseCode,
     CerfaDiplomeCode,
     CerfaEmployeurSpecifiqueCode,
     CerfaMaitreNiveauDiplomeCode,
     CerfaNationaliteCode,
+    CerfaNsfSpecialiteCode,
+    CerfaProTypeQualificationViseeCode,
     CerfaRegimeSocialCode,
     CerfaSituationAvantContratCode,
     CerfaTypeContratCode,
@@ -103,9 +106,11 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "diplome_intitule": {"source": "formation.intitule_diplome"},
     "code_diplome": {"source": "formation.code_diplome"},
     "code_rncp": {"source": "formation.code_rncp"},
+    "specialite_formation": {"source": "formation.specialite_formation"},
     "formation_debut": {"source": "formation.start_date"},
     "formation_fin": {"source": "formation.end_date"},
     "formation_duree_heures": {"source": "formation.total_heures"},
+    "formation_heures_enseignements": {"source": "formation.heures_enseignements_generaux"},
     "formation_distance_heures": {"source": "formation.heures_distanciel"},
     "formation_lieu_denomination": {"source": "formation.centre.nom"},
     "formation_lieu_uai": {"source": "formation.centre.numero_uai_centre"},
@@ -113,6 +118,7 @@ CERFA_AUTOFILL_SOURCES: Dict[str, Dict[str, str]] = {
     "formation_lieu_voie": {"source": "formation.centre.nom_voie"},
     "formation_lieu_code_postal": {"source": "formation.centre.code_postal"},
     "formation_lieu_commune": {"source": "formation.centre.commune"},
+    "organisme_declaration_activite": {"source": "formation.centre.organisme_declaration_activite"},
     # Contrat
     "type_contrat": {"source": "candidat.type_contrat"},
 }
@@ -207,6 +213,15 @@ class CerfaContrat(models.Model):
         blank=True,
         related_name="cerfa_contrats",
         help_text="Partenaire source utilise pour pre-remplir le CERFA.",
+    )
+    cerfa_type = models.CharField(
+        max_length=24,
+        choices=(
+            ("apprentissage", "Contrat apprentissage"),
+            ("professionnalisation", "Contrat de professionnalisation"),
+        ),
+        default="apprentissage",
+        help_text="Nature du contrat CERFA : apprentissage ou professionnalisation.",
     )
 
     # ───────────────────────── EMPLOYEUR ─────────────────────────
@@ -313,6 +328,24 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Code IDCC de la convention collective applicable.",
+    )
+    employeur_urssaf_particulier = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Numero URSSAF du particulier-employeur pour le CERFA professionnalisation.",
+    )
+    employeur_organisme_prevoyance = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Organisme de prevoyance, le cas echeant, pour le CERFA professionnalisation.",
+    )
+    employeur_numero_projet = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Numero de projet associe au contrat de professionnalisation, si applicable.",
     )
     employeur_regime_assurance_chomage = models.BooleanField(
         default=False,
@@ -618,6 +651,28 @@ class CerfaContrat(models.Model):
         choices=CerfaDiplomeCode.choices,
         help_text="Code CERFA du plus haut diplome obtenu.",
     )
+    apprenti_inscrit_france_travail = models.BooleanField(
+        blank=True,
+        null=True,
+        help_text="Indique explicitement si le beneficiaire est inscrit a France Travail.",
+    )
+    apprenti_france_travail_numero = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Numero d'inscription France Travail pour le CERFA professionnalisation.",
+    )
+    apprenti_france_travail_duree_mois = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Duree d'inscription a France Travail en mois pour le CERFA professionnalisation.",
+    )
+    apprenti_minimum_social_type = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Type de minimum social perçu, si beneficiaire, pour le CERFA professionnalisation.",
+    )
 
     # ───────────────────── REPRÉSENTANT LÉGAL ─────────────────────
     representant_nom = models.CharField(
@@ -724,7 +779,7 @@ class CerfaContrat(models.Model):
         help_text="Commune du CFA responsable.",
     )
     cfa_entreprise = models.BooleanField(
-        default=False,
+        default=True,
         help_text="Case indiquant si le CFA est un CFA d’entreprise.",
     )
 
@@ -758,6 +813,43 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Code RNCP de la certification visée.",
+    )
+    type_qualification_visee = models.CharField(
+        max_length=1,
+        blank=True,
+        null=True,
+        choices=CerfaProTypeQualificationViseeCode.choices,
+        help_text="Type de qualification visee pour le CERFA professionnalisation.",
+    )
+    organisme_declaration_activite = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Numero de declaration d'activite de l'organisme de formation principal.",
+    )
+    nombre_organismes_formation = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        default=1,
+        help_text="Nombre d'organismes de formation intervenant dans le contrat de professionnalisation.",
+    )
+    specialite_formation = models.CharField(
+        max_length=3,
+        blank=True,
+        null=True,
+        choices=CerfaNsfSpecialiteCode.choices,
+        help_text="Code NSF de specialite de formation pour le CERFA professionnalisation.",
+    )
+    organisation_formation = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Organisation de la formation pour le CERFA professionnalisation.",
+    )
+    formation_heures_enseignements = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Duree des enseignements generaux, professionnels et technologiques en heures.",
     )
     formation_debut = models.DateField(
         blank=True,
@@ -836,8 +928,10 @@ class CerfaContrat(models.Model):
         max_length=2,
         blank=True,
         null=True,
-        choices=CerfaTypeContratCode.choices,
-        help_text="Code CERFA du type de contrat ou avenant.",
+        help_text=(
+            "Code CERFA du type de contrat ou avenant. La nomenclature depend du type de CERFA "
+            "(apprentissage ou professionnalisation)."
+        ),
     )
     type_derogation = models.CharField(
         max_length=255,
@@ -857,6 +951,35 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Numéro du contrat précédent ou du contrat sur lequel porte l’avenant.",
+    )
+    emploi_occupe_pendant_contrat = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Emploi occupe pendant le contrat (intitule precis), utile pour le CERFA professionnalisation.",
+    )
+    classification_emploi = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Classification de l'emploi dans la convention collective pour le CERFA professionnalisation.",
+    )
+    classification_niveau = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Niveau de classification pour le CERFA professionnalisation.",
+    )
+    coefficient_hierarchique = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Coefficient hierarchique pour le CERFA professionnalisation.",
+    )
+    duree_periode_essai_jours = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Duree de la periode d'essai en jours pour le CERFA professionnalisation.",
     )
     date_conclusion = models.DateField(
         blank=True,
@@ -917,6 +1040,18 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Lieu de signature du contrat.",
+    )
+    opco_nom = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Nom de l'OPCO auquel est adresse le dossier complet pour le CERFA professionnalisation.",
+    )
+    opco_adherent_numero = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Numero d'adherent employeur a l'OPCO, s'il existe, pour le CERFA professionnalisation.",
     )
 
     # ─────────────────────── MÉTADONNÉES ───────────────────────
@@ -1006,6 +1141,12 @@ class CerfaContrat(models.Model):
             payload["maitre2_niveau_diplome"] = getattr(partenaire, "maitre2_niveau_diplome_code", None)
 
         if candidat is not None:
+            cerfa_type = (
+                "professionnalisation"
+                if getattr(candidat, "type_contrat", None) == "professionnalisation"
+                else "apprentissage"
+            )
+            payload["cerfa_type"] = cerfa_type
             payload["apprenti_nationalite_code"] = getattr(candidat, "nationalite_code", None)
             payload["apprenti_regime_social_code"] = getattr(candidat, "regime_social_code", None)
             payload["apprenti_situation_avant_code"] = getattr(candidat, "situation_avant_contrat_code", None)
@@ -1024,12 +1165,25 @@ class CerfaContrat(models.Model):
             payload["apprenti_dernier_diplome_prepare"] = getattr(candidat, "dernier_diplome_prepare_code", None)
             payload["apprenti_plus_haut_diplome"] = getattr(candidat, "diplome_plus_eleve_obtenu_code", None)
             payload["apprenti_derniere_annee_suivie"] = getattr(candidat, "derniere_classe_code", None)
-            payload["type_contrat"] = _pick_code(candidat, "type_contrat_code", "type_contrat")
+            payload["type_contrat"] = (
+                _pick_code(candidat, "type_contrat_code", "type_contrat")
+                if cerfa_type == "apprentissage"
+                else getattr(candidat, "type_contrat_code", None)
+            )
+            payload["apprenti_inscrit_france_travail"] = getattr(candidat, "inscrit_france_travail", None)
+            payload["apprenti_france_travail_numero"] = getattr(
+                candidat, "numero_inscription_france_travail", None
+            )
+            payload["apprenti_france_travail_duree_mois"] = getattr(
+                candidat, "duree_inscription_france_travail_mois", None
+            )
 
         if formation is not None:
             payload["diplome_vise_code"] = getattr(formation, "diplome_vise_code", None)
             payload["diplome_vise"] = _pick_code(formation, "diplome_vise_code", "intitule_diplome")
             payload["diplome_intitule"] = getattr(formation, "intitule_diplome", None)
+            payload["type_qualification_visee"] = getattr(formation, "type_qualification_visee", None)
+        payload = sync_cerfa_choice_labels(payload, payload.get("cerfa_type"))
         return _compact_dict(payload)
 
     @classmethod

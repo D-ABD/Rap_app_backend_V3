@@ -56,10 +56,14 @@ export type CandidatPick = {
   formation_num_offre?: string | null;
   formation_type_offre?: string | null;
   centre_nom?: string | null;
+  type_contrat?: string | null;
+  type_contrat_code?: string | null;
   entreprise_placement?: number | null;
   entreprise_placement_nom?: string | null;
   entreprise_validee?: number | null;
   entreprise_validee_nom?: string | null;
+  placement_appairage_partenaire?: number | null;
+  placement_appairage_partenaire_nom?: string | null;
   last_appairage?: {
     partenaire?: number | null;
     partenaire_nom?: string | null;
@@ -102,6 +106,8 @@ type CandidatApi = {
   formation_num_offre?: string | null;
   formation_type_offre?: string | null;
   centre_nom?: string | null;
+  type_contrat?: string | null;
+  type_contrat_code?: string | null;
   entreprise_placement?: number | null;
   entreprise_placement_nom?: string | null;
   entreprise_validee?: number | null;
@@ -195,6 +201,19 @@ function extractActive(x: CandidatApi): boolean | undefined {
     return (cu as Partial<CompteUtilisateurLite>).is_active;
   return undefined;
 }
+function formatTypeContratLabel(typeContrat?: string | null, typeContratCode?: string | null): string | null {
+  const value = _nn(typeContrat) || _nn(typeContratCode);
+  if (!value) return null;
+  const labels: Record<string, string> = {
+    apprentissage: "Apprentissage",
+    professionnalisation: "Professionnalisation",
+    sans_contrat: "Sans contrat",
+    poei_poec: "POEI / POEC",
+    crif: "CRIF",
+    autre: "Autre",
+  };
+  return labels[value] ?? value;
+}
 function normalizeCandidat(x: CandidatApi): CandidatPick {
   const prenom = _nn(x.prenom);
   const nom = _nn(x.nom);
@@ -215,6 +234,8 @@ function normalizeCandidat(x: CandidatApi): CandidatPick {
     formation_num_offre: x.formation_num_offre ?? null,
     formation_type_offre: x.formation_type_offre ?? null,
     centre_nom: x.centre_nom ?? null,
+    type_contrat: x.type_contrat ?? null,
+    type_contrat_code: x.type_contrat_code ?? null,
     entreprise_placement: x.entreprise_placement ?? null,
     entreprise_placement_nom: x.entreprise_placement_nom ?? null,
     entreprise_validee: x.entreprise_validee ?? null,
@@ -401,6 +422,8 @@ export default function CandidatsSelectModal({
         nom_complet: `${created.prenom} ${created.nom}`.trim(),
         email: created.email ?? null,
         formation: created.formation ? { id: created.formation, nom: null } : null,
+        type_contrat: null,
+        type_contrat_code: null,
       };
 
       toast.success("✅ Candidat créé et sélectionné");
@@ -520,6 +543,8 @@ export default function CandidatsSelectModal({
                         {c.formation_nom && `🎓 ${c.formation_nom}`}
                         {c.formation_num_offre && ` • Offre ${c.formation_num_offre}`}
                         {c.formation_type_offre && ` • ${c.formation_type_offre}`}
+                        {formatTypeContratLabel(c.type_contrat, c.type_contrat_code) &&
+                          ` • Contrat: ${formatTypeContratLabel(c.type_contrat, c.type_contrat_code)}`}
                         {c.centre_nom && ` • Centre: ${c.centre_nom}`}
                       </>
                     }

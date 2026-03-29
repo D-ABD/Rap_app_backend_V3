@@ -6,6 +6,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from ...models import Candidat, CerfaContrat, Formation, Partenaire
+from ...services.cerfa_mapping_service import sync_cerfa_choice_labels
 from ...services.placement_services import AppairagePlacementService
 
 
@@ -25,6 +26,8 @@ CODE_TO_TEXT_FIELDS: tuple[tuple[str, str], ...] = (
     ("type_derogation_code", "type_derogation"),
 )
 
+PROFESSIONNALISATION_TYPE_CONTRAT_CODES = {"11", "12", "21", "22", "23", "24", "30"}
+
 
 def _choice_label(field_name: str, code: Any) -> str | None:
     if code in (None, "", "null", "undefined"):
@@ -35,10 +38,20 @@ def _choice_label(field_name: str, code: Any) -> str | None:
 
 def _sync_choice_labels(values: dict[str, Any]) -> dict[str, Any]:
     """Hydrate les libellés snapshot du CERFA à partir des codes fournis."""
+    if values.get("type_contrat_code") in (None, "", "null", "undefined"):
+        raw_type_contrat = str(values.get("type_contrat") or "").strip().lower()
+        if raw_type_contrat in {
+            "apprentissage",
+            "contrat apprentissage",
+            "professionnalisation",
+            "contrat de professionnalisation",
+        }:
+            values["type_contrat"] = None
+    values = sync_cerfa_choice_labels(values, values.get("cerfa_type"))
     for code_field, text_field in CODE_TO_TEXT_FIELDS:
         code = values.get(code_field)
         label = _choice_label(code_field, code)
-        if label:
+        if label and not values.get(text_field):
             values[text_field] = label
     return values
 
@@ -80,6 +93,13 @@ def _sync_candidat_from_cerfa(cerfa: CerfaContrat) -> None:
         "commune_naissance": cerfa.apprenti_commune_naissance or None,
         "nationalite_code": cerfa.apprenti_nationalite_code or None,
         "regime_social_code": cerfa.apprenti_regime_social_code or None,
+        "inscrit_france_travail": (
+            cerfa.apprenti_inscrit_france_travail
+            if cerfa.apprenti_inscrit_france_travail is not None
+            else bool(cerfa.apprenti_france_travail_numero)
+        ),
+        "numero_inscription_france_travail": cerfa.apprenti_france_travail_numero or None,
+        "duree_inscription_france_travail_mois": cerfa.apprenti_france_travail_duree_mois,
         "sportif_haut_niveau": cerfa.apprenti_sportif_haut_niveau,
         "rqth": cerfa.apprenti_rqth,
         "equivalence_jeunes": cerfa.apprenti_equivalence_jeunes,
@@ -182,6 +202,7 @@ def _sync_centre_from_cerfa(cerfa: CerfaContrat) -> None:
         "cfa_responsable_complement": cerfa.cfa_adresse_complement or None,
         "cfa_responsable_code_postal": cerfa.cfa_code_postal or None,
         "cfa_responsable_commune": cerfa.cfa_commune or None,
+        "organisme_declaration_activite": cerfa.organisme_declaration_activite or None,
     }
     _apply_updates(centre, {**lieu_updates, **cfa_updates})
 
@@ -196,9 +217,12 @@ def _sync_formation_from_cerfa(cerfa: CerfaContrat) -> None:
         "diplome_vise_code": cerfa.diplome_vise_code or None,
         "code_diplome": cerfa.code_diplome or None,
         "code_rncp": cerfa.code_rncp or None,
+        "type_qualification_visee": cerfa.type_qualification_visee or None,
+        "specialite_formation": cerfa.specialite_formation or None,
         "start_date": cerfa.formation_debut,
         "end_date": cerfa.formation_fin,
         "total_heures": cerfa.formation_duree_heures,
+        "heures_enseignements_generaux": cerfa.formation_heures_enseignements,
         "heures_distanciel": cerfa.formation_distance_heures,
     }
     _apply_updates(formation, updates)
@@ -346,6 +370,22 @@ class CerfaContratSerializer(serializers.ModelSerializer):
             data["diplome_vise"] = data.get("diplome_vise") or diplome_source
             data["diplome_intitule"] = data.get("diplome_intitule") or diplome_source
         return data
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        cerfa_type = attrs.get("cerfa_type", getattr(self.instance, "cerfa_type", None))
+        type_contrat_code = attrs.get("type_contrat_code", getattr(self.instance, "type_contrat_code", None))
+        if cerfa_type == "professionnalisation":
+            if type_contrat_code not in (None, "", "null", "undefined"):
+                if str(type_contrat_code) not in PROFESSIONNALISATION_TYPE_CONTRAT_CODES:
+                    raise serializers.ValidationError(
+                        {
+                            "type_contrat_code": (
+                                "Pour un CERFA professionnalisation, le type de contrat doit etre "
+                                "parmi 11, 12, 21, 22, 23, 24 ou 30."
+                            )
+                        }
+                    )
+        return attrs
 
     def create(self, validated_data: dict[str, Any]) -> CerfaContrat:
         candidat_id = validated_data.pop("candidat_id", None)

@@ -28,6 +28,7 @@ class CentreSerializer(serializers.ModelSerializer):
             "commune",
             "numero_uai_centre",
             "siret_centre",
+            "organisme_declaration_activite",
             "cfa_entreprise",
             "cfa_responsable_est_lieu_principal",
             "cfa_responsable_denomination",

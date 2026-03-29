@@ -40,6 +40,9 @@ export type FormationWritePayload = {
   nombre_candidats?: number | null;
   nombre_entretiens?: number | null;
   intitule_diplome?: string | null;
+  diplome_vise_code?: string | null;
+  type_qualification_visee?: string | null;
+  specialite_formation?: string | null;
   code_diplome?: string | null;
   code_rncp?: string | null;
   total_heures?: number | null;

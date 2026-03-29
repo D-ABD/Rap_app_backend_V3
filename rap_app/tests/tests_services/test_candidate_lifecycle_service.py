@@ -201,3 +201,115 @@ class CandidateLifecycleServiceTests(TestCase):
         self.assertFalse(candidate.en_appairage)
         self.assertTrue(candidate.en_accompagnement_tre)
         self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ACCOMPAGNEMENT)
+
+    def test_mark_gespers_increments_formation_inscrits_for_crif(self):
+        candidate = Candidat.objects.create(
+            nom="Gespers",
+            prenom="Crif",
+            email="gespers.crif@example.com",
+            formation=self.formation,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
+
+        candidate.refresh_from_db()
+        self.formation.refresh_from_db()
+        self.assertTrue(candidate.inscrit_gespers)
+        self.assertEqual(self.formation.inscrits_crif, 1)
+        self.assertEqual(self.formation.inscrits_mp, 0)
+
+        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)
+
+    def test_clear_gespers_decrements_formation_inscrits_without_going_negative(self):
+        candidate = Candidat.objects.create(
+            nom="Gespers",
+            prenom="Reset",
+            email="gespers.reset@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        self.formation.inscrits_crif = 1
+        self.formation.save(user=self.actor, update_fields=["inscrits_crif"])
+
+        CandidateLifecycleService.clear_gespers(candidate, actor=self.actor)
+
+        candidate.refresh_from_db()
+        self.formation.refresh_from_db()
+        self.assertFalse(candidate.inscrit_gespers)
+        self.assertEqual(self.formation.inscrits_crif, 0)
+
+        CandidateLifecycleService.clear_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 0)
+
+    def test_mark_gespers_increments_mp_for_non_crif_formations(self):
+        type_offre_mp = TypeOffre.objects.create(nom=TypeOffre.POEI)
+        formation_mp = Formation.objects.create(
+            nom="Formation MP Lifecycle",
+            centre=self.centre,
+            type_offre=type_offre_mp,
+            statut=self.statut,
+            start_date=timezone.localdate() + timedelta(days=5),
+            end_date=timezone.localdate() + timedelta(days=30),
+        )
+        candidate = Candidat.objects.create(
+            nom="Gespers",
+            prenom="Mp",
+            email="gespers.mp@example.com",
+            formation=formation_mp,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
+
+        formation_mp.refresh_from_db()
+        self.assertEqual(formation_mp.inscrits_crif, 0)
+        self.assertEqual(formation_mp.inscrits_mp, 1)
+
+    def test_mark_gespers_does_not_double_count_already_validated_candidate(self):
+        candidate = Candidat.objects.create(
+            nom="Gespers",
+            prenom="Validated",
+            email="gespers.validated@example.com",
+            formation=self.formation,
+            date_validation_inscription=timezone.now(),
+            parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        self.formation.inscrits_crif = 1
+        self.formation.save(user=self.actor, update_fields=["inscrits_crif"])
+
+        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)
+
+    def test_clear_gespers_keeps_count_when_candidate_stays_validated(self):
+        candidate = Candidat.objects.create(
+            nom="Gespers",
+            prenom="StillValidated",
+            email="gespers.still.validated@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            date_validation_inscription=timezone.now(),
+            parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        self.formation.inscrits_crif = 1
+        self.formation.save(user=self.actor, update_fields=["inscrits_crif"])
+
+        CandidateLifecycleService.clear_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)

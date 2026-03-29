@@ -27,6 +27,54 @@ from ..serializers.types_offre_serializers import TypeOffreSerializer
 logger = logging.getLogger("application.api.formation")
 
 
+def _resolved_inscrits_crif(obj) -> int:
+    return int(getattr(obj, "inscrits_crif_calc", getattr(obj, "inscrits_crif", 0)) or 0)
+
+
+def _resolved_inscrits_mp(obj) -> int:
+    return int(getattr(obj, "inscrits_mp_calc", getattr(obj, "inscrits_mp", 0)) or 0)
+
+
+def _resolved_total_inscrits(obj) -> int:
+    return _resolved_inscrits_crif(obj) + _resolved_inscrits_mp(obj)
+
+
+def _resolved_total_places(obj) -> int:
+    annotated = getattr(obj, "total_places_calc", None)
+    if annotated is not None:
+        return int(annotated or 0)
+    return int((getattr(obj, "prevus_crif", 0) or 0) + (getattr(obj, "prevus_mp", 0) or 0))
+
+
+def _resolved_places_restantes_crif(obj) -> int:
+    return max((getattr(obj, "prevus_crif", 0) or 0) - _resolved_inscrits_crif(obj), 0)
+
+
+def _resolved_places_restantes_mp(obj) -> int:
+    return max((getattr(obj, "prevus_mp", 0) or 0) - _resolved_inscrits_mp(obj), 0)
+
+
+def _resolved_places_disponibles(obj) -> int:
+    return max(_resolved_total_places(obj) - _resolved_total_inscrits(obj), 0)
+
+
+def _resolved_taux_saturation(obj) -> float:
+    annotated = getattr(obj, "taux_saturation_calc", None)
+    if annotated is not None:
+        return round(float(annotated or 0.0), 2)
+    total_places = _resolved_total_places(obj)
+    if total_places <= 0:
+        return 0.0
+    return round((100.0 * _resolved_total_inscrits(obj)) / total_places, 2)
+
+
+def _resolved_saturation(obj) -> float:
+    annotated = getattr(obj, "saturation_calc", None)
+    if annotated is not None:
+        return round(float(annotated or 0.0), 2)
+    return _resolved_taux_saturation(obj)
+
+
 @extend_schema_serializer(
     examples=[
         OpenApiExample(
@@ -75,47 +123,92 @@ class FormationListSerializer(serializers.Serializer):
     activite = serializers.CharField(read_only=True)
 
     nom = serializers.CharField()
+    num_kairos = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     num_offre = serializers.CharField()
+    num_produit = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     start_date = serializers.DateField()
     end_date = serializers.DateField()
-    saturation = serializers.FloatField()
+    saturation = serializers.SerializerMethodField()
 
     saturation_badge = serializers.SerializerMethodField()
     centre = serializers.SerializerMethodField()
     statut = serializers.SerializerMethodField()
     type_offre = serializers.SerializerMethodField()
 
-    inscrits_crif = serializers.IntegerField()
-    inscrits_mp = serializers.IntegerField()
+    inscrits_crif = serializers.SerializerMethodField()
+    inscrits_mp = serializers.SerializerMethodField()
     prevus_crif = serializers.IntegerField()
     prevus_mp = serializers.IntegerField()
     cap = serializers.IntegerField(allow_null=True)
+    assistante = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     nombre_candidats = serializers.IntegerField()
     candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField()
+    nombre_evenements = serializers.IntegerField(required=False, allow_null=True)
     nombre_prospections = serializers.IntegerField(required=False, read_only=True)
     nombre_appairages = serializers.IntegerField(required=False, read_only=True)
     intitule_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    diplome_vise_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    type_qualification_visee = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    specialite_formation = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_rncp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     total_heures = serializers.IntegerField(required=False, allow_null=True)
+    heures_enseignements_generaux = serializers.IntegerField(required=False, allow_null=True)
     heures_distanciel = serializers.IntegerField(required=False, allow_null=True)
 
     inscrits_total = serializers.SerializerMethodField()
     prevus_total = serializers.SerializerMethodField()
-    places_restantes = serializers.IntegerField(source="places_disponibles", read_only=True)
+    total_places = serializers.IntegerField(required=False, allow_null=True)
+    total_inscrits = serializers.SerializerMethodField()
+    places_restantes = serializers.SerializerMethodField()
+    places_disponibles = serializers.SerializerMethodField()
+    places_restantes_crif = serializers.SerializerMethodField()
+    places_restantes_mp = serializers.SerializerMethodField()
     taux_transformation = serializers.SerializerMethodField()
     transformation_badge = serializers.SerializerMethodField()
 
     @extend_schema_field(str)
+    def get_inscrits_crif(self, obj):
+        return _resolved_inscrits_crif(obj)
+
+    @extend_schema_field(str)
+    def get_inscrits_mp(self, obj):
+        return _resolved_inscrits_mp(obj)
+
+    @extend_schema_field(str)
     def get_inscrits_total(self, obj):
         """Somme inscrits_crif + inscrits_mp."""
-        return (obj.inscrits_crif or 0) + (obj.inscrits_mp or 0)
+        return _resolved_total_inscrits(obj)
 
     @extend_schema_field(str)
     def get_prevus_total(self, obj):
         """Somme prevus_crif + prevus_mp."""
         return (obj.prevus_crif or 0) + (obj.prevus_mp or 0)
+
+    @extend_schema_field(str)
+    def get_total_inscrits(self, obj):
+        return _resolved_total_inscrits(obj)
+
+    @extend_schema_field(str)
+    def get_places_disponibles(self, obj):
+        return _resolved_places_disponibles(obj)
+
+    @extend_schema_field(str)
+    def get_places_restantes(self, obj):
+        return _resolved_places_disponibles(obj)
+
+    @extend_schema_field(str)
+    def get_places_restantes_crif(self, obj):
+        return _resolved_places_restantes_crif(obj)
+
+    @extend_schema_field(str)
+    def get_places_restantes_mp(self, obj):
+        return _resolved_places_restantes_mp(obj)
+
+    @extend_schema_field(float)
+    def get_saturation(self, obj):
+        return _resolved_saturation(obj)
 
     @extend_schema_field(str)
     def get_taux_transformation(self, obj):
@@ -140,7 +233,7 @@ class FormationListSerializer(serializers.Serializer):
     @extend_schema_field(str)
     def get_saturation_badge(self, obj):
         """Classe badge selon obj.saturation (mêmes seuils que transformation_badge)."""
-        taux = obj.saturation
+        taux = _resolved_saturation(obj)
         if taux is None:
             return "default"
         if taux >= 70:
@@ -257,6 +350,12 @@ class FormationDetailSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     est_archivee = serializers.BooleanField(read_only=True)
     activite = serializers.CharField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
+    is_future = serializers.BooleanField(read_only=True)
+    is_past = serializers.BooleanField(read_only=True)
+    is_a_recruter = serializers.BooleanField(read_only=True)
+    status_temporel = serializers.CharField(read_only=True)
+    statut_color = serializers.CharField(read_only=True, allow_null=True)
 
     nom = serializers.CharField(required=True)
     centre_id = serializers.IntegerField(required=True)
@@ -271,8 +370,8 @@ class FormationDetailSerializer(serializers.Serializer):
 
     prevus_crif = serializers.IntegerField(required=False, default=0)
     prevus_mp = serializers.IntegerField(required=False, default=0)
-    inscrits_crif = serializers.IntegerField(required=False, default=0)
-    inscrits_mp = serializers.IntegerField(required=False, default=0)
+    inscrits_crif = serializers.SerializerMethodField()
+    inscrits_mp = serializers.SerializerMethodField()
     assistante = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     cap = serializers.IntegerField(required=False, allow_null=True)
     convocation_envoie = serializers.BooleanField(default=False)
@@ -287,18 +386,28 @@ class FormationDetailSerializer(serializers.Serializer):
     statut = serializers.SerializerMethodField(read_only=True)
     type_offre = serializers.SerializerMethodField(read_only=True)
 
-    saturation = serializers.FloatField(read_only=True)
+    saturation = serializers.SerializerMethodField()
     saturation_badge = serializers.SerializerMethodField()
     inscrits_total = serializers.SerializerMethodField()
     prevus_total = serializers.SerializerMethodField()
-    places_restantes = serializers.IntegerField(source="places_disponibles", read_only=True)
+    total_places = serializers.IntegerField(read_only=True)
+    total_inscrits = serializers.SerializerMethodField()
+    places_restantes = serializers.SerializerMethodField()
+    places_disponibles = serializers.SerializerMethodField()
+    places_restantes_crif = serializers.SerializerMethodField()
+    places_restantes_mp = serializers.SerializerMethodField()
+    taux_saturation = serializers.SerializerMethodField()
     taux_transformation = serializers.SerializerMethodField()
     transformation_badge = serializers.SerializerMethodField()
 
     intitule_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    diplome_vise_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    type_qualification_visee = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    specialite_formation = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_rncp = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     total_heures = serializers.IntegerField(required=False, allow_null=True)
+    heures_enseignements_generaux = serializers.IntegerField(required=False, allow_null=True)
     heures_distanciel = serializers.IntegerField(required=False, allow_null=True)
 
     commentaires = CommentaireSerializer(many=True, read_only=True)
@@ -308,14 +417,50 @@ class FormationDetailSerializer(serializers.Serializer):
     prospections = ProspectionSerializer(many=True, read_only=True)
 
     @extend_schema_field(float)
+    def get_inscrits_crif(self, obj):
+        return _resolved_inscrits_crif(obj)
+
+    @extend_schema_field(float)
+    def get_inscrits_mp(self, obj):
+        return _resolved_inscrits_mp(obj)
+
+    @extend_schema_field(float)
     def get_inscrits_total(self, obj):
         """Somme inscrits_crif + inscrits_mp."""
-        return (obj.inscrits_crif or 0) + (obj.inscrits_mp or 0)
+        return _resolved_total_inscrits(obj)
 
     @extend_schema_field(float)
     def get_prevus_total(self, obj):
         """Somme prevus_crif + prevus_mp."""
         return (obj.prevus_crif or 0) + (obj.prevus_mp or 0)
+
+    @extend_schema_field(float)
+    def get_total_inscrits(self, obj):
+        return _resolved_total_inscrits(obj)
+
+    @extend_schema_field(float)
+    def get_places_disponibles(self, obj):
+        return _resolved_places_disponibles(obj)
+
+    @extend_schema_field(float)
+    def get_places_restantes(self, obj):
+        return _resolved_places_disponibles(obj)
+
+    @extend_schema_field(float)
+    def get_places_restantes_crif(self, obj):
+        return _resolved_places_restantes_crif(obj)
+
+    @extend_schema_field(float)
+    def get_places_restantes_mp(self, obj):
+        return _resolved_places_restantes_mp(obj)
+
+    @extend_schema_field(float)
+    def get_saturation(self, obj):
+        return _resolved_saturation(obj)
+
+    @extend_schema_field(float)
+    def get_taux_saturation(self, obj):
+        return _resolved_taux_saturation(obj)
 
     @extend_schema_field(float)
     def get_taux_transformation(self, obj):
@@ -346,7 +491,7 @@ class FormationDetailSerializer(serializers.Serializer):
     @extend_schema_field(str)
     def get_saturation_badge(self, obj):
         """Classe badge selon obj.saturation (mêmes seuils que get_transformation_badge)."""
-        taux = getattr(obj, "saturation", None)
+        taux = _resolved_saturation(obj)
         if taux is None:
             return "default"
         if taux >= 100:
@@ -428,22 +573,30 @@ class BaseFormationWriteSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nom",
+            "num_kairos",
             "num_offre",
+            "num_produit",
             "start_date",
             "end_date",
             "centre_id",
             "type_offre_id",
             "statut_id",
             "intitule_diplome",
+            "diplome_vise_code",
+            "type_qualification_visee",
+            "specialite_formation",
             "code_diplome",
             "code_rncp",
             "total_heures",
+            "heures_enseignements_generaux",
             "heures_distanciel",
             "prevus_crif",
             "prevus_mp",
             "inscrits_crif",
             "inscrits_mp",
             "cap",
+            "assistante",
+            "entree_formation",
             "nombre_candidats",
             "nombre_entretiens",
             "convocation_envoie",

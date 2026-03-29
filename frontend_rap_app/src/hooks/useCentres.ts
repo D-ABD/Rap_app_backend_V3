@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import axios from "axios";
+import api from "../api/axios";
 import type { Centre, CentreFormData, CentreOption } from "../types/centre";
 
 /** Pagination générique */
@@ -9,12 +9,6 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
-
-/** Instance axios configurée */
-const api = axios.create({
-  baseURL: "/api",
-  headers: { "Content-Type": "application/json" },
-});
 
 /* ============================================================
    🔹 1️⃣ — LISTE DES CENTRES (avec pagination et recherche)

@@ -111,6 +111,21 @@ export default function FormationStatsSummary({
     { label: "Actives", value: k.nb_actives ?? 0, color: theme.palette.primary.main },
     { label: "À venir", value: k.nb_a_venir ?? 0, color: theme.palette.info.main },
     { label: "Terminées", value: k.nb_terminees ?? 0, color: theme.palette.success.main },
+    {
+      label: "Inscrits saisis",
+      value: k.total_inscrits_saisis ?? 0,
+      color: theme.palette.secondary.main,
+    },
+    {
+      label: "Inscrits GESPERS",
+      value: k.candidats?.nb_inscrits_gespers ?? 0,
+      color: theme.palette.warning.main,
+    },
+    {
+      label: "Écart inscrits",
+      value: k.ecart_inscrits_vs_gespers ?? 0,
+      color: theme.palette.error.main,
+    },
     { label: "Événements", value: k.nb_evenements ?? 0, color: theme.palette.warning.main },
     { label: "Prospections", value: k.nb_prospections ?? 0, color: theme.palette.secondary.main },
     { label: "Annulées", value: k.nb_annulees ?? 0, color: theme.palette.error.main },

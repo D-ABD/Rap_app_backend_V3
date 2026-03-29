@@ -40,6 +40,16 @@ def get_user(instance):
     )
 
 
+def _user_info(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return "par Système"
+
+    full_name_getter = getattr(user, "get_full_name", None)
+    full_name = full_name_getter().strip() if callable(full_name_getter) else ""
+    username = getattr(user, "username", None) or getattr(user, "get_username", lambda: None)()
+    return f"par {full_name or username or 'Utilisateur'}"
+
+
 @receiver(post_save, sender=Formation, dispatch_uid="rap_app.formations_signals.log_formation_saved")
 def log_formation_saved(sender, instance, created, **kwargs):
     """
@@ -50,7 +60,7 @@ def log_formation_saved(sender, instance, created, **kwargs):
 
     action = "créée" if created else "modifiée"
     user = get_user(instance)
-    user_info = f"par {user.get_full_name() or user.username}" if user else "par Système"
+    user_info = _user_info(user)
 
     logger_formation.info(f"[Signal] Formation {action} : {instance.nom} (ID={instance.pk}) {user_info}")
 
@@ -77,7 +87,7 @@ def log_formation_deleted(sender, instance, **kwargs):
         return
 
     user = get_user(instance)
-    user_info = f"par {user.get_full_name() or user.username}" if user else "par Système"
+    user_info = _user_info(user)
 
     logger_formation.warning(f"[Signal] Formation supprimée : {instance.nom} (ID={instance.pk}) {user_info}")
 
@@ -115,7 +125,7 @@ def log_historique_ajout(sender, instance, created, **kwargs):
     ancienne = instance.ancienne_valeur or "—"
     nouvelle = instance.nouvelle_valeur or "—"
     user = instance.created_by
-    user_info = f"par {user.get_full_name() or user.username}" if user else "par Système"
+    user_info = _user_info(user)
 
     logger_historique.info(
         f"[Signal] Historique enregistré pour formation #{instance.formation_id} "

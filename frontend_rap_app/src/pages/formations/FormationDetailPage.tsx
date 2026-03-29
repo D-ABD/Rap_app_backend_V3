@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useFormation } from "../../hooks/useFormations";
 import PageTemplate from "../../components/PageTemplate";
 import FormationCommentsModal from "../../components/modals/FormationCommentsModal"; // ✅ import ajouté
+import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -28,6 +29,17 @@ const nn = (s?: string | number | null) =>
   s === null || s === undefined || s === "" ? "—" : String(s);
 
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
+const QUALIFICATION_VISEE_LABELS: Record<string, string> = {
+  "1": "1 - Certification enregistree au RNCP autre qu'un CQP",
+  "2": "2 - Certificat de qualification professionnelle (CQP)",
+  "3": "3 - Qualification reconnue dans les classifications d'une convention collective nationale",
+  "4": "4 - Action delivree dans le cadre du contrat de professionnalisation experimental",
+  "5": "5 - Action de pre-qualification ou de pre-formation abroge",
+  "6": "6 - Certification inscrite au repertoire specifique abroge",
+  "7": "7 - Autre abroge",
+  "8": "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation VAE 2022",
+};
+const qualificationLabel = (value?: string | null) => (value ? QUALIFICATION_VISEE_LABELS[value] ?? value : "—");
 const buildCandidatesUrl = (id: number) => `/candidats?formation=${id}`;
 const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_phase=stagiaire_en_formation`;
 const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
@@ -136,9 +148,19 @@ export default function FormationsDetailPage() {
           <Grid item xs={12}>
             <Section title="Diplôme ou titre visé">
               <Field label="Intitulé" value={nn(formation.intitule_diplome)} />
+              <Field label="Code diplôme CERFA" value={nn(formation.diplome_vise_code)} />
+              <Field label="Type qualification visée" value={qualificationLabel(formation.type_qualification_visee)} />
+              <Field
+                label="Code NSF spécialité de formation"
+                value={nsfSpecialiteLabel(formation.specialite_formation)}
+              />
               <Field label="Code diplôme" value={nn(formation.code_diplome)} />
               <Field label="Code RNCP" value={nn(formation.code_rncp)} />
               <Field label="Total heures" value={nn(formation.total_heures)} />
+              <Field
+                label="Heures d'enseignements généraux"
+                value={nn(formation.heures_enseignements_generaux)}
+              />
               <Field label="Heures distanciel" value={nn(formation.heures_distanciel)} />
             </Section>
           </Grid>

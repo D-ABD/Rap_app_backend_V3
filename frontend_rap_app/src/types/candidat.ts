@@ -134,6 +134,9 @@ export interface Candidat {
   pays_naissance?: string | null;
   nationalite_code?: string | null;
   nir?: string | null; // Numéro de sécurité sociale (15 chiffres)
+  inscrit_france_travail?: boolean;
+  numero_inscription_france_travail?: string | null;
+  duree_inscription_france_travail_mois?: number | null;
   rqth: boolean;
   permis_b: boolean;
 

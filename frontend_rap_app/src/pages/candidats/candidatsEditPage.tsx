@@ -30,6 +30,9 @@ const BASE_EDITABLE_FIELDS: Array<keyof CandidatFormData> = [
   "pays_naissance",
   "nationalite_code",
   "nir",
+  "inscrit_france_travail",
+  "numero_inscription_france_travail",
+  "duree_inscription_france_travail_mois",
   "rqth",
   "permis_b",
   "street_number",
@@ -41,6 +44,9 @@ const BASE_EDITABLE_FIELDS: Array<keyof CandidatFormData> = [
   "type_contrat",
   "type_contrat_code",
   "disponibilite",
+  "communication",
+  "experience",
+  "csp",
   "regime_social_code",
   "sportif_haut_niveau",
   "equivalence_jeunes",
@@ -95,6 +101,10 @@ export default function CandidatEditPage() {
   const { update, loading: saving } = useUpdateCandidat(candidatId);
 
   const canEditFormation = !!me && ["admin", "superadmin", "staff"].includes(me.role);
+  const candidatDisplayName =
+    [data?.prenom, data?.nom].filter(Boolean).join(" ").trim() ||
+    data?.nom_complet ||
+    "Candidat";
 
   /**
    * 🧩 handleSubmit
@@ -163,7 +173,7 @@ export default function CandidatEditPage() {
   // ── Page principale ────────────────────────────────
   return (
     <PageTemplate
-      title={`👤 Candidat #${candidatId} — édition`}
+      title={`👤 ${candidatDisplayName} — édition`}
       backButton
       onBack={() => navigate(-1)}
     >

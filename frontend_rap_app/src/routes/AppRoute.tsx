@@ -155,6 +155,7 @@ export default function AppRoute() {
   type AdminOnlyRouteProps = { children: ReactNode };
   type AdminRouteProps = { children: ReactNode };
   type SecureRouteProps = { children: ReactNode };
+  type CerfaRouteProps = { children: ReactNode };
 
   function AdminOnlyRoute({ children }: AdminOnlyRouteProps) {
     const { user } = useAuth();
@@ -196,7 +197,17 @@ export default function AppRoute() {
     return <>{children}</>;
   }
 
+  function CerfaRoute({ children }: CerfaRouteProps) {
+    const { user } = useAuth();
+    const role = (user?.role ?? "").toLowerCase();
+    const allowed = ["staff", "staff_read", "admin", "superadmin"].includes(role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
   const secure = (el: ReactNode) => <SecureRoute>{el}</SecureRoute>;
+  const cerfaSecure = (el: ReactNode) => <CerfaRoute>{el}</CerfaRoute>;
 
   /* ---------- Helper : choisir le layout selon le rôle ---------- */
   const getLayoutForUser = (user?: any) => {
@@ -412,8 +423,15 @@ export default function AppRoute() {
         <Route path="/commentaires/:id/edit" element={secure(<CommentairesEditPage />)} />
 
         {/* CERFA */}
-        <Route path="/cerfa" element={secure(<CerfaPage />)} />
-        <Route path="/cerfa/:id/edit" element={secure(<CerfaEditPage />)} />
+        <Route path="/cerfa" element={cerfaSecure(<CerfaPage />)} />
+        <Route
+          path="/cerfa/:id/edit"
+          element={
+            <AdminRoute>
+              <CerfaEditPage />
+            </AdminRoute>
+          }
+        />
 
         {/* Formations */}
         <Route path="/formations" element={secure(<FormationsPage />)} />

@@ -35,6 +35,7 @@ export default function CentreForm({
     complement_adresse: "",
     numero_uai_centre: "",
     siret_centre: "",
+    organisme_declaration_activite: "",
     cfa_entreprise: false,
 
     // Champs CFA responsable
@@ -135,6 +136,14 @@ export default function CentreForm({
             label="N° SIRET du centre"
             name="siret_centre"
             value={values.siret_centre || ""}
+            onChange={handleChange}
+            fullWidth
+          />
+
+          <TextField
+            label="Declaration d'activite"
+            name="organisme_declaration_activite"
+            value={values.organisme_declaration_activite || ""}
             onChange={handleChange}
             fullWidth
           />

@@ -30,12 +30,26 @@ import SearchInput from "../../components/SearchInput";
 import CerfaTable from "./CerfaTable";
 import { CerfaForm } from "./CerfaForm";
 import CerfaDetailModal from "./CerfaDetailModal";
+import { useAuth } from "../../hooks/useAuth";
+import { useCentres } from "../../hooks/useCentres";
+import FiltresCerfaPanel, { CerfaFiltresValues } from "../../components/filters/FiltresCerfaPanel";
 
 export default function CerfaPage() {
   const _theme = useTheme(); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [filters, setFilters] = useState({ search: "" });
+  const [filters, setFilters] = useState<CerfaFiltresValues>({
+    search: "",
+    centre: "",
+    cerfa_type: "",
+    type_contrat_code: "",
+    auto_generated: "",
+    date_field: "created_at",
+    date_from: "",
+    date_to: "",
+  });
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -43,6 +57,10 @@ export default function CerfaPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [showTypeChoice, setShowTypeChoice] = useState(false);
+  const [newCerfaType, setNewCerfaType] = useState<"apprentissage" | "professionnalisation">(
+    "apprentissage"
+  );
   const [selectedContrat, setSelectedContrat] = useState<CerfaContrat | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -56,13 +74,17 @@ export default function CerfaPage() {
     const candidat = parseId(searchParams.get("candidat"));
     const formation = parseId(searchParams.get("formation"));
     const employeur = parseId(searchParams.get("employeur"));
+    const cerfaType = searchParams.get("cerfa_type");
     const formationNom = searchParams.get("formation_nom");
     const employeurNom = searchParams.get("employeur_nom");
 
     if (!candidat && !formation && !employeur) return null;
 
     return {
+      cerfaType,
       form: {
+        cerfa_type:
+          cerfaType === "professionnalisation" ? "professionnalisation" : "apprentissage",
         candidat: candidat ?? undefined,
         formation: formation ?? undefined,
         employeur: employeur ?? undefined,
@@ -77,20 +99,58 @@ export default function CerfaPage() {
   }, [searchParams]);
 
   const queryParams = useMemo(
-    () => ({ search: filters.search, page, page_size: pageSize, reloadKey }),
+    () => ({
+      search: filters.search,
+      centre: filters.centre || undefined,
+      cerfa_type: (filters.cerfa_type || undefined) as
+        | "apprentissage"
+        | "professionnalisation"
+        | undefined,
+      type_contrat_code: filters.type_contrat_code || undefined,
+      auto_generated:
+        filters.auto_generated === "true"
+          ? true
+          : filters.auto_generated === "false"
+            ? false
+            : undefined,
+      date_field: (filters.date_field || undefined) as
+        | "created_at"
+        | "date_conclusion"
+        | "date_debut_execution"
+        | "formation_debut"
+        | undefined,
+      date_from: filters.date_from || undefined,
+      date_to: filters.date_to || undefined,
+      page,
+      page_size: pageSize,
+      reloadKey,
+    }),
     [filters, page, pageSize, reloadKey]
   );
   const editingId = selectedId ?? selectedContrat?.id ?? null;
 
   const { data, isLoading, isError } = useCerfaList(queryParams);
+  const { data: centresData } = useCentres({ page: 1, page_size: 200, ordering: "nom" });
   const { mutateAsync: createCerfa, isPending: isCreating } = useCerfaCreate();
   const { mutateAsync: updateCerfa, isPending: isUpdating } = useCerfaUpdate(editingId ?? -1);
   const { mutateAsync: remove } = useCerfaDelete();
   const { mutateAsync: downloadPdf } = useCerfaDownloadPdf();
+  const role = (user?.role ?? "").toLowerCase();
+  const canWriteCerfa = ["staff", "admin", "superadmin"].includes(role);
 
   const contrats: CerfaContrat[] = useMemo(() => data?.results ?? [], [data]);
   const count = data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
+  const activeFiltersCount = useMemo(
+    () =>
+      Object.entries(filters).filter(([key, value]) => {
+        if (key === "search") return false;
+        if (value == null) return false;
+        if (typeof value === "string") return value.trim() !== "";
+        return true;
+      }).length,
+    [filters]
+  );
 
   const formatBackendMessages = (messages: unknown): string => {
     if (Array.isArray(messages)) {
@@ -104,6 +164,23 @@ export default function CerfaPage() {
     return String(messages ?? "");
   };
 
+  const buildCerfaFileName = (contrat?: CerfaContrat | null) => {
+    const prefix =
+      contrat?.cerfa_type === "professionnalisation" ? "cerfa_pro" : "cerfa_apprent";
+    const slugify = (value?: string | null) =>
+      (value ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "") || "inconnu";
+
+    return `${prefix}_${slugify(contrat?.apprenti_nom_naissance)}_${slugify(
+      contrat?.apprenti_prenom
+    )}.pdf`;
+  };
+
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
@@ -115,12 +192,38 @@ export default function CerfaPage() {
   }, [selectedContrat, selectedId]);
 
   useEffect(() => {
+    if (!canWriteCerfa) return;
     if (candidateContext) {
       setSelectedContrat(null);
       setSelectedId(null);
-      setShowForm(true);
+      if (candidateContext.cerfaType) {
+        setShowForm(true);
+      } else {
+        setShowTypeChoice(true);
+      }
     }
-  }, [candidateContext]);
+  }, [candidateContext, canWriteCerfa]);
+
+  const openCerfaByType = (type: "apprentissage" | "professionnalisation") => {
+    if (candidateContext) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("cerfa_type", type);
+        return next;
+      });
+      setShowTypeChoice(false);
+      return;
+    }
+
+    setShowTypeChoice(false);
+    setSelectedContrat(null);
+    setSelectedId(null);
+    setNewCerfaType(type);
+    if (type === "professionnalisation") {
+      toast.info("CERFA professionnalisation selectionne. Le choix est memorise pour ce flux.");
+    }
+    setShowForm(true);
+  };
 
   const handleRowClick = (id: number) => {
     const contrat = contrats.find((c) => c.id === id);
@@ -194,33 +297,57 @@ export default function CerfaPage() {
     <PageTemplate
       title="📑 Contrats CERFA"
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            onClick={() => setShowFilters((v) => !v)}
+            startIcon={<span>{showFilters ? "🫣" : "🔎"}</span>}
+          >
+            {showFilters ? "Masquer filtres" : "Afficher filtres"}
+            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
           <SearchInput
             placeholder="Rechercher par apprenti, employeur..."
             value={filters.search}
             onChange={(e) => {
-              setFilters({ ...filters, search: e.target.value });
+              setFilters((prev) => ({ ...prev, search: e.target.value }));
               setPage(1);
             }}
           />
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+            disabled={!canWriteCerfa}
             onClick={() => {
+              if (!canWriteCerfa) return;
               setSelectedContrat(null);
               setSelectedId(null);
-              setShowForm(true);
+              setShowTypeChoice(true);
             }}
           >
             Nouveau CERFA
           </Button>
-          {selectedIds.length > 0 && (
+          {canWriteCerfa && selectedIds.length > 0 && (
             <Button color="error" onClick={() => setShowConfirm(true)}>
               Supprimer ({selectedIds.length})
             </Button>
           )}
         </Stack>
       }
+      filters={
+        showFilters ? (
+          <FiltresCerfaPanel
+            centres={centresData?.results ?? []}
+            values={filters}
+            onChange={(newValues) => {
+              setFilters(newValues);
+              setPage(1);
+            }}
+            onRefresh={() => setReloadKey((k) => k + 1)}
+          />
+        ) : undefined
+      }
+      showFilters={showFilters}
       footer={
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -259,13 +386,15 @@ export default function CerfaPage() {
           }
           onRowClick={handleRowClick}
           onDeleteClick={(id) => {
+            if (!canWriteCerfa) return;
             setSelectedId(id);
             setShowConfirm(true);
           }}
           onDownloadPdf={async (id) => {
             try {
               const blob = await downloadPdf(id);
-              const fileName = `cerfa_${id}.pdf`;
+              const contrat = contrats.find((c) => c.id === id);
+              const fileName = buildCerfaFileName(contrat);
               const url = URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
@@ -279,6 +408,7 @@ export default function CerfaPage() {
             }
           }}
           onEditClick={(id) => {
+            if (!canWriteCerfa) return;
             const contrat = contrats.find((c) => c.id === id);
             if (contrat) {
               setSelectedContrat(contrat);
@@ -286,6 +416,7 @@ export default function CerfaPage() {
               setShowForm(true);
             }
           }}
+          canWrite={canWriteCerfa}
         />
       )}
 
@@ -302,6 +433,7 @@ export default function CerfaPage() {
               [
                 "candidat",
                 "candidat_nom",
+                "cerfa_type",
                 "formation",
                 "formation_nom",
                 "employeur",
@@ -312,7 +444,7 @@ export default function CerfaPage() {
           }
         }}
         initialData={selectedContrat}
-        initialContext={selectedContrat ? null : candidateContext?.form ?? null}
+        initialContext={selectedContrat ? null : candidateContext?.form ?? { cerfa_type: newCerfaType }}
         initialSelections={selectedContrat ? null : candidateContext?.selections ?? null}
         onSubmit={
           selectedContrat
@@ -356,12 +488,42 @@ export default function CerfaPage() {
         readOnly={isCreating || isUpdating}
       />
 
+      <Dialog open={showTypeChoice} onClose={() => setShowTypeChoice(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Type de CERFA</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Choisissez le type de CERFA a creer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setShowTypeChoice(false)} variant="outlined">
+            Annuler
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => openCerfaByType("apprentissage")}
+            disabled={!canWriteCerfa}
+          >
+            Apprentissage
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => openCerfaByType("professionnalisation")}
+            disabled={!canWriteCerfa}
+          >
+            Professionnalisation
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ✅ Détail CERFA */}
       <CerfaDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
         contrat={selectedContrat}
         onEdit={(id) => {
+          if (!canWriteCerfa) return;
           const contrat = contrats.find((c) => c.id === id) ?? selectedContrat;
           if (contrat) {
             setSelectedContrat(contrat);
@@ -370,6 +532,7 @@ export default function CerfaPage() {
             setShowForm(true);
           }
         }}
+        canWrite={canWriteCerfa}
       />
 
       {/* ✅ Confirmation suppression */}
@@ -387,7 +550,7 @@ export default function CerfaPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
+          <Button color="error" variant="contained" onClick={handleDelete} disabled={!canWriteCerfa}>
             Supprimer
           </Button>
         </DialogActions>

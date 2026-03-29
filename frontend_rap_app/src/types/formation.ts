@@ -104,9 +104,13 @@ export interface Formation {
 
   // 🎓 Diplôme ou titre visé
   intitule_diplome?: string | null;
+  diplome_vise_code?: string | null;
+  type_qualification_visee?: string | null;
+  specialite_formation?: string | null;
   code_diplome?: string | null;
   code_rncp?: string | null;
   total_heures?: number | null;
+  heures_enseignements_generaux?: number | null;
   heures_distanciel?: number | null;
 
   // commentaires & métadonnées
@@ -155,10 +159,13 @@ export interface FormationFormData {
 
   // 🎓 Diplôme ou titre visé
   intitule_diplome?: string;
+  type_qualification_visee?: string;
+  specialite_formation?: string;
   diplome_vise_code?: string;
   code_diplome?: string;
   code_rncp?: string;
   total_heures?: number;
+  heures_enseignements_generaux?: number;
   heures_distanciel?: number;
 
   assistante?: string;

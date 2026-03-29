@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -26,8 +26,15 @@ import { useCerfaPrefill } from "../../hooks/useCerfa";
 import CandidatsSelectModal from "../../components/modals/CandidatsSelectModal";
 import FormationSelectModal from "../../components/modals/FormationSelectModal";
 import PartenaireSelectModal from "../../components/modals/PartenairesSelectModal";
+import { NSF_SPECIALITE_OPTIONS } from "../../constants/nsfOptions";
+import { suggestNsfSpecialite } from "../../constants/nsfSuggestions";
 
 type CodeOption = { value: string; label: string };
+
+const CERFA_TYPE_LABELS: Record<"apprentissage" | "professionnalisation", string> = {
+  apprentissage: "Contrat apprentissage",
+  professionnalisation: "Contrat de professionnalisation",
+};
 
 const NATIONALITE_OPTIONS: CodeOption[] = [
   { value: "1", label: "1 - Francaise" },
@@ -55,6 +62,19 @@ const SITUATION_AVANT_OPTIONS: CodeOption[] = [
   { value: "12", label: "12 - Inactif" },
 ];
 
+const PRO_SITUATION_AVANT_OPTIONS: CodeOption[] = [
+  { value: "1", label: "1 - Scolaire" },
+  { value: "2", label: "2 - Prequalification" },
+  { value: "3", label: "3 - Etudiant" },
+  { value: "4", label: "4 - Contrat d'apprentissage" },
+  { value: "5", label: "5 - Contrat de professionnalisation" },
+  { value: "6", label: "6 - Salarie en contrat aide : CUI-CIE, CUI-CAE" },
+  { value: "7", label: "7 - Stagiaire de la formation professionnelle" },
+  { value: "8", label: "8 - Salarie" },
+  { value: "9", label: "9 - Personne a la recherche d'un emploi" },
+  { value: "10", label: "10 - Inactif" },
+];
+
 const DIPLOME_OPTIONS: CodeOption[] = [
   { value: "13", label: "13 - Aucun diplome ni titre professionnel" },
   { value: "25", label: "25 - Diplome national du Brevet" },
@@ -80,6 +100,30 @@ const DIPLOME_OPTIONS: CodeOption[] = [
   { value: "76", label: "76 - Diplome d'ecole de commerce" },
   { value: "79", label: "79 - Autre niveau bac+5 ou plus" },
   { value: "80", label: "80 - Doctorat" },
+];
+
+const PRO_DIPLOME_OPTIONS: CodeOption[] = [
+  { value: "10", label: "10 - Doctorat" },
+  { value: "11", label: "11 - Master 2 professionnel / DESS / diplome grande ecole" },
+  { value: "12", label: "12 - Master 2 recherche / DEA" },
+  { value: "19", label: "19 - Autre diplome ou titre de niveau bac +5 ou plus" },
+  { value: "21", label: "21 - Master 1 professionnel" },
+  { value: "22", label: "22 - Master 1 general" },
+  { value: "23", label: "23 - Licence professionnelle" },
+  { value: "24", label: "24 - Licence generale" },
+  { value: "29", label: "29 - Autre diplome ou titre de niveau bac +3 ou 4" },
+  { value: "31", label: "31 - Brevet de Technicien Superieur" },
+  { value: "32", label: "32 - Diplome Universitaire de technologie" },
+  { value: "39", label: "39 - Autre diplome ou titre de niveau bac +2" },
+  { value: "41", label: "41 - Baccalaureat professionnel" },
+  { value: "42", label: "42 - Baccalaureat general" },
+  { value: "43", label: "43 - Baccalaureat technologique" },
+  { value: "49", label: "49 - Autre diplome ou titre de niveau bac" },
+  { value: "51", label: "51 - CAP" },
+  { value: "52", label: "52 - BEP" },
+  { value: "53", label: "53 - Mention complementaire" },
+  { value: "59", label: "59 - Autre diplome ou titre de niveau CAP/BEP" },
+  { value: "60", label: "60 - Aucun diplome ni titre professionnel" },
 ];
 
 const DERNIERE_CLASSE_OPTIONS: CodeOption[] = [
@@ -147,6 +191,25 @@ const TYPE_CONTRAT_OPTIONS: CodeOption[] = [
   { value: "38", label: "38 - Modification lieu principal de formation" },
 ];
 
+const PRO_TYPE_CONTRAT_OPTIONS: CodeOption[] = [
+  { value: "11", label: "11 - Contrat initial (cas general)" },
+  {
+    value: "12",
+    label: "12 - Contrat initial conclu conjointement avec deux employeurs pour l'exercice d'une activite saisonniere",
+  },
+  { value: "21", label: "21 - Nouveau contrat en raison de l'echec aux epreuves d'evaluation" },
+  { value: "22", label: "22 - Nouveau contrat en raison de la defaillance de l'organisme de formation" },
+  {
+    value: "23",
+    label: "23 - Nouveau contrat en raison de la maternite, de la maladie ou d'un accident de travail",
+  },
+  {
+    value: "24",
+    label: "24 - Nouveau contrat pour l'obtention d'une qualification superieure ou complementaire",
+  },
+  { value: "30", label: "30 - Avenant" },
+];
+
 const TYPE_DEROGATION_OPTIONS: CodeOption[] = [
   { value: "11", label: "11 - Age inferieur a 16 ans" },
   { value: "12", label: "12 - Age superieur a 29 ans" },
@@ -155,6 +218,29 @@ const TYPE_DEROGATION_OPTIONS: CodeOption[] = [
   { value: "50", label: "50 - Cumul de derogations" },
   { value: "60", label: "60 - Autre derogation" },
 ];
+
+const PRO_TYPE_QUALIFICATION_OPTIONS: CodeOption[] = [
+  { value: "1", label: "1 - Certification enregistree au RNCP autre qu'un CQP" },
+  { value: "2", label: "2 - Certificat de qualification professionnelle (CQP)" },
+  { value: "3", label: "3 - Qualification reconnue dans les classifications d'une convention collective nationale" },
+  {
+    value: "4",
+    label: "4 - Action delivree dans le cadre du contrat de professionnalisation experimental prevu en application du VI de l'article 28 de la loi n° 2018-771 du 5 septembre 2018",
+  },
+  { value: "5", label: "5 - Action de pre-qualification ou de pre-formation abroge" },
+  {
+    value: "6",
+    label: "6 - Certification inscrite au repertoire specifique prevu a l'article L. 6113-6 du code du travail abroge",
+  },
+  { value: "7", label: "7 - Autre abroge" },
+  {
+    value: "8",
+    label: "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation associant des actions de validation des acquis de l'experience mentionnee a l'article 11 de la loi n° 2022-1598 du 21 decembre 2022",
+  },
+];
+
+const APPRENTISSAGE_TYPE_CONTRAT_CODES = new Set(TYPE_CONTRAT_OPTIONS.map((opt) => opt.value));
+const PROFESSIONNALISATION_TYPE_CONTRAT_CODES = new Set(PRO_TYPE_CONTRAT_OPTIONS.map((opt) => opt.value));
 
 type CerfaFormProps = {
   open: boolean;
@@ -180,6 +266,9 @@ export function CerfaForm({
   readOnly = false,
 }: CerfaFormProps) {
   const [form, setForm] = useState<Partial<CerfaContratCreate>>({
+    cerfa_type: "apprentissage",
+    cfa_entreprise: true,
+    nombre_organismes_formation: 1,
     pieces_justificatives_ok: true,
   });
   const [selectedCandidat, setSelectedCandidat] = useState<any>(null);
@@ -189,10 +278,12 @@ export function CerfaForm({
   const [showCandidatModal, setShowCandidatModal] = useState(false);
   const [showFormationModal, setShowFormationModal] = useState(false);
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
+  const suggestedNsf = suggestNsfSpecialite(form.diplome_intitule, form.diplome_vise);
   const [prefillInfo, setPrefillInfo] = useState<string>("");
   const { mutateAsync: prefillCerfa, isPending: isPrefilling } = useCerfaPrefill();
-  const setField = (field: keyof CerfaContratCreate, value: unknown) =>
+  const setField = useCallback((field: keyof CerfaContratCreate, value: unknown) => {
     setForm((current) => ({ ...current, [field]: value }));
+  }, []);
 
   const getDateValue = useCallback((value?: string | null) => {
     if (!value) return null;
@@ -249,6 +340,79 @@ export function CerfaForm({
     </TextField>
   );
 
+  const renderMemoDateField = useCallback(
+    (
+      field: keyof CerfaContratCreate,
+      value: string | null | undefined,
+      label: string,
+      helperText?: string
+    ) => (
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <DatePicker
+          label={label}
+          value={getDateValue(value)}
+          onChange={(nextValue: Dayjs | null) =>
+            setField(field, nextValue && nextValue.isValid() ? nextValue.format("YYYY-MM-DD") : null)
+          }
+          views={["year", "month", "day"]}
+          openTo="year"
+          format="DD/MM/YYYY"
+          disabled={readOnly}
+          slotProps={{
+            textField: {
+              fullWidth: true,
+              helperText,
+            },
+          }}
+        />
+      </LocalizationProvider>
+    ),
+    [getDateValue, readOnly, setField]
+  );
+
+  const renderMemoSelectField = useCallback(
+    (
+      field: keyof CerfaContratCreate,
+      value: string | null | undefined,
+      label: string,
+      options: CodeOption[]
+    ) => (
+      <TextField
+        select
+        fullWidth
+        label={label}
+        value={value ?? ""}
+        onChange={(e) => setField(field, e.target.value || null)}
+        disabled={readOnly}
+        helperText="Liste CERFA codifiee."
+      >
+        <MenuItem value="">Non defini</MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
+    ),
+    [readOnly, setField]
+  );
+
+  const renderMemoCheckbox = useCallback(
+    (field: keyof CerfaContratCreate, label: string, value?: boolean | null) => (
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={!!value}
+            onChange={(e) => setField(field, e.target.checked)}
+            disabled={readOnly}
+          />
+        }
+        label={label}
+      />
+    ),
+    [readOnly, setField]
+  );
+
   const hasValue = (value: unknown) => {
     if (value === null || value === undefined) return false;
     if (typeof value === "string") return value.trim() !== "";
@@ -263,7 +427,16 @@ export function CerfaForm({
       const next = { ...current };
       Object.entries(payload).forEach(([key, value]) => {
         const formKey = key as keyof CerfaContratCreate;
-        if (!hasValue(next[formKey]) && hasValue(value)) {
+        if (
+          formKey === "formation_duree_heures" ||
+          formKey === "formation_heures_enseignements" ||
+          formKey === "apprenti_rqth" ||
+          formKey === "apprenti_equivalence_jeunes" ||
+          formKey === "apprenti_extension_boe" ||
+          formKey === "apprenti_inscrit_france_travail"
+        ) {
+          next[formKey] = (value ?? null) as never;
+        } else if (!hasValue(next[formKey]) && hasValue(value)) {
           next[formKey] = value as never;
         }
       });
@@ -273,6 +446,7 @@ export function CerfaForm({
   );
 
   const buildInitialFormData = (contrat: CerfaContrat): Partial<CerfaContratCreate> => ({
+    cerfa_type: contrat.cerfa_type,
     candidat: contrat.candidat,
     formation: contrat.formation,
     employeur: contrat.employeur,
@@ -295,6 +469,9 @@ export function CerfaForm({
     employeur_code_ape: contrat.employeur_code_ape,
     employeur_effectif: contrat.employeur_effectif,
     employeur_code_idcc: contrat.employeur_code_idcc,
+    employeur_urssaf_particulier: contrat.employeur_urssaf_particulier,
+    employeur_organisme_prevoyance: contrat.employeur_organisme_prevoyance,
+    employeur_numero_projet: contrat.employeur_numero_projet,
     employeur_regime_assurance_chomage: contrat.employeur_regime_assurance_chomage,
     maitre1_nom: contrat.maitre1_nom,
     maitre1_prenom: contrat.maitre1_prenom,
@@ -354,6 +531,10 @@ export function CerfaForm({
     apprenti_intitule_dernier_diplome: contrat.apprenti_intitule_dernier_diplome,
     apprenti_plus_haut_diplome: contrat.apprenti_plus_haut_diplome,
     apprenti_plus_haut_diplome_code: contrat.apprenti_plus_haut_diplome_code,
+    apprenti_inscrit_france_travail: contrat.apprenti_inscrit_france_travail,
+    apprenti_france_travail_numero: contrat.apprenti_france_travail_numero,
+    apprenti_france_travail_duree_mois: contrat.apprenti_france_travail_duree_mois,
+    apprenti_minimum_social_type: contrat.apprenti_minimum_social_type,
     apprenti_projet_entreprise: contrat.apprenti_projet_entreprise,
     cfa_entreprise: contrat.cfa_entreprise,
     cfa_denomination: contrat.cfa_denomination,
@@ -370,6 +551,12 @@ export function CerfaForm({
     diplome_intitule: contrat.diplome_intitule,
     code_diplome: contrat.code_diplome,
     code_rncp: contrat.code_rncp,
+    type_qualification_visee: contrat.type_qualification_visee,
+    organisme_declaration_activite: contrat.organisme_declaration_activite,
+    nombre_organismes_formation: contrat.nombre_organismes_formation,
+    specialite_formation: contrat.specialite_formation,
+    organisation_formation: contrat.organisation_formation,
+    formation_heures_enseignements: contrat.formation_heures_enseignements,
     formation_debut: contrat.formation_debut,
     formation_fin: contrat.formation_fin,
     formation_duree_heures: contrat.formation_duree_heures,
@@ -386,6 +573,11 @@ export function CerfaForm({
     type_derogation: contrat.type_derogation,
     type_derogation_code: contrat.type_derogation_code,
     numero_contrat_precedent: contrat.numero_contrat_precedent,
+    emploi_occupe_pendant_contrat: contrat.emploi_occupe_pendant_contrat,
+    classification_emploi: contrat.classification_emploi,
+    classification_niveau: contrat.classification_niveau,
+    coefficient_hierarchique: contrat.coefficient_hierarchique,
+    duree_periode_essai_jours: contrat.duree_periode_essai_jours,
     date_conclusion: contrat.date_conclusion,
     date_debut_execution: contrat.date_debut_execution,
     date_fin_contrat: contrat.date_fin_contrat,
@@ -397,6 +589,8 @@ export function CerfaForm({
     salaire_brut_mensuel: contrat.salaire_brut_mensuel,
     caisse_retraite: contrat.caisse_retraite,
     lieu_signature: contrat.lieu_signature,
+    opco_nom: contrat.opco_nom,
+    opco_adherent_numero: contrat.opco_adherent_numero,
   });
 
   // 🔁 Pré-remplissage en mode édition
@@ -427,7 +621,13 @@ export function CerfaForm({
       );
       setPrefillInfo("Les informations du CERFA existant ont ete rechargees.");
     } else if (initialContext) {
-      setForm({ pieces_justificatives_ok: true, ...initialContext });
+      setForm({
+        cerfa_type: "apprentissage",
+        cfa_entreprise: true,
+        nombre_organismes_formation: 1,
+        pieces_justificatives_ok: true,
+        ...initialContext,
+      });
       setSelectedCandidat(
         initialSelections?.candidat?.id
           ? {
@@ -466,13 +666,36 @@ export function CerfaForm({
       );
       setPrefillInfo("Le contexte CERFA a ete initialise depuis la fiche candidat.");
     } else {
-      setForm({ pieces_justificatives_ok: true });
+      setForm({ cerfa_type: "apprentissage", cfa_entreprise: true, pieces_justificatives_ok: true });
       setSelectedCandidat(null);
       setSelectedFormation(null);
       setSelectedPartenaire(null);
       setPrefillInfo("");
     }
   }, [initialContext, initialData, initialSelections]);
+
+  useEffect(() => {
+    setForm((current) => {
+      const currentCode = current.type_contrat_code ?? null;
+      if (!currentCode) return current;
+      const allowedCodes =
+        current.cerfa_type === "professionnalisation"
+          ? PROFESSIONNALISATION_TYPE_CONTRAT_CODES
+          : APPRENTISSAGE_TYPE_CONTRAT_CODES;
+      if (allowedCodes.has(currentCode)) return current;
+      return {
+        ...current,
+        type_contrat_code: null,
+        type_contrat:
+          current.cerfa_type === "professionnalisation" &&
+          ["apprentissage", "contrat apprentissage", "professionnalisation", "contrat de professionnalisation"].includes(
+            String(current.type_contrat ?? "").trim().toLowerCase()
+          )
+            ? null
+            : current.type_contrat,
+      };
+    });
+  }, [form.cerfa_type]);
 
   const applyPrefill = useCallback(
     async (
@@ -583,6 +806,593 @@ export function CerfaForm({
     />
   );
 
+  const apprentiSection = useMemo(
+    () => (
+      <>
+        <Typography variant="subtitle2">Apprenti</Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Nom de naissance" value={form.apprenti_nom_naissance ?? ""} onChange={(e) => setField("apprenti_nom_naissance", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Nom d'usage" value={form.apprenti_nom_usage ?? ""} onChange={(e) => setField("apprenti_nom_usage", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Prenom" value={form.apprenti_prenom ?? ""} onChange={(e) => setField("apprenti_prenom", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="NIR" value={form.apprenti_nir ?? ""} onChange={(e) => setField("apprenti_nir", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Email apprenti" value={form.apprenti_email ?? ""} onChange={(e) => setField("apprenti_email", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Telephone apprenti" value={form.apprenti_telephone ?? ""} onChange={(e) => setField("apprenti_telephone", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoDateField("apprenti_date_naissance", form.apprenti_date_naissance, "Date de naissance", "Le calendrier permet de choisir facilement l'annee.")}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              select
+              fullWidth
+              label="Sexe"
+              value={form.apprenti_sexe ?? ""}
+              onChange={(e) => setField("apprenti_sexe", (e.target.value || null) as "M" | "F" | null)}
+              disabled={readOnly}
+            >
+              <MenuItem value="">Non defini</MenuItem>
+              <MenuItem value="M">M</MenuItem>
+              <MenuItem value="F">F</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoSelectField("apprenti_nationalite_code", form.apprenti_nationalite_code, "Nationalite CERFA", NATIONALITE_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Departement de naissance" value={form.apprenti_departement_naissance ?? ""} onChange={(e) => setField("apprenti_departement_naissance", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Commune de naissance" value={form.apprenti_commune_naissance ?? ""} onChange={(e) => setField("apprenti_commune_naissance", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Numero" value={form.apprenti_numero ?? ""} onChange={(e) => setField("apprenti_numero", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Voie" value={form.apprenti_voie ?? ""} onChange={(e) => setField("apprenti_voie", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Complement" value={form.apprenti_complement ?? ""} onChange={(e) => setField("apprenti_complement", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Code postal" value={form.apprenti_code_postal ?? ""} onChange={(e) => setField("apprenti_code_postal", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Commune" value={form.apprenti_commune ?? ""} onChange={(e) => setField("apprenti_commune", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField("apprenti_regime_social_code", form.apprenti_regime_social_code, "Regime social CERFA", REGIME_SOCIAL_OPTIONS)}
+          </Grid>
+          <Grid item xs={12}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              {renderMemoCheckbox("apprenti_sportif_haut_niveau", "Sportif haut niveau", form.apprenti_sportif_haut_niveau)}
+              {renderMemoCheckbox("apprenti_rqth", "RQTH", form.apprenti_rqth)}
+              {renderMemoCheckbox("apprenti_droits_rqth", "Droits attaches a la RQTH", form.apprenti_droits_rqth)}
+              {renderMemoCheckbox("apprenti_equivalence_jeunes", "Equivalence jeunes", form.apprenti_equivalence_jeunes)}
+              {renderMemoCheckbox("apprenti_extension_boe", "Extension BOE", form.apprenti_extension_boe)}
+              {renderMemoCheckbox("apprenti_projet_entreprise", "Projet creation / reprise", form.apprenti_projet_entreprise)}
+            </Stack>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField(
+              "apprenti_situation_avant_code",
+              form.apprenti_situation_avant_code,
+              "Situation avant contrat CERFA",
+              form.cerfa_type === "professionnalisation" ? PRO_SITUATION_AVANT_OPTIONS : SITUATION_AVANT_OPTIONS
+            )}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField(
+              "apprenti_dernier_diplome_prepare_code",
+              form.apprenti_dernier_diplome_prepare_code,
+              "Dernier diplome prepare CERFA",
+              form.cerfa_type === "professionnalisation" ? PRO_DIPLOME_OPTIONS : DIPLOME_OPTIONS
+            )}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField("apprenti_derniere_annee_suivie_code", form.apprenti_derniere_annee_suivie_code, "Derniere annee suivie CERFA", DERNIERE_CLASSE_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField(
+              "apprenti_plus_haut_diplome_code",
+              form.apprenti_plus_haut_diplome_code,
+              "Plus haut diplome CERFA",
+              form.cerfa_type === "professionnalisation" ? PRO_DIPLOME_OPTIONS : DIPLOME_OPTIONS
+            )}
+          </Grid>
+          {form.cerfa_type === "professionnalisation" && (
+            <>
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={<Checkbox checked={!!form.apprenti_inscrit_france_travail} onChange={(e) => setField("apprenti_inscrit_france_travail", e.target.checked)} />}
+                  label="Inscrit France Travail"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Numero d'inscription France Travail" value={form.apprenti_france_travail_numero ?? ""} onChange={(e) => setField("apprenti_france_travail_numero", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  fullWidth
+                  label="Duree France Travail (mois)"
+                  type="number"
+                  value={form.apprenti_france_travail_duree_mois ?? ""}
+                  onChange={(e) => setField("apprenti_france_travail_duree_mois", e.target.value === "" ? null : Number(e.target.value))}
+                  disabled={readOnly}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField fullWidth label="Type de minimum social" value={form.apprenti_minimum_social_type ?? ""} onChange={(e) => setField("apprenti_minimum_social_type", e.target.value)} disabled={readOnly} />
+              </Grid>
+            </>
+          )}
+          <Grid item xs={12}>
+            <TextField fullWidth label="Intitule du dernier diplome" value={form.apprenti_intitule_dernier_diplome ?? ""} onChange={(e) => setField("apprenti_intitule_dernier_diplome", e.target.value)} disabled={readOnly} />
+          </Grid>
+        </Grid>
+      </>
+    ),
+    [
+      form.apprenti_code_postal,
+      form.apprenti_commune,
+      form.apprenti_commune_naissance,
+      form.apprenti_complement,
+      form.apprenti_date_naissance,
+      form.apprenti_departement_naissance,
+      form.apprenti_derniere_annee_suivie_code,
+      form.apprenti_droits_rqth,
+      form.apprenti_email,
+      form.apprenti_equivalence_jeunes,
+      form.apprenti_extension_boe,
+      form.apprenti_france_travail_duree_mois,
+      form.apprenti_france_travail_numero,
+      form.apprenti_inscrit_france_travail,
+      form.apprenti_intitule_dernier_diplome,
+      form.apprenti_minimum_social_type,
+      form.apprenti_nationalite_code,
+      form.apprenti_nir,
+      form.apprenti_nom_naissance,
+      form.apprenti_nom_usage,
+      form.apprenti_numero,
+      form.apprenti_plus_haut_diplome_code,
+      form.apprenti_prenom,
+      form.apprenti_projet_entreprise,
+      form.apprenti_regime_social_code,
+      form.apprenti_rqth,
+      form.apprenti_sexe,
+      form.apprenti_situation_avant_code,
+      form.apprenti_sportif_haut_niveau,
+      form.apprenti_telephone,
+      form.apprenti_dernier_diplome_prepare_code,
+      form.apprenti_voie,
+      form.cerfa_type,
+      readOnly,
+      renderMemoCheckbox,
+      renderMemoDateField,
+      renderMemoSelectField,
+      setField,
+    ]
+  );
+
+  const employeurSection = useMemo(
+    () => (
+      <>
+        <Typography variant="subtitle2">Employeur</Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              {renderMemoCheckbox("employeur_prive", "Employeur prive", form.employeur_prive)}
+              {renderMemoCheckbox("employeur_public", "Employeur public", form.employeur_public)}
+              {renderMemoCheckbox("employeur_regime_assurance_chomage", "Regime assurance chomage specifique", form.employeur_regime_assurance_chomage)}
+            </Stack>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Nom et prenom ou denomination" value={form.employeur_nom ?? ""} onChange={(e) => setField("employeur_nom", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="N° SIRET de l'etablissement" value={form.employeur_siret ?? ""} onChange={(e) => setField("employeur_siret", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="caption" color="text.secondary">Adresse de l'etablissement d'execution du contrat</Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Courriel" value={form.employeur_email ?? ""} onChange={(e) => setField("employeur_email", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Telephone" value={form.employeur_telephone ?? ""} onChange={(e) => setField("employeur_telephone", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Numero" value={form.employeur_adresse_numero ?? ""} onChange={(e) => setField("employeur_adresse_numero", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={8}>
+            <TextField fullWidth label="Voie" value={form.employeur_adresse_voie ?? ""} onChange={(e) => setField("employeur_adresse_voie", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Complement" value={form.employeur_adresse_complement ?? ""} onChange={(e) => setField("employeur_adresse_complement", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Code postal" value={form.employeur_code_postal ?? ""} onChange={(e) => setField("employeur_code_postal", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Commune" value={form.employeur_commune ?? ""} onChange={(e) => setField("employeur_commune", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoSelectField("employeur_type_code", form.employeur_type_code, "Type d'employeur CERFA", TYPE_EMPLOYEUR_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoSelectField("employeur_specifique_code", form.employeur_specifique_code, "Employeur specifique CERFA", EMPLOYEUR_SPECIFIQUE_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Code APE" value={form.employeur_code_ape ?? ""} onChange={(e) => setField("employeur_code_ape", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Effectif total salaries de l'entreprise" type="number" value={form.employeur_effectif ?? ""} onChange={(e) => setField("employeur_effectif", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Code IDCC de la convention collective applicable" value={form.employeur_code_idcc ?? ""} onChange={(e) => setField("employeur_code_idcc", e.target.value)} disabled={readOnly} />
+          </Grid>
+          {form.cerfa_type === "professionnalisation" && (
+            <>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="N° URSSAF du particulier-employeur" value={form.employeur_urssaf_particulier ?? ""} onChange={(e) => setField("employeur_urssaf_particulier", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="Organisme de prevoyance" value={form.employeur_organisme_prevoyance ?? ""} onChange={(e) => setField("employeur_organisme_prevoyance", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="Numero du projet" value={form.employeur_numero_projet ?? ""} onChange={(e) => setField("employeur_numero_projet", e.target.value)} disabled={readOnly} />
+              </Grid>
+            </>
+          )}
+        </Grid>
+      </>
+    ),
+    [
+      form.cerfa_type,
+      form.employeur_adresse_complement,
+      form.employeur_adresse_numero,
+      form.employeur_adresse_voie,
+      form.employeur_code_ape,
+      form.employeur_code_idcc,
+      form.employeur_code_postal,
+      form.employeur_commune,
+      form.employeur_effectif,
+      form.employeur_email,
+      form.employeur_nom,
+      form.employeur_numero_projet,
+      form.employeur_organisme_prevoyance,
+      form.employeur_prive,
+      form.employeur_public,
+      form.employeur_regime_assurance_chomage,
+      form.employeur_siret,
+      form.employeur_specifique_code,
+      form.employeur_telephone,
+      form.employeur_type_code,
+      form.employeur_urssaf_particulier,
+      readOnly,
+      renderMemoCheckbox,
+      renderMemoSelectField,
+      setField,
+    ]
+  );
+
+  const formationSection = useMemo(
+    () => (
+      <>
+        <Typography variant="subtitle2">Formation</Typography>
+        <Grid container spacing={2}>
+          {form.cerfa_type === "professionnalisation" && (
+            <Grid item xs={12} md={6}>
+              {renderMemoSelectField("type_qualification_visee", form.type_qualification_visee, "Type de qualification visee", PRO_TYPE_QUALIFICATION_OPTIONS)}
+            </Grid>
+          )}
+          <Grid item xs={12} md={6}>
+            {renderMemoSelectField("diplome_vise_code", form.diplome_vise_code, "Diplome vise CERFA", form.cerfa_type === "professionnalisation" ? PRO_DIPLOME_OPTIONS : DIPLOME_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Intitule diplome" value={form.diplome_intitule ?? ""} onChange={(e) => setField("diplome_intitule", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Code diplome" value={form.code_diplome ?? ""} onChange={(e) => setField("code_diplome", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Code RNCP" value={form.code_rncp ?? ""} onChange={(e) => setField("code_rncp", e.target.value)} disabled={readOnly} />
+          </Grid>
+          {form.cerfa_type === "professionnalisation" && (
+            <>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="Declaration d'activite organisme" value={form.organisme_declaration_activite ?? ""} onChange={(e) => setField("organisme_declaration_activite", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="Nombre d'organismes" type="number" value={form.nombre_organismes_formation ?? ""} onChange={(e) => setField("nombre_organismes_formation", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Code NSF specialite de formation"
+                  value={form.specialite_formation ?? ""}
+                  onChange={(e) => setField("specialite_formation", e.target.value)}
+                  helperText="Code NSF a 3 chiffres."
+                  disabled={readOnly}
+                >
+                  <MenuItem value="">Non defini</MenuItem>
+                  {NSF_SPECIALITE_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              {suggestedNsf && suggestedNsf.code !== (form.specialite_formation ?? "") && (
+                <Grid item xs={12}>
+                  <Alert severity="info">Suggestion NSF : {suggestedNsf.label}</Alert>
+                </Grid>
+              )}
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Organisation de la formation" value={form.organisation_formation ?? ""} onChange={(e) => setField("organisation_formation", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Heures d'enseignements (CERFA pro)" type="number" value={form.formation_heures_enseignements ?? ""} onChange={(e) => setField("formation_heures_enseignements", e.target.value === "" ? null : Number(e.target.value))} helperText="Volume specifique des enseignements generaux, professionnels et technologiques." disabled={readOnly} />
+              </Grid>
+            </>
+          )}
+          <Grid item xs={12} md={6}>
+            {renderMemoDateField("formation_debut", form.formation_debut, "Date debut formation")}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoDateField("formation_debut", form.formation_debut, "Date debut de formation en CFA")}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            {renderMemoDateField("formation_fin", form.formation_fin, "Date fin formation")}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Duree totale formation (heures)" type="number" value={form.formation_duree_heures ?? ""} onChange={(e) => setField("formation_duree_heures", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Duree distance (heures)" type="number" value={form.formation_distance_heures ?? ""} onChange={(e) => setField("formation_distance_heures", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+        </Grid>
+      </>
+    ),
+    [
+      form.cerfa_type,
+      form.code_diplome,
+      form.code_rncp,
+      form.diplome_intitule,
+      form.diplome_vise_code,
+      form.formation_debut,
+      form.formation_distance_heures,
+      form.formation_duree_heures,
+      form.formation_fin,
+      form.formation_heures_enseignements,
+      form.nombre_organismes_formation,
+      form.organisation_formation,
+      form.organisme_declaration_activite,
+      form.specialite_formation,
+      form.type_qualification_visee,
+      readOnly,
+      renderMemoDateField,
+      renderMemoSelectField,
+      setField,
+      suggestedNsf,
+    ]
+  );
+
+  const cfaSection = useMemo(
+    () => (
+      <>
+        <Typography variant="subtitle2">CFA / lieu de formation</Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              {renderMemoCheckbox("cfa_entreprise", "CFA d'entreprise", form.cfa_entreprise)}
+              {renderMemoCheckbox(
+                "cfa_est_lieu_formation_principal",
+                "CFA = lieu principal",
+                form.cfa_est_lieu_formation_principal
+              )}
+            </Stack>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Denomination CFA" value={form.cfa_denomination ?? ""} onChange={(e) => setField("cfa_denomination", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="UAI CFA" value={form.cfa_uai ?? ""} onChange={(e) => setField("cfa_uai", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="SIRET CFA" value={form.cfa_siret ?? ""} onChange={(e) => setField("cfa_siret", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Numero CFA" value={form.cfa_adresse_numero ?? ""} onChange={(e) => setField("cfa_adresse_numero", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <TextField fullWidth label="Voie CFA" value={form.cfa_adresse_voie ?? ""} onChange={(e) => setField("cfa_adresse_voie", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Complement CFA" value={form.cfa_adresse_complement ?? ""} onChange={(e) => setField("cfa_adresse_complement", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="CP CFA" value={form.cfa_code_postal ?? ""} onChange={(e) => setField("cfa_code_postal", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={9}>
+            <TextField fullWidth label="Commune CFA" value={form.cfa_commune ?? ""} onChange={(e) => setField("cfa_commune", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField fullWidth label="Lieu formation - denomination" value={form.formation_lieu_denomination ?? ""} onChange={(e) => setField("formation_lieu_denomination", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Lieu formation - UAI" value={form.formation_lieu_uai ?? ""} onChange={(e) => setField("formation_lieu_uai", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Lieu formation - SIRET" value={form.formation_lieu_siret ?? ""} onChange={(e) => setField("formation_lieu_siret", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <TextField fullWidth label="Lieu formation - voie" value={form.formation_lieu_voie ?? ""} onChange={(e) => setField("formation_lieu_voie", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField fullWidth label="Lieu formation - CP" value={form.formation_lieu_code_postal ?? ""} onChange={(e) => setField("formation_lieu_code_postal", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={9}>
+            <TextField fullWidth label="Lieu formation - commune" value={form.formation_lieu_commune ?? ""} onChange={(e) => setField("formation_lieu_commune", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              {renderMemoCheckbox(
+                "pieces_justificatives_ok",
+                "L'employeur atteste disposer de l'ensemble des pieces justificatives necessaires au depot du contrat",
+                form.pieces_justificatives_ok
+              )}
+            </Stack>
+          </Grid>
+        </Grid>
+      </>
+    ),
+    [
+      form.cfa_adresse_complement,
+      form.cfa_adresse_numero,
+      form.cfa_adresse_voie,
+      form.cfa_code_postal,
+      form.cfa_commune,
+      form.cfa_denomination,
+      form.cfa_entreprise,
+      form.cfa_est_lieu_formation_principal,
+      form.cfa_siret,
+      form.cfa_uai,
+      form.formation_lieu_code_postal,
+      form.formation_lieu_commune,
+      form.formation_lieu_denomination,
+      form.formation_lieu_siret,
+      form.formation_lieu_uai,
+      form.formation_lieu_voie,
+      form.pieces_justificatives_ok,
+      readOnly,
+      renderMemoCheckbox,
+      setField,
+    ]
+  );
+
+  const contratSection = useMemo(
+    () => (
+      <>
+        <Typography variant="subtitle2">Contrat</Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            {renderMemoSelectField(
+              "type_contrat_code",
+              form.type_contrat_code,
+              "Type de contrat CERFA",
+              form.cerfa_type === "professionnalisation" ? PRO_TYPE_CONTRAT_OPTIONS : TYPE_CONTRAT_OPTIONS
+            )}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoSelectField("type_derogation_code", form.type_derogation_code, "Type de derogation CERFA", TYPE_DEROGATION_OPTIONS)}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Numero contrat precedent" value={form.numero_contrat_precedent ?? ""} onChange={(e) => setField("numero_contrat_precedent", e.target.value)} disabled={readOnly} />
+          </Grid>
+          {form.cerfa_type === "professionnalisation" && (
+            <>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth label="Emploi occupe pendant le contrat" value={form.emploi_occupe_pendant_contrat ?? ""} onChange={(e) => setField("emploi_occupe_pendant_contrat", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField fullWidth label="Classification emploi" value={form.classification_emploi ?? ""} onChange={(e) => setField("classification_emploi", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField fullWidth label="Niveau" value={form.classification_niveau ?? ""} onChange={(e) => setField("classification_niveau", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField fullWidth label="Coefficient hierarchique" value={form.coefficient_hierarchique ?? ""} onChange={(e) => setField("coefficient_hierarchique", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField fullWidth label="Periode d'essai (jours)" type="number" value={form.duree_periode_essai_jours ?? ""} onChange={(e) => setField("duree_periode_essai_jours", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+              </Grid>
+            </>
+          )}
+          <Grid item xs={12} md={4}>
+            {renderMemoDateField("date_debut_execution", form.date_debut_execution, "Date debut execution")}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoDateField("date_debut_formation_pratique_employeur", form.date_debut_formation_pratique_employeur, "Date debut formation pratique employeur")}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoDateField("date_fin_contrat", form.date_fin_contrat, "Date fin contrat")}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoDateField("date_effet_avenant", form.date_effet_avenant, "Date effet avenant")}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            {renderMemoCheckbox("travail_machines_dangereuses", "Travail sur machines dangereuses", form.travail_machines_dangereuses)}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Lieu de signature" value={form.lieu_signature ?? ""} onChange={(e) => setField("lieu_signature", e.target.value)} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Duree hebdo (heures)" type="number" value={form.duree_hebdo_heures ?? ""} onChange={(e) => setField("duree_hebdo_heures", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Duree hebdo (minutes)" type="number" value={form.duree_hebdo_minutes ?? ""} onChange={(e) => setField("duree_hebdo_minutes", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField fullWidth label="Salaire brut mensuel" type="number" value={form.salaire_brut_mensuel ?? ""} onChange={(e) => setField("salaire_brut_mensuel", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField fullWidth label="Caisse retraite" value={form.caisse_retraite ?? ""} onChange={(e) => setField("caisse_retraite", e.target.value)} disabled={readOnly} />
+          </Grid>
+          {form.cerfa_type === "professionnalisation" && (
+            <>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Nom de l'OPCO" value={form.opco_nom ?? ""} onChange={(e) => setField("opco_nom", e.target.value)} disabled={readOnly} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth label="Numero d'adherent OPCO" value={form.opco_adherent_numero ?? ""} onChange={(e) => setField("opco_adherent_numero", e.target.value)} disabled={readOnly} />
+              </Grid>
+            </>
+          )}
+        </Grid>
+      </>
+    ),
+    [
+      form.caisse_retraite,
+      form.cerfa_type,
+      form.classification_emploi,
+      form.classification_niveau,
+      form.coefficient_hierarchique,
+      form.date_debut_execution,
+      form.date_debut_formation_pratique_employeur,
+      form.date_effet_avenant,
+      form.date_fin_contrat,
+      form.duree_hebdo_heures,
+      form.duree_hebdo_minutes,
+      form.duree_periode_essai_jours,
+      form.emploi_occupe_pendant_contrat,
+      form.lieu_signature,
+      form.numero_contrat_precedent,
+      form.opco_adherent_numero,
+      form.opco_nom,
+      form.salaire_brut_mensuel,
+      form.travail_machines_dangereuses,
+      form.type_contrat_code,
+      form.type_derogation_code,
+      readOnly,
+      renderMemoCheckbox,
+      renderMemoDateField,
+      renderMemoSelectField,
+      setField,
+    ]
+  );
+
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -591,6 +1401,12 @@ export function CerfaForm({
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
+            <Alert severity="info">
+              {CERFA_TYPE_LABELS[
+                (form.cerfa_type as "apprentissage" | "professionnalisation" | undefined) ??
+                  "apprentissage"
+              ]}
+            </Alert>
             {prefillInfo ? <Alert severity="info">{prefillInfo}</Alert> : null}
             <Button
               variant="outlined"
@@ -646,344 +1462,8 @@ export function CerfaForm({
 
             <Divider />
 
-            <Typography variant="subtitle2">Apprenti</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nom de naissance"
-                  value={form.apprenti_nom_naissance ?? ""}
-                  onChange={(e) => setField("apprenti_nom_naissance", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nom d'usage"
-                  value={form.apprenti_nom_usage ?? ""}
-                  onChange={(e) => setField("apprenti_nom_usage", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Prenom"
-                  value={form.apprenti_prenom ?? ""}
-                  onChange={(e) => setField("apprenti_prenom", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="NIR"
-                  value={form.apprenti_nir ?? ""}
-                  onChange={(e) => setField("apprenti_nir", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Email apprenti"
-                  value={form.apprenti_email ?? ""}
-                  onChange={(e) => setField("apprenti_email", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Telephone apprenti"
-                  value={form.apprenti_telephone ?? ""}
-                  onChange={(e) => setField("apprenti_telephone", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderDateField(
-                  "apprenti_date_naissance",
-                  "Date de naissance",
-                  "Le calendrier permet de choisir facilement l'annee."
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Sexe"
-                  value={form.apprenti_sexe ?? ""}
-                  onChange={(e) => setField("apprenti_sexe", (e.target.value || null) as "M" | "F" | null)}
-                  disabled={readOnly}
-                >
-                  <MenuItem value="">Non defini</MenuItem>
-                  <MenuItem value="M">M</MenuItem>
-                  <MenuItem value="F">F</MenuItem>
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderSelectField("apprenti_nationalite_code", "Nationalite CERFA", NATIONALITE_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Departement de naissance"
-                  value={form.apprenti_departement_naissance ?? ""}
-                  onChange={(e) => setField("apprenti_departement_naissance", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Commune de naissance"
-                  value={form.apprenti_commune_naissance ?? ""}
-                  onChange={(e) => setField("apprenti_commune_naissance", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Numero"
-                  value={form.apprenti_numero ?? ""}
-                  onChange={(e) => setField("apprenti_numero", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Voie"
-                  value={form.apprenti_voie ?? ""}
-                  onChange={(e) => setField("apprenti_voie", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Complement"
-                  value={form.apprenti_complement ?? ""}
-                  onChange={(e) => setField("apprenti_complement", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Code postal"
-                  value={form.apprenti_code_postal ?? ""}
-                  onChange={(e) => setField("apprenti_code_postal", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Commune"
-                  value={form.apprenti_commune ?? ""}
-                  onChange={(e) => setField("apprenti_commune", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("apprenti_regime_social_code", "Regime social CERFA", REGIME_SOCIAL_OPTIONS)}
-              </Grid>
-              <Grid item xs={12}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  {renderCheckbox(
-                    "apprenti_sportif_haut_niveau",
-                    "Sportif haut niveau",
-                    form.apprenti_sportif_haut_niveau
-                  )}
-                  {renderCheckbox("apprenti_rqth", "RQTH", form.apprenti_rqth)}
-                  {renderCheckbox(
-                    "apprenti_droits_rqth",
-                    "Droits attaches a la RQTH",
-                    form.apprenti_droits_rqth
-                  )}
-                  {renderCheckbox(
-                    "apprenti_equivalence_jeunes",
-                    "Equivalence jeunes",
-                    form.apprenti_equivalence_jeunes
-                  )}
-                  {renderCheckbox(
-                    "apprenti_extension_boe",
-                    "Extension BOE",
-                    form.apprenti_extension_boe
-                  )}
-                  {renderCheckbox(
-                    "apprenti_projet_entreprise",
-                    "Projet creation / reprise",
-                    form.apprenti_projet_entreprise
-                  )}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("apprenti_situation_avant_code", "Situation avant contrat CERFA", SITUATION_AVANT_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("apprenti_dernier_diplome_prepare_code", "Dernier diplome prepare CERFA", DIPLOME_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("apprenti_derniere_annee_suivie_code", "Derniere annee suivie CERFA", DERNIERE_CLASSE_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("apprenti_plus_haut_diplome_code", "Plus haut diplome CERFA", DIPLOME_OPTIONS)}
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Intitule du dernier diplome"
-                  value={form.apprenti_intitule_dernier_diplome ?? ""}
-                  onChange={(e) => setField("apprenti_intitule_dernier_diplome", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-            </Grid>
-
-            <Typography variant="subtitle2">Employeur</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  {renderCheckbox("employeur_prive", "Employeur prive", form.employeur_prive)}
-                  {renderCheckbox("employeur_public", "Employeur public", form.employeur_public)}
-                  {renderCheckbox(
-                    "employeur_regime_assurance_chomage",
-                    "Regime assurance chomage specifique",
-                    form.employeur_regime_assurance_chomage
-                  )}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nom et prenom ou denomination"
-                  value={form.employeur_nom ?? ""}
-                  onChange={(e) => setField("employeur_nom", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="N° SIRET de l'etablissement"
-                  value={form.employeur_siret ?? ""}
-                  onChange={(e) => setField("employeur_siret", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="caption" color="text.secondary">
-                  Adresse de l'etablissement d'execution du contrat
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Courriel"
-                  value={form.employeur_email ?? ""}
-                  onChange={(e) => setField("employeur_email", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Telephone"
-                  value={form.employeur_telephone ?? ""}
-                  onChange={(e) => setField("employeur_telephone", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Numero"
-                  value={form.employeur_adresse_numero ?? ""}
-                  onChange={(e) => setField("employeur_adresse_numero", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={8}>
-                <TextField
-                  fullWidth
-                  label="Voie"
-                  value={form.employeur_adresse_voie ?? ""}
-                  onChange={(e) => setField("employeur_adresse_voie", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Complement"
-                  value={form.employeur_adresse_complement ?? ""}
-                  onChange={(e) => setField("employeur_adresse_complement", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Code postal"
-                  value={form.employeur_code_postal ?? ""}
-                  onChange={(e) => setField("employeur_code_postal", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Commune"
-                  value={form.employeur_commune ?? ""}
-                  onChange={(e) => setField("employeur_commune", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderSelectField("employeur_type_code", "Type d'employeur CERFA", TYPE_EMPLOYEUR_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderSelectField("employeur_specifique_code", "Employeur specifique CERFA", EMPLOYEUR_SPECIFIQUE_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Code APE"
-                  value={form.employeur_code_ape ?? ""}
-                  onChange={(e) => setField("employeur_code_ape", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Effectif total salaries de l'entreprise"
-                  type="number"
-                  value={form.employeur_effectif ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "employeur_effectif",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Code IDCC de la convention collective applicable"
-                  value={form.employeur_code_idcc ?? ""}
-                  onChange={(e) => setField("employeur_code_idcc", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-            </Grid>
+            {apprentiSection}
+            {employeurSection}
 
             <Typography variant="subtitle2">Maitres d'apprentissage</Typography>
             <Grid container spacing={2}>
@@ -1011,7 +1491,11 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 1 - diplome" value={form.maitre1_diplome ?? ""} onChange={(e) => setField("maitre1_diplome", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={6}>
-                {renderSelectField("maitre1_niveau_diplome_code", "Maitre 1 - niveau diplome CERFA", MAITRE_NIVEAU_OPTIONS)}
+                {renderSelectField(
+                  "maitre1_niveau_diplome_code",
+                  "Maitre 1 - niveau diplome CERFA",
+                  MAITRE_NIVEAU_OPTIONS
+                )}
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField fullWidth label="Maitre 2 - nom" value={form.maitre2_nom ?? ""} onChange={(e) => setField("maitre2_nom", e.target.value)} disabled={readOnly} />
@@ -1032,251 +1516,18 @@ export function CerfaForm({
                 <TextField fullWidth label="Maitre 2 - diplome" value={form.maitre2_diplome ?? ""} onChange={(e) => setField("maitre2_diplome", e.target.value)} disabled={readOnly} />
               </Grid>
               <Grid item xs={12} md={6}>
-                {renderSelectField("maitre2_niveau_diplome_code", "Maitre 2 - niveau diplome CERFA", MAITRE_NIVEAU_OPTIONS)}
-              </Grid>
-            </Grid>
-
-            <Typography variant="subtitle2">Formation</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                {renderSelectField("diplome_vise_code", "Diplome vise CERFA", DIPLOME_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Intitule diplome"
-                  value={form.diplome_intitule ?? ""}
-                  onChange={(e) => setField("diplome_intitule", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Code diplome"
-                  value={form.code_diplome ?? ""}
-                  onChange={(e) => setField("code_diplome", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Code RNCP"
-                  value={form.code_rncp ?? ""}
-                  onChange={(e) => setField("code_rncp", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderDateField("formation_debut", "Date debut formation")}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderDateField("formation_debut", "Date debut de formation en CFA")}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {renderDateField("formation_fin", "Date fin formation")}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Duree formation (heures)"
-                  type="number"
-                  value={form.formation_duree_heures ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "formation_duree_heures",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Duree distance (heures)"
-                  type="number"
-                  value={form.formation_distance_heures ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "formation_distance_heures",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-            </Grid>
-
-            <Typography variant="subtitle2">CFA / lieu de formation</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  {renderCheckbox("cfa_entreprise", "CFA d'entreprise", form.cfa_entreprise)}
-                  {renderCheckbox(
-                    "cfa_est_lieu_formation_principal",
-                    "CFA = lieu principal",
-                    form.cfa_est_lieu_formation_principal
-                  )}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Denomination CFA" value={form.cfa_denomination ?? ""} onChange={(e) => setField("cfa_denomination", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="UAI CFA" value={form.cfa_uai ?? ""} onChange={(e) => setField("cfa_uai", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="SIRET CFA" value={form.cfa_siret ?? ""} onChange={(e) => setField("cfa_siret", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Numero CFA" value={form.cfa_adresse_numero ?? ""} onChange={(e) => setField("cfa_adresse_numero", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={5}>
-                <TextField fullWidth label="Voie CFA" value={form.cfa_adresse_voie ?? ""} onChange={(e) => setField("cfa_adresse_voie", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="Complement CFA" value={form.cfa_adresse_complement ?? ""} onChange={(e) => setField("cfa_adresse_complement", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="CP CFA" value={form.cfa_code_postal ?? ""} onChange={(e) => setField("cfa_code_postal", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={9}>
-                <TextField fullWidth label="Commune CFA" value={form.cfa_commune ?? ""} onChange={(e) => setField("cfa_commune", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Lieu formation - denomination" value={form.formation_lieu_denomination ?? ""} onChange={(e) => setField("formation_lieu_denomination", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Lieu formation - UAI" value={form.formation_lieu_uai ?? ""} onChange={(e) => setField("formation_lieu_uai", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Lieu formation - SIRET" value={form.formation_lieu_siret ?? ""} onChange={(e) => setField("formation_lieu_siret", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={5}>
-                <TextField fullWidth label="Lieu formation - voie" value={form.formation_lieu_voie ?? ""} onChange={(e) => setField("formation_lieu_voie", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Lieu formation - CP" value={form.formation_lieu_code_postal ?? ""} onChange={(e) => setField("formation_lieu_code_postal", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={9}>
-                <TextField fullWidth label="Lieu formation - commune" value={form.formation_lieu_commune ?? ""} onChange={(e) => setField("formation_lieu_commune", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                  {renderCheckbox(
-                    "pieces_justificatives_ok",
-                    "L'employeur atteste disposer de l'ensemble des pieces justificatives necessaires au depot du contrat",
-                    form.pieces_justificatives_ok
-                  )}
-                </Stack>
-              </Grid>
-            </Grid>
-
-            <Typography variant="subtitle2">Contrat</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                {renderSelectField("type_contrat_code", "Type de contrat CERFA", TYPE_CONTRAT_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderSelectField("type_derogation_code", "Type de derogation CERFA", TYPE_DEROGATION_OPTIONS)}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Numero contrat precedent"
-                  value={form.numero_contrat_precedent ?? ""}
-                  onChange={(e) => setField("numero_contrat_precedent", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderDateField("date_debut_execution", "Date debut execution")}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderDateField(
-                  "date_debut_formation_pratique_employeur",
-                  "Date debut formation pratique employeur"
+                {renderSelectField(
+                  "maitre2_niveau_diplome_code",
+                  "Maitre 2 - niveau diplome CERFA",
+                  MAITRE_NIVEAU_OPTIONS
                 )}
               </Grid>
-              <Grid item xs={12} md={4}>
-                {renderDateField("date_fin_contrat", "Date fin contrat")}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderDateField("date_effet_avenant", "Date effet avenant")}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                {renderCheckbox(
-                  "travail_machines_dangereuses",
-                  "Travail sur machines dangereuses",
-                  form.travail_machines_dangereuses
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Lieu de signature"
-                  value={form.lieu_signature ?? ""}
-                  onChange={(e) => setField("lieu_signature", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Duree hebdo (heures)"
-                  type="number"
-                  value={form.duree_hebdo_heures ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "duree_hebdo_heures",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Duree hebdo (minutes)"
-                  type="number"
-                  value={form.duree_hebdo_minutes ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "duree_hebdo_minutes",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Salaire brut mensuel"
-                  type="number"
-                  value={form.salaire_brut_mensuel ?? ""}
-                  onChange={(e) =>
-                    setField(
-                      "salaire_brut_mensuel",
-                      e.target.value === "" ? null : Number(e.target.value)
-                    )
-                  }
-                  disabled={readOnly}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Caisse retraite"
-                  value={form.caisse_retraite ?? ""}
-                  onChange={(e) => setField("caisse_retraite", e.target.value)}
-                  disabled={readOnly}
-                />
-              </Grid>
             </Grid>
+
+            {formationSection}
+
+            {cfaSection}
+            {contratSection}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1290,72 +1541,78 @@ export function CerfaForm({
       </Dialog>
 
       {/* 🧩 Sélection Candidat */}
-      <CandidatsSelectModal
-        show={showCandidatModal}
-        onClose={() => setShowCandidatModal(false)}
-        onSelect={async (c) => {
-          setSelectedCandidat(c);
-          if (c?.formation?.id) {
-            setSelectedFormation(c.formation);
-          }
-          setForm((f) => ({
-            ...f,
-            candidat: c.id,
-            formation: c?.formation?.id ?? f.formation,
-            apprenti_nom_naissance: c.nom_naissance ?? undefined,
-            apprenti_nom_usage: c.nom ?? undefined,
-            apprenti_prenom: c.prenom || undefined,
-          }));
-          setPrefillInfo("Le candidat a ete selectionne pour le CERFA.");
-          setShowCandidatModal(false);
-          await applyCandidateOnlyPrefill(
-            c.id,
-            "Le CERFA a ete pre-rempli automatiquement avec les donnees du candidat et sa formation."
-          );
-        }}
-      />
+      {showCandidatModal ? (
+        <CandidatsSelectModal
+          show={showCandidatModal}
+          onClose={() => setShowCandidatModal(false)}
+          onSelect={async (c) => {
+            setSelectedCandidat(c);
+            if (c?.formation?.id) {
+              setSelectedFormation(c.formation);
+            }
+            setForm((f) => ({
+              ...f,
+              candidat: c.id,
+              formation: c?.formation?.id ?? f.formation,
+              apprenti_nom_naissance: c.nom_naissance ?? undefined,
+              apprenti_nom_usage: c.nom ?? undefined,
+              apprenti_prenom: c.prenom || undefined,
+            }));
+            setPrefillInfo("Le candidat a ete selectionne pour le CERFA.");
+            setShowCandidatModal(false);
+            await applyCandidateOnlyPrefill(
+              c.id,
+              "Le CERFA a ete pre-rempli automatiquement avec les donnees du candidat et sa formation."
+            );
+          }}
+        />
+      ) : null}
 
       {/* 🧩 Sélection Formation */}
-      <FormationSelectModal
-        show={showFormationModal}
-        onClose={() => setShowFormationModal(false)}
-        onSelect={async (f) => {
-          setSelectedFormation(f);
-          setForm((p) => ({ ...p, formation: f.id }));
-          setShowFormationModal(false);
-          await applyPrefill(
-            {
-              candidat: form.candidat,
-              formation: f.id,
-              employeur: form.employeur,
-            },
-            "Le CERFA a ete complete avec les donnees de la formation selectionnee."
-          );
-        }}
-      />
+      {showFormationModal ? (
+        <FormationSelectModal
+          show={showFormationModal}
+          onClose={() => setShowFormationModal(false)}
+          onSelect={async (f) => {
+            setSelectedFormation(f);
+            setForm((p) => ({ ...p, formation: f.id }));
+            setShowFormationModal(false);
+            await applyPrefill(
+              {
+                candidat: form.candidat,
+                formation: f.id,
+                employeur: form.employeur,
+              },
+              "Le CERFA a ete complete avec les donnees de la formation selectionnee."
+            );
+          }}
+        />
+      ) : null}
 
       {/* 🧩 Sélection Partenaire */}
-      <PartenaireSelectModal
-        show={showPartenaireModal}
-        onClose={() => setShowPartenaireModal(false)}
-        onSelect={async (p) => {
-          setSelectedPartenaire(p);
-          setForm((f) => ({
-            ...f,
-            employeur: p.id, // ✅ c’est cette clé que le backend attend
-            employeur_nom: p.nom, // (facultatif : pour affichage local)
-          }));
-          setShowPartenaireModal(false);
-          await applyPrefill(
-            {
-              candidat: form.candidat,
-              formation: form.formation,
+      {showPartenaireModal ? (
+        <PartenaireSelectModal
+          show={showPartenaireModal}
+          onClose={() => setShowPartenaireModal(false)}
+          onSelect={async (p) => {
+            setSelectedPartenaire(p);
+            setForm((f) => ({
+              ...f,
               employeur: p.id,
-            },
-            "Le CERFA a ete complete avec les donnees de l'employeur selectionne."
-          );
-        }}
-      />
+              employeur_nom: p.nom,
+            }));
+            setShowPartenaireModal(false);
+            await applyPrefill(
+              {
+                candidat: form.candidat,
+                formation: form.formation,
+                employeur: p.id,
+              },
+              "Le CERFA a ete complete avec les donnees de l'employeur selectionne."
+            );
+          }}
+        />
+      ) : null}
     </>
   );
 }

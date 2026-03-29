@@ -1,6 +1,5 @@
-import React, { useMemo, useCallback } from "react";
-import { Box, Stack, Button, TextField, Typography } from "@mui/material";
-import { visuallyHidden } from "@mui/utils";
+import { useMemo } from "react";
+import { Box } from "@mui/material";
 import FilterTemplate, { type FieldConfig } from "./FilterTemplate";
 import type { FiltresFormationsData, FiltresFormationsValues } from "../../types/formation";
 
@@ -39,6 +38,10 @@ function buildReset(values: FiltresFormationsValues): FiltresFormationsValues {
     type_offre: undefined,
     activite: undefined,
     dans: undefined, // 👈 nouveau filtre “période à venir”
+    date_debut: undefined,
+    date_fin: undefined,
+    places_disponibles: false,
+    tri: undefined,
     avec_archivees: false,
     page: 1,
   };
@@ -51,26 +54,6 @@ export default function FiltresFormationsPanel({
   onReset,
   onRefresh,
 }: Props) {
-  // 🔍 Gestion locale de la recherche texte
-  const onLocalSearchChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
-    (e) => {
-      onChange({ ...values, texte: e.target.value, page: 1 });
-    },
-    [onChange, values]
-  );
-
-  const onSearchKeyDown = useCallback<React.KeyboardEventHandler<HTMLInputElement>>(
-    (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        if (values.texte) {
-          onChange({ ...values, texte: "", page: 1 });
-        }
-      }
-    },
-    [onChange, values]
-  );
-
   // 🧩 Construction dynamique des filtres
   const fields = useMemo<Array<FieldConfig<FiltresFormationsValues>>>(() => {
     if (!filtres) return [];
@@ -136,12 +119,44 @@ export default function FiltresFormationsPanel({
           })) ?? []),
         ]),
       },
+      {
+        key: "date_debut" as const,
+        label: "📅 Débute après",
+        type: "date",
+      },
+      {
+        key: "date_fin" as const,
+        label: "🏁 Finit avant",
+        type: "date",
+      },
+      {
+        key: "tri" as const,
+        label: "↕️ Trier par",
+        type: "select",
+        options: [
+          { value: "start_date", label: "Date de début croissante" },
+          { value: "-start_date", label: "Date de début décroissante" },
+          { value: "end_date", label: "Date de fin croissante" },
+          { value: "-end_date", label: "Date de fin décroissante" },
+          { value: "nom", label: "Nom A-Z" },
+          { value: "-nom", label: "Nom Z-A" },
+          { value: "centre__nom", label: "Centre A-Z" },
+          { value: "-centre__nom", label: "Centre Z-A" },
+          { value: "created_at", label: "Création ancienne -> récente" },
+          { value: "-created_at", label: "Création récente -> ancienne" },
+        ],
+      },
       // 🗃️ Inclure les archivées (option de compatibilité)
       {
         key: "avec_archivees" as const,
         label: "🗃️ Inclure les archivées",
         type: "checkbox",
         tooltip: "Afficher aussi les formations archivées dans la liste",
+      },
+      {
+        key: "places_disponibles" as const,
+        label: "🪑 Seulement avec places disponibles",
+        type: "checkbox",
       },
     ];
   }, [filtres]);
@@ -185,44 +200,7 @@ export default function FiltresFormationsPanel({
   }
 
   return (
-    <>
-      {/* 🔎 Recherche */}
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="center"
-        mb={1.5}
-        flexWrap={{ xs: "wrap", md: "nowrap" }}
-      >
-        <label htmlFor="formations-search-input" style={visuallyHidden as React.CSSProperties}>
-          Rechercher des formations
-        </label>
-        <Typography component="span" id="formations-search-help" sx={visuallyHidden}>
-          Tapez votre recherche. Appuyez sur Échap pour effacer.
-        </Typography>
-
-        <TextField
-          id="formations-search-input"
-          type="search"
-          size="small"
-          fullWidth
-          value={values.texte ?? ""}
-          onChange={onLocalSearchChange}
-          onKeyDown={onSearchKeyDown}
-          placeholder="🔎 Recherche (nom, centre, type, statut…)"
-          inputProps={{
-            "aria-describedby": "formations-search-help",
-          }}
-        />
-
-        {values.texte && (
-          <Button variant="outlined" onClick={() => onChange({ ...values, texte: "", page: 1 })}>
-            ✕
-          </Button>
-        )}
-      </Stack>
-
-      {/* 📋 Filtres dynamiques */}
+    <Box>
       <FilterTemplate<FiltresFormationsValues>
         values={values}
         onChange={(next) => onChange({ ...next, page: 1 })}
@@ -230,6 +208,6 @@ export default function FiltresFormationsPanel({
         actions={actions}
         cols={4}
       />
-    </>
+    </Box>
   );
 }

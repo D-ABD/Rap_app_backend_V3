@@ -205,3 +205,30 @@ class CandidatSerializerTest(TestCase):
         self.assertEqual(candidat.telephone, "0612345678")
         self.assertEqual(candidat.ville, "Saint-Denis")
         self.assertEqual(candidat.code_postal, "75008")
+
+    def test_create_update_serializer_syncs_formation_inscrits_when_gespers_changes(self):
+        serializer = CandidatCreateUpdateSerializer(
+            instance=self.candidat,
+            data={"inscrit_gespers": True},
+            partial=True,
+            context={"request": self._request()},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)
+
+        serializer = CandidatCreateUpdateSerializer(
+            instance=self.candidat,
+            data={"inscrit_gespers": False},
+            partial=True,
+            context={"request": self._request()},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 0)

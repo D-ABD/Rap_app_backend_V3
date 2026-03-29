@@ -229,6 +229,26 @@ class Candidat(BaseModel):
         help_text=_("Code CERFA de la nationalite de l'apprenti."),
     )
     nir = models.CharField(max_length=32, blank=True, null=True, verbose_name=_("Numéro de sécurité sociale (NIR)"))
+    inscrit_france_travail = models.BooleanField(
+        default=False,
+        verbose_name=_("Inscrit France Travail"),
+        help_text=_(
+            "Information de parcours durable utile au pré-remplissage du CERFA professionnalisation."
+        ),
+    )
+    numero_inscription_france_travail = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Numéro d'inscription France Travail"),
+        help_text=_("Numéro d'inscription à France Travail conservé sur la fiche candidat."),
+    )
+    duree_inscription_france_travail_mois = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Durée d'inscription France Travail (mois)"),
+        help_text=_("Durée déclarée d'inscription à France Travail, en mois."),
+    )
     # Contact
     email = models.EmailField(blank=True, null=True, verbose_name=_("Email"))
     phone_regex = RegexValidator(
@@ -322,9 +342,11 @@ class Candidat(BaseModel):
         max_length=2,
         blank=True,
         null=True,
-        choices=CerfaTypeContratCode.choices,
         verbose_name=_("Type de contrat CERFA"),
-        help_text=_("Code CERFA du type de contrat ou avenant."),
+        help_text=_(
+            "Code snapshot du type de contrat ou avenant CERFA. Le libelle exact depend du type "
+            "de contrat vise : apprentissage ou professionnalisation."
+        ),
     )
     disponibilite = models.CharField(
         max_length=30, choices=Disponibilite.choices, blank=True, null=True, verbose_name=_("Disponibilité")

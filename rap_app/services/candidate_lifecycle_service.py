@@ -5,6 +5,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models.candidat import Candidat
+from ..models.formations import Formation
+from ..models.types_offre import TypeOffre
 from .candidate_account_service import CandidateAccountService
 
 
@@ -48,6 +50,94 @@ class CandidateLifecycleService:
         return Candidat.ParcoursPhase.POSTULANT
 
     @classmethod
+    def _counts_in_formation_inscrits(cls, candidate: Candidat) -> bool:
+        return bool(
+            candidate.formation_id
+            and (
+                candidate.inscrit_gespers
+                or candidate.date_validation_inscription
+                or candidate.date_entree_formation_effective
+                or candidate.parcours_phase
+                in {
+                    Candidat.ParcoursPhase.INSCRIT_VALIDE,
+                    Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+                    Candidat.ParcoursPhase.SORTI,
+                }
+            )
+        )
+
+    @classmethod
+    def _is_crif_formation(cls, candidate: Candidat) -> bool:
+        formation = getattr(candidate, "formation", None)
+        type_offre = getattr(formation, "type_offre", None)
+        return getattr(type_offre, "nom", None) == TypeOffre.CRIF
+
+    @classmethod
+    def _adjust_formation_counter(cls, formation_id: int | None, *, crif: bool, delta: int, actor=None) -> None:
+        if not delta or not formation_id:
+            return
+
+        formation = Formation._base_manager.select_for_update().get(pk=formation_id)
+        field = "inscrits_crif" if crif else "inscrits_mp"
+        current_value = getattr(formation, field) or 0
+        next_value = max(current_value + delta, 0)
+
+        if next_value == current_value:
+            return
+
+        setattr(formation, field, next_value)
+        formation.save(user=actor, update_fields=[field])
+
+    @classmethod
+    def _adjust_formation_inscrits(cls, candidate: Candidat, *, delta: int, actor=None) -> None:
+        cls._adjust_formation_counter(
+            candidate.formation_id,
+            crif=cls._is_crif_formation(candidate),
+            delta=delta,
+            actor=actor,
+        )
+
+    @classmethod
+    def _sync_formation_inscrits_from_transition(cls, candidate: Candidat, *, was_counted: bool, actor=None) -> None:
+        is_counted = cls._counts_in_formation_inscrits(candidate)
+        if was_counted == is_counted:
+            return
+        cls._adjust_formation_inscrits(candidate, delta=1 if is_counted else -1, actor=actor)
+
+    @classmethod
+    def sync_candidate_formation_inscrits(
+        cls,
+        candidate: Candidat,
+        *,
+        previous_formation_id: int | None = None,
+        previous_was_counted: bool = False,
+        previous_was_crif: bool = False,
+        actor=None,
+    ) -> None:
+        current_formation_id = candidate.formation_id
+        current_was_counted = cls._counts_in_formation_inscrits(candidate)
+        current_was_crif = cls._is_crif_formation(candidate) if current_formation_id else False
+
+        if previous_formation_id == current_formation_id and previous_was_counted == current_was_counted:
+            return
+
+        if previous_formation_id and previous_was_counted:
+            cls._adjust_formation_counter(
+                previous_formation_id,
+                crif=previous_was_crif,
+                delta=-1,
+                actor=actor,
+            )
+
+        if current_formation_id and current_was_counted:
+            cls._adjust_formation_counter(
+                current_formation_id,
+                crif=current_was_crif,
+                delta=1,
+                actor=actor,
+            )
+
+    @classmethod
     @transaction.atomic
     def validate_inscription(cls, candidate: Candidat, actor=None) -> Candidat:
         """
@@ -57,6 +147,7 @@ class CandidateLifecycleService:
         if not candidate.formation_id:
             raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
 
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()
         updates = []
 
@@ -70,6 +161,8 @@ class CandidateLifecycleService:
 
         if updates:
             candidate.save(user=actor, update_fields=updates)
+
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
 
         CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
 
@@ -117,6 +210,7 @@ class CandidateLifecycleService:
         if not candidate.formation_id:
             raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
 
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()
         updates = []
 
@@ -139,6 +233,8 @@ class CandidateLifecycleService:
         if updates:
             candidate.save(user=actor, update_fields=updates)
 
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
+
         if candidate.admissible and (candidate.compte_utilisateur_id or candidate.email):
             CandidateAccountService.promote_to_stagiaire(candidate, actor=actor)
 
@@ -150,6 +246,7 @@ class CandidateLifecycleService:
         """
         Annule une entrée en formation lorsqu'elle a été enregistrée par erreur.
         """
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         updates = []
 
         target_phase = cls._target_phase_without_live_training(candidate)
@@ -173,6 +270,8 @@ class CandidateLifecycleService:
         if updates:
             candidate.save(user=actor, update_fields=updates)
 
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
+
         CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
         return candidate
 
@@ -182,6 +281,7 @@ class CandidateLifecycleService:
         if not candidate.formation_id:
             raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
 
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()
         updates = []
 
@@ -204,6 +304,8 @@ class CandidateLifecycleService:
         if updates:
             candidate.save(user=actor, update_fields=updates)
 
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
+
         CandidateAccountService.revert_to_candidate_user(candidate, actor=actor)
 
         return candidate
@@ -212,6 +314,7 @@ class CandidateLifecycleService:
     @transaction.atomic
     def mark_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
         """Marque manuellement le candidat comme inscrit GESPERS."""
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         updates = []
         if not candidate.inscrit_gespers:
             candidate.inscrit_gespers = True
@@ -222,12 +325,14 @@ class CandidateLifecycleService:
             updates.append("statut")
         if updates:
             candidate.save(user=actor, update_fields=updates)
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
         return candidate
 
     @classmethod
     @transaction.atomic
     def clear_gespers(cls, candidate: Candidat, actor=None) -> Candidat:
         """Annule manuellement l'inscription GESPERS du candidat."""
+        was_counted = cls._counts_in_formation_inscrits(candidate)
         updates = []
         if candidate.inscrit_gespers:
             candidate.inscrit_gespers = False
@@ -241,6 +346,7 @@ class CandidateLifecycleService:
             updates.append("statut")
         if updates:
             candidate.save(user=actor, update_fields=updates)
+        cls._sync_formation_inscrits_from_transition(candidate, was_counted=was_counted, actor=actor)
         return candidate
 
     @classmethod

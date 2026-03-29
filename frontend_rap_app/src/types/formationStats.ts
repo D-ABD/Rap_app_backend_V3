@@ -19,6 +19,7 @@ export type CandidatKpis = {
   nb_entretien_ok: number;
   nb_test_ok: number;
   nb_inscrits_gespers: number;
+  ecart_inscrits_vs_gespers: number;
   nb_entrees_formation: number;
   nb_sortis: number;
   nb_abandons_phase: number;
@@ -63,6 +64,7 @@ export type OverviewKpis = {
   total_places_mp: number;
   total_inscrits_crif: number;
   total_inscrits_mp: number;
+  total_inscrits_saisis: number;
   total_places: number;
   total_inscrits: number;
   total_dispo_crif: number;
@@ -79,6 +81,7 @@ export type OverviewKpis = {
   };
   entrees_formation: number;
   candidats: CandidatKpis;
+  ecart_inscrits_vs_gespers: number;
   appairages: AppairageKpis; // ← NEW
   avec_archivees?: boolean;
   nb_annulees: number;
@@ -123,6 +126,7 @@ export type GroupRow = {
   total_places_crif: number;
   total_places_mp: number;
   total_inscrits: number;
+  total_inscrits_saisis: number;
   total_inscrits_crif: number;
   total_inscrits_mp: number;
   total_dispo_crif: number;
@@ -144,6 +148,7 @@ export type GroupRow = {
   nb_entretien_ok: number;
   nb_test_ok: number;
   nb_inscrits_gespers: number;
+  ecart_inscrits_vs_gespers: number;
   nb_entrees_formation: number;
   nb_sortis: number;
   nb_abandons_phase: number;

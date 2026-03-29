@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  DialogContentText,
   Button,
   Box,
   Grid,
@@ -172,7 +173,10 @@ function buildCandidateAppairageCreateUrl(candidat?: CandidatWithFormation | nul
   return `/appairages/create?${params.toString()}`;
 }
 
-function buildCandidateCerfaCreateUrl(candidat?: CandidatWithFormation | null): string | null {
+function buildCandidateCerfaCreateUrl(
+  candidat?: CandidatWithFormation | null,
+  cerfaType?: "apprentissage" | "professionnalisation"
+): string | null {
   if (!candidat?.id) return null;
 
   const params = new URLSearchParams();
@@ -181,6 +185,9 @@ function buildCandidateCerfaCreateUrl(candidat?: CandidatWithFormation | null): 
     "candidat_nom",
     nn(candidat.nom_complet || `${candidat.prenom ?? ""} ${candidat.nom ?? ""}`.trim())
   );
+  if (cerfaType) {
+    params.set("cerfa_type", cerfaType);
+  }
 
   return `/cerfa?${params.toString()}`;
 }
@@ -276,6 +283,7 @@ const SECTIONS: {
     title: "Contrat",
     fields: [
       { key: "type_contrat", label: "Type de contrat" },
+      { key: "type_contrat_code", label: "Type de contrat CERFA (code notice)" },
       { key: "contrat_signe_display", label: "Contrat signé" },
     ],
   },
@@ -313,6 +321,9 @@ const SECTIONS: {
       { key: "derniere_classe_code", label: "Dernière classe CERFA" },
       { key: "intitule_diplome_prepare", label: "Intitulé du diplôme préparé" },
       { key: "situation_avant_contrat_code", label: "Situation avant contrat CERFA" },
+      { key: "inscrit_france_travail", label: "Inscrit France Travail" },
+      { key: "numero_inscription_france_travail", label: "N° inscription France Travail" },
+      { key: "duree_inscription_france_travail_mois", label: "Durée inscription FT (mois)" },
       { key: "projet_creation_entreprise", label: "Projet création entreprise" },
       { key: "regime_social_code", label: "Régime social CERFA" },
       { key: "sportif_haut_niveau", label: "Sportif de haut niveau" },
@@ -355,6 +366,7 @@ export default function CandidatDetailModal({
   onLifecycleSuccess,
 }: Props) {
   const navigate = useNavigate();
+  const [showCerfaChoice, setShowCerfaChoice] = useState(false);
   const { user } = useAuth();
   const {
     loading: lifecycleLoading,
@@ -383,6 +395,7 @@ export default function CandidatDetailModal({
   const la = candidat?.last_appairage ?? null;
   const linkedAccountId = getLinkedAccountId(candidat);
   const isStaffLike = !!user && ["admin", "superadmin", "staff", "staff_read"].includes(user.role);
+  const canWriteCerfa = !!user && ["admin", "superadmin", "staff"].includes(user.role);
   const hasLinkedAccount = !!candidat?.compte_utilisateur;
   const requestStatus = candidat?.demande_compte_statut ?? null;
   const canReverseFormation = candidat?.parcours_phase === "stagiaire_en_formation";
@@ -515,6 +528,7 @@ export default function CandidatDetailModal({
   };
 
   return (
+    <>
     <Dialog
       open={open}
       onClose={onClose}
@@ -633,13 +647,12 @@ export default function CandidatDetailModal({
                             Créer une prospection
                           </Button>
                         )}
-                        {createCerfaUrl && (
+                        {createCerfaUrl && canWriteCerfa && (
                           <Button
                             variant="contained"
                             color="info"
                             onClick={() => {
-                              onClose();
-                              navigate(createCerfaUrl);
+                              setShowCerfaChoice(true);
                             }}
                           >
                             Créer un CERFA
@@ -843,6 +856,45 @@ export default function CandidatDetailModal({
         </Button>
       </DialogActions>
     </Dialog>
+    <Dialog open={showCerfaChoice} onClose={() => setShowCerfaChoice(false)} maxWidth="xs" fullWidth>
+      <DialogTitle>Type de CERFA</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Choisissez le CERFA à créer pour ce candidat.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={() => setShowCerfaChoice(false)} variant="outlined">
+          Annuler
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => {
+            const url = buildCandidateCerfaCreateUrl(candidat, "apprentissage");
+            setShowCerfaChoice(false);
+            if (!url) return;
+            onClose();
+            navigate(url);
+          }}
+        >
+          Apprentissage
+        </Button>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => {
+            const url = buildCandidateCerfaCreateUrl(candidat, "professionnalisation");
+            setShowCerfaChoice(false);
+            if (!url) return;
+            onClose();
+            navigate(url);
+          }}
+        >
+          Professionnalisation
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 }
 

@@ -174,6 +174,38 @@ function SectionInfosContrat({ form, setForm }: Props) {
                       />
                     </Grid>
 
+                    <Grid item xs={12} md={6}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={!!form.inscrit_france_travail}
+                            onChange={updateCheckbox("inscrit_france_travail")}
+                          />
+                        }
+                        label="Inscrit France Travail"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Numéro d'inscription France Travail"
+                        value={form.numero_inscription_france_travail ?? ""}
+                        onChange={updateField("numero_inscription_france_travail")}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="Durée d'inscription France Travail (mois)"
+                        value={form.duree_inscription_france_travail_mois ?? ""}
+                        onChange={updateField("duree_inscription_france_travail_mois")}
+                        inputProps={{ min: 0 }}
+                      />
+                    </Grid>
+
           {/* Situation avant contrat */}
           <Grid item xs={12} md={6}>
             <TextField

@@ -39,8 +39,14 @@ export type CerfaQueryParams = {
   candidat?: number;
   formation?: number;
   employeur?: number;
-  diplome_vise?: string;
+  centre?: number;
+  cerfa_type?: "apprentissage" | "professionnalisation";
+  type_contrat_code?: string;
   auto_generated?: boolean;
+  date_field?: "created_at" | "date_conclusion" | "date_debut_execution" | "formation_debut";
+  date_from?: string;
+  date_to?: string;
+  diplome_vise?: string;
 };
 
 /* ----------------------------------------
@@ -66,6 +72,7 @@ export type CerfaContratBase = {
 
   // créé automatiquement ?
   auto_generated: boolean;
+  cerfa_type: "apprentissage" | "professionnalisation";
 
   // relations
   candidat: number; // FK -> Candidat (id)
@@ -91,6 +98,9 @@ export type CerfaContratBase = {
   employeur_code_ape: string | null;
   employeur_effectif: number | null;
   employeur_code_idcc: string | null;
+  employeur_urssaf_particulier: string | null;
+  employeur_organisme_prevoyance: string | null;
+  employeur_numero_projet: string | null;
   employeur_regime_assurance_chomage: boolean;
 
   // MAÎTRES D’APPRENTISSAGE
@@ -157,6 +167,10 @@ export type CerfaContratBase = {
   apprenti_intitule_dernier_diplome: string | null;
   apprenti_plus_haut_diplome: string | null;
   apprenti_plus_haut_diplome_code: string | null;
+  apprenti_inscrit_france_travail: boolean | null;
+  apprenti_france_travail_numero: string | null;
+  apprenti_france_travail_duree_mois: number | null;
+  apprenti_minimum_social_type: string | null;
   apprenti_projet_entreprise: boolean;
 
   // FORMATION / CFA
@@ -176,6 +190,12 @@ export type CerfaContratBase = {
   diplome_intitule: string | null;
   code_diplome: string | null;
   code_rncp: string | null;
+  type_qualification_visee: string | null;
+  organisme_declaration_activite: string | null;
+  nombre_organismes_formation: number | null;
+  specialite_formation: string | null;
+  organisation_formation: string | null;
+  formation_heures_enseignements: number | null;
   formation_debut: string | null;
   formation_fin: string | null;
   formation_duree_heures: number | null;
@@ -195,6 +215,11 @@ export type CerfaContratBase = {
   type_derogation_code: string | null;
   motif_derogation: string | null;
   numero_contrat_precedent: string | null;
+  emploi_occupe_pendant_contrat: string | null;
+  classification_emploi: string | null;
+  classification_niveau: string | null;
+  coefficient_hierarchique: string | null;
+  duree_periode_essai_jours: number | null;
   date_conclusion: string | null;
   date_debut_execution: string | null;
   date_fin_contrat: string | null;
@@ -210,6 +235,8 @@ export type CerfaContratBase = {
 
   // SIGNATURES
   lieu_signature: string | null;
+  opco_nom: string | null;
+  opco_adherent_numero: string | null;
 
   // Rémunérations liées (imbriquées côté serializer)
   remunerations?: CerfaRemuneration[];

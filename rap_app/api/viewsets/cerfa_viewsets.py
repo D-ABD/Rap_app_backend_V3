@@ -4,6 +4,7 @@ import os
 
 from django.conf import settings
 from django.http import FileResponse
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework.decorators import action
@@ -14,7 +15,7 @@ from ...api.paginations import RapAppPagination
 from ...api.permissions import IsStaffOrAbove
 from ...models import Candidat, CerfaContrat, Formation, Partenaire
 from ...services.placement_services import AppairagePlacementService
-from ...utils.pdf_cerfa_utils import generer_pdf_cerfa
+from ...utils.pdf_cerfa_utils import build_cerfa_export_filename, generer_pdf_cerfa
 from ..serializers.cerfa_serializers import CerfaContratSerializer, _sync_choice_labels
 from .base import BaseApiViewSet
 
@@ -40,6 +41,56 @@ class CerfaContratViewSet(BaseApiViewSet):
     create_message = "CERFA cree avec succes."
     update_message = "CERFA mis a jour avec succes."
     destroy_message = "CERFA supprime avec succes."
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related(
+            "candidat",
+            "formation",
+            "formation__centre",
+            "employeur",
+        )
+
+        params = self.request.query_params
+        centre_id = params.get("centre")
+        cerfa_type = params.get("cerfa_type")
+        type_contrat_code = params.get("type_contrat_code")
+        date_field = params.get("date_field")
+        date_from = params.get("date_from")
+        date_to = params.get("date_to")
+
+        if centre_id not in (None, ""):
+            queryset = queryset.filter(
+                Q(formation__centre_id=centre_id) | Q(candidat__formation__centre_id=centre_id)
+            )
+
+        if cerfa_type not in (None, ""):
+            queryset = queryset.filter(cerfa_type=cerfa_type)
+
+        if type_contrat_code not in (None, ""):
+            queryset = queryset.filter(type_contrat_code=type_contrat_code)
+
+        allowed_date_fields = {"created_at", "date_conclusion", "date_debut_execution", "formation_debut"}
+        if date_field in allowed_date_fields:
+            if date_from not in (None, ""):
+                queryset = queryset.filter(**{f"{date_field}__date__gte": date_from} if date_field == "created_at" else {f"{date_field}__gte": date_from})
+            if date_to not in (None, ""):
+                queryset = queryset.filter(**{f"{date_field}__date__lte": date_to} if date_field == "created_at" else {f"{date_field}__lte": date_to})
+
+        return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.filter_queryset(self.get_queryset()).filter(pk=kwargs.get("pk")).first()
+        if instance is None:
+            return self.success_response(
+                data=None,
+                message="CERFA deja absent ou deja supprime.",
+            )
+
+        instance.delete()
+        return self.success_response(
+            data=None,
+            message=self.destroy_message,
+        )
 
     @action(detail=False, methods=["get"], url_path="prefill")
     def prefill(self, request):
@@ -126,14 +177,14 @@ class CerfaContratViewSet(BaseApiViewSet):
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
         instance = self.get_object()
-        if not instance.pdf_fichier:
-            output_path = generer_pdf_cerfa(instance)
-            instance.pdf_fichier.name = os.path.relpath(output_path, settings.MEDIA_ROOT)
-            instance.save(update_fields=["pdf_fichier", "updated_at"])
+        # Always regenerate on download so the exported file reflects the current CERFA snapshot.
+        output_path = generer_pdf_cerfa(instance)
+        instance.pdf_fichier.name = os.path.relpath(output_path, settings.MEDIA_ROOT)
+        instance.save(update_fields=["pdf_fichier", "updated_at"])
 
         return FileResponse(
             instance.pdf_fichier.open("rb"),
             content_type="application/pdf",
             as_attachment=True,
-            filename=f"cerfa_{instance.pk}.pdf",
+            filename=build_cerfa_export_filename(instance),
         )

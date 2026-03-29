@@ -79,6 +79,7 @@ export default function CentreDetailPage({ centre: propCentre }: Props) {
             ["Complément d’adresse", centre.complement_adresse],
             ["N° UAI du centre", centre.numero_uai_centre],
             ["N° SIRET du centre", centre.siret_centre],
+            ["Declaration d'activite", centre.organisme_declaration_activite],
             ["CFA d’entreprise", centre.cfa_entreprise ? "Oui" : "Non"],
           ]}
         />

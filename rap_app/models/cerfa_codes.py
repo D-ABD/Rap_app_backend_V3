@@ -134,3 +134,52 @@ class CerfaTypeDerogationCode(models.TextChoices):
     ALLONGEMENT_DUREE = "22", _("22 - Allongement de la duree")
     CUMUL = "50", _("50 - Cumul de derogations")
     AUTRE = "60", _("60 - Autre derogation")
+
+
+class CerfaProTypeQualificationViseeCode(models.TextChoices):
+    RNCP = "1", _("1 - Certification enregistree au RNCP autre qu'un CQP")
+    CQP = "2", _("2 - Certificat de qualification professionnelle (CQP)")
+    CCN = "3", _("3 - Qualification reconnue dans les classifications d'une convention collective nationale")
+    EXPERIMENTAL_2018 = "4", _(
+        "4 - Action delivree dans le cadre du contrat de professionnalisation experimental prevu en application du VI de l'article 28 de la loi n° 2018-771 du 5 septembre 2018"
+    )
+    PREQUALIFICATION_ABROGE = "5", _("5 - Action de pre-qualification ou de pre-formation abroge")
+    REPERTOIRE_SPECIFIQUE_ABROGE = "6", _(
+        "6 - Certification inscrite au repertoire specifique prevu a l'article L. 6113-6 du code du travail abroge"
+    )
+    AUTRE_ABROGE = "7", _("7 - Autre abroge")
+    VAE_2022 = "8", _(
+        "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation associant des actions de validation des acquis de l'experience mentionnee a l'article 11 de la loi n° 2022-1598 du 21 decembre 2022"
+    )
+
+
+class CerfaNsfSpecialiteCode(models.TextChoices):
+    INDUSTRIE_FONDAMENTALE = "200", _("200 - Technologies industrielles fondamentales")
+    COMMANDES_INDUSTRIELLES = "201", _("201 - Technologies de commandes des transformations industrielles")
+    AGROALIMENTAIRE = "221", _("221 - Agro-alimentaire, alimentation, cuisine")
+    ENERGIE_CLIMATIQUE = "227", _("227 - Energie, genie climatique")
+    GENIE_CIVIL_CONSTRUCTION_BOIS = "230", _("230 - Genie civil, construction, bois")
+    GENIE_CIVIL_TOPOGRAPHIE = "231", _("231 - Mines et carrieres, genie civil, topographie")
+    BATIMENT_CONSTRUCTION_COUVERTURE = "232", _("232 - Batiment : construction et couverture")
+    BATIMENT_FINITIONS = "233", _("233 - Batiment : finitions")
+    BOIS_AMEUBLEMENT = "234", _("234 - Travail du bois et de l'ameublement")
+    MECANIQUE_ELECTRICITE = "250", _("250 - Specialites pluritechnologiques mecanique-electricite")
+    MECANIQUE_USINAGE = "251", _("251 - Mecanique generale et de precision, usinage")
+    MECANIQUE_AUTO = "252", _("252 - Moteurs et mecanique auto")
+    ELECTRICITE_ELECTRONIQUE = "255", _("255 - Electricite, electronique")
+    ECHANGES_GESTION = "310", _("310 - Specialites plurivalentes des echanges et de la gestion")
+    TRANSPORT_LOGISTIQUE = "311", _("311 - Transport, manutention, magasinage")
+    COMMERCE_VENTE = "312", _("312 - Commerce, vente")
+    COMPTABILITE_GESTION = "314", _("314 - Comptabilite, gestion")
+    RH_EMPLOI = "315", _("315 - Ressources humaines, gestion du personnel, gestion de l'emploi")
+    COMMUNICATION = "320", _("320 - Specialites plurivalentes de la communication")
+    JOURNALISME_COMMUNICATION = "321", _("321 - Journalisme et communication")
+    INFORMATIQUE = "326", _("326 - Informatique, traitement de l'information, reseaux de transmission des donnees")
+    SANITAIRE_SOCIAL = "330", _("330 - Specialites plurivalentes sanitaires et sociales")
+    SANTE = "331", _("331 - Sante")
+    TRAVAIL_SOCIAL = "332", _("332 - Travail social")
+    ENSEIGNEMENT_FORMATION = "333", _("333 - Enseignement, formation")
+    HOTELLERIE_TOURISME_LOISIRS = "334", _("334 - Accueil, hotellerie, tourisme")
+    SERVICES_A_LA_PERSONNE = "336", _("336 - Coiffure, esthetique et autres specialites de services aux personnes")
+    PROTECTION_ENVIRONNEMENT = "343", _("343 - Nettoyage, assainissement, protection de l'environnement")
+    SECURITE_BIENS_PERSONNES = "344", _("344 - Securite des biens et des personnes, police, surveillance")

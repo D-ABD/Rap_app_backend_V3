@@ -71,6 +71,13 @@ class Centre(BaseModel):
 
     numero_uai_centre = models.CharField(max_length=20, blank=True, null=True)
     siret_centre = models.CharField(max_length=14, blank=True, null=True)
+    organisme_declaration_activite = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Déclaration d'activité",
+        help_text="Numéro de déclaration d'activité de l'organisme de formation.",
+    )
 
     # ---------- Informations CFA Responsable ----------
     cfa_responsable_est_lieu_principal = models.BooleanField(

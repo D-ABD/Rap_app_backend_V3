@@ -6,6 +6,12 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import type { CerfaContrat } from "../../types/cerfa";
 import ResponsiveTableTemplate, { TableColumn } from "../../components/ResponsiveTableTemplate";
 
+function formatCerfaType(value?: "apprentissage" | "professionnalisation" | string | null) {
+  if (value === "professionnalisation") return "Contrat de professionnalisation";
+  if (value === "apprentissage") return "Contrat apprentissage";
+  return "—";
+}
+
 /* ---------------------------
    🗓️ Formatage de date natif
 ---------------------------- */
@@ -32,6 +38,7 @@ interface Props {
   onDeleteClick: (id: number) => void;
   onDownloadPdf?: (id: number) => void;
   onEditClick?: (id: number) => void;
+  canWrite?: boolean;
 }
 
 export default function CerfaTable({
@@ -42,6 +49,7 @@ export default function CerfaTable({
   onDeleteClick,
   onDownloadPdf,
   onEditClick,
+  canWrite = true,
 }: Props) {
   const columns: TableColumn<CerfaContrat>[] = [
     {
@@ -53,29 +61,28 @@ export default function CerfaTable({
       render: (c) => (
         <Checkbox
           checked={selectedIds.includes(c.id)}
+          disabled={!canWrite}
           onClick={(e) => e.stopPropagation()}
           onChange={() => onToggleSelect(c.id)}
         />
       ),
     },
     {
-      key: "apprenti_nom_naissance",
-      label: "Nom de naissance",
-      sticky: "left",
-      width: 180,
-      render: (c) => <strong>{c.apprenti_nom_naissance || "—"}</strong>,
-    },
-    {
       key: "apprenti_nom_usage",
-      label: "Nom d'usage",
-      width: 170,
-      render: (c) => c.apprenti_nom_usage || "—",
+      label: "Apprenti",
+      sticky: "left",
+      width: 220,
+      render: (c) => {
+        const nom = c.apprenti_nom_usage || c.apprenti_nom_naissance || "—";
+        const prenom = c.apprenti_prenom || "";
+        return <strong>{[prenom, nom].filter(Boolean).join(" ")}</strong>;
+      },
     },
     {
-      key: "apprenti_prenom",
-      label: "Prenom",
-      width: 160,
-      render: (c) => c.apprenti_prenom || "—",
+      key: "cerfa_type",
+      label: "Type de contrat",
+      width: 220,
+      render: (c) => formatCerfaType(c.cerfa_type),
     },
     { key: "employeur_nom", label: "Employeur", width: 220 },
     { key: "diplome_vise", label: "Diplôme visé", width: 200 },
@@ -159,11 +166,15 @@ export default function CerfaTable({
       columns={columns}
       data={contrats}
       getRowId={(c) => c.id}
-      cardTitle={(c) => `${c.apprenti_prenom} ${c.apprenti_nom_naissance}`}
+      cardTitle={(c) =>
+        [c.apprenti_prenom, c.apprenti_nom_usage || c.apprenti_nom_naissance]
+          .filter(Boolean)
+          .join(" ")
+      }
       actions={(c) => (
         <>
           {/* ✏️ Modifier */}
-          {onEditClick && (
+          {canWrite && onEditClick && (
             <Tooltip title="Modifier le contrat">
               <IconButton
                 color="primary"
@@ -178,17 +189,19 @@ export default function CerfaTable({
           )}
 
           {/* 🗑️ Supprimer */}
-          <Tooltip title="Supprimer le contrat">
-            <IconButton
-              color="error"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteClick(c.id);
-              }}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
+          {canWrite && (
+            <Tooltip title="Supprimer le contrat">
+              <IconButton
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteClick(c.id);
+                }}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
         </>
       )}
       onRowClick={(c) => onRowClick(c.id)}

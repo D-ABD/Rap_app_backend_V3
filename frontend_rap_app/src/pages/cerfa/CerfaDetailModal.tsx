@@ -20,6 +20,7 @@ import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import { toast } from "react-toastify";
 import { useCerfaGeneratePdf, useCerfaDownloadPdf, downloadBlob } from "../../hooks/useCerfa";
 import type { CerfaContrat } from "../../types/cerfa";
+import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -38,6 +39,54 @@ const fmt = (iso?: string | null): string => {
 const nn = (s?: string | number | null) =>
   s === null || s === undefined || s === "" ? "—" : String(s);
 const yn = (value?: boolean | null) => (value === null || value === undefined ? "—" : value ? "Oui" : "Non");
+const QUALIFICATION_VISEE_LABELS: Record<string, string> = {
+  "1": "1 - Certification enregistree au RNCP autre qu'un CQP",
+  "2": "2 - Certificat de qualification professionnelle (CQP)",
+  "3": "3 - Qualification reconnue dans les classifications d'une convention collective nationale",
+  "4": "4 - Action delivree dans le cadre du contrat de professionnalisation experimental",
+  "5": "5 - Action de pre-qualification ou de pre-formation abroge",
+  "6": "6 - Certification inscrite au repertoire specifique abroge",
+  "7": "7 - Autre abroge",
+  "8": "8 - Certification ou qualification professionnelle visee dans le cadre de l'experimentation VAE 2022",
+};
+const qualificationLabel = (value?: string | null) => (value ? QUALIFICATION_VISEE_LABELS[value] ?? value : "—");
+const contractTypeLabel = (code?: string | null, label?: string | null) => {
+  const codeText = code?.trim();
+  const labelText = label?.trim();
+  if (
+    labelText &&
+    ["apprentissage", "contrat apprentissage", "professionnalisation", "contrat de professionnalisation"].includes(
+      labelText.toLowerCase()
+    )
+  ) {
+    return codeText || "—";
+  }
+  if (codeText && labelText) {
+    return labelText.startsWith(`${codeText} - `) ? labelText : `${codeText} - ${labelText}`;
+  }
+  return codeText || labelText || "—";
+};
+const cerfaTypeLabel = (value?: "apprentissage" | "professionnalisation" | string | null) => {
+  if (value === "professionnalisation") return "Contrat de professionnalisation";
+  if (value === "apprentissage") return "Contrat apprentissage";
+  return "—";
+};
+const cerfaFileName = (contrat?: CerfaContrat | null) => {
+  const prefix =
+    contrat?.cerfa_type === "professionnalisation" ? "cerfa_pro" : "cerfa_apprent";
+  const slugify = (value?: string | null) =>
+    (value ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "") || "inconnu";
+
+  return `${prefix}_${slugify(contrat?.apprenti_nom_naissance)}_${slugify(
+    contrat?.apprenti_prenom
+  )}.pdf`;
+};
 
 /* ---------- Props ---------- */
 type Props = {
@@ -46,6 +95,7 @@ type Props = {
   contrat?: CerfaContrat | null;
   loading?: boolean;
   onEdit?: (id: number) => void;
+  canWrite?: boolean;
 };
 
 /* ---------- Component ---------- */
@@ -55,6 +105,7 @@ export default function CerfaDetailModal({
   contrat,
   loading = false,
   onEdit,
+  canWrite = true,
 }: Props) {
   const { mutateAsync: generatePdf, isPending: isGenerating } = useCerfaGeneratePdf(
     contrat?.id ?? 0
@@ -99,7 +150,7 @@ export default function CerfaDetailModal({
 
         // ⬇️ Téléchargement automatique du fichier
         const blob = await downloadPdf(contrat.id);
-        downloadBlob(blob, `cerfa_${contrat.id}.pdf`);
+        downloadBlob(blob, cerfaFileName(contrat));
       } else {
         toast.warning("PDF généré mais aucune URL détectée.");
       }
@@ -114,7 +165,7 @@ export default function CerfaDetailModal({
     try {
       toast.info("📥 Téléchargement du PDF...");
       const blob = await downloadPdf(contrat.id);
-      downloadBlob(blob, `cerfa_${contrat.id}.pdf`);
+      downloadBlob(blob, cerfaFileName(contrat));
     } catch {
       toast.error("❌ Erreur lors du téléchargement du PDF.");
     }
@@ -147,20 +198,22 @@ export default function CerfaDetailModal({
 
         <Box display="flex" gap={1}>
           {/* 🪄 Bouton Générer + téléchargement */}
-          <Tooltip title="Générer le PDF CERFA">
-            <span>
-              <Button
-                variant="contained"
-                color="secondary"
-                size="small"
-                startIcon={isGenerating ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-                disabled={isGenerating}
-                onClick={handleGeneratePdf}
-              >
-                {isGenerating ? "Génération..." : "Générer PDF"}
-              </Button>
-            </span>
-          </Tooltip>
+          {canWrite && (
+            <Tooltip title="Générer le PDF CERFA">
+              <span>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  size="small"
+                  startIcon={isGenerating ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+                  disabled={isGenerating}
+                  onClick={handleGeneratePdf}
+                >
+                  {isGenerating ? "Génération..." : "Générer PDF"}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
 
           {/* 📥 Bouton Télécharger PDF (manuel) */}
           <Tooltip title="Télécharger le PDF existant">
@@ -177,17 +230,19 @@ export default function CerfaDetailModal({
           </Tooltip>
 
           {/* ✏️ Modifier */}
-          <Tooltip title="Modifier le contrat">
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<EditIcon fontSize="small" />}
-              onClick={() => onEdit?.(contrat.id)}
-            >
-              Modifier
-            </Button>
-          </Tooltip>
+          {canWrite && (
+            <Tooltip title="Modifier le contrat">
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                startIcon={<EditIcon fontSize="small" />}
+                onClick={() => onEdit?.(contrat.id)}
+              >
+                Modifier
+              </Button>
+            </Tooltip>
+          )}
         </Box>
       </DialogTitle>
 
@@ -202,6 +257,12 @@ export default function CerfaDetailModal({
 
         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
           <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Section title="Type de CERFA">
+                <Field label="Nature du contrat" value={cerfaTypeLabel(contrat.cerfa_type)} />
+              </Section>
+            </Grid>
+
             <Grid item xs={12}>
               <Section title="Apprenti">
                 <Field label="Nom de naissance" value={nn(contrat.apprenti_nom_naissance)} />
@@ -231,6 +292,13 @@ export default function CerfaDetailModal({
                 <Field label="Dernière année suivie CERFA" value={nn(contrat.apprenti_derniere_annee_suivie)} />
                 <Field label="Intitulé dernier diplôme" value={nn(contrat.apprenti_intitule_dernier_diplome)} />
                 <Field label="Plus haut diplôme CERFA" value={nn(contrat.apprenti_plus_haut_diplome)} />
+                <Field label="Inscrit France Travail" value={yn(contrat.apprenti_inscrit_france_travail)} />
+                <Field label="Numero France Travail" value={nn(contrat.apprenti_france_travail_numero)} />
+                <Field
+                  label="Duree France Travail (mois)"
+                  value={nn(contrat.apprenti_france_travail_duree_mois)}
+                />
+                <Field label="Type minimum social" value={nn(contrat.apprenti_minimum_social_type)} />
                 <Field label="Projet création / reprise" value={yn(contrat.apprenti_projet_entreprise)} />
               </Section>
             </Grid>
@@ -253,6 +321,12 @@ export default function CerfaDetailModal({
                 <Field label="Code APE" value={nn(contrat.employeur_code_ape)} />
                 <Field label="Effectif total salaries de l'entreprise" value={nn(contrat.employeur_effectif)} />
                 <Field label="Code IDCC de la convention collective applicable" value={nn(contrat.employeur_code_idcc)} />
+                <Field label="N° URSSAF particulier-employeur" value={nn(contrat.employeur_urssaf_particulier)} />
+                <Field
+                  label="Organisme de prevoyance"
+                  value={nn(contrat.employeur_organisme_prevoyance)}
+                />
+                <Field label="Numero du projet" value={nn(contrat.employeur_numero_projet)} />
                 <Field
                   label="Regime assurance chomage specifique"
                   value={yn(contrat.employeur_regime_assurance_chomage)}
@@ -263,22 +337,60 @@ export default function CerfaDetailModal({
             <Grid item xs={12}>
               <Section title="Formation / Diplôme">
                 <Field label="Diplôme visé CERFA" value={nn(contrat.diplome_vise)} />
+                <Field label="Type qualification visee" value={qualificationLabel(contrat.type_qualification_visee)} />
                 <Field label="Intitule precis" value={nn(contrat.diplome_intitule)} />
                 <Field label="Code diplome" value={nn(contrat.code_diplome)} />
                 <Field label="Code RNCP" value={nn(contrat.code_rncp)} />
+                <Field
+                  label="Declaration d'activite organisme"
+                  value={nn(contrat.organisme_declaration_activite)}
+                />
+                <Field
+                  label="Nombre d'organismes"
+                  value={nn(contrat.nombre_organismes_formation)}
+                />
+                <Field
+                  label="Code NSF specialite de formation"
+                  value={nsfSpecialiteLabel(contrat.specialite_formation)}
+                />
+                <Field
+                  label="Organisation de la formation"
+                  value={nn(contrat.organisation_formation)}
+                />
+                <Field
+                  label="Heures d'enseignements (CERFA pro)"
+                  value={nn(contrat.formation_heures_enseignements)}
+                />
                 <Field label="Date debut formation" value={fmt(contrat.formation_debut)} />
                 <Field label="Date debut formation CFA" value={fmt(contrat.formation_debut)} />
                 <Field label="Date fin epreuves / examens" value={fmt(contrat.formation_fin)} />
-                <Field label="Duree formation (heures)" value={nn(contrat.formation_duree_heures)} />
+                <Field label="Duree totale formation (heures)" value={nn(contrat.formation_duree_heures)} />
                 <Field label="Heures a distance" value={nn(contrat.formation_distance_heures)} />
               </Section>
             </Grid>
 
             <Grid item xs={12}>
               <Section title="Contrat">
-                <Field label="Type de contrat CERFA" value={nn(contrat.type_contrat)} />
+                <Field
+                  label="Type de contrat CERFA"
+                  value={contractTypeLabel(contrat.type_contrat_code, contrat.type_contrat)}
+                />
                 <Field label="Type de derogation CERFA" value={nn(contrat.type_derogation)} />
                 <Field label="Numero contrat precedent" value={nn(contrat.numero_contrat_precedent)} />
+                <Field
+                  label="Emploi occupe pendant le contrat"
+                  value={nn(contrat.emploi_occupe_pendant_contrat)}
+                />
+                <Field label="Classification emploi" value={nn(contrat.classification_emploi)} />
+                <Field label="Niveau classification" value={nn(contrat.classification_niveau)} />
+                <Field
+                  label="Coefficient hierarchique"
+                  value={nn(contrat.coefficient_hierarchique)}
+                />
+                <Field
+                  label="Periode d'essai (jours)"
+                  value={nn(contrat.duree_periode_essai_jours)}
+                />
                 <Field label="Date conclusion" value={fmt(contrat.date_conclusion)} />
                 <Field label="Date debut execution" value={fmt(contrat.date_debut_execution)} />
                 <Field label="Date fin contrat" value={fmt(contrat.date_fin_contrat)} />
@@ -295,6 +407,8 @@ export default function CerfaDetailModal({
                 <Field label="Duree hebdo (minutes)" value={nn(contrat.duree_hebdo_minutes)} />
                 <Field label="Salaire brut mensuel" value={nn(contrat.salaire_brut_mensuel)} />
                 <Field label="Caisse retraite" value={nn(contrat.caisse_retraite)} />
+                <Field label="Nom OPCO" value={nn(contrat.opco_nom)} />
+                <Field label="Numero adherent OPCO" value={nn(contrat.opco_adherent_numero)} />
                 <Field label="Lieu de signature" value={nn(contrat.lieu_signature)} />
               </Section>
             </Grid>
