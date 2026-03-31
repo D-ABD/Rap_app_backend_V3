@@ -123,6 +123,8 @@ export default function CerfaDetailModal({
       </Dialog>
     );
 
+  const isProfessionnalisation = contrat.cerfa_type === "professionnalisation";
+
   // ✅ Champs essentiels
   const requiredFields: Record<string, any> = {
     "Nom de naissance": contrat.apprenti_nom_naissance,
@@ -337,35 +339,42 @@ export default function CerfaDetailModal({
             <Grid item xs={12}>
               <Section title="Formation / Diplôme">
                 <Field label="Diplôme visé CERFA" value={nn(contrat.diplome_vise)} />
-                <Field label="Type qualification visee" value={qualificationLabel(contrat.type_qualification_visee)} />
                 <Field label="Intitule precis" value={nn(contrat.diplome_intitule)} />
                 <Field label="Code diplome" value={nn(contrat.code_diplome)} />
                 <Field label="Code RNCP" value={nn(contrat.code_rncp)} />
                 <Field
-                  label="Declaration d'activite organisme"
-                  value={nn(contrat.organisme_declaration_activite)}
-                />
-                <Field
-                  label="Nombre d'organismes"
-                  value={nn(contrat.nombre_organismes_formation)}
-                />
-                <Field
                   label="Code NSF specialite de formation"
                   value={nsfSpecialiteLabel(contrat.specialite_formation)}
                 />
-                <Field
-                  label="Organisation de la formation"
-                  value={nn(contrat.organisation_formation)}
-                />
-                <Field
-                  label="Heures d'enseignements (CERFA pro)"
-                  value={nn(contrat.formation_heures_enseignements)}
-                />
                 <Field label="Date debut formation" value={fmt(contrat.formation_debut)} />
-                <Field label="Date debut formation CFA" value={fmt(contrat.formation_debut)} />
                 <Field label="Date fin epreuves / examens" value={fmt(contrat.formation_fin)} />
                 <Field label="Duree totale formation (heures)" value={nn(contrat.formation_duree_heures)} />
                 <Field label="Heures a distance" value={nn(contrat.formation_distance_heures)} />
+                {isProfessionnalisation && (
+                  <>
+                    <Field
+                      label="Type qualification visee"
+                      value={qualificationLabel(contrat.type_qualification_visee)}
+                    />
+                    <Field
+                      label="Declaration d'activite organisme"
+                      value={nn(contrat.organisme_declaration_activite)}
+                    />
+                    <Field
+                      label="Nombre d'organismes"
+                      value={nn(contrat.nombre_organismes_formation)}
+                    />
+                    <Field
+                      label="Organisation de la formation"
+                      value={nn(contrat.organisation_formation)}
+                    />
+                    <Field
+                      label="Heures d'enseignements (CERFA pro)"
+                      value={nn(contrat.formation_heures_enseignements)}
+                    />
+                    <Field label="Date debut formation CFA" value={fmt(contrat.formation_debut)} />
+                  </>
+                )}
               </Section>
             </Grid>
 
@@ -375,22 +384,9 @@ export default function CerfaDetailModal({
                   label="Type de contrat CERFA"
                   value={contractTypeLabel(contrat.type_contrat_code, contrat.type_contrat)}
                 />
-                <Field label="Type de derogation CERFA" value={nn(contrat.type_derogation)} />
-                <Field label="Numero contrat precedent" value={nn(contrat.numero_contrat_precedent)} />
-                <Field
-                  label="Emploi occupe pendant le contrat"
-                  value={nn(contrat.emploi_occupe_pendant_contrat)}
-                />
-                <Field label="Classification emploi" value={nn(contrat.classification_emploi)} />
-                <Field label="Niveau classification" value={nn(contrat.classification_niveau)} />
-                <Field
-                  label="Coefficient hierarchique"
-                  value={nn(contrat.coefficient_hierarchique)}
-                />
-                <Field
-                  label="Periode d'essai (jours)"
-                  value={nn(contrat.duree_periode_essai_jours)}
-                />
+                {isProfessionnalisation && (
+                  <Field label="Nature du contrat" value={nn(contrat.nature_contrat)} />
+                )}
                 <Field label="Date conclusion" value={fmt(contrat.date_conclusion)} />
                 <Field label="Date debut execution" value={fmt(contrat.date_debut_execution)} />
                 <Field label="Date fin contrat" value={fmt(contrat.date_fin_contrat)} />
@@ -406,10 +402,63 @@ export default function CerfaDetailModal({
                 <Field label="Duree hebdo (heures)" value={nn(contrat.duree_hebdo_heures)} />
                 <Field label="Duree hebdo (minutes)" value={nn(contrat.duree_hebdo_minutes)} />
                 <Field label="Salaire brut mensuel" value={nn(contrat.salaire_brut_mensuel)} />
+                <Field
+                  label="Avantage nourriture (EUR / repas)"
+                  value={nn(contrat.avantage_nourriture)}
+                />
+                <Field
+                  label="Avantage logement (EUR / mois)"
+                  value={nn(contrat.avantage_logement)}
+                />
+                <Field label="Autre avantage en nature" value={nn(contrat.avantage_autre)} />
+                {!isProfessionnalisation && (
+                  <>
+                    <Field
+                      label="1ere annee - periode 1"
+                      value={`${fmt(contrat.remu_annee1_periode1_debut)} -> ${fmt(contrat.remu_annee1_periode1_fin)} / ${nn(contrat.remu_annee1_periode1_pourcentage)}% du ${nn(contrat.remu_annee1_periode1_reference)}`}
+                    />
+                    <Field
+                      label="1ere annee - periode 2"
+                      value={`${fmt(contrat.remu_annee1_periode2_debut)} -> ${fmt(contrat.remu_annee1_periode2_fin)} / ${nn(contrat.remu_annee1_periode2_pourcentage)}% du ${nn(contrat.remu_annee1_periode2_reference)}`}
+                    />
+                    <Field
+                      label="2eme annee - periode 1"
+                      value={`${fmt(contrat.remu_annee2_periode1_debut)} -> ${fmt(contrat.remu_annee2_periode1_fin)} / ${nn(contrat.remu_annee2_periode1_pourcentage)}% du ${nn(contrat.remu_annee2_periode1_reference)}`}
+                    />
+                    <Field
+                      label="2eme annee - periode 2"
+                      value={`${fmt(contrat.remu_annee2_periode2_debut)} -> ${fmt(contrat.remu_annee2_periode2_fin)} / ${nn(contrat.remu_annee2_periode2_pourcentage)}% du ${nn(contrat.remu_annee2_periode2_reference)}`}
+                    />
+                  </>
+                )}
                 <Field label="Caisse retraite" value={nn(contrat.caisse_retraite)} />
-                <Field label="Nom OPCO" value={nn(contrat.opco_nom)} />
-                <Field label="Numero adherent OPCO" value={nn(contrat.opco_adherent_numero)} />
                 <Field label="Lieu de signature" value={nn(contrat.lieu_signature)} />
+                {isProfessionnalisation ? (
+                  <>
+                    <Field label="Numero contrat precedent" value={nn(contrat.numero_contrat_precedent)} />
+                    <Field
+                      label="Emploi occupe pendant le contrat"
+                      value={nn(contrat.emploi_occupe_pendant_contrat)}
+                    />
+                    <Field label="Classification emploi" value={nn(contrat.classification_emploi)} />
+                    <Field label="Niveau classification" value={nn(contrat.classification_niveau)} />
+                    <Field
+                      label="Coefficient hierarchique"
+                      value={nn(contrat.coefficient_hierarchique)}
+                    />
+                    <Field
+                      label="Periode d'essai (jours)"
+                      value={nn(contrat.duree_periode_essai_jours)}
+                    />
+                    <Field label="Nom OPCO" value={nn(contrat.opco_nom)} />
+                    <Field label="Numero adherent OPCO" value={nn(contrat.opco_adherent_numero)} />
+                  </>
+                ) : (
+                  <>
+                    <Field label="Type de derogation CERFA" value={nn(contrat.type_derogation)} />
+                    <Field label="Numero contrat precedent" value={nn(contrat.numero_contrat_precedent)} />
+                  </>
+                )}
               </Section>
             </Grid>
 

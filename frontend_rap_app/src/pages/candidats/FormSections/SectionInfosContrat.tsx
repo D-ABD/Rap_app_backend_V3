@@ -11,6 +11,37 @@ import {
 } from "@mui/material";
 import type { CandidatFormData } from "../../../types/candidat";
 
+const TYPE_CONTRAT_CERFA_OPTIONS = [
+  { value: "11", label: "11 - Premier contrat d'apprentissage" },
+  { value: "21", label: "21 - Nouveau contrat meme employeur" },
+  { value: "22", label: "22 - Nouveau contrat autre employeur" },
+  { value: "23", label: "23 - Nouveau contrat apres rupture" },
+  { value: "31", label: "31 - Modification situation juridique employeur" },
+  { value: "32", label: "32 - Changement d'employeur contrat saisonnier" },
+  { value: "33", label: "33 - Prolongation suite echec examen" },
+  { value: "34", label: "34 - Prolongation suite RQTH" },
+  { value: "35", label: "35 - Diplome supplementaire prepare" },
+  { value: "36", label: "36 - Autres changements" },
+  { value: "37", label: "37 - Modification lieu d'execution" },
+  { value: "38", label: "38 - Modification lieu principal de formation" },
+];
+
+const TYPE_CONTRAT_CERFA_PRO_OPTIONS = [
+  { value: "11", label: "11 - Contrat initial (cas general)" },
+  {
+    value: "12",
+    label: "12 - Contrat initial conclu conjointement avec deux employeurs pour l'exercice d'une activite saisonniere",
+  },
+  { value: "21", label: "21 - Nouveau contrat en raison de l'echec aux epreuves d'evaluation" },
+  { value: "22", label: "22 - Nouveau contrat en raison de la defaillance de l'organisme de formation" },
+  { value: "23", label: "23 - Nouveau contrat en raison de la maternite, de la maladie ou d'un accident de travail" },
+  {
+    value: "24",
+    label: "24 - Nouveau contrat pour l'obtention d'une qualification superieure ou complementaire",
+  },
+  { value: "30", label: "30 - Avenant" },
+];
+
 const NATIONALITE_OPTIONS = [
   { value: "1", label: "1 - Francaise" },
   { value: "2", label: "2 - Union europeenne" },
@@ -80,10 +111,16 @@ const REGIME_SOCIAL_OPTIONS = [
 interface Props {
   form: CandidatFormData;
   setForm: React.Dispatch<React.SetStateAction<CandidatFormData>>;
+  errors?: Record<string, string[]>;
 }
 
-function SectionInfosContrat({ form, setForm }: Props) {
+function SectionInfosContrat({ form, setForm, errors }: Props) {
   // Les champs source CERFA sont volontairement portes par des listes codees.
+  const typeContratCerfaOptions =
+    form.type_contrat === "professionnalisation"
+      ? TYPE_CONTRAT_CERFA_PRO_OPTIONS
+      : TYPE_CONTRAT_CERFA_OPTIONS;
+
   const updateField = useCallback(
     (key: keyof CandidatFormData) =>
       (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -204,6 +241,28 @@ function SectionInfosContrat({ form, setForm }: Props) {
                         onChange={updateField("duree_inscription_france_travail_mois")}
                         inputProps={{ min: 0 }}
                       />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Type de contrat CERFA (code notice)"
+                        value={form.type_contrat_code ?? ""}
+                        onChange={updateField("type_contrat_code")}
+                        error={!!errors?.type_contrat_code?.length}
+                        helperText={
+                          errors?.type_contrat_code?.[0] ??
+                          "Code officiel CERFA utilise pour le pre-remplissage du contrat."
+                        }
+                      >
+                        <MenuItem value="">Non defini</MenuItem>
+                        {typeContratCerfaOptions.map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
                     </Grid>
 
           {/* Situation avant contrat */}

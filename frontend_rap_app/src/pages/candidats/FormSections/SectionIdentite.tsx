@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Box,
   Button,
+  FormHelperText,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -23,10 +24,49 @@ import type { CandidatFormData, CandidatMeta } from "../../../types/candidat";
 import { formatFormation } from "./utils";
 import { FormationPick } from "../../../components/modals/FormationSelectModal";
 
+const TYPE_CONTRAT_CERFA_OPTIONS = [
+  { value: "11", label: "11 - Premier contrat d'apprentissage" },
+  { value: "21", label: "21 - Nouveau contrat meme employeur" },
+  { value: "22", label: "22 - Nouveau contrat autre employeur" },
+  { value: "23", label: "23 - Nouveau contrat apres rupture" },
+  { value: "31", label: "31 - Modification situation juridique employeur" },
+  { value: "32", label: "32 - Changement d'employeur contrat saisonnier" },
+  { value: "33", label: "33 - Prolongation suite echec examen" },
+  { value: "34", label: "34 - Prolongation suite RQTH" },
+  { value: "35", label: "35 - Diplome supplementaire prepare" },
+  { value: "36", label: "36 - Autres changements" },
+  { value: "37", label: "37 - Modification lieu d'execution" },
+  { value: "38", label: "38 - Modification lieu principal de formation" },
+];
+
+const TYPE_CONTRAT_CERFA_PRO_OPTIONS = [
+  { value: "11", label: "11 - Contrat initial (cas general)" },
+  {
+    value: "12",
+    label: "12 - Contrat initial conclu conjointement avec deux employeurs pour l'exercice d'une activite saisonniere",
+  },
+  { value: "21", label: "21 - Nouveau contrat en raison de l'echec aux epreuves d'evaluation" },
+  { value: "22", label: "22 - Nouveau contrat en raison de la defaillance de l'organisme de formation" },
+  { value: "23", label: "23 - Nouveau contrat en raison de la maternite, de la maladie ou d'un accident de travail" },
+  {
+    value: "24",
+    label: "24 - Nouveau contrat pour l'obtention d'une qualification superieure ou complementaire",
+  },
+  { value: "30", label: "30 - Avenant" },
+];
+
+const APPRENTISSAGE_TYPE_CONTRAT_CERFA_CODES = new Set(
+  TYPE_CONTRAT_CERFA_OPTIONS.map((opt) => opt.value)
+);
+const PROFESSIONNALISATION_TYPE_CONTRAT_CERFA_CODES = new Set(
+  TYPE_CONTRAT_CERFA_PRO_OPTIONS.map((opt) => opt.value)
+);
+
 interface Props {
   form: CandidatFormData;
   setForm: React.Dispatch<React.SetStateAction<CandidatFormData>>;
   meta?: CandidatMeta | null;
+  errors?: Record<string, string[]>;
 
   // Formation
   canEditFormation: boolean;
@@ -38,6 +78,8 @@ interface Props {
 function SectionIdentite({
   form,
   setForm,
+  meta,
+  errors,
   canEditFormation,
   setShowFormationModal,
   formationInfo,
@@ -58,6 +100,25 @@ function SectionIdentite({
           ...f,
           [key]: e.target.value === "" ? undefined : e.target.value,
         })),
+    [setForm]
+  );
+
+  const updateTypeContrat = useCallback(
+    (e: any) => {
+      const nextTypeContrat = e.target.value === "" ? undefined : e.target.value;
+      setForm((f) => {
+        const currentCode = f.type_contrat_code ?? undefined;
+        const allowedCodes =
+          nextTypeContrat === "professionnalisation"
+            ? PROFESSIONNALISATION_TYPE_CONTRAT_CERFA_CODES
+            : APPRENTISSAGE_TYPE_CONTRAT_CERFA_CODES;
+        return {
+          ...f,
+          type_contrat: nextTypeContrat,
+          type_contrat_code: currentCode && allowedCodes.has(currentCode) ? currentCode : undefined,
+        };
+      });
+    },
     [setForm]
   );
 
@@ -214,7 +275,51 @@ function SectionIdentite({
               label="Numéro OSIA"
               value={form.numero_osia ?? ""}
               onChange={updateField("numero_osia")}
+              error={!!errors?.numero_osia?.length}
+              helperText={errors?.numero_osia?.[0]}
             />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors?.type_contrat?.length}>
+              <FormLabel>Type de contrat du stagiaire</FormLabel>
+              <Select
+                value={form.type_contrat ?? ""}
+                onChange={updateTypeContrat}
+                displayEmpty
+              >
+                <MenuItem value="">—</MenuItem>
+                {(meta?.type_contrat_choices ?? []).map((opt) => (
+                  <MenuItem key={String(opt.value)} value={String(opt.value)}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {errors?.type_contrat?.length ? (
+                <FormHelperText>{errors.type_contrat[0]}</FormHelperText>
+              ) : null}
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth error={!!errors?.contrat_signe?.length}>
+              <FormLabel>Contrat signé</FormLabel>
+              <Select
+                value={form.contrat_signe ?? ""}
+                onChange={updateSelect("contrat_signe")}
+                displayEmpty
+              >
+                <MenuItem value="">—</MenuItem>
+                {(meta?.contrat_signe_choices ?? []).map((opt) => (
+                  <MenuItem key={String(opt.value)} value={String(opt.value)}>
+                    {opt.label}
+                  </MenuItem>
+                  ))}
+                </Select>
+              <FormHelperText>
+                {errors?.contrat_signe?.[0] ?? 'Si la valeur est "Oui", le numéro OSIA devient obligatoire.'}
+              </FormHelperText>
+            </FormControl>
           </Grid>
 
           {/* -------------------- ADRESSE -------------------- */}

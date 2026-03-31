@@ -15,9 +15,10 @@ interface Props {
   setForm: React.Dispatch<React.SetStateAction<CandidatFormData>>;
   showUsersModal: boolean;
   setShowUsersModal: (v: boolean) => void;
+  errors?: Record<string, string[]>;
 }
 
-function SectionAssignations({ form, setForm, setShowUsersModal }: Props) {
+function SectionAssignations({ form, setForm, setShowUsersModal, errors }: Props) {
   // Memoise label pour éviter recalcul inutile
   const vuParLabel = useMemo(() => {
     if (typeof form.vu_par === "number") return `Utilisateur #${form.vu_par}`;
@@ -47,6 +48,8 @@ function SectionAssignations({ form, setForm, setShowUsersModal }: Props) {
           value={vuParLabel}
           InputProps={{ readOnly: true }}
           placeholder="— Aucune sélection —"
+          error={!!errors?.vu_par?.length}
+          helperText={errors?.vu_par?.[0]}
         />
 
         <Box display="flex" gap={1} mt={1}>

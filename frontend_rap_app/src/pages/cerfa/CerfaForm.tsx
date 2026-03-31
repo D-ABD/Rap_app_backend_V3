@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -20,6 +23,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { toast } from "react-toastify";
 import { CerfaContrat, CerfaContratCreate } from "../../types/cerfa";
 import { useCerfaPrefill } from "../../hooks/useCerfa";
@@ -239,6 +243,17 @@ const PRO_TYPE_QUALIFICATION_OPTIONS: CodeOption[] = [
   },
 ];
 
+const REMUNERATION_REFERENCE_OPTIONS: CodeOption[] = [
+  { value: "SMIC", label: "SMIC" },
+  { value: "SMC", label: "SMC" },
+];
+
+const PRO_NATURE_CONTRAT_OPTIONS: CodeOption[] = [
+  { value: "cdi", label: "CDI" },
+  { value: "cdd", label: "CDD" },
+  { value: "travail_temporaire", label: "travail temporaire" },
+];
+
 const APPRENTISSAGE_TYPE_CONTRAT_CODES = new Set(TYPE_CONTRAT_OPTIONS.map((opt) => opt.value));
 const PROFESSIONNALISATION_TYPE_CONTRAT_CODES = new Set(PRO_TYPE_CONTRAT_OPTIONS.map((opt) => opt.value));
 
@@ -254,7 +269,439 @@ type CerfaFormProps = {
   } | null;
   onSubmit?: (data: CerfaContratCreate) => Promise<void> | void;
   readOnly?: boolean;
+  fieldErrors?: Partial<Record<keyof CerfaContratCreate, string>>;
+  globalError?: string | null;
 };
+
+type ContractSectionForm = {
+  cerfa_type?: "apprentissage" | "professionnalisation" | null;
+  type_contrat_code?: string | null;
+  nature_contrat?: "cdi" | "cdd" | "travail_temporaire" | null;
+  type_derogation_code?: string | null;
+  numero_contrat_precedent?: string | null;
+  emploi_occupe_pendant_contrat?: string | null;
+  classification_emploi?: string | null;
+  classification_niveau?: string | null;
+  coefficient_hierarchique?: string | null;
+  duree_periode_essai_jours?: number | null;
+  date_conclusion?: string | null;
+  date_debut_execution?: string | null;
+  date_fin_contrat?: string | null;
+  date_debut_formation_pratique_employeur?: string | null;
+  date_effet_avenant?: string | null;
+  travail_machines_dangereuses?: boolean | null;
+  duree_hebdo_heures?: number | null;
+  duree_hebdo_minutes?: number | null;
+  salaire_brut_mensuel?: number | null;
+  avantage_nourriture?: number | null;
+  avantage_logement?: number | null;
+  avantage_autre?: string | null;
+  remu_annee1_periode1_debut?: string | null;
+  remu_annee1_periode1_fin?: string | null;
+  remu_annee1_periode1_pourcentage?: number | null;
+  remu_annee1_periode1_reference?: string | null;
+  remu_annee1_periode2_debut?: string | null;
+  remu_annee1_periode2_fin?: string | null;
+  remu_annee1_periode2_pourcentage?: number | null;
+  remu_annee1_periode2_reference?: string | null;
+  remu_annee2_periode1_debut?: string | null;
+  remu_annee2_periode1_fin?: string | null;
+  remu_annee2_periode1_pourcentage?: number | null;
+  remu_annee2_periode1_reference?: string | null;
+  remu_annee2_periode2_debut?: string | null;
+  remu_annee2_periode2_fin?: string | null;
+  remu_annee2_periode2_pourcentage?: number | null;
+  remu_annee2_periode2_reference?: string | null;
+  caisse_retraite?: string | null;
+  lieu_signature?: string | null;
+};
+
+type MemoContractSectionProps = {
+  form: ContractSectionForm;
+  readOnly: boolean;
+  getDateValue: (value?: string | null) => Dayjs | null;
+  setField: (field: keyof CerfaContratCreate, value: unknown) => void;
+};
+
+const MemoContractSection = memo(function MemoContractSection({
+  form,
+  readOnly,
+  getDateValue,
+  setField,
+}: MemoContractSectionProps) {
+  const [yearTwoExpanded, setYearTwoExpanded] = useState(false);
+
+  const renderDate = (
+    field: keyof CerfaContratCreate,
+    label: string,
+    helperText?: string
+  ) => (
+    <DatePicker
+      label={label}
+      value={getDateValue(form[field as keyof ContractSectionForm] as string | null | undefined)}
+      onChange={(value: Dayjs | null) =>
+        setField(field, value && value.isValid() ? value.format("YYYY-MM-DD") : null)
+      }
+      views={["year", "month", "day"]}
+      openTo="year"
+      format="DD/MM/YYYY"
+      disabled={readOnly}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          helperText,
+        },
+      }}
+    />
+  );
+
+  const renderSelect = (
+    field: keyof CerfaContratCreate,
+    value: string | null | undefined,
+    label: string,
+    options: CodeOption[]
+  ) => (
+    <TextField
+      select
+      fullWidth
+      label={label}
+      value={value ?? ""}
+      onChange={(e) => setField(field, e.target.value || null)}
+      disabled={readOnly}
+      helperText="Liste CERFA codifiee."
+    >
+      <MenuItem value="">Non defini</MenuItem>
+      {options.map((option) => (
+        <MenuItem key={option.value} value={option.value}>
+          {option.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+
+  const renderCheckbox = (
+    field: keyof CerfaContratCreate,
+    label: string,
+    value?: boolean | null
+  ) => (
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={!!value}
+          onChange={(e) => setField(field, e.target.checked)}
+          disabled={readOnly}
+        />
+      }
+      label={label}
+    />
+  );
+
+  return (
+    <>
+      <Typography variant="subtitle2">Contrat</Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          <Alert severity="info" sx={{ py: 0 }}>
+            {form.cerfa_type === "professionnalisation"
+              ? "Renseigne ici les informations contractuelles specifiques au CERFA professionnalisation."
+              : "Renseigne ici les informations contractuelles du CERFA apprentissage, puis les periodes de remuneration si elles s'appliquent."}
+          </Alert>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Typography variant="body2" fontWeight={700}>
+            Nature du contrat
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderSelect(
+            "type_contrat_code",
+            form.type_contrat_code,
+            "Type de contrat / avenant CERFA",
+            form.cerfa_type === "professionnalisation" ? PRO_TYPE_CONTRAT_OPTIONS : TYPE_CONTRAT_OPTIONS
+          )}
+        </Grid>
+        {form.cerfa_type === "professionnalisation" && (
+          <Grid item xs={12} md={4}>
+            {renderSelect(
+              "nature_contrat",
+              form.nature_contrat,
+              "Nature du contrat",
+              PRO_NATURE_CONTRAT_OPTIONS
+            )}
+          </Grid>
+        )}
+        <Grid item xs={12} md={4}>
+          {renderSelect(
+            "type_derogation_code",
+            form.type_derogation_code,
+            "Type de derogation CERFA",
+            TYPE_DEROGATION_OPTIONS
+          )}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Numero du contrat precedent / avenant"
+            value={form.numero_contrat_precedent ?? ""}
+            onChange={(e) => setField("numero_contrat_precedent", e.target.value)}
+            disabled={readOnly}
+            helperText="A renseigner surtout en cas de renouvellement, avenant ou contrat precedent."
+          />
+        </Grid>
+
+        <Grid item xs={12}>
+          <Typography variant="body2" fontWeight={700}>
+            Calendrier du contrat
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderDate("date_conclusion", "Date de signature / conclusion")}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderDate("date_debut_execution", "Date de debut d'execution")}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderDate("date_fin_contrat", "Date de fin du contrat")}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderDate(
+            "date_debut_formation_pratique_employeur",
+            "Debut de la formation pratique chez l'employeur"
+          )}
+        </Grid>
+        <Grid item xs={12} md={4}>
+          {renderDate("date_effet_avenant", "Date d'effet de l'avenant")}
+        </Grid>
+
+        <Grid item xs={12}>
+          <Typography variant="body2" fontWeight={700}>
+            Temps de travail et signature
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Duree hebdomadaire - heures"
+            type="number"
+            value={form.duree_hebdo_heures ?? ""}
+            onChange={(e) => setField("duree_hebdo_heures", e.target.value === "" ? null : Number(e.target.value))}
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Duree hebdomadaire - minutes"
+            type="number"
+            value={form.duree_hebdo_minutes ?? ""}
+            onChange={(e) => setField("duree_hebdo_minutes", e.target.value === "" ? null : Number(e.target.value))}
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Lieu de signature"
+            value={form.lieu_signature ?? ""}
+            onChange={(e) => setField("lieu_signature", e.target.value)}
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          {renderCheckbox(
+            "travail_machines_dangereuses",
+            "Travail sur machines dangereuses / exposition a des risques particuliers",
+            form.travail_machines_dangereuses
+          )}
+        </Grid>
+
+        <Grid item xs={12}>
+          <Typography variant="body2" fontWeight={700}>
+            Remuneration et caisse
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Salaire brut mensuel a l'embauche"
+            type="number"
+            value={form.salaire_brut_mensuel ?? ""}
+            onChange={(e) => setField("salaire_brut_mensuel", e.target.value === "" ? null : Number(e.target.value))}
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Avantage nourriture (EUR / repas)"
+            type="number"
+            value={form.avantage_nourriture ?? ""}
+            onChange={(e) =>
+              setField("avantage_nourriture", e.target.value === "" ? null : Number(e.target.value))
+            }
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Avantage logement (EUR / mois)"
+            type="number"
+            value={form.avantage_logement ?? ""}
+            onChange={(e) =>
+              setField("avantage_logement", e.target.value === "" ? null : Number(e.target.value))
+            }
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Autre avantage en nature"
+            value={form.avantage_autre ?? ""}
+            onChange={(e) => setField("avantage_autre", e.target.value)}
+            disabled={readOnly}
+          />
+        </Grid>
+        <Grid item xs={12} md={8}>
+          <TextField
+            fullWidth
+            label="Caisse de retraite complementaire"
+            value={form.caisse_retraite ?? ""}
+            onChange={(e) => setField("caisse_retraite", e.target.value)}
+            disabled={readOnly}
+          />
+        </Grid>
+
+        {form.cerfa_type === "professionnalisation" && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="body2" fontWeight={700}>
+                Informations specifiques au contrat professionnalisation
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField fullWidth label="Emploi occupe pendant le contrat" value={form.emploi_occupe_pendant_contrat ?? ""} onChange={(e) => setField("emploi_occupe_pendant_contrat", e.target.value)} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="Classification de l'emploi" value={form.classification_emploi ?? ""} onChange={(e) => setField("classification_emploi", e.target.value)} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField fullWidth label="Niveau de classification" value={form.classification_niveau ?? ""} onChange={(e) => setField("classification_niveau", e.target.value)} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="Coefficient hierarchique" value={form.coefficient_hierarchique ?? ""} onChange={(e) => setField("coefficient_hierarchique", e.target.value)} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField fullWidth label="Periode d'essai (jours)" type="number" value={form.duree_periode_essai_jours ?? ""} onChange={(e) => setField("duree_periode_essai_jours", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+            </Grid>
+          </>
+        )}
+
+        {form.cerfa_type === "apprentissage" && (
+          <>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="body2" fontWeight={700}>
+                Remuneration apprentissage - 1ere annee
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Renseigne les periodes affichees sur le CERFA et la base utilisee : `SMIC` ou `SMC`.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              {renderDate("remu_annee1_periode1_debut", "Periode 1 - debut")}
+            </Grid>
+            <Grid item xs={12} md={3}>
+              {renderDate("remu_annee1_periode1_fin", "Periode 1 - fin")}
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField fullWidth label="Periode 1 - %" type="number" value={form.remu_annee1_periode1_pourcentage ?? ""} onChange={(e) => setField("remu_annee1_periode1_pourcentage", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              {renderSelect(
+                "remu_annee1_periode1_reference",
+                form.remu_annee1_periode1_reference,
+                "Periode 1 - base",
+                REMUNERATION_REFERENCE_OPTIONS
+              )}
+            </Grid>
+            <Grid item xs={12} md={3}>
+              {renderDate("remu_annee1_periode2_debut", "Periode 2 - debut")}
+            </Grid>
+            <Grid item xs={12} md={3}>
+              {renderDate("remu_annee1_periode2_fin", "Periode 2 - fin")}
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <TextField fullWidth label="Periode 2 - %" type="number" value={form.remu_annee1_periode2_pourcentage ?? ""} onChange={(e) => setField("remu_annee1_periode2_pourcentage", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              {renderSelect(
+                "remu_annee1_periode2_reference",
+                form.remu_annee1_periode2_reference,
+                "Periode 2 - base",
+                REMUNERATION_REFERENCE_OPTIONS
+              )}
+            </Grid>
+            <Grid item xs={12}>
+              <Accordion
+                disableGutters
+                expanded={yearTwoExpanded}
+                onChange={(_, expanded) => setYearTwoExpanded(expanded)}
+                sx={{ boxShadow: "none", border: "1px solid", borderColor: "divider", borderRadius: 1 }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={700}>
+                    Remuneration apprentissage - 2eme annee
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 0, pb: 0 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={3}>
+                      {renderDate("remu_annee2_periode1_debut", "Periode 1 - debut")}
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      {renderDate("remu_annee2_periode1_fin", "Periode 1 - fin")}
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField fullWidth label="Periode 1 - %" type="number" value={form.remu_annee2_periode1_pourcentage ?? ""} onChange={(e) => setField("remu_annee2_periode1_pourcentage", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      {renderSelect(
+                        "remu_annee2_periode1_reference",
+                        form.remu_annee2_periode1_reference,
+                        "Periode 1 - base",
+                        REMUNERATION_REFERENCE_OPTIONS
+                      )}
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      {renderDate("remu_annee2_periode2_debut", "Periode 2 - debut")}
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                      {renderDate("remu_annee2_periode2_fin", "Periode 2 - fin")}
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField fullWidth label="Periode 2 - %" type="number" value={form.remu_annee2_periode2_pourcentage ?? ""} onChange={(e) => setField("remu_annee2_periode2_pourcentage", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      {renderSelect(
+                        "remu_annee2_periode2_reference",
+                        form.remu_annee2_periode2_reference,
+                        "Periode 2 - base",
+                        REMUNERATION_REFERENCE_OPTIONS
+                      )}
+                    </Grid>
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+            </Grid>
+          </>
+        )}
+      </Grid>
+    </>
+  );
+});
 
 export function CerfaForm({
   open,
@@ -264,6 +711,8 @@ export function CerfaForm({
   initialSelections = null,
   onSubmit,
   readOnly = false,
+  fieldErrors = {},
+  globalError = null,
 }: CerfaFormProps) {
   const [form, setForm] = useState<Partial<CerfaContratCreate>>({
     cerfa_type: "apprentissage",
@@ -278,6 +727,25 @@ export function CerfaForm({
   const [showCandidatModal, setShowCandidatModal] = useState(false);
   const [showFormationModal, setShowFormationModal] = useState(false);
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
+
+  const getLinkedFormationFromCandidate = useCallback((candidate: any) => {
+    if (candidate?.formation?.id) {
+      return candidate.formation;
+    }
+    if (typeof candidate?.formation === "number") {
+      return {
+        id: candidate.formation,
+        nom: candidate?.formation_nom || `Formation #${candidate.formation}`,
+      };
+    }
+    if (typeof candidate?.formation_id === "number") {
+      return {
+        id: candidate.formation_id,
+        nom: candidate?.formation_nom || `Formation #${candidate.formation_id}`,
+      };
+    }
+    return null;
+  }, []);
   const suggestedNsf = suggestNsfSpecialite(form.diplome_intitule, form.diplome_vise);
   const [prefillInfo, setPrefillInfo] = useState<string>("");
   const { mutateAsync: prefillCerfa, isPending: isPrefilling } = useCerfaPrefill();
@@ -296,25 +764,24 @@ export function CerfaForm({
     label: string,
     helperText?: string
   ) => (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <DatePicker
-        label={label}
-        value={getDateValue(form[field] as string | null | undefined)}
-        onChange={(value: Dayjs | null) =>
-          setField(field, value && value.isValid() ? value.format("YYYY-MM-DD") : null)
-        }
-        views={["year", "month", "day"]}
-        openTo="year"
-        format="DD/MM/YYYY"
-        disabled={readOnly}
-        slotProps={{
-          textField: {
-            fullWidth: true,
-            helperText,
-          },
-        }}
-      />
-    </LocalizationProvider>
+    <DatePicker
+      label={label}
+      value={getDateValue(form[field] as string | null | undefined)}
+      onChange={(value: Dayjs | null) =>
+        setField(field, value && value.isValid() ? value.format("YYYY-MM-DD") : null)
+      }
+      views={["year", "month", "day"]}
+      openTo="year"
+      format="DD/MM/YYYY"
+      disabled={readOnly}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          error: !!fieldErrors[field],
+          helperText: fieldErrors[field] || helperText,
+        },
+      }}
+    />
   );
 
   const renderSelectField = (
@@ -329,7 +796,8 @@ export function CerfaForm({
       value={(form[field] as string | null | undefined) ?? ""}
       onChange={(e) => setField(field, e.target.value || null)}
       disabled={readOnly}
-      helperText="Liste CERFA codifiee."
+      error={!!fieldErrors[field]}
+      helperText={fieldErrors[field] || "Liste CERFA codifiee."}
     >
       <MenuItem value="">Non defini</MenuItem>
       {options.map((option) => (
@@ -347,25 +815,24 @@ export function CerfaForm({
       label: string,
       helperText?: string
     ) => (
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <DatePicker
-          label={label}
-          value={getDateValue(value)}
-          onChange={(nextValue: Dayjs | null) =>
-            setField(field, nextValue && nextValue.isValid() ? nextValue.format("YYYY-MM-DD") : null)
-          }
-          views={["year", "month", "day"]}
-          openTo="year"
-          format="DD/MM/YYYY"
-          disabled={readOnly}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              helperText,
-            },
-          }}
-        />
-      </LocalizationProvider>
+      <DatePicker
+        label={label}
+        value={getDateValue(value)}
+        onChange={(nextValue: Dayjs | null) =>
+          setField(field, nextValue && nextValue.isValid() ? nextValue.format("YYYY-MM-DD") : null)
+        }
+        views={["year", "month", "day"]}
+        openTo="year"
+        format="DD/MM/YYYY"
+      disabled={readOnly}
+      slotProps={{
+        textField: {
+          fullWidth: true,
+          error: !!fieldErrors[field],
+          helperText: fieldErrors[field] || helperText,
+        },
+      }}
+    />
     ),
     [getDateValue, readOnly, setField]
   );
@@ -384,7 +851,8 @@ export function CerfaForm({
         value={value ?? ""}
         onChange={(e) => setField(field, e.target.value || null)}
         disabled={readOnly}
-        helperText="Liste CERFA codifiee."
+        error={!!fieldErrors[field]}
+        helperText={fieldErrors[field] || "Liste CERFA codifiee."}
       >
         <MenuItem value="">Non defini</MenuItem>
         {options.map((option) => (
@@ -570,6 +1038,7 @@ export function CerfaForm({
     pieces_justificatives_ok: contrat.pieces_justificatives_ok ?? true,
     type_contrat: contrat.type_contrat,
     type_contrat_code: contrat.type_contrat_code,
+    nature_contrat: contrat.nature_contrat,
     type_derogation: contrat.type_derogation,
     type_derogation_code: contrat.type_derogation_code,
     numero_contrat_precedent: contrat.numero_contrat_precedent,
@@ -587,6 +1056,25 @@ export function CerfaForm({
     duree_hebdo_heures: contrat.duree_hebdo_heures,
     duree_hebdo_minutes: contrat.duree_hebdo_minutes,
     salaire_brut_mensuel: contrat.salaire_brut_mensuel,
+    avantage_nourriture: contrat.avantage_nourriture,
+    avantage_logement: contrat.avantage_logement,
+    avantage_autre: contrat.avantage_autre,
+    remu_annee1_periode1_debut: contrat.remu_annee1_periode1_debut,
+    remu_annee1_periode1_fin: contrat.remu_annee1_periode1_fin,
+    remu_annee1_periode1_pourcentage: contrat.remu_annee1_periode1_pourcentage,
+    remu_annee1_periode1_reference: contrat.remu_annee1_periode1_reference,
+    remu_annee1_periode2_debut: contrat.remu_annee1_periode2_debut,
+    remu_annee1_periode2_fin: contrat.remu_annee1_periode2_fin,
+    remu_annee1_periode2_pourcentage: contrat.remu_annee1_periode2_pourcentage,
+    remu_annee1_periode2_reference: contrat.remu_annee1_periode2_reference,
+    remu_annee2_periode1_debut: contrat.remu_annee2_periode1_debut,
+    remu_annee2_periode1_fin: contrat.remu_annee2_periode1_fin,
+    remu_annee2_periode1_pourcentage: contrat.remu_annee2_periode1_pourcentage,
+    remu_annee2_periode1_reference: contrat.remu_annee2_periode1_reference,
+    remu_annee2_periode2_debut: contrat.remu_annee2_periode2_debut,
+    remu_annee2_periode2_fin: contrat.remu_annee2_periode2_fin,
+    remu_annee2_periode2_pourcentage: contrat.remu_annee2_periode2_pourcentage,
+    remu_annee2_periode2_reference: contrat.remu_annee2_periode2_reference,
     caisse_retraite: contrat.caisse_retraite,
     lieu_signature: contrat.lieu_signature,
     opco_nom: contrat.opco_nom,
@@ -1282,116 +1770,102 @@ export function CerfaForm({
     ]
   );
 
-  const contratSection = useMemo(
-    () => (
-      <>
-        <Typography variant="subtitle2">Contrat</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            {renderMemoSelectField(
-              "type_contrat_code",
-              form.type_contrat_code,
-              "Type de contrat CERFA",
-              form.cerfa_type === "professionnalisation" ? PRO_TYPE_CONTRAT_OPTIONS : TYPE_CONTRAT_OPTIONS
-            )}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            {renderMemoSelectField("type_derogation_code", form.type_derogation_code, "Type de derogation CERFA", TYPE_DEROGATION_OPTIONS)}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Numero contrat precedent" value={form.numero_contrat_precedent ?? ""} onChange={(e) => setField("numero_contrat_precedent", e.target.value)} disabled={readOnly} />
-          </Grid>
-          {form.cerfa_type === "professionnalisation" && (
-            <>
-              <Grid item xs={12} md={4}>
-                <TextField fullWidth label="Emploi occupe pendant le contrat" value={form.emploi_occupe_pendant_contrat ?? ""} onChange={(e) => setField("emploi_occupe_pendant_contrat", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Classification emploi" value={form.classification_emploi ?? ""} onChange={(e) => setField("classification_emploi", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <TextField fullWidth label="Niveau" value={form.classification_niveau ?? ""} onChange={(e) => setField("classification_niveau", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Coefficient hierarchique" value={form.coefficient_hierarchique ?? ""} onChange={(e) => setField("coefficient_hierarchique", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField fullWidth label="Periode d'essai (jours)" type="number" value={form.duree_periode_essai_jours ?? ""} onChange={(e) => setField("duree_periode_essai_jours", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
-              </Grid>
-            </>
-          )}
-          <Grid item xs={12} md={4}>
-            {renderMemoDateField("date_debut_execution", form.date_debut_execution, "Date debut execution")}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            {renderMemoDateField("date_debut_formation_pratique_employeur", form.date_debut_formation_pratique_employeur, "Date debut formation pratique employeur")}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            {renderMemoDateField("date_fin_contrat", form.date_fin_contrat, "Date fin contrat")}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            {renderMemoDateField("date_effet_avenant", form.date_effet_avenant, "Date effet avenant")}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            {renderMemoCheckbox("travail_machines_dangereuses", "Travail sur machines dangereuses", form.travail_machines_dangereuses)}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Lieu de signature" value={form.lieu_signature ?? ""} onChange={(e) => setField("lieu_signature", e.target.value)} disabled={readOnly} />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Duree hebdo (heures)" type="number" value={form.duree_hebdo_heures ?? ""} onChange={(e) => setField("duree_hebdo_heures", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Duree hebdo (minutes)" type="number" value={form.duree_hebdo_minutes ?? ""} onChange={(e) => setField("duree_hebdo_minutes", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Salaire brut mensuel" type="number" value={form.salaire_brut_mensuel ?? ""} onChange={(e) => setField("salaire_brut_mensuel", e.target.value === "" ? null : Number(e.target.value))} disabled={readOnly} />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField fullWidth label="Caisse retraite" value={form.caisse_retraite ?? ""} onChange={(e) => setField("caisse_retraite", e.target.value)} disabled={readOnly} />
-          </Grid>
-          {form.cerfa_type === "professionnalisation" && (
-            <>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Nom de l'OPCO" value={form.opco_nom ?? ""} onChange={(e) => setField("opco_nom", e.target.value)} disabled={readOnly} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField fullWidth label="Numero d'adherent OPCO" value={form.opco_adherent_numero ?? ""} onChange={(e) => setField("opco_adherent_numero", e.target.value)} disabled={readOnly} />
-              </Grid>
-            </>
-          )}
-        </Grid>
-      </>
-    ),
+  const contractFormData = useMemo<ContractSectionForm>(
+    () => ({
+      cerfa_type: form.cerfa_type as "apprentissage" | "professionnalisation" | null | undefined,
+      type_contrat_code: form.type_contrat_code ?? null,
+      nature_contrat: (form.nature_contrat as "cdi" | "cdd" | "travail_temporaire" | null | undefined) ?? null,
+      type_derogation_code: form.type_derogation_code ?? null,
+      numero_contrat_precedent: form.numero_contrat_precedent ?? null,
+      emploi_occupe_pendant_contrat: form.emploi_occupe_pendant_contrat ?? null,
+      classification_emploi: form.classification_emploi ?? null,
+      classification_niveau: form.classification_niveau ?? null,
+      coefficient_hierarchique: form.coefficient_hierarchique ?? null,
+      duree_periode_essai_jours: form.duree_periode_essai_jours ?? null,
+      date_conclusion: form.date_conclusion ?? null,
+      date_debut_execution: form.date_debut_execution ?? null,
+      date_fin_contrat: form.date_fin_contrat ?? null,
+      date_debut_formation_pratique_employeur: form.date_debut_formation_pratique_employeur ?? null,
+      date_effet_avenant: form.date_effet_avenant ?? null,
+      travail_machines_dangereuses: form.travail_machines_dangereuses ?? null,
+      duree_hebdo_heures: form.duree_hebdo_heures ?? null,
+      duree_hebdo_minutes: form.duree_hebdo_minutes ?? null,
+      salaire_brut_mensuel: form.salaire_brut_mensuel ?? null,
+      avantage_nourriture: form.avantage_nourriture ?? null,
+      avantage_logement: form.avantage_logement ?? null,
+      avantage_autre: form.avantage_autre ?? null,
+      remu_annee1_periode1_debut: form.remu_annee1_periode1_debut ?? null,
+      remu_annee1_periode1_fin: form.remu_annee1_periode1_fin ?? null,
+      remu_annee1_periode1_pourcentage: form.remu_annee1_periode1_pourcentage ?? null,
+      remu_annee1_periode1_reference: form.remu_annee1_periode1_reference ?? null,
+      remu_annee1_periode2_debut: form.remu_annee1_periode2_debut ?? null,
+      remu_annee1_periode2_fin: form.remu_annee1_periode2_fin ?? null,
+      remu_annee1_periode2_pourcentage: form.remu_annee1_periode2_pourcentage ?? null,
+      remu_annee1_periode2_reference: form.remu_annee1_periode2_reference ?? null,
+      remu_annee2_periode1_debut: form.remu_annee2_periode1_debut ?? null,
+      remu_annee2_periode1_fin: form.remu_annee2_periode1_fin ?? null,
+      remu_annee2_periode1_pourcentage: form.remu_annee2_periode1_pourcentage ?? null,
+      remu_annee2_periode1_reference: form.remu_annee2_periode1_reference ?? null,
+      remu_annee2_periode2_debut: form.remu_annee2_periode2_debut ?? null,
+      remu_annee2_periode2_fin: form.remu_annee2_periode2_fin ?? null,
+      remu_annee2_periode2_pourcentage: form.remu_annee2_periode2_pourcentage ?? null,
+      remu_annee2_periode2_reference: form.remu_annee2_periode2_reference ?? null,
+      caisse_retraite: form.caisse_retraite ?? null,
+      lieu_signature: form.lieu_signature ?? null,
+    }),
     [
-      form.caisse_retraite,
       form.cerfa_type,
+      form.type_contrat_code,
+      form.nature_contrat,
+      form.type_derogation_code,
+      form.numero_contrat_precedent,
+      form.emploi_occupe_pendant_contrat,
       form.classification_emploi,
       form.classification_niveau,
       form.coefficient_hierarchique,
+      form.duree_periode_essai_jours,
+      form.date_conclusion,
       form.date_debut_execution,
+      form.date_fin_contrat,
       form.date_debut_formation_pratique_employeur,
       form.date_effet_avenant,
-      form.date_fin_contrat,
+      form.travail_machines_dangereuses,
       form.duree_hebdo_heures,
       form.duree_hebdo_minutes,
-      form.duree_periode_essai_jours,
-      form.emploi_occupe_pendant_contrat,
-      form.lieu_signature,
-      form.numero_contrat_precedent,
-      form.opco_adherent_numero,
-      form.opco_nom,
       form.salaire_brut_mensuel,
-      form.travail_machines_dangereuses,
-      form.type_contrat_code,
-      form.type_derogation_code,
-      readOnly,
-      renderMemoCheckbox,
-      renderMemoDateField,
-      renderMemoSelectField,
-      setField,
+      form.avantage_nourriture,
+      form.avantage_logement,
+      form.avantage_autre,
+      form.remu_annee1_periode1_debut,
+      form.remu_annee1_periode1_fin,
+      form.remu_annee1_periode1_pourcentage,
+      form.remu_annee1_periode1_reference,
+      form.remu_annee1_periode2_debut,
+      form.remu_annee1_periode2_fin,
+      form.remu_annee1_periode2_pourcentage,
+      form.remu_annee1_periode2_reference,
+      form.remu_annee2_periode1_debut,
+      form.remu_annee2_periode1_fin,
+      form.remu_annee2_periode1_pourcentage,
+      form.remu_annee2_periode1_reference,
+      form.remu_annee2_periode2_debut,
+      form.remu_annee2_periode2_fin,
+      form.remu_annee2_periode2_pourcentage,
+      form.remu_annee2_periode2_reference,
+      form.caisse_retraite,
+      form.lieu_signature,
     ]
   );
+
+  const selectedFormationLabel = useMemo(() => {
+    const fullTitle =
+      (typeof form.diplome_intitule === "string" && form.diplome_intitule.trim()) ||
+      (typeof form.diplome_vise === "string" && form.diplome_vise.trim()) ||
+      (selectedFormation?.nom as string | undefined) ||
+      (typeof form.formation === "number" ? `Formation #${form.formation}` : "");
+
+    return fullTitle || "";
+  }, [form.diplome_intitule, form.diplome_vise, form.formation, selectedFormation]);
 
   return (
     <>
@@ -1400,73 +1874,85 @@ export function CerfaForm({
           {initialData ? "Modifier un contrat CERFA" : "Créer un contrat CERFA"}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <Alert severity="info">
-              {CERFA_TYPE_LABELS[
-                (form.cerfa_type as "apprentissage" | "professionnalisation" | undefined) ??
-                  "apprentissage"
-              ]}
-            </Alert>
-            {prefillInfo ? <Alert severity="info">{prefillInfo}</Alert> : null}
-            <Button
-              variant="outlined"
-              onClick={() => setShowCandidatModal(true)}
-              disabled={readOnly}
-            >
-              {selectedCandidat
-                ? `👤 ${selectedCandidat.nom_complet}`
-                : form.candidat
-                  ? `👤 Candidat #${form.candidat}`
-                  : "Sélectionner un candidat"}
-            </Button>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Stack spacing={2} mt={1}>
+              <Alert severity="info">
+                {CERFA_TYPE_LABELS[
+                  (form.cerfa_type as "apprentissage" | "professionnalisation" | undefined) ??
+                    "apprentissage"
+                ]}
+              </Alert>
+              {prefillInfo ? <Alert severity="info">{prefillInfo}</Alert> : null}
+              {globalError ? <Alert severity="error">{globalError}</Alert> : null}
+              <Button
+                variant="outlined"
+                onClick={() => setShowCandidatModal(true)}
+                disabled={readOnly}
+              >
+                {selectedCandidat
+                  ? `👤 ${selectedCandidat.nom_complet}`
+                  : form.candidat
+                    ? `👤 Candidat #${form.candidat}`
+                    : "Sélectionner un candidat"}
+              </Button>
 
-            <Button
-              variant="outlined"
-              onClick={() => setShowFormationModal(true)}
-              disabled={readOnly}
-            >
-              {selectedFormation
-                ? `🎓 ${selectedFormation.nom}`
-                : form.formation
-                  ? `🎓 Formation #${form.formation}`
-                  : "Sélectionner une formation"}
-            </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setShowFormationModal(true)}
+                disabled={readOnly}
+              >
+                {selectedFormationLabel
+                  ? `🎓 ${selectedFormationLabel}`
+                  : form.formation
+                    ? `🎓 Formation #${form.formation}`
+                    : "Sélectionner une formation"}
+              </Button>
 
-            <Button
-              variant="outlined"
-              onClick={() => setShowPartenaireModal(true)}
-              disabled={readOnly}
-            >
-              {selectedPartenaire
-                ? `🏢 ${selectedPartenaire.nom}`
-                : form.employeur_nom
-                  ? `🏢 ${form.employeur_nom}`
-                  : "Sélectionner un partenaire"}
-            </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setShowPartenaireModal(true)}
+                disabled={readOnly}
+              >
+                {selectedPartenaire
+                  ? `🏢 ${selectedPartenaire.nom}`
+                  : form.employeur_nom
+                    ? `🏢 ${form.employeur_nom}`
+                    : "Sélectionner un partenaire"}
+              </Button>
 
-            {renderDateField(
-              "date_conclusion",
-              "Date de conclusion",
-              "Le calendrier permet de choisir facilement l'annee."
-            )}
+              <Alert severity="info" sx={{ py: 0 }}>
+                {`Selection en cours : ${
+                  selectedCandidat?.nom_complet || (form.candidat ? `Candidat #${form.candidat}` : "Aucun candidat")
+                } | ${
+                  selectedFormationLabel ? `Formation : ${selectedFormationLabel}` : "Aucune formation"
+                } | ${
+                  selectedPartenaire?.nom || form.employeur_nom || "Aucune entreprise"
+                }`}
+              </Alert>
 
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<AutoFixHighIcon />}
-              onClick={handlePrefill}
-              disabled={readOnly || isPrefilling}
-            >
-              {isPrefilling ? "Pre-remplissage..." : "Pre-remplir avec les donnees disponibles"}
-            </Button>
+              {renderDateField(
+                "date_conclusion",
+                "Date de conclusion",
+                "Le calendrier permet de choisir facilement l'annee."
+              )}
 
-            <Divider />
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<AutoFixHighIcon />}
+                onClick={handlePrefill}
+                disabled={readOnly || isPrefilling}
+              >
+                {isPrefilling ? "Pre-remplissage..." : "Pre-remplir avec les donnees disponibles"}
+              </Button>
 
-            {apprentiSection}
-            {employeurSection}
+              <Divider />
 
-            <Typography variant="subtitle2">Maitres d'apprentissage</Typography>
-            <Grid container spacing={2}>
+              {apprentiSection}
+              {employeurSection}
+
+              <Typography variant="subtitle2">Maitres d'apprentissage</Typography>
+              <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                   {renderCheckbox("maitre_eligible", "Maitre eligible", form.maitre_eligible)}
@@ -1522,13 +2008,19 @@ export function CerfaForm({
                   MAITRE_NIVEAU_OPTIONS
                 )}
               </Grid>
-            </Grid>
+              </Grid>
 
-            {formationSection}
+              {formationSection}
 
-            {cfaSection}
-            {contratSection}
-          </Stack>
+              {cfaSection}
+              <MemoContractSection
+                form={contractFormData}
+                readOnly={readOnly}
+                getDateValue={getDateValue}
+                setField={setField}
+              />
+            </Stack>
+          </LocalizationProvider>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose} disabled={readOnly}>
@@ -1547,13 +2039,14 @@ export function CerfaForm({
           onClose={() => setShowCandidatModal(false)}
           onSelect={async (c) => {
             setSelectedCandidat(c);
-            if (c?.formation?.id) {
-              setSelectedFormation(c.formation);
+            const linkedFormation = getLinkedFormationFromCandidate(c);
+            if (linkedFormation) {
+              setSelectedFormation(linkedFormation);
             }
             setForm((f) => ({
               ...f,
               candidat: c.id,
-              formation: c?.formation?.id ?? f.formation,
+              formation: linkedFormation?.id ?? f.formation,
               apprenti_nom_naissance: c.nom_naissance ?? undefined,
               apprenti_nom_usage: c.nom ?? undefined,
               apprenti_prenom: c.prenom || undefined,

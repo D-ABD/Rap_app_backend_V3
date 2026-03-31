@@ -28,7 +28,7 @@ avec :
 
 Les champs CERFA suivants peuvent deja etre derives du modele `Partenaire` :
 
-- nom employeur
+- nom employeur 
 - adresse employeur :
   - numero
   - voie

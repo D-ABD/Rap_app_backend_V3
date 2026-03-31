@@ -211,6 +211,7 @@ export type CerfaContratBase = {
   // CONTRAT
   type_contrat: string | null;
   type_contrat_code: string | null;
+  nature_contrat: "cdi" | "cdd" | "travail_temporaire" | null;
   type_derogation: string | null;
   type_derogation_code: string | null;
   motif_derogation: string | null;
@@ -231,6 +232,25 @@ export type CerfaContratBase = {
 
   // REMUNERATION
   salaire_brut_mensuel: number | null;
+  avantage_nourriture: number | null;
+  avantage_logement: number | null;
+  avantage_autre: string | null;
+  remu_annee1_periode1_debut: string | null;
+  remu_annee1_periode1_fin: string | null;
+  remu_annee1_periode1_pourcentage: number | null;
+  remu_annee1_periode1_reference: string | null;
+  remu_annee1_periode2_debut: string | null;
+  remu_annee1_periode2_fin: string | null;
+  remu_annee1_periode2_pourcentage: number | null;
+  remu_annee1_periode2_reference: string | null;
+  remu_annee2_periode1_debut: string | null;
+  remu_annee2_periode1_fin: string | null;
+  remu_annee2_periode1_pourcentage: number | null;
+  remu_annee2_periode1_reference: string | null;
+  remu_annee2_periode2_debut: string | null;
+  remu_annee2_periode2_fin: string | null;
+  remu_annee2_periode2_pourcentage: number | null;
+  remu_annee2_periode2_reference: string | null;
   caisse_retraite: string | null;
 
   // SIGNATURES

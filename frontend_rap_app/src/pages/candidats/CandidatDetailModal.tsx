@@ -179,14 +179,22 @@ function buildCandidateCerfaCreateUrl(
 ): string | null {
   if (!candidat?.id) return null;
 
+  const inferredCerfaType =
+    cerfaType ??
+    (candidat.type_contrat === "professionnalisation"
+      ? "professionnalisation"
+      : candidat.type_contrat === "apprentissage"
+        ? "apprentissage"
+        : undefined);
+
   const params = new URLSearchParams();
   params.set("candidat", String(candidat.id));
   params.set(
     "candidat_nom",
     nn(candidat.nom_complet || `${candidat.prenom ?? ""} ${candidat.nom ?? ""}`.trim())
   );
-  if (cerfaType) {
-    params.set("cerfa_type", cerfaType);
+  if (inferredCerfaType) {
+    params.set("cerfa_type", inferredCerfaType);
   }
 
   return `/cerfa?${params.toString()}`;
@@ -410,6 +418,12 @@ export default function CandidatDetailModal({
   const createProspectionUrl = buildCandidateProspectionCreateUrl(candidat);
   const createAppairageUrl = buildCandidateAppairageCreateUrl(candidat);
   const createCerfaUrl = buildCandidateCerfaCreateUrl(candidat);
+  const inferredCandidateCerfaType =
+    candidat?.type_contrat === "professionnalisation"
+      ? "professionnalisation"
+      : candidat?.type_contrat === "apprentissage"
+        ? "apprentissage"
+        : null;
   const openCandidateAppairages = () => {
     if (!candidat?.id) return;
     onClose();
@@ -652,6 +666,11 @@ export default function CandidatDetailModal({
                             variant="contained"
                             color="info"
                             onClick={() => {
+                              if (inferredCandidateCerfaType) {
+                                onClose();
+                                navigate(createCerfaUrl);
+                                return;
+                              }
                               setShowCerfaChoice(true);
                             }}
                           >

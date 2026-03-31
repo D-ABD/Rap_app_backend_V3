@@ -933,6 +933,17 @@ class CerfaContrat(models.Model):
             "(apprentissage ou professionnalisation)."
         ),
     )
+    nature_contrat = models.CharField(
+        max_length=24,
+        blank=True,
+        null=True,
+        choices=(
+            ("cdi", "CDI"),
+            ("cdd", "CDD"),
+            ("travail_temporaire", "travail temporaire"),
+        ),
+        help_text="Nature du contrat pour le CERFA professionnalisation : CDI, CDD ou travail temporaire.",
+    )
     type_derogation = models.CharField(
         max_length=255,
         blank=True,
@@ -1026,6 +1037,118 @@ class CerfaContrat(models.Model):
         blank=True,
         null=True,
         help_text="Salaire brut mensuel prévu.",
+    )
+    avantage_nourriture = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Montant de l'avantage en nature nourriture, en euros par repas.",
+    )
+    avantage_logement = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Montant de l'avantage en nature logement, en euros par mois.",
+    )
+    avantage_autre = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Autre avantage en nature, le cas echeant.",
+    )
+    remu_annee1_periode1_debut = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de debut de la premiere periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode1_fin = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de fin de la premiere periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode1_pourcentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Pourcentage applique sur la premiere periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode1_reference = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Reference de base (SMIC/SMC) pour la premiere periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode2_debut = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de debut de la seconde periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode2_fin = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de fin de la seconde periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode2_pourcentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Pourcentage applique sur la seconde periode de remuneration de 1ere annee.",
+    )
+    remu_annee1_periode2_reference = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Reference de base (SMIC/SMC) pour la seconde periode de remuneration de 1ere annee.",
+    )
+    remu_annee2_periode1_debut = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de debut de la premiere periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode1_fin = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de fin de la premiere periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode1_pourcentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Pourcentage applique sur la premiere periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode1_reference = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Reference de base (SMIC/SMC) pour la premiere periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode2_debut = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de debut de la seconde periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode2_fin = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date de fin de la seconde periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode2_pourcentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Pourcentage applique sur la seconde periode de remuneration de 2eme annee.",
+    )
+    remu_annee2_periode2_reference = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Reference de base (SMIC/SMC) pour la seconde periode de remuneration de 2eme annee.",
     )
     caisse_retraite = models.CharField(
         max_length=255,

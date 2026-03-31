@@ -115,6 +115,9 @@ def _code_with_label(code, label):
 
 
 def _infer_pro_contract_nature(cerfa_contrat):
+    explicit_value = format_value(getattr(cerfa_contrat, "nature_contrat", None)).lower()
+    if explicit_value in {"cdi", "cdd", "travail_temporaire"}:
+        return explicit_value
     raw = " ".join(
         [
             format_value(getattr(cerfa_contrat, "type_contrat_code", None)),
@@ -340,6 +343,133 @@ def _formation_overlay_values(cerfa_contrat):
         "Zone de texte 21_28": fin_jour,
         "Zone de texte 21_29": fin_mois,
         "Zone de texte 21_30": fin_annee,
+    }
+
+
+def _apprentissage_contract_overlay_values(cerfa_contrat):
+    conclusion_jour, conclusion_mois, conclusion_annee = _split_date_parts(
+        getattr(cerfa_contrat, "date_conclusion", None)
+    )
+    debut_execution_jour, debut_execution_mois, debut_execution_annee = _split_date_parts(
+        getattr(cerfa_contrat, "date_debut_execution", None)
+    )
+    debut_pratique_jour, debut_pratique_mois, debut_pratique_annee = _split_date_parts(
+        getattr(cerfa_contrat, "date_debut_formation_pratique_employeur", None)
+    )
+    effet_avenant_jour, effet_avenant_mois, effet_avenant_annee = _split_date_parts(
+        getattr(cerfa_contrat, "date_effet_avenant", None)
+    )
+    fin_contrat_jour, fin_contrat_mois, fin_contrat_annee = _split_date_parts(
+        getattr(cerfa_contrat, "date_fin_contrat", None)
+    )
+    remu_annee1_periode1_debut_jour, remu_annee1_periode1_debut_mois, remu_annee1_periode1_debut_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee1_periode1_debut", None)
+    )
+    remu_annee1_periode1_fin_jour, remu_annee1_periode1_fin_mois, remu_annee1_periode1_fin_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee1_periode1_fin", None)
+    )
+    remu_annee1_periode2_debut_jour, remu_annee1_periode2_debut_mois, remu_annee1_periode2_debut_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee1_periode2_debut", None)
+    )
+    remu_annee1_periode2_fin_jour, remu_annee1_periode2_fin_mois, remu_annee1_periode2_fin_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee1_periode2_fin", None)
+    )
+    remu_annee2_periode1_debut_jour, remu_annee2_periode1_debut_mois, remu_annee2_periode1_debut_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee2_periode1_debut", None)
+    )
+    remu_annee2_periode1_fin_jour, remu_annee2_periode1_fin_mois, remu_annee2_periode1_fin_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee2_periode1_fin", None)
+    )
+    remu_annee2_periode2_debut_jour, remu_annee2_periode2_debut_mois, remu_annee2_periode2_debut_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee2_periode2_debut", None)
+    )
+    remu_annee2_periode2_fin_jour, remu_annee2_periode2_fin_mois, remu_annee2_periode2_fin_annee = _split_date_parts(
+        getattr(cerfa_contrat, "remu_annee2_periode2_fin", None)
+    )
+    salaire_euros, salaire_centimes = _split_decimal_parts(
+        getattr(cerfa_contrat, "salaire_brut_mensuel", None)
+    )
+    avantage_nourriture_euros, avantage_nourriture_centimes = _split_decimal_parts(
+        getattr(cerfa_contrat, "avantage_nourriture", None)
+    )
+    avantage_logement_euros, avantage_logement_centimes = _split_decimal_parts(
+        getattr(cerfa_contrat, "avantage_logement", None)
+    )
+
+    return {
+        # Mode contractuel de l'apprentissage (page 1) + rappel page 2.
+        "Zone de texte 8_54": format_value(getattr(cerfa_contrat, "type_contrat_code", None)),
+        "Zone de texte 8_71": format_value(getattr(cerfa_contrat, "type_contrat_code", None)),
+        "Zone de texte 8_70": format_value(getattr(cerfa_contrat, "type_derogation_code", None)),
+        "Zone de texte 8_55": format_value(getattr(cerfa_contrat, "numero_contrat_precedent", None)),
+        # Dates du contrat
+        "Zone de texte 21_16": conclusion_jour,
+        "Zone de texte 21_17": conclusion_mois,
+        "Zone de texte 21_18": conclusion_annee,
+        "Zone de texte 21_19": debut_execution_jour,
+        "Zone de texte 21_20": debut_execution_mois,
+        "Zone de texte 21_21": debut_execution_annee,
+        "Zone de texte 21_22": debut_pratique_jour,
+        "Zone de texte 21_23": debut_pratique_mois,
+        "Zone de texte 21_24": debut_pratique_annee,
+        "Zone de texte 21_13": effet_avenant_jour,
+        "Zone de texte 21_14": effet_avenant_mois,
+        "Zone de texte 21_15": effet_avenant_annee,
+        "Zone de texte 21_10": fin_contrat_jour,
+        "Zone de texte 21_11": fin_contrat_mois,
+        "Zone de texte 21_12": fin_contrat_annee,
+        # Duree du travail / risques particuliers
+        "Zone de texte 8_68": format_value(getattr(cerfa_contrat, "duree_hebdo_heures", None)),
+        "Zone de texte 8_69": format_value(getattr(cerfa_contrat, "duree_hebdo_minutes", None)),
+        "Case #C3#A0 cocher 5_13": _checkbox_mark(
+            getattr(cerfa_contrat, "travail_machines_dangereuses", None), True
+        ),
+        "Case #C3#A0 cocher 5_14": _checkbox_mark(
+            getattr(cerfa_contrat, "travail_machines_dangereuses", None), False
+        ),
+        # Remuneration / signature
+        "Zone de texte 8_72": salaire_euros,
+        "Zone de texte 21_73": salaire_centimes,
+        "Zone de texte 21_74": format_value(getattr(cerfa_contrat, "caisse_retraite", None)),
+        "Zone de texte 21_75": avantage_nourriture_euros,
+        "Zone de texte 21_76": avantage_nourriture_centimes,
+        "Zone de texte 21_77": avantage_logement_euros,
+        "Zone de texte 21_78": avantage_logement_centimes,
+        "Zone de texte 21_79": format_value(getattr(cerfa_contrat, "avantage_autre", None)),
+        "Zone de texte 8_90": format_value(getattr(cerfa_contrat, "lieu_signature", None)),
+        # Remuneration apprentissage - 1ere et 2eme annee
+        "Zone de texte 21_81": remu_annee1_periode1_debut_jour,
+        "Zone de texte 21_82": remu_annee1_periode1_debut_mois,
+        "Zone de texte 21_83": remu_annee1_periode1_debut_annee,
+        "Zone de texte 21_84": remu_annee1_periode1_fin_jour,
+        "Zone de texte 21_85": remu_annee1_periode1_fin_mois,
+        "Zone de texte 21_86": remu_annee1_periode1_fin_annee,
+        "Zone de texte 8_95": format_value(getattr(cerfa_contrat, "remu_annee1_periode1_pourcentage", None)),
+        "Zone de texte 8_96": format_value(getattr(cerfa_contrat, "remu_annee1_periode1_reference", None)),
+        "Zone de texte 21_87": remu_annee1_periode2_debut_jour,
+        "Zone de texte 21_88": remu_annee1_periode2_debut_mois,
+        "Zone de texte 21_89": remu_annee1_periode2_debut_annee,
+        "Zone de texte 21_90": remu_annee1_periode2_fin_jour,
+        "Zone de texte 21_91": remu_annee1_periode2_fin_mois,
+        "Zone de texte 21_92": remu_annee1_periode2_fin_annee,
+        "Zone de texte 8_97": format_value(getattr(cerfa_contrat, "remu_annee1_periode2_pourcentage", None)),
+        "Zone de texte 8_98": format_value(getattr(cerfa_contrat, "remu_annee1_periode2_reference", None)),
+        "Zone de texte 21_37": remu_annee2_periode1_debut_jour,
+        "Zone de texte 21_38": remu_annee2_periode1_debut_mois,
+        "Zone de texte 21_39": remu_annee2_periode1_debut_annee,
+        "Zone de texte 21_40": remu_annee2_periode1_fin_jour,
+        "Zone de texte 21_41": remu_annee2_periode1_fin_mois,
+        "Zone de texte 21_42": remu_annee2_periode1_fin_annee,
+        "Zone de texte 8_56": format_value(getattr(cerfa_contrat, "remu_annee2_periode1_pourcentage", None)),
+        "Zone de texte 8_57": format_value(getattr(cerfa_contrat, "remu_annee2_periode1_reference", None)),
+        "Zone de texte 21_43": remu_annee2_periode2_debut_jour,
+        "Zone de texte 21_44": remu_annee2_periode2_debut_mois,
+        "Zone de texte 21_45": remu_annee2_periode2_debut_annee,
+        "Zone de texte 21_46": remu_annee2_periode2_fin_jour,
+        "Zone de texte 21_47": remu_annee2_periode2_fin_mois,
+        "Zone de texte 21_48": remu_annee2_periode2_fin_annee,
+        "Zone de texte 8_58": format_value(getattr(cerfa_contrat, "remu_annee2_periode2_pourcentage", None)),
+        "Zone de texte 8_59": format_value(getattr(cerfa_contrat, "remu_annee2_periode2_reference", None)),
     }
 
 
@@ -974,7 +1104,12 @@ def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
     if is_apprentissage_template and template_pdf.pages:
         candidate_overlay = _build_overlay(
             template_pdf.pages[0],
-            _candidate_overlay_values(cerfa_contrat),
+            {
+                **_candidate_overlay_values(cerfa_contrat),
+                **{
+                    "Zone de texte 8_54": format_value(getattr(cerfa_contrat, "type_contrat_code", None)),
+                },
+            },
             text_font_size=7.5,
             checkbox_font_size=8,
             single_line_text=True,
@@ -984,9 +1119,12 @@ def generer_pdf_cerfa(cerfa_contrat, output_path=None, flatten=False):
 
     # 5quater - superpose les donnees formation / CFA sur le template apprentissage
     if is_apprentissage_template and len(template_pdf.pages) > 1:
+        apprentissage_page_2_values = {}
+        apprentissage_page_2_values.update(_formation_overlay_values(cerfa_contrat))
+        apprentissage_page_2_values.update(_apprentissage_contract_overlay_values(cerfa_contrat))
         formation_overlay = _build_overlay(
             template_pdf.pages[1],
-            _formation_overlay_values(cerfa_contrat),
+            apprentissage_page_2_values,
             text_font_size=7.5,
             checkbox_font_size=8,
             single_line_text=True,

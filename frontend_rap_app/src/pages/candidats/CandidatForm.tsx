@@ -127,9 +127,12 @@ export default function CandidatForm({
       code_postal: form.code_postal,
       ville: form.ville,
       formation: form.formation,
+      type_contrat: form.type_contrat,
+      contrat_signe: form.contrat_signe,
     }),
     [
       form.code_postal,
+      form.contrat_signe,
       form.date_naissance,
       form.email,
       form.formation,
@@ -143,6 +146,7 @@ export default function CandidatForm({
       form.street_name,
       form.street_number,
       form.telephone,
+      form.type_contrat,
       form.ville,
     ]
   );
@@ -150,8 +154,6 @@ export default function CandidatForm({
   const suiviForm = useMemo(
     () => ({
       cv_statut: form.cv_statut,
-      type_contrat: form.type_contrat,
-      contrat_signe: form.contrat_signe,
       disponibilite: form.disponibilite,
       communication: form.communication,
       experience: form.experience,
@@ -170,7 +172,6 @@ export default function CandidatForm({
     [
       form.admissible,
       form.communication,
-      form.contrat_signe,
       form.csp,
       form.courrier_rentree,
       form.cv_statut,
@@ -184,7 +185,6 @@ export default function CandidatForm({
       form.rgpd_consent_obtained,
       form.rgpd_legal_basis,
       form.test_is_ok,
-      form.type_contrat,
     ]
   );
 
@@ -212,6 +212,7 @@ export default function CandidatForm({
       derniere_classe_code: form.derniere_classe_code,
       intitule_diplome_prepare: form.intitule_diplome_prepare,
       regime_social_code: form.regime_social_code,
+      type_contrat_code: form.type_contrat_code,
       sportif_haut_niveau: form.sportif_haut_niveau,
       equivalence_jeunes: form.equivalence_jeunes,
       extension_boe: form.extension_boe,
@@ -235,6 +236,7 @@ export default function CandidatForm({
       form.pays_naissance,
       form.projet_creation_entreprise,
       form.regime_social_code,
+      form.type_contrat_code,
       form.situation_avant_contrat_code,
       form.sportif_haut_niveau,
     ]
@@ -308,24 +310,67 @@ export default function CandidatForm({
           } else {
             const [firstField, firstMessages] = Object.entries(parsedErrors)[0] ?? [];
             if (firstField && firstMessages?.length) {
-              if (
+              if ([
+                "nom",
+                "prenom",
+                "email",
+                "telephone",
+                "formation",
+                "date_naissance",
+                "nir",
+                "code_postal",
+                "ville",
+                "type_contrat",
+                "contrat_signe",
+                "numero_osia",
+              ].includes(firstField)) {
+                setOpenSection("identite");
+              } else if (
                 [
-                  "nom",
-                  "prenom",
-                  "email",
-                  "telephone",
-                  "formation",
-                  "date_naissance",
-                  "nir",
-                  "code_postal",
-                  "ville",
+                  "type_contrat_code",
+                  "nom_naissance",
+                  "departement_naissance",
+                  "commune_naissance",
+                  "pays_naissance",
+                  "nationalite_code",
+                  "inscrit_france_travail",
+                  "numero_inscription_france_travail",
+                  "duree_inscription_france_travail_mois",
+                  "situation_avant_contrat_code",
+                  "dernier_diplome_prepare_code",
+                  "diplome_plus_eleve_obtenu_code",
+                  "derniere_classe_code",
+                  "intitule_diplome_prepare",
+                  "regime_social_code",
+                  "sportif_haut_niveau",
+                  "equivalence_jeunes",
+                  "extension_boe",
+                  "projet_creation_entreprise",
                 ].includes(firstField)
               ) {
-                setOpenSection("identite");
+                setOpenSection("cerfa");
               } else if (firstField.startsWith("rgpd_")) {
                 setOpenSection("suivi");
               }
-              setGlobalError(firstMessages.join(", "));
+              const userLabel =
+                firstField === "type_contrat_code"
+                  ? "Type de contrat CERFA (code notice)"
+                  : firstField === "type_contrat"
+                    ? "Type de contrat du stagiaire"
+                    : firstField === "contrat_signe"
+                      ? "Contrat signe"
+                      : firstField === "numero_osia" &&
+                          firstMessages.join(" ").toLowerCase().includes("requis quand le contrat est signe")
+                        ? "Pour enregistrer un contrat signe a \"Oui\", renseignez d'abord le numero OSIA."
+                      : null;
+              setGlobalError(
+                userLabel ===
+                  "Pour enregistrer un contrat signe a \"Oui\", renseignez d'abord le numero OSIA."
+                  ? userLabel
+                  : userLabel
+                    ? `${userLabel} : ${firstMessages.join(", ")}`
+                    : firstMessages.join(", ")
+              );
             }
           }
         } else {
@@ -382,6 +427,7 @@ export default function CandidatForm({
             form={identiteForm}
             setForm={setForm}
             meta={meta}
+            errors={errors}
 
             canEditFormation={canEditFormation}
             showFormationModal={showFormationModal}
@@ -420,6 +466,7 @@ export default function CandidatForm({
             setForm={setForm}
             showUsersModal={showUsersModal}
             setShowUsersModal={setShowUsersModal}
+            errors={errors}
           />
         </AccordionDetails>
       </Accordion>
@@ -434,7 +481,7 @@ export default function CandidatForm({
           <Typography fontWeight={600}>Informations CERFA / contrat</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <MemoInfosContrat form={cerfaForm} setForm={setForm} />
+          <MemoInfosContrat form={cerfaForm} setForm={setForm} errors={errors} />
         </AccordionDetails>
       </Accordion>
 
@@ -448,7 +495,7 @@ export default function CandidatForm({
           <Typography fontWeight={600}>Notes internes</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <MemoNotes form={notesForm} setForm={setForm} />
+          <MemoNotes form={notesForm} setForm={setForm} errors={errors} />
         </AccordionDetails>
       </Accordion>
 

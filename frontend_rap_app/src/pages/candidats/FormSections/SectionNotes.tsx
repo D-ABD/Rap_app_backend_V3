@@ -5,9 +5,10 @@ import type { CandidatFormData } from "../../../types/candidat";
 interface Props {
   form: CandidatFormData;
   setForm: React.Dispatch<React.SetStateAction<CandidatFormData>>;
+  errors?: Record<string, string[]>;
 }
 
-function SectionNotes({ form, setForm }: Props) {
+function SectionNotes({ form, setForm, errors }: Props) {
   const updateNotes = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const value = e.target.value;
@@ -30,6 +31,8 @@ function SectionNotes({ form, setForm }: Props) {
           placeholder="Saisir une note…"
           value={form.notes ?? ""}
           onChange={updateNotes}
+          error={!!errors?.notes?.length}
+          helperText={errors?.notes?.[0]}
         />
       </CardContent>
     </Card>

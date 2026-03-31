@@ -34,17 +34,6 @@ Donc :
 - les pages anciennes peuvent rester comme base visuelle
 - mais les contrats, hooks, types et actions doivent etre revalides
 
-Regles de qualite a respecter pendant toute la refonte :
-
-- toute erreur visible dans l'UI doit afficher un message clair, comprehensible et oriente utilisateur
-- les messages d'erreur doivent exploiter le contrat backend `message / errors / error_code`
-- le code doit etre nettoye au fil de l'eau, pas seulement "fonctionnel"
-- le code doit rester lisible, structure et documente pour pouvoir etre repris et modifie facilement dans 1 an ou 2
-- on privilegie les corrections durables plutot que les contournements rapides difficiles a maintenir
-- chaque ecran repris doit rester responsive et utilisable sur desktop comme sur mobile
-- toute navigation vers une liste ou un objet lie doit transmettre l'identifiant utile
-- toute page cible doit consommer cet identifiant pour afficher uniquement le contexte demande
-
 ---
 
 ## Priorites
@@ -60,15 +49,6 @@ Regles de qualite a respecter pendant toute la refonte :
 - client API unique
 - gestion uniforme des erreurs
 
-Etat courant :
-
-- bloc auth / api / `me` / `roles` / guards deja realigne sur le backend actuel
-- proxy dev et base API locales deja remis en place
-- normalisation initiale des erreurs backend deja branchee dans le front actif
-- dependances frontend assainies via `npm audit fix`
-- reliquat `quill` nettoye sans casser le front
-- build production frontend validee
-
 ## 2. Modules les plus sensibles au backend actuel
 
 - candidats
@@ -76,121 +56,6 @@ Etat courant :
 - bulk actions candidats
 - RGPD candidat
 - error handling front-ready
-
-Etat courant :
-
-- module `candidats` deja entame
-- types et meta candidats deja etendus pour `parcours_phase`, `phase_contract` et RGPD
-- creation candidat deja revalidee avec les nouveaux champs RGPD obligatoires du backend
-- affichage UI des phases candidat deja simplifie puis realigne sur les statuts metier backend
-- actions lifecycle candidat deja branchees dans l'UI
-- actions bulk candidats deja branchees dans l'UI
-- compte candidat deja realigne avec le backend pour conserver le role `candidatuser`
-  jusqu'a l'entree en formation
-- statuts candidat backend/frontend maintenant realignes avec :
-  - flags manuels cumulables `admissible`, `inscrit_gespers`, `en_accompagnement_tre`, `en_appairage`
-  - transitions structurees `en formation`, `sortie / fin de formation`, `abandon`
-  - confirmations et messages UI clairs dans la modale candidat
-- navigation rapide depuis candidats vers appairages et prospections maintenant branchee
-- dashboards candidats / formations deja partiellement realignes sur les nouveaux statuts metier
-- module `formations` maintenant reellement avance avec :
-  - types / hooks / pages principales remises a niveau
-  - creation / edition
-  - detail modal et detail page
-  - messages d'erreur plus clairs
-  - navigation front plus propre
-  - liens rapides vers candidats, inscrits, prospections, appairages, partenaires et evenements
-- module `evenements` maintenant branche comme vrai module front avec :
-  - routes dediees
-  - liste / detail / creation / edition
-  - integration dans navbar et sidebar
-  - pre-remplissage et conservation fiables de la formation
-- stats `prospections` maintenant enrichies pour mieux refleter :
-  - les prospections avec ou sans candidat
-  - les prospections avec ou sans formation
-- module `prospections` maintenant mieux relie au reste du front avec :
-  - navigation directe vers candidats, formations et partenaires
-  - acces plus direct aux commentaires prospection depuis la table et la modale
-  - pages staff et candidat plus coherentes
-  - detail et commentaires mieux branches dans le dashboard
-- les navigations liees par ID ont ete fiabilisees sur les modules deja repris :
-  - `candidats`
-  - `formations`
-  - `prospections`
-  - `appairages`
-  - `evenements`
-  - commentaires `prospections` et `appairages`
-- stats `evenements` maintenant branchees comme vrai module dashboard avec :
-  - KPI globaux
-  - repartition par type et statut temporel
-  - tableaux groupes par centre / formation / type / statut
-- module `appairages` maintenant suffisamment repris avec :
-  - liste, detail, creation et edition
-  - commentaires relies et scopes par ID
-  - navigation directe vers candidats, formations, partenaires et commentaires
-- module `partenaires` maintenant suffisamment repris avec :
-  - liste, detail, creation et edition
-  - compteurs exploitables vers prospections et appairages
-  - actions rapides de creation contextuelle depuis le detail
-- modules support maintenant suffisamment repris autour de :
-  - `documents`
-  - `commentaires`
-  - `cvtheque`
-- module `ateliers TRE` maintenant suffisamment repris avec :
-  - liste / creation / edition / detail
-  - multi-selection de candidats via modale
-  - presences mieux gerees en creation et edition
-  - navigation detail vers candidats et centre
-- modules `prepa` et `declic` maintenant suffisamment repris avec :
-  - suivi nominatif adapte a chaque logique metier
-  - exports liste / presence / emargement
-  - detail, creation, edition et navigation relies
-  - commentaires et champs texte libre enrichis
-- module `rapports` maintenant repris avec :
-  - types / hooks / pages
-  - liste / detail / creation / edition
-  - exports individuels et export liste
-  - lecture plus metier dans la table et la modale detail
-- module `logs` maintenant repris avec :
-  - types / hooks / pages
-  - consultation admin, filtres et detail
-  - exports `xlsx` / `csv` / `pdf`
-  - acces deplace sous `Parametres` pour rester reserve aux admins
-- diagnostic logs mis a jour :
-  - pas de besoin de suppression manuelle reguliere
-  - index et pagination deja presents
-  - vrai besoin futur = retention / purge automatique si le volume grossit
-- passe de finition maintenant bien engagee :
-  - dashboards principaux nettoyes et libelles harmonises
-  - `grouped dashboard` complete avec `prepa` et `declic`
-  - ecrans `rapports` et `logs` ameliores en confort d'usage
-  - reset de filtres et garde-fous UX ajoutes sur les pages admin recentes
-  - plusieurs pages d'edition critiques ont maintenant des messages de chargement et d'erreur plus lisibles
-  - modales de selection principales et derniers widgets overview harmonises
-  - dernier lot de formulaires creation / edition nettoye sur les pages encore un peu brutes
-- nettoyage legacy maintenant commence pour de vrai :
-  - `AppRoute copy.tsx` supprime
-  - `useFetch copy.ts` supprime
-  - `CommentaireStatsDashboard copy.tsx` supprime
-  - `FormationOverviewWidget2` renomme en `FormationFinanceursOverviewWidget`
-  - `SarurationDashboard` renomme en `SaturationDashboard`
-- enrichissement texte maintenant mieux aligne dans l'app avec :
-  - commentaires `formation`, `prospection`, `appairage`
-  - champs libres `prospection`, `prepa`, `declic`, `objectifs`, `partenaires`
-  - rendu enrichi dans les modales detail et les principaux ecrans repris
-  - dashboards commentaires `prospection` et `appairage` corriges
-  - exports PDF commentaires corriges pour conserver le rendu enrichi
-  - exports XLSX commentaires nettoyes pour sortir un texte lisible sans balises HTML brutes
-  - regle de sortie maintenant clarifiee :
-    - PDF = preservation du rendu enrichi
-    - XLSX = texte lisible propre sans balises HTML brutes
-- prochaine cible : finaliser les derniers ecarts stats / dashboards puis rapports / logs
-- scan global back/front du 24 mars 2026 :
-  - les hooks / types / pages des modules metier principaux sont globalement realignes avec le backend actuel
-  - les hooks / types `stats` sont deja presents sur la plupart des modules principaux
-  - le vrai retard principal ne concerne plus les pages / hooks / types des modules metier majeurs
-  - l'effort restant est surtout transverse : dashboards, UX, responsive, nettoyage legacy
-  - les reliquats legacy restants sont maintenant marginaux
 
 ## 3. Modules metier principaux
 
@@ -211,6 +76,7 @@ Etat courant :
 - dashboards
 - rapports
 - logs
+- evenements
 
 ---
 
@@ -247,9 +113,16 @@ Etat courant :
 
 ## Ordre Recommande
 
-1. verifier les derniers ecarts visibles en tests UI reels
-2. finaliser la passe responsive
-3. finaliser la documentation front
+1. remettre a niveau auth et api
+2. remettre a niveau candidats
+3. remettre a niveau formations
+4. remettre a niveau prospections
+5. remettre a niveau appairages
+6. remettre a niveau partenaires / documents / commentaires / cvtheque
+7. remettre a niveau ateliers TRE
+8. remettre a niveau prepa / declic
+9. remettre a niveau stats / dashboards
+10. remettre a niveau rapports / logs / evenements
 
 ---
 
@@ -268,6 +141,14 @@ Le chantier sera termine quand :
 
 ## Prochaine Etape Concrete
 
-1. valider les derniers ecrans en usage reel
-2. corriger les eventuels ecarts responsive restants
-3. figer la documentation finale
+Reprendre le socle critique dans cet ordre :
+
+1. auth
+2. client API
+3. `me`
+4. `roles`
+5. guards
+6. candidats
+
+Ensuite seulement, remettre a niveau les autres modules.
+ 

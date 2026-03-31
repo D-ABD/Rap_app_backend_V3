@@ -6,100 +6,68 @@
 - ancien front remis comme base active locale
 - analyse ancien front vs backend
 - plan de refonte progressive
+
+## A faire 
+
 - remettre a niveau auth
 - remettre a niveau client API
 - remettre a niveau `me`
 - remettre a niveau `roles`
 - remettre a niveau guards
 - remettre a niveau gestion des erreurs
-- assainir les dependances frontend
-- valider la build frontend
 - types candidats
 - hooks candidats
-- RGPD candidat
-- creation candidat compatible avec le nouveau backend
 - pages candidats
 - lifecycle candidat
 - bulk actions candidats
-- compte candidat aligne avec le backend
-- statuts candidat backend/frontend realignes
-- statuts candidat manuels cumulables
-- modale candidat avec actions dynamiques et actions inverses
-- type de contrat remis en evidence dans le form et la modale candidat
-- stats candidats realignees sur les statuts metier
-- stats formations realignees sur les statuts candidat utiles
-- candidats sans statut metier identifies dans les stats
-- navigation candidats vers appairages et prospections
-- premier lot formations : creation, edition, detail et erreurs UI clarifiees
+- RGPD candidat
 - types formations
 - hooks formations
 - pages formations
-- navigation formations vers candidats, appairages, prospections, partenaires et evenements
-- module evenements branche dans navbar et sidebar
+- types prospections
+- hooks prospections
+- pages prospections
+- commentaires prospection
+- types appairages
+- hooks appairages
+- pages appairages
+- commentaires appairage
+- types partenaires
+- hooks partenaires
+- pages partenaires
+- types documents
+- hooks documents
+- pages documents
+- types commentaires formation
+- hooks commentaires formation
+- pages commentaires formation
+- types cvtheque
+- hooks cvtheque
+- pages cvtheque
+- types ateliers TRE
+- hooks ateliers TRE
+- pages ateliers TRE
+- bulk ateliers TRE
+- types prepa
+- hooks prepa
+- pages prepa
+- types declic
+- hooks declic
+- pages declic
+- types stats
+- hooks stats
+- dashboards
+- types rapports
+- hooks rapports
+- pages rapports
+- types logs
+- hooks logs
+- pages logs
 - types evenements
 - hooks evenements
 - pages evenements
-- creation / edition evenement avec formation conservee et pre-remplissage fiable
-- stats prospections enrichies avec liens candidat / formation
-- stats evenements backend et frontend
-- navigation croisee prospections vers candidats, formations, partenaires et commentaires
-- module prospections staff et candidat aligne avec navigation detail / commentaires / stats
-- navigation liee par ID fiabilisee sur les modules repris pour n'afficher que le contexte demande
-- module appairages aligne avec table, detail, creation, edition, commentaires et navigation croisee
-- module partenaires aligne avec pages, detail, creation, edition et navigation vers prospections / appairages
-- module documents aligne avec navigation contextuelle par formation et retours de liste coherents
-- module commentaires formation aligne avec navigation contextuelle par formation et edition plus propre
-- commentaires enrichis maintenant relus correctement avec gras / couleurs / surlignages sur les modules repris
-- champs texte libre enrichis branches sur prospections, prepa, declic, objectifs, suivi nominatif et partenaires
-- stats commentaires prospection / appairage alignees sur le rendu enrichi
-- exports commentaires PDF alignes sur le rendu enrichi
-- exports commentaires XLSX nettoyes en texte lisible sans balises HTML brutes
-- rendu enrichi maintenant conserve aussi dans les dashboards commentaires corriges et les principaux ecrans detail
-- exports commentaires clarifies :
-  - PDF : rendu riche conserve
-  - XLSX : export volontairement nettoye en texte lisible sans HTML brut
-- module cvtheque aligne avec creation, edition, navigation contextuelle candidat et retour de liste
-- module ateliers TRE aligne avec detail navigable, multi-selection candidats et edition des presences
-- modules prepa / declic maintenant repris avec suivi nominatif, exports, emargement et commentaires enrichis
-- types et hooks `stats` deja largement presents pour les modules metier principaux
-- module `rapports` maintenant branche avec :
-  - types / hooks / pages
-  - liste / detail / creation / edition
-  - exports liste et export individuel
-  - lecture plus claire des donnees dans la table et la modale
-- module `logs` maintenant branche avec :
-  - types / hooks / pages
-  - liste / detail / filtres
-  - exports `xlsx` / `csv` / `pdf`
-  - acces reserve via `Parametres`
-- strategie logs clarifiee :
-  - pas de suppression manuelle au fil de l'eau
-  - pagination + index existants suffisants a court terme
-  - prevoir plus tard une retention / purge automatique
-- dashboards principaux nettoyes :
-  - libelles plus coherents
-  - grouped dashboard complete avec `prepa` et `declic`
-  - vues `rapports` et `logs` plus confortables
-- passe UX recente :
-  - reset des filtres sur `rapports` et `logs`
-  - exports desactives quand non pertinents
-  - validation simple des plages de dates sur `logs`
-  - messages de chargement et d'erreur plus clairs sur plusieurs pages d'edition
-  - modales de selection principales avec messages plus propres
-  - widgets overview restants harmonises
-  - dernier lot de creation / edition nettoye sur `formations`, `prospection`, `commentaires`, `prepa`
-- nettoyage legacy deja entame :
-  - suppression de `AppRoute copy.tsx`
-  - suppression de `useFetch copy.ts`
-  - suppression de `CommentaireStatsDashboard copy.tsx`
-  - renommage de `FormationOverviewWidget2` vers `FormationFinanceursOverviewWidget`
-  - renommage de `SarurationDashboard` vers `SaturationDashboard`
-- dependances frontend assainies
-- build frontend validee
-
-## A faire
-
-- verifier les derniers ecarts visuels au fil des tests UI
-- finaliser la passe responsive
-- eventuels derniers ajustements d'exports si un cas reel remonte
-- documentation front finale de cloture
+- exports
+- error handling UI
+- responsive pass complete
+- nettoyage ancien front
+- documentation front finale

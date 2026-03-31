@@ -58,6 +58,10 @@ export default function CerfaPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [showTypeChoice, setShowTypeChoice] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formFieldErrors, setFormFieldErrors] = useState<
+    Partial<Record<keyof CerfaContratCreate, string>>
+  >({});
   const [newCerfaType, setNewCerfaType] = useState<"apprentissage" | "professionnalisation">(
     "apprentissage"
   );
@@ -70,11 +74,19 @@ export default function CerfaPage() {
     return Number.isFinite(parsed) ? parsed : null;
   };
 
+  const normalizeCandidateCerfaType = (value: string | null) => {
+    if (value === "professionnalisation") return "professionnalisation" as const;
+    if (value === "apprentissage") return "apprentissage" as const;
+    return null;
+  };
+
   const candidateContext = useMemo(() => {
     const candidat = parseId(searchParams.get("candidat"));
     const formation = parseId(searchParams.get("formation"));
     const employeur = parseId(searchParams.get("employeur"));
-    const cerfaType = searchParams.get("cerfa_type");
+    const cerfaType =
+      normalizeCandidateCerfaType(searchParams.get("cerfa_type")) ??
+      normalizeCandidateCerfaType(searchParams.get("candidate_type_contrat"));
     const formationNom = searchParams.get("formation_nom");
     const employeurNom = searchParams.get("employeur_nom");
 
@@ -83,8 +95,7 @@ export default function CerfaPage() {
     return {
       cerfaType,
       form: {
-        cerfa_type:
-          cerfaType === "professionnalisation" ? "professionnalisation" : "apprentissage",
+        cerfa_type: cerfaType ?? "apprentissage",
         candidat: candidat ?? undefined,
         formation: formation ?? undefined,
         employeur: employeur ?? undefined,
@@ -162,6 +173,17 @@ export default function CerfaPage() {
         .join(", ");
     }
     return String(messages ?? "");
+  };
+
+  const extractCerfaFieldErrors = (errorData: unknown) => {
+    const next: Partial<Record<keyof CerfaContratCreate, string>> = {};
+    if (!errorData || typeof errorData !== "object" || Array.isArray(errorData)) {
+      return next;
+    }
+    Object.entries(errorData as Record<string, unknown>).forEach(([field, messages]) => {
+      next[field as keyof CerfaContratCreate] = formatBackendMessages(messages);
+    });
+    return next;
   };
 
   const buildCerfaFileName = (contrat?: CerfaContrat | null) => {
@@ -252,6 +274,8 @@ export default function CerfaPage() {
   // ✅ Création CERFA avec affichage des champs manquants
   const handleCreateCerfa = async (data: CerfaContratCreate) => {
     try {
+      setFormError(null);
+      setFormFieldErrors({});
       await createCerfa(data);
       toast.success("✅ Contrat CERFA créé avec succès !");
       setShowForm(false);
@@ -279,6 +303,8 @@ export default function CerfaPage() {
         message = `⚠️ Erreur de validation : ${errors}`;
       }
 
+      setFormError(message);
+      setFormFieldErrors(extractCerfaFieldErrors(errorData));
       toast.error(message);
 
       if (import.meta.env.MODE !== "production" && errorData) {
@@ -427,6 +453,8 @@ export default function CerfaPage() {
           setShowForm(false);
           setSelectedContrat(null);
           setSelectedId(null);
+          setFormError(null);
+          setFormFieldErrors({});
           if (candidateContext) {
             setSearchParams((prev) => {
               const next = new URLSearchParams(prev);
@@ -454,6 +482,8 @@ export default function CerfaPage() {
                   return;
                 }
                 try {
+                  setFormError(null);
+                  setFormFieldErrors({});
                   await updateCerfa(data);
                   toast.success("✅ Contrat mis à jour !");
                   setShowForm(false);
@@ -480,12 +510,16 @@ export default function CerfaPage() {
                     message = `Erreur de validation : ${errors}`;
                   }
 
+                  setFormError(message);
+                  setFormFieldErrors(extractCerfaFieldErrors(errorData));
                   toast.error(message);
                 }
               }
             : handleCreateCerfa
         }
         readOnly={isCreating || isUpdating}
+        fieldErrors={formFieldErrors}
+        globalError={formError}
       />
 
       <Dialog open={showTypeChoice} onClose={() => setShowTypeChoice(false)} maxWidth="xs" fullWidth>
