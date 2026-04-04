@@ -1,3 +1,5 @@
+"""Configuration admin des formations et de leur historique."""
+
 import logging
 
 from django.contrib import admin, messages
@@ -16,6 +18,8 @@ logger = logging.getLogger("application.formation")
 
 
 class ActiviteFilter(admin.SimpleListFilter):
+    """Filtre admin simple sur l'activité logique d'une formation."""
+
     title = _("Activité")
     parameter_name = "activite"
 
@@ -32,6 +36,8 @@ class ActiviteFilter(admin.SimpleListFilter):
 
 
 class StatutTemporelFilter(admin.SimpleListFilter):
+    """Filtre admin sur l'état temporel d'une formation."""
+
     title = _("Statut temporel")
     parameter_name = "status_temporel"
 
@@ -54,6 +60,8 @@ class StatutTemporelFilter(admin.SimpleListFilter):
 
 
 class SaturationFilter(admin.SimpleListFilter):
+    """Filtre admin sur les grandes classes de saturation d'une formation."""
+
     title = _("Saturation")
     parameter_name = "saturation"
 
@@ -80,6 +88,8 @@ class SaturationFilter(admin.SimpleListFilter):
 
 
 class HistoriqueFormationInline(admin.TabularInline):
+    """Inline en lecture seule pour l'historique des modifications formation."""
+
     model = HistoriqueFormation
     extra = 0
     can_delete = False
@@ -107,6 +117,7 @@ class HistoriqueFormationInline(admin.TabularInline):
 
 @admin.register(Formation)
 class FormationAdmin(admin.ModelAdmin):
+    """Administration principale des formations."""
     list_display = (
         "nom",
         "centre_display",
@@ -335,6 +346,7 @@ class FormationAdmin(admin.ModelAdmin):
 
 @admin.register(HistoriqueFormation)
 class HistoriqueFormationAdmin(admin.ModelAdmin):
+    """Administration dédiée de l'historique formation."""
     list_display = (
         "formation",
         "champ_modifie",

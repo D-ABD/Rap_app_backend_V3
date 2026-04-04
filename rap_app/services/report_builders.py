@@ -1,3 +1,5 @@
+"""Builders transverses de rapports et exports agrégés."""
+
 from __future__ import annotations
 
 from datetime import datetime, time
@@ -11,6 +13,7 @@ from ..models.rapports import Rapport
 
 
 def _candidate_en_formation_q() -> Q:
+    """Construit le filtre métier représentant un candidat en formation."""
     return (
         Q(parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
         | Q(statut=Candidat.StatutCandidat.EN_FORMATION)

@@ -1,3 +1,5 @@
+"""ViewSet des commentaires d'appairage."""
+
 import logging
 from io import BytesIO
 from pathlib import Path

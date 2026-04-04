@@ -1,3 +1,5 @@
+"""Base de viewset centre-scopé / owner-scopé."""
+
 from __future__ import annotations
 
 from typing import Literal

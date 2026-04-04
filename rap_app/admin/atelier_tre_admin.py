@@ -1,3 +1,5 @@
+"""Configuration admin des ateliers TRE."""
+
 import logging
 
 from django.contrib import admin, messages

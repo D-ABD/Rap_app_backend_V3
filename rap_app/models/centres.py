@@ -1,3 +1,5 @@
+"""Modèle centre et validations associées."""
+
 import logging
 
 from django.core.exceptions import ValidationError

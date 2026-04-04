@@ -1,3 +1,5 @@
+"""Modèles du périmètre jury."""
+
 import logging
 from datetime import date
 from decimal import Decimal, InvalidOperation

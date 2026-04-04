@@ -1,17 +1,22 @@
+"""Helpers de normalisation de texte français pour l'affichage métier."""
+
 import re
 
 
 def _collapse_spaces(value):
+    """Réduit les espaces multiples en un seul espace propre."""
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
 def _smart_title_token(token: str) -> str:
+    """Met en forme un token isolé en conservant une casse simple et stable."""
     if not token:
         return token
     return token[:1].upper() + token[1:].lower()
 
 
 def _smart_title(value):
+    """Applique une casse de titre souple sur une chaîne française."""
     value = _collapse_spaces(value)
     if not value:
         return value

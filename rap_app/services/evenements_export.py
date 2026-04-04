@@ -1,3 +1,5 @@
+"""Helpers d'export CSV pour les événements."""
+
 import csv
 
 from django.http import HttpResponse

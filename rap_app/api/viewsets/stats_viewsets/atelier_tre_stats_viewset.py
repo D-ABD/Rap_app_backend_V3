@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur les ateliers TRE."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -16,6 +18,7 @@ from ...serializers.base_serializers import EmptySerializer
 
 
 def _parse_date(value: str | None):
+    """Parse une date ISO simple et retourne `None` si la valeur est vide."""
     if not value:
         return None
     try:
@@ -25,6 +28,7 @@ def _parse_date(value: str | None):
 
 
 def _to_int_or_none(v) -> Optional[int]:
+    """Convertit une valeur optionnelle en entier ou retourne `None`."""
     try:
         return int(v)
     except (TypeError, ValueError):

@@ -1,3 +1,5 @@
+"""Endpoints utilisateurs et rôles."""
+
 from django.db import transaction
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend

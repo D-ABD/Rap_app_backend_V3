@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur les formations visibles par l'utilisateur."""
+
 from __future__ import annotations
 
 from typing import Iterable, Literal, Optional
@@ -46,6 +48,7 @@ GroupKey = Literal["formation", "centre", "departement", "type_offre", "statut"]
 
 
 def _candidate_en_formation_q(prefix: str = "") -> Q:
+    """Construit le filtre métier représentant un candidat en formation."""
     field = lambda name: f"{prefix}{name}"
     return (
         Q(**{field("parcours_phase"): Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION})
@@ -54,10 +57,12 @@ def _candidate_en_formation_q(prefix: str = "") -> Q:
 
 
 def _candidate_phase_q(phase: str, prefix: str = "") -> Q:
+    """Construit un filtre `Q` sur une phase candidat avec préfixe optionnel."""
     return Q(**{f"{prefix}parcours_phase": phase})
 
 
 def _candidate_statut_metier_q(value: str, prefix: str = "") -> Q:
+    """Construit un filtre métier sur le statut candidat avec préfixe optionnel."""
     return Candidat.statut_metier_q(value, prefix=prefix)
 
 

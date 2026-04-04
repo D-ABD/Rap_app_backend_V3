@@ -1,4 +1,4 @@
-# rap_app/models/custom_user.py
+"""Modèle utilisateur central et rôles applicatifs."""
 
 import logging
 

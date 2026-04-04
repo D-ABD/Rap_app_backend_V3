@@ -1,3 +1,5 @@
+"""Endpoints d'authentification JWT par email."""
+
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import serializers

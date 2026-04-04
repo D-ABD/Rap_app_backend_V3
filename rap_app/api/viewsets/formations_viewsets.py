@@ -1,3 +1,5 @@
+"""ViewSet principal des formations."""
+
 import csv
 import datetime
 import logging
@@ -72,6 +74,8 @@ FORMATION_GESPERS_CANDIDATE_Q = Q(candidats__inscrit_gespers=True)
 
 
 class FormationSearchFilter(filters.SearchFilter):
+    """SearchFilter dédié qui lit le paramètre `texte` au lieu de `search`."""
+
     search_param = "texte"
 
 

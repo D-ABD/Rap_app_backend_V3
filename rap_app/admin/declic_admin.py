@@ -1,4 +1,5 @@
-# rap_app/admin/declic_admin.py
+"""Configuration admin du périmètre Déclic."""
+
 import logging
 from io import BytesIO
 
@@ -21,6 +22,8 @@ logger = logging.getLogger("rap_app.admin.declic")
 # 🔎 FILTRE CP
 # -------------------------------------------------------------------
 class CodePostalFilter(SimpleListFilter):
+    """Filtre admin par code postal du centre rattaché à la séance."""
+
     title = "Code postal du centre"
     parameter_name = "code_postal"
 
@@ -44,6 +47,7 @@ class CodePostalFilter(SimpleListFilter):
 # -------------------------------------------------------------------
 @admin.action(description="📤 Exporter les ateliers en Excel")
 def export_declic_xlsx(modeladmin, request, queryset):
+    """Exporte la sélection Déclic en fichier Excel orienté ateliers."""
 
     wb = Workbook()
     ws = wb.active
@@ -180,6 +184,7 @@ class ObjectifDeclicAdmin(admin.ModelAdmin):
 # -------------------------------------------------------------------
 @admin.register(Declic)
 class DeclicAdmin(admin.ModelAdmin):
+    """Administration principale des séances Déclic."""
 
     list_display = (
         "date_display",
@@ -220,6 +225,8 @@ class DeclicAdmin(admin.ModelAdmin):
 
 
 class ParticipantDeclicInline(admin.TabularInline):
+    """Inline de lecture/édition des participants d'une séance Déclic."""
+
     model = ParticipantDeclic
     extra = 1
     fields = ("nom", "prenom", "telephone", "email", "present", "commentaire_presence")
@@ -230,6 +237,8 @@ DeclicAdmin.inlines = [ParticipantDeclicInline]
 
 @admin.register(ParticipantDeclic)
 class ParticipantDeclicAdmin(admin.ModelAdmin):
+    """Administration directe des participants Déclic."""
+
     list_display = ("nom", "prenom", "centre", "declic_origine", "present", "updated_at_display")
     list_filter = ("present", "centre", "declic_origine__type_declic")
     search_fields = ("nom", "prenom", "telephone", "email", "centre__nom")

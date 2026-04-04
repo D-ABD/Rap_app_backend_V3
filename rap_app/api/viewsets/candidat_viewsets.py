@@ -1,3 +1,5 @@
+"""ViewSet principal des candidats."""
+
 import csv
 import logging
 from io import BytesIO
@@ -63,6 +65,7 @@ SENSITIVE_KEYS = {"password", "token", "secret", "api_key", "auth", "credential"
 
 
 def _parse_candidate_ids(payload) -> list[int]:
+    """Normalise une liste d'identifiants candidats issue d'un payload bulk."""
     ids = payload.get("candidate_ids") or payload.get("candidats") or []
     if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
         raise ValidationError({"candidate_ids": ["Ce champ doit être une liste d'identifiants entiers."]})
@@ -70,6 +73,7 @@ def _parse_candidate_ids(payload) -> list[int]:
 
 
 def _sanitize_dict(d: dict) -> dict:
+    """Masque les clés sensibles d'un dictionnaire avant journalisation."""
     out = {}
     for k, v in d.items():
         if any(s in k.lower() for s in SENSITIVE_KEYS):
@@ -80,6 +84,7 @@ def _sanitize_dict(d: dict) -> dict:
 
 
 def _extract_validation_payload(exc) -> tuple[str, dict]:
+    """Normalise une `ValidationError` DRF en couple `(message, errors)`."""
     if hasattr(exc, "message_dict"):
         errors = exc.message_dict
     elif isinstance(getattr(exc, "detail", None), dict):
@@ -104,6 +109,7 @@ def _extract_validation_payload(exc) -> tuple[str, dict]:
 
 
 def _resolve_error_code(message: str | None) -> str | None:
+    """Déduit un code d'erreur métier simplifié à partir d'un message connu."""
     if not message:
         return None
     return MESSAGE_ERROR_CODE_MAP.get(message)

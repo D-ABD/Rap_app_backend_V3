@@ -1,3 +1,5 @@
+"""ViewSet des ateliers TRE."""
+
 import csv
 import logging
 from datetime import datetime

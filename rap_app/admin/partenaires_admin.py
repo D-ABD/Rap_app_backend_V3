@@ -1,4 +1,5 @@
-# rap_app/admin/partenaire_admin.py
+"""Configuration admin des partenaires."""
+
 import csv
 
 from django.contrib import admin

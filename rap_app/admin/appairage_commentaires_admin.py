@@ -1,3 +1,5 @@
+"""Configuration admin des commentaires d'appairage."""
+
 import logging
 
 from django.contrib import admin, messages

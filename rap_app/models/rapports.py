@@ -1,4 +1,4 @@
-# models/rapports.py
+"""Modèles des rapports et exports configurables."""
 
 from django.core.exceptions import ValidationError
 from django.db import models

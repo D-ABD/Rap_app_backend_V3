@@ -1,4 +1,5 @@
-# rap_app/admin/prospection_admin.py
+"""Configuration admin des prospections et de leur historique."""
+
 from datetime import timedelta
 
 from django.contrib import admin, messages
@@ -12,6 +13,7 @@ from ..models.prospection_choices import ProspectionChoices
 
 
 class HistoriqueProspectionInline(admin.TabularInline):
+    """Inline en lecture seule pour l'historique d'une prospection."""
     model = HistoriqueProspection
     extra = 0
     can_delete = False
@@ -74,6 +76,7 @@ class RelanceEtatFilter(admin.SimpleListFilter):
 
 @admin.register(Prospection)
 class ProspectionAdmin(admin.ModelAdmin):
+    """Administration principale des prospections."""
     date_hierarchy = "date_prospection"
 
     list_display = (
@@ -290,6 +293,7 @@ class ProspectionAdmin(admin.ModelAdmin):
 
 @admin.register(HistoriqueProspection)
 class HistoriqueProspectionAdmin(admin.ModelAdmin):
+    """Administration dédiée de l'historique prospection."""
     date_hierarchy = "date_modification"
     list_display = (
         "id",

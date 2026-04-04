@@ -1,3 +1,11 @@
+"""Mixins DRF transverses pour réponses API, masquage et scoping historique.
+
+Le fichier mélange des briques récentes (ex. `ApiResponseMixin`) et quelques
+mixins plus anciens encore utilisés sur des modules spécialisés. Les
+docstrings ci-dessous précisent quand une brique est historique et quand il
+vaut mieux privilégier les helpers plus récents du backend.
+"""
+
 from typing import Any, Mapping, Optional, Tuple
 
 from django.db import models
@@ -87,13 +95,24 @@ class StaffCentresScopeMixin:
 
     def _is_staff_or_read(self, u) -> bool:
         """
-        Retourne True si l'utilisateur est staff ou staff_read.
+        Retourne True si l'utilisateur est `staff` ou `staff_read`.
+
+        Ce helper reste volontairement étroit, car `StaffCentresScopeMixin`
+        est une brique historique pensée pour ces deux rôles. Les rôles coeur
+        plus récents (`commercial`, `charge_recrutement`) doivent plutôt
+        passer par les helpers centralisés de `roles.py` et les viewsets
+        centre-scopés plus récents.
         """
         return is_staff_or_staffread(u)
 
     def _user_centre_ids(self) -> Optional[list[int]]:
         """
-        Retourne la liste des ids de centres visibles par l'utilisateur, ou None pour un accès global.
+        Retourne les ids de centres visibles pour ce mixin historique.
+
+        Convention :
+        - `None` pour un accès global admin-like ;
+        - `list[int]` pour `staff` / `staff_read` ;
+        - `[]` pour les autres profils.
         """
         request = getattr(self, "request", None)
         if request is not None:
@@ -110,7 +129,12 @@ class StaffCentresScopeMixin:
 
     def _user_departement_codes(self) -> Optional[list[str]]:
         """
-        Retourne la liste des codes départements visibles par l'utilisateur, ou None pour un accès global.
+        Retourne les codes départements visibles pour ce mixin historique.
+
+        Cette méthode ne pilote pas le nouveau scope opérationnel coeur des
+        rôles `commercial` / `charge_recrutement`. Elle reste utile sur
+        certains modules anciens où un filtrage départemental d'appoint existe
+        encore.
         """
         u = self.request.user
         if self._is_admin_like(u):

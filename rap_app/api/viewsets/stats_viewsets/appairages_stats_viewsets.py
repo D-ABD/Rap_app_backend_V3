@@ -1,4 +1,5 @@
-# rap_app/api/viewsets/stats_viewsets/appairages_stats_viewsets.py
+"""Statistiques agrégées sur les appairages."""
+
 from __future__ import annotations
 
 import logging
@@ -29,6 +30,7 @@ def _safe_status_key(raw: str) -> str:
 
 
 def _to_int_or_none(val) -> Optional[int]:
+    """Convertit une valeur en entier ou retourne `None` si vide ou invalide."""
     try:
         return int(val)
     except (TypeError, ValueError):

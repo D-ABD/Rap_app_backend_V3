@@ -1,3 +1,5 @@
+"""Configuration admin des commentaires de formation."""
+
 import csv
 import logging
 from io import StringIO

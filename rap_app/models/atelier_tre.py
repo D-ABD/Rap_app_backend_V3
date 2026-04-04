@@ -1,4 +1,4 @@
-# models/atelier_tre.py
+"""Modèles du périmètre Ateliers TRE."""
 
 from django.db import models, transaction
 from django.db.models import Count, Exists, OuterRef, Q, QuerySet

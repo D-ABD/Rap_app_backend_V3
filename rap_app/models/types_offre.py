@@ -1,3 +1,5 @@
+"""Modèle des types d'offres paramétrables."""
+
 import logging
 import re
 

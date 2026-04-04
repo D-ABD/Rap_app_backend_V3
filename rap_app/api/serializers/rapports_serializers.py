@@ -1,3 +1,5 @@
+"""Sérialiseurs des rapports et de leurs choix associés."""
+
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers

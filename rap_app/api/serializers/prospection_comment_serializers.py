@@ -1,3 +1,5 @@
+"""Sérialiseurs des commentaires de prospection."""
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 from django.utils.translation import gettext_lazy as _

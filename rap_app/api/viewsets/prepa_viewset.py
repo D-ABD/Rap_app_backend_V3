@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/prepa_viewset.py
+"""ViewSet des séances Prépa."""
 
 from io import BytesIO
 from pathlib import Path

@@ -1,3 +1,5 @@
+"""Configuration admin des centres."""
+
 import logging
 
 from django.contrib import admin, messages

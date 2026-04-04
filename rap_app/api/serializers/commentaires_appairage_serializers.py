@@ -1,3 +1,5 @@
+"""Sérialiseurs des commentaires d'appairage."""
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 from django.utils.html import strip_tags

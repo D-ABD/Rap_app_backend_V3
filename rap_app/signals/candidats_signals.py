@@ -1,3 +1,12 @@
+"""Signaux historiques autour des candidats et de la synchronisation compte.
+
+Dans l'état actuel du projet, ce fichier sert surtout d'audit et de
+traçabilité : plusieurs synchronisations métier ont été sorties des signals au
+profit de services explicites. Les docstrings ci-dessous indiquent donc quand
+un signal est réellement actif et quand il est seulement conservé pour
+détection / compatibilité.
+"""
+
 import logging
 
 from django.contrib.auth.hashers import make_password
@@ -25,15 +34,18 @@ CANDIDATE_ROLES = {
 
 # Helpers internes pour gestion des champs texte et de la génération d'identifiants uniques
 def _nn(val: str | None) -> str:
+    """Retourne une chaîne normalisée non nulle et sans espaces périphériques."""
     return (val or "").strip()
 
 
 def _email_local(email: str | None) -> str:
+    """Retourne la partie locale d'un email normalisé en minuscules."""
     e = _nn(email).lower()
     return e.split("@", 1)[0] if "@" in e else e
 
 
 def _safe_non_blank(primary: str | None, *fallbacks: str, default: str = "Inconnu") -> str:
+    """Retourne la première valeur non vide parmi plusieurs candidats."""
     for v in (primary, *fallbacks):
         v = _nn(v)
         if v:
@@ -42,6 +54,7 @@ def _safe_non_blank(primary: str | None, *fallbacks: str, default: str = "Inconn
 
 
 def _build_unique_username(base: str) -> str:
+    """Construit un username unique en suffixant si nécessaire."""
     base = _nn(base).lower().replace(" ", "").strip(".") or "user"
     username = base
     i = 1

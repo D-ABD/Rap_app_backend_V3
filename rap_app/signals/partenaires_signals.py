@@ -1,3 +1,15 @@
+"""Signaux autour des partenaires.
+
+Le fichier gère surtout :
+- une normalisation légère avant sauvegarde ;
+- de la journalisation applicative ;
+- quelques effets de bord historiques comme l'historique formation ou la
+  notification email sur création d'entreprise.
+
+Ces signaux ne pilotent pas le scope d'accès : ils complètent la traçabilité
+et l'hygiène des données.
+"""
+
 import logging
 import sys
 

@@ -1,3 +1,5 @@
+"""Services transverses de création d'historiques applicatifs."""
+
 from __future__ import annotations
 
 from datetime import date

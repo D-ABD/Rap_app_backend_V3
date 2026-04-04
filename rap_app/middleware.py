@@ -1,3 +1,5 @@
+"""Middlewares utilitaires du projet."""
+
 import threading
 
 _thread_locals = threading.local()

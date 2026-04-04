@@ -1,12 +1,16 @@
+"""Hooks drf-spectacular pour ajuster le schéma OpenAPI généré."""
+
 from drf_spectacular.plumbing import build_basic_type
 from drf_spectacular.types import OpenApiTypes
 
 
 def preprocess_hook(endpoints):
+    """Laisse la liste d'endpoints inchangée avant génération du schéma."""
     return endpoints
 
 
 def postprocess_hook(result, generator, request, public):
+    """Injecte des noms d'enum stables dans le schéma OpenAPI final."""
     # Correction manuelle des noms d'enum
     enum_mappings = {
         "rap_app.Prospection.statut": "StatutEnum",

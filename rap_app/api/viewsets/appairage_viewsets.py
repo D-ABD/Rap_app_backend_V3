@@ -1,3 +1,5 @@
+"""ViewSet principal des appairages."""
+
 from io import BytesIO
 from pathlib import Path
 
@@ -39,6 +41,7 @@ from .scoped_viewset import ScopedModelViewSet
 
 
 def _extract_validation_payload(exc) -> tuple[str, dict]:
+    """Normalise une `ValidationError` DRF en couple `(message, errors)`."""
     if hasattr(exc, "message_dict"):
         errors = exc.message_dict
     elif isinstance(getattr(exc, "detail", None), dict):

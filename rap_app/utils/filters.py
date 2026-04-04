@@ -1,3 +1,5 @@
+"""Filtres django-filter réutilisables dans l'application."""
+
 import django_filters
 import unicodedata
 from django.db.models import Q
@@ -12,6 +14,7 @@ from ..models.prospection_comments import ProspectionComment
 
 
 def _normalize_choice_token(value):
+    """Normalise un libellé de choix pour faciliter les comparaisons souples."""
     normalized = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
     normalized = normalized.lower().replace("/", " ").replace("-", " ")
     return " ".join(normalized.split())

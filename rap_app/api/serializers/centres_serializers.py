@@ -1,4 +1,4 @@
-# rap_app/api/serializers/centre_serializers.py
+"""Sérialiseurs des centres."""
 
 from rest_framework import serializers
 

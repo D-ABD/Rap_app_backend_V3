@@ -1,3 +1,5 @@
+"""Modèles du périmètre VAE."""
+
 import logging
 from datetime import date
 from decimal import Decimal

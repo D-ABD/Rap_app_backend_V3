@@ -1,4 +1,5 @@
-# models/logs.py
+"""Modèles de journalisation applicative."""
+
 from __future__ import annotations
 
 import logging

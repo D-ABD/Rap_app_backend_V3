@@ -1,3 +1,5 @@
+"""Modèle principal des contrats CERFA et helpers d'autoremplissage."""
+
 from typing import Any, Dict, Optional
 
 from django.conf import settings
@@ -145,6 +147,7 @@ CERFA_AUTOFILL_MISSING_FIELDS: Dict[str, str] = {
 
 
 def _resolve_attr(obj: Any, path: str) -> Any:
+    """Résout un chemin d'attributs imbriqué de type `a.b.c`."""
     current = obj
     for part in path.split("."):
         if current is None:
@@ -154,10 +157,12 @@ def _resolve_attr(obj: Any, path: str) -> Any:
 
 
 def _compact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Supprime les entrées vides d'un dictionnaire sans casser les booléens."""
     return {key: value for key, value in data.items() if value not in (None, "", [], {}, ())}
 
 
 def _pick_code(root_obj: Any, code_attr: str, text_attr: str) -> Any:
+    """Extrait un code prioritaire depuis le champ code puis le champ texte."""
     if root_obj is None:
         return None
     code_value = getattr(root_obj, code_attr, None)

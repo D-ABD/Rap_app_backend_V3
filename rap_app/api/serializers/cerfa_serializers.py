@@ -1,3 +1,5 @@
+"""Sérialiseurs et helpers métier autour des contrats CERFA."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -30,6 +32,7 @@ PROFESSIONNALISATION_TYPE_CONTRAT_CODES = {"11", "12", "21", "22", "23", "24", "
 
 
 def _choice_label(field_name: str, code: Any) -> str | None:
+    """Retourne le libellé humain d'un code CERFA à partir du champ ciblé."""
     if code in (None, "", "null", "undefined"):
         return None
     field = CerfaContrat._meta.get_field(field_name)
@@ -57,6 +60,7 @@ def _sync_choice_labels(values: dict[str, Any]) -> dict[str, Any]:
 
 
 def _apply_updates(instance: Any, updates: dict[str, Any]) -> None:
+    """Applique et persiste uniquement les champs effectivement modifiés."""
     dirty_fields: list[str] = []
     for field_name, value in updates.items():
         if not hasattr(instance, field_name):
@@ -71,6 +75,7 @@ def _apply_updates(instance: Any, updates: dict[str, Any]) -> None:
 
 
 def _sync_candidat_from_cerfa(cerfa: CerfaContrat) -> None:
+    """Synchronise les champs candidat à partir du CERFA courant."""
     candidat = cerfa.candidat
     if candidat is None:
         return
@@ -122,6 +127,7 @@ def _sync_candidat_from_cerfa(cerfa: CerfaContrat) -> None:
 
 
 def _sync_partenaire_from_cerfa(cerfa: CerfaContrat) -> None:
+    """Synchronise les champs partenaire à partir du CERFA courant."""
     partenaire = cerfa.employeur
     if partenaire is None:
         return
@@ -161,6 +167,7 @@ def _sync_partenaire_from_cerfa(cerfa: CerfaContrat) -> None:
 
 
 def _sync_centre_from_cerfa(cerfa: CerfaContrat) -> None:
+    """Synchronise le centre lié à partir des informations du CERFA."""
     formation = cerfa.formation
     centre = getattr(formation, "centre", None) if formation is not None else None
     if centre is None:
@@ -208,6 +215,7 @@ def _sync_centre_from_cerfa(cerfa: CerfaContrat) -> None:
 
 
 def _sync_formation_from_cerfa(cerfa: CerfaContrat) -> None:
+    """Synchronise certains champs de la formation liée au CERFA."""
     formation = cerfa.formation
     if formation is None:
         return
@@ -244,6 +252,7 @@ def _merge_prefill_data(
     formation_id: int | None,
     employeur_id: int | None,
 ) -> dict[str, Any]:
+    """Fusionne les données validées avec les préremplissages CERFA déduits."""
     def _as_int(value: Any) -> int | None:
         if value in (None, "", "null", "undefined"):
             return None
@@ -308,6 +317,8 @@ def _merge_prefill_data(
 
 
 class CerfaContratSerializer(serializers.ModelSerializer):
+    """Contrat principal de lecture/écriture des CERFA enrichi côté métier."""
+
     candidat = serializers.IntegerField(source="candidat_id", required=False, allow_null=True)
     formation = serializers.IntegerField(source="formation_id", required=False, allow_null=True)
     employeur = serializers.IntegerField(source="employeur_id", required=False, allow_null=True)

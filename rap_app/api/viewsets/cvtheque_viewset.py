@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/cvtheque_viewset.py
+"""ViewSet de la CVthèque."""
 
 import mimetypes
 import os

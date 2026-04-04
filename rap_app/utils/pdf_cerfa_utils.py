@@ -1,3 +1,5 @@
+"""Helpers bas niveau de génération et remplissage PDF CERFA."""
+
 import os
 import re
 from datetime import date, datetime
@@ -15,10 +17,12 @@ from ..models.cerfa_contrats import CerfaContrat
 
 
 def _join_non_empty(parts):
+    """Concatène des morceaux non vides avec un séparateur lisible."""
     return " - ".join([format_value(part) for part in parts if format_value(part)])
 
 
 def _split_date_parts(value):
+    """Découpe une date formatée `JJ/MM/AAAA` en trois morceaux."""
     formatted = format_value(value)
     if not formatted or "/" not in formatted:
         return ("", "", "")
@@ -29,12 +33,14 @@ def _split_date_parts(value):
 
 
 def _checkbox_mark(value, expected=True):
+    """Retourne `X` quand une case doit être cochée."""
     if value is None:
         return ""
     return "X" if bool(value) is expected else ""
 
 
 def _sex_checkbox_mark(value, expected):
+    """Retourne `X` pour la case sexe attendue selon la valeur normalisée."""
     normalized = format_value(value).strip().upper()
     if not normalized:
         return ""
@@ -42,12 +48,14 @@ def _sex_checkbox_mark(value, expected):
 
 
 def _bool_to_oui_non(value):
+    """Convertit un booléen en `Oui` / `Non` pour le CERFA."""
     if value is None:
         return ""
     return "Oui" if bool(value) else "Non"
 
 
 def _split_decimal_parts(value):
+    """Découpe une valeur numérique en partie entière et décimale."""
     if value in (None, ""):
         return ("", "")
     try:
@@ -60,6 +68,7 @@ def _split_decimal_parts(value):
 
 
 def _split_email_parts(value):
+    """Découpe un email en partie locale et domaine."""
     email = format_value(value)
     if not email:
         return ("", "")
@@ -70,6 +79,7 @@ def _split_email_parts(value):
 
 
 def _pick_first_non_empty(*values):
+    """Retourne la première valeur non vide après formatage."""
     for value in values:
         formatted = format_value(value)
         if formatted:
@@ -78,6 +88,7 @@ def _pick_first_non_empty(*values):
 
 
 def _candidate_bool(cerfa_contrat, candidate_attr, snapshot_attr):
+    """Résout un booléen candidat avec fallback sur le snapshot CERFA."""
     candidat = getattr(cerfa_contrat, "candidat", None)
     if candidat is not None and hasattr(candidat, candidate_attr):
         return getattr(candidat, candidate_attr, None)
@@ -85,6 +96,7 @@ def _candidate_bool(cerfa_contrat, candidate_attr, snapshot_attr):
 
 
 def _choice_label_for_instance(field_name, value):
+    """Résout le libellé humain d'un champ à choix du modèle CERFA."""
     raw = format_value(value)
     if not raw:
         return ""
@@ -96,6 +108,7 @@ def _choice_label_for_instance(field_name, value):
 
 
 def _code_with_label(code, label):
+    """Assemble un code et son libellé en évitant les doublons inutiles."""
     code_text = format_value(code)
     label_text = format_value(label)
     if label_text.strip().lower() in {
@@ -115,6 +128,7 @@ def _code_with_label(code, label):
 
 
 def _infer_pro_contract_nature(cerfa_contrat):
+    """Infère la nature du contrat de professionnalisation à afficher."""
     explicit_value = format_value(getattr(cerfa_contrat, "nature_contrat", None)).lower()
     if explicit_value in {"cdi", "cdd", "travail_temporaire"}:
         return explicit_value
@@ -134,12 +148,14 @@ def _infer_pro_contract_nature(cerfa_contrat):
 
 
 def _infer_pro_particulier_employeur(cerfa_contrat):
+    """Infère si l'employeur doit être considéré comme particulier côté pro."""
     if format_value(getattr(cerfa_contrat, "employeur_siret", None)):
         return False
     return None
 
 
 def _infer_pro_france_travail(cerfa_contrat):
+    """Infère l'indicateur France Travail pour le CERFA professionnalisation."""
     candidat = getattr(cerfa_contrat, "candidat", None)
     if candidat is not None and hasattr(candidat, "inscrit_france_travail"):
         explicit_value = getattr(candidat, "inscrit_france_travail", None)
@@ -159,6 +175,7 @@ def _infer_pro_france_travail(cerfa_contrat):
 
 
 def _candidate_overlay_values(cerfa_contrat):
+    """Construit le dictionnaire overlay de la zone candidat/apprenti."""
     apprenti_rqth = _candidate_bool(cerfa_contrat, "rqth", "apprenti_rqth")
     apprenti_equivalence_jeunes = _candidate_bool(
         cerfa_contrat, "equivalence_jeunes", "apprenti_equivalence_jeunes"
@@ -315,6 +332,7 @@ def _candidate_overlay_values(cerfa_contrat):
 
 
 def _formation_overlay_values(cerfa_contrat):
+    """Construit le dictionnaire overlay de la zone formation/CFA."""
     debut_jour, debut_mois, debut_annee = _split_date_parts(
         getattr(cerfa_contrat, "formation_debut", None)
     )
@@ -347,6 +365,7 @@ def _formation_overlay_values(cerfa_contrat):
 
 
 def _apprentissage_contract_overlay_values(cerfa_contrat):
+    """Construit les valeurs overlay spécifiques au contrat apprentissage."""
     conclusion_jour, conclusion_mois, conclusion_annee = _split_date_parts(
         getattr(cerfa_contrat, "date_conclusion", None)
     )
@@ -474,6 +493,7 @@ def _apprentissage_contract_overlay_values(cerfa_contrat):
 
 
 def _professionnalisation_text_values(cerfa_contrat):
+    """Construit les libellés texte du bloc professionnalisation."""
     formation = getattr(cerfa_contrat, "formation", None)
     apprenti_jour, apprenti_mois, apprenti_annee = _split_date_parts(
         getattr(cerfa_contrat, "apprenti_date_naissance", None)
@@ -647,6 +667,7 @@ def _professionnalisation_text_values(cerfa_contrat):
 
 
 def _professionnalisation_overlay_values(cerfa_contrat):
+    """Construit les valeurs overlay spécifiques au contrat professionnalisation."""
     apprenti_rqth = _candidate_bool(cerfa_contrat, "rqth", "apprenti_rqth")
     apprenti_equivalence_jeunes = _candidate_bool(
         cerfa_contrat, "equivalence_jeunes", "apprenti_equivalence_jeunes"
@@ -714,6 +735,7 @@ def _professionnalisation_overlay_values(cerfa_contrat):
 
 
 def _draw_text_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_size=8):
+    """Dessine un texte dans une zone bornée du PDF avec retour à la ligne simple."""
     text = format_value(text)
     if not text:
         return
@@ -746,6 +768,7 @@ def _draw_text_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_siz
 
 
 def _draw_single_line_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", font_size=7):
+    """Dessine une seule ligne ajustée dans une case du PDF."""
     text = format_value(text)
     if not text:
         return
@@ -763,6 +786,7 @@ def _draw_single_line_in_box(pdf, text, x1, y1, x2, y2, font_name="Helvetica", f
 
 
 def _draw_checkbox_mark(pdf, text, x1, y1, x2, y2, font_name="Helvetica-Bold", font_size=9):
+    """Dessine un marqueur centré dans une case à cocher."""
     text = format_value(text)
     if not text:
         return
@@ -780,6 +804,7 @@ def _draw_checkbox_mark(pdf, text, x1, y1, x2, y2, font_name="Helvetica-Bold", f
 
 
 def _draw_manual_single_line(pdf, text, rect, font_name="Helvetica", font_size=7.5):
+    """Dessine une valeur simple dans un rectangle `(x1, y1, x2, y2)`."""
     text = format_value(text)
     if not text:
         return
@@ -788,6 +813,7 @@ def _draw_manual_single_line(pdf, text, rect, font_name="Helvetica", font_size=7
 
 
 def _build_cfa_manual_overlay(page, cerfa_contrat):
+    """Construit l'overlay manuel complémentaire pour les zones CFA."""
     media_box = page.MediaBox
     width = float(media_box[2]) - float(media_box[0])
     height = float(media_box[3]) - float(media_box[1])
@@ -836,6 +862,7 @@ def _build_cfa_manual_overlay(page, cerfa_contrat):
 
 
 def _build_professionnalisation_manual_overlay(page, cerfa_contrat):
+    """Construit l'overlay manuel complémentaire pour le CERFA pro."""
     media_box = page.MediaBox
     width = float(media_box[2]) - float(media_box[0])
     height = float(media_box[3]) - float(media_box[1])
@@ -856,6 +883,7 @@ def _build_professionnalisation_manual_overlay(page, cerfa_contrat):
 
 
 def _build_candidate_overlay(page, cerfa_contrat):
+    """Construit l'overlay PDF pour la zone candidat/apprenti."""
     return _build_overlay(page, _candidate_overlay_values(cerfa_contrat))
 
 
@@ -868,6 +896,7 @@ def _build_overlay(
     single_line_text=False,
     multiline_text_fields=None,
 ):
+    """Construit un overlay PDF générique à partir d'un mapping de champs."""
     annots = getattr(page, "Annots", []) or []
     field_rects = {}
     for annot in annots:
@@ -918,6 +947,7 @@ def format_value(value):
 
 
 def _slugify_filename_part(value, fallback="inconnu"):
+    """Nettoie un fragment de nom de fichier pour l'export CERFA."""
     text = format_value(value).lower()
     if not text:
         return fallback
@@ -927,6 +957,7 @@ def _slugify_filename_part(value, fallback="inconnu"):
 
 
 def build_cerfa_export_filename(cerfa_contrat):
+    """Construit le nom de fichier d'export CERFA à partir de l'objet courant."""
     prefix = (
         "cerfa_pro"
         if getattr(cerfa_contrat, "cerfa_type", "apprentissage") == "professionnalisation"
@@ -938,6 +969,7 @@ def build_cerfa_export_filename(cerfa_contrat):
 
 
 def _build_summary_rows(cerfa_contrat):
+    """Construit les lignes de synthèse textuelle jointes au PDF CERFA."""
     rows = [
         ("Apprenti - nom", getattr(cerfa_contrat, "apprenti_nom_naissance", None)),
         ("Apprenti - prenom", getattr(cerfa_contrat, "apprenti_prenom", None)),
@@ -1020,6 +1052,7 @@ def _build_summary_rows(cerfa_contrat):
 
 
 def _build_summary_pdf(cerfa_contrat):
+    """Construit un PDF de synthèse textuelle complémentaire au CERFA rempli."""
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -1048,6 +1081,7 @@ def _build_summary_pdf(cerfa_contrat):
 
 
 def _resolve_template_path(cerfa_contrat):
+    """Résout le chemin du template PDF selon le type de CERFA demandé."""
     cerfa_type = getattr(cerfa_contrat, "cerfa_type", "apprentissage")
     file_name = "cerfa_pro_12434-05.pdf" if cerfa_type == "professionnalisation" else "cerfa_10103-14.pdf"
     template_path = os.path.join(settings.BASE_DIR, "rap_app/static/cerfa", file_name)

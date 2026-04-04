@@ -1,3 +1,5 @@
+"""Services bulk appliqués aux candidats."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable

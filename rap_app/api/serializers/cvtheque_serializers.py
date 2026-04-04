@@ -1,3 +1,5 @@
+"""Sérialiseurs de la CVthèque."""
+
 from rest_framework import serializers
 
 from ...models.candidat import Candidat

@@ -1,4 +1,5 @@
-# serializers.py (ou ton fichier actuel des serializers Partenaire)
+"""Sérialiseurs principaux des partenaires."""
+
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (
     OpenApiExample,

@@ -1,4 +1,5 @@
-# rap_app/api/serializers/prepa_serializers.py
+"""Sérialiseurs des séances Prépa et de leurs stagiaires."""
+
 from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 

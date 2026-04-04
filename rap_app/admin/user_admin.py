@@ -1,3 +1,5 @@
+"""Configuration admin des utilisateurs et actions associées."""
+
 import csv
 import logging
 from io import StringIO
@@ -19,6 +21,7 @@ logger = logging.getLogger("application.customuser")
 # ───────────────────────────────────────────────
 @admin.action(description="🎓 Passer en stagiaire")
 def passer_en_stagiaire(modeladmin, request, queryset):
+    """Convertit en lot des utilisateurs vers le rôle `stagiaire`."""
     updated = 0
     for user in queryset:
         if user.role != CustomUser.ROLE_STAGIAIRE:

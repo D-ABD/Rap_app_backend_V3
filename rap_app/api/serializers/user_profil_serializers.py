@@ -1,3 +1,13 @@
+"""Sérialiseurs autour des utilisateurs, profils et inscription.
+
+Le but de ce fichier est double :
+- exposer un contrat de lecture enrichi pour le front (`CustomUserSerializer`)
+- garder des contrats d'écriture explicites pour create/update/registration.
+
+Les docstrings décrivent ici les règles réelles du code, notamment sur
+l'affectation des centres et sur les restrictions de changement de rôle.
+"""
+
 from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as filters
@@ -34,7 +44,21 @@ from ..serializers.formations_serializers import FormationLightSerializer
 )
 class CustomUserSerializer(serializers.ModelSerializer):
     """
-    Sérialiseur pour CustomUser : champs du modèle, formation (write_only), formation_info (read_only), centres (write_only), centres_info et centre (read_only), champs calculés (avatar_url, is_admin, is_staff_read, etc.). validate_role : seul superadmin peut attribuer superadmin ; seul admin/superadmin peut attribuer admin ; interdiction de modifier son propre rôle. create/update : attribution des centres réservée à admin/superadmin via _is_admin_user et _assign_centres.
+    Contrat de lecture enrichi pour `CustomUser`.
+
+    Ce serializer expose :
+    - les champs principaux du modèle ;
+    - des champs enrichis de lecture (`role_display`, `full_name`,
+      `formation_info`, `centres_info`, `centre`, `role_lie`) ;
+    - un champ `formation` en écriture pour relier un candidat/stagiaire ;
+    - un champ `centres` en écriture réservé à l'administration.
+
+    Règles métiers importantes reflétées par le code :
+    - seul un superadmin peut attribuer `superadmin` ;
+    - seul un admin ou un superadmin peut attribuer `admin` ;
+    - un utilisateur ne peut pas se changer lui-même de rôle ;
+    - l'affectation explicite des centres en create/update est réservée à un
+      admin ou superadmin via `_assign_centres()`.
     """
 
     role_display = serializers.CharField(source="get_role_display", read_only=True)
@@ -326,7 +350,15 @@ from django.utils import timezone
 
 class RegistrationSerializer(serializers.ModelSerializer):
     """
-    Inscription d'un nouvel utilisateur : email, password (write_only), first_name, last_name, consent_rgpd (obligatoire). validate_consent_rgpd : exige True. create : crée un utilisateur is_active=False, role='stagiaire', enregistre consent_date si consent_rgpd.
+    Contrat d'inscription publique d'un nouvel utilisateur.
+
+    Le serializer exige le consentement RGPD et crée un compte :
+    - `is_active=False`
+    - `role='stagiaire'`
+    - avec `consent_date` renseignée si le consentement est validé
+
+    Il s'agit d'un flux d'entrée simple ; l'attribution d'autres rôles ou de
+    centres relève ensuite des écrans et endpoints d'administration.
     """
 
     consent_rgpd = serializers.BooleanField(

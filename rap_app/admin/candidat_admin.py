@@ -1,3 +1,5 @@
+"""Configuration admin des candidats."""
+
 import logging
 
 from django.contrib import admin, messages
@@ -16,6 +18,8 @@ logger = logging.getLogger("application.candidats")
 # Inline : HistoriquePlacement
 # ───────────────────────────────────────────────
 class HistoriquePlacementInline(admin.TabularInline):
+    """Inline en lecture seule pour l'historique de placement d'un candidat."""
+
     model = HistoriquePlacement
     extra = 0
     can_delete = False

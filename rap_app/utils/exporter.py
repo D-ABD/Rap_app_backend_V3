@@ -1,4 +1,4 @@
-# rap_app/utils/exporter.py
+"""Utilitaire générique d'export CSV / DOCX / PDF."""
 
 import csv
 import io

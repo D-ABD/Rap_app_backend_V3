@@ -1,4 +1,4 @@
-# views/prospection.py
+"""ViewSet principal des prospections."""
 
 import datetime
 from io import BytesIO

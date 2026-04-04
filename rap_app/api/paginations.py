@@ -1,4 +1,4 @@
-# rap_app/api/paginations.py
+"""Pagination standardisée utilisée par les listes de l'API."""
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response

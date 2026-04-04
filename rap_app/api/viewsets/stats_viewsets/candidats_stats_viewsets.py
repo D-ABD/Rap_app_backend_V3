@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur les candidats."""
+
 from __future__ import annotations
 
 import logging
@@ -86,10 +88,12 @@ def _poei_poec_values() -> list[str]:
 
 
 def _candidate_phase_equals(value: str) -> Q:
+    """Construit un filtre `Q` sur la phase candidat normalisée."""
     return Q(parcours_phase=value)
 
 
 def _candidate_en_formation_q() -> Q:
+    """Construit le filtre métier représentant un candidat en formation."""
     return (
         Q(parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION)
         | Q(statut=Candidat.StatutCandidat.EN_FORMATION)
@@ -97,10 +101,12 @@ def _candidate_en_formation_q() -> Q:
 
 
 def _candidate_inscrit_valide_q() -> Q:
+    """Construit le filtre métier représentant un candidat inscrit validé."""
     return Q(parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE)
 
 
 def _candidate_statut_metier_q(value: str, prefix: str = "") -> Q:
+    """Construit un filtre métier sur le statut candidat avec préfixe optionnel."""
     return Candidat.statut_metier_q(value, prefix=prefix)
 
 

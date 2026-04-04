@@ -1,3 +1,5 @@
+"""Helpers transverses pour sécuriser l'exécution des signaux Django."""
+
 from contextlib import contextmanager
 from typing import Any, Generator
 

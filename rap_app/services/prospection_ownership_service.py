@@ -1,3 +1,5 @@
+"""Services de résolution owner/formation/centre des prospections."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -23,6 +25,7 @@ _DEFER_PROSPECTION_OWNER_SYNC: ContextVar[bool] = ContextVar(
 
 @contextmanager
 def defer_prospection_owner_sync():
+    """Suspend temporairement la résolution automatique owner/formation/centre."""
     token = _DEFER_PROSPECTION_OWNER_SYNC.set(True)
     try:
         yield
@@ -31,6 +34,7 @@ def defer_prospection_owner_sync():
 
 
 def is_prospection_owner_sync_deferred() -> bool:
+    """Indique si la résolution automatique de prospection est suspendue."""
     return _DEFER_PROSPECTION_OWNER_SYNC.get()
 
 

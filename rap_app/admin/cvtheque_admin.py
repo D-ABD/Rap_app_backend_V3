@@ -1,3 +1,5 @@
+"""Configuration admin de la CVthèque."""
+
 from django.contrib import admin
 from django.utils.html import format_html
 
@@ -6,6 +8,7 @@ from ..models.cvtheque import CVTheque
 
 @admin.register(CVTheque)
 class CVThequeAdmin(admin.ModelAdmin):
+    """Administration détaillée des CV et métadonnées formation/candidat."""
 
     # ----------------------------
     # 📌 Colonnes affichées en liste

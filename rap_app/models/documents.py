@@ -1,3 +1,5 @@
+"""Modèle des documents liés aux formations."""
+
 import logging
 import os
 

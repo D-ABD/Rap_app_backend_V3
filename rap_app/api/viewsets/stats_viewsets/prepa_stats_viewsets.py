@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/prepa_stats_viewset.py
+"""Statistiques agrégées sur le périmètre Prépa."""
 
 from io import BytesIO
 from pathlib import Path

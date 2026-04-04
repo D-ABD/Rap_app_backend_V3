@@ -1,4 +1,5 @@
-# rap_app/admin.py
+"""Configuration admin des commentaires de prospection."""
+
 from __future__ import annotations
 
 from typing import Iterable, Optional, Tuple
@@ -18,6 +19,8 @@ from rap_app.models.prospection_comments import ProspectionComment
 # Filtres personnalisés
 # ───────────────────────────────────────────────────────────────
 class DepartementListFilter(admin.SimpleListFilter):
+    """Filtre admin par département dérivé du code postal du centre."""
+
     title = _("Département (centre)")
     parameter_name = "departement"
 
@@ -45,6 +48,8 @@ class DepartementListFilter(admin.SimpleListFilter):
 # ───────────────────────────────────────────────────────────────
 @admin.register(ProspectionComment)
 class ProspectionCommentAdmin(admin.ModelAdmin):
+    """Administration des commentaires liés aux prospections."""
+
     list_display = (
         "id",
         "prospection_link",

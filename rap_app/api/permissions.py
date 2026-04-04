@@ -1,3 +1,17 @@
+"""Permissions DRF communes pour l'API RapApp.
+
+Ce module centralise les permissions réutilisables par les viewsets. Les
+docstrings cherchent à décrire le comportement réel du code, notamment depuis
+l'introduction des rôles `commercial` et `charge_recrutement`.
+
+Règles de lecture à garder en tête :
+- `admin-like` = admin, superadmin, superuser ;
+- `staff_like` = admin-like + commercial + charge_recrutement + staff +
+  staff_read ;
+- certains modules spécialisés restent volontairement exclus pour
+  `commercial`/`charge_recrutement` même s'ils sont `staff_like`.
+"""
+
 from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
@@ -81,7 +95,11 @@ class IsAdminLikeOnly(BasePermission):
 
 class IsAdmin(BasePermission):
     """
-    Autorise admin, superadmin, staff et staff_read.
+    Autorise uniquement `admin-like`, `staff` et `staff_read`.
+
+    Cette permission historique n'inclut volontairement pas les rôles
+    `commercial` et `charge_recrutement`. Pour les modules coeur pilotés par
+    centre, préférer `IsStaffOrAbove`.
     """
 
     message = "Accès réservé au staff, admin ou superadmin."
@@ -93,7 +111,11 @@ class IsAdmin(BasePermission):
 
 class ReadWriteAdminReadStaff(BasePermission):
     """
-    Accès lecture aux staff, staff_read, admin ; écriture réservée aux admins.
+    Accès lecture à `staff`, `staff_read` et `admin-like` ; écriture réservée
+    à `admin-like`.
+
+    Les rôles `commercial` et `charge_recrutement` n'entrent pas dans cette
+    permission historique.
     """
 
     message = "Lecture réservée au staff/staff_read. Écriture réservée aux admins."
@@ -236,12 +258,16 @@ class UserVisibilityScopeMixin:
 
     Comportement :
     - admin-like : accès global
-    - staff/staff_read : pas de restriction supplémentaire dans ce mixin
+    - `staff` / `staff_read` : pas de restriction supplémentaire dans ce mixin
     - autres utilisateurs authentifiés : restreints à `user_field`
 
     Ce mixin ne remplace pas le scoping par centres. Il sert surtout pour les
-    ressources où la visibilité non-staff repose sur un lien direct avec un
-    champ utilisateur (`created_by` par défaut).
+    ressources où la visibilité non-admin non-staff repose sur un lien direct
+    avec un champ utilisateur (`created_by` par défaut).
+
+    Important : ce mixin historique ne traite pas `commercial` et
+    `charge_recrutement` comme des profils staff génériques ; pour ces rôles,
+    le scoping recommandé passe par les viewsets centre-scopés.
     """
 
     user_field = "created_by"
@@ -319,7 +345,10 @@ class IsDeclicStaffOrAbove(BasePermission):
 
 class IsPrepaStaffOrAbove(BasePermission):
     """
-    Autorise admin, superadmin, staff standard, prepa_staff. Staff_read uniquement en lecture. Refuse les autres.
+    Autorise `admin-like`, `staff`, `prepa_staff` et `staff_read` en lecture.
+
+    Les rôles coeur `commercial` et `charge_recrutement` sont exclus de ce
+    module spécialisé.
     """
 
     message = "Accès réservé au staff PrépaComp ou supérieur."
@@ -406,7 +435,8 @@ class CanAccessCandidatObject(BasePermission):
 
     Règles :
     - admin-like : accès complet ;
-    - staff/staff_read : accès selon le périmètre centre du candidat ;
+    - staff-like internes (`commercial`, `charge_recrutement`, `staff`,
+      `staff_read`) : accès selon le périmètre centre du candidat ;
     - candidat : accès uniquement à son propre profil ;
     - autres profils : refus.
 
@@ -424,7 +454,8 @@ class CanAccessCandidatObject(BasePermission):
             self.message = "Authentification requise."
             return False
 
-        # Tous les super-admin / admin / staff peuvent accéder (les droits seront affinés en objet)
+        # Les rôles internes staff-like peuvent entrer dans la vue ; le
+        # périmètre exact est ensuite affiné au niveau objet.
         if is_admin_like(user) or is_staff_like(user):
             return True
 
@@ -443,7 +474,7 @@ class CanAccessCandidatObject(BasePermission):
         if is_admin_like(user):
             return True
 
-        # Staff & staff_read : périmètre par centres
+        # Les rôles internes staff-like restent limités au périmètre centre.
         if is_staff_like(user):
             centres = get_staff_centre_ids_cached(request)
             if centres is None:

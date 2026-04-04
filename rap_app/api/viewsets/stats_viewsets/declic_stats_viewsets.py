@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur le périmètre Déclic."""
+
 from io import BytesIO
 from pathlib import Path
 

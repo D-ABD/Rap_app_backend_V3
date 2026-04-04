@@ -1,4 +1,5 @@
-# apps/.../api/viewsets/prospection_comment_viewsets.py
+"""ViewSet des commentaires de prospection."""
+
 import datetime
 import logging
 from io import BytesIO

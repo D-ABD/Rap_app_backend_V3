@@ -1,3 +1,5 @@
+"""Outils de debug visuel pour les overlays PDF CERFA."""
+
 import csv
 import json
 import os

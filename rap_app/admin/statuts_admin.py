@@ -1,3 +1,5 @@
+"""Configuration admin des statuts."""
+
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _

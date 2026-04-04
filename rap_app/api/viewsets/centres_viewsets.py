@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/centre_viewsets.py
+"""ViewSet des centres."""
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404

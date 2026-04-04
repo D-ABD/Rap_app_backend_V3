@@ -1,13 +1,13 @@
-from __future__ import annotations
-
-from rap_app.api.serializers.base_serializers import EmptySerializer
-
 """Reporting agrégé sur les prospections visibles par l'utilisateur courant.
 
 Le module expose des KPI globaux et groupés. Les filtres sont manuels et
 portent notamment sur les dates, le centre, le département, la formation, le
 partenaire, l'owner et les différents codes métier de `ProspectionChoices`.
 """
+
+from __future__ import annotations
+
+from rap_app.api.serializers.base_serializers import EmptySerializer
 
 
 from typing import Literal, Optional
@@ -58,7 +58,6 @@ GroupKey = Literal[
 
 
 class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
-    serializer_class = EmptySerializer
     """
     Statistiques agrégées sur les prospections.
 
@@ -68,6 +67,7 @@ class ProspectionStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     métier.
     """
 
+    serializer_class = EmptySerializer
     permission_classes = [IsOwnerOrStaffOrAbove]
 
     # ────────────────────────────────────────────────────────────

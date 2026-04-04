@@ -10,17 +10,23 @@ from django.utils.translation import gettext_lazy as _
 
 
 class CerfaNationaliteCode(models.TextChoices):
+    """Nomenclature CERFA des nationalités apprenti."""
+
     FRANCAISE = "1", _("1 - Francaise")
     UNION_EUROPEENNE = "2", _("2 - Union europeenne")
     HORS_UNION_EUROPEENNE = "3", _("3 - Etranger hors Union europeenne")
 
 
 class CerfaRegimeSocialCode(models.TextChoices):
+    """Nomenclature CERFA des régimes sociaux apprenti."""
+
     MSA = "1", _("1 - MSA")
     URSSAF = "2", _("2 - URSSAF")
 
 
 class CerfaSituationAvantContratCode(models.TextChoices):
+    """Nomenclature CERFA des situations avant contrat."""
+
     SCOLAIRE = "1", _("1 - Scolaire")
     PREPA_APPRENTISSAGE = "2", _("2 - Prepa apprentissage")
     ETUDIANT = "3", _("3 - Etudiant")
@@ -36,6 +42,8 @@ class CerfaSituationAvantContratCode(models.TextChoices):
 
 
 class CerfaDiplomeCode(models.TextChoices):
+    """Nomenclature CERFA des diplômes et niveaux préparés/obtenus."""
+
     AUCUN_DIPLOME = "13", _("13 - Aucun diplome ni titre professionnel")
     DNB = "25", _("25 - Diplome national du Brevet")
     CFG = "26", _("26 - Certificat de formation generale")
@@ -63,6 +71,8 @@ class CerfaDiplomeCode(models.TextChoices):
 
 
 class CerfaDerniereClasseCode(models.TextChoices):
+    """Nomenclature CERFA de la dernière classe ou année suivie."""
+
     DIPLOME_OBTENU = "01", _("01 - Derniere annee du cycle suivie et diplome obtenu")
     PREMIERE_VALIDEE = "11", _("11 - 1ere annee validee")
     PREMIERE_NON_VALIDEE = "12", _("12 - 1ere annee non validee")
@@ -76,6 +86,8 @@ class CerfaDerniereClasseCode(models.TextChoices):
 
 
 class CerfaTypeEmployeurCode(models.TextChoices):
+    """Nomenclature CERFA des types d'employeurs."""
+
     REPERTOIRE_METIERS = "11", _("11 - Entreprise inscrite au repertoire des metiers")
     RCS = "12", _("12 - Entreprise inscrite uniquement au registre du commerce et des societes")
     MSA = "13", _("13 - Entreprise relevant de la mutualite sociale agricole")
@@ -95,6 +107,8 @@ class CerfaTypeEmployeurCode(models.TextChoices):
 
 
 class CerfaEmployeurSpecifiqueCode(models.TextChoices):
+    """Nomenclature CERFA des cas particuliers employeur."""
+
     AUCUN = "0", _("0 - Aucun de ces cas")
     ETT = "1", _("1 - Entreprise de travail temporaire")
     GROUPEMENT = "2", _("2 - Groupement d'employeurs")
@@ -103,6 +117,8 @@ class CerfaEmployeurSpecifiqueCode(models.TextChoices):
 
 
 class CerfaMaitreNiveauDiplomeCode(models.TextChoices):
+    """Nomenclature CERFA des niveaux de diplôme maître d'apprentissage."""
+
     AUCUN = "0", _("0 - Aucun")
     CAP_BEP = "3", _("3 - CAP, BEP")
     BAC = "4", _("4 - Baccalaureat")
@@ -113,6 +129,8 @@ class CerfaMaitreNiveauDiplomeCode(models.TextChoices):
 
 
 class CerfaTypeContratCode(models.TextChoices):
+    """Nomenclature CERFA des types de contrats et situations associées."""
+
     PREMIER_CONTRAT = "11", _("11 - Premier contrat d'apprentissage")
     MEME_EMPLOYEUR = "21", _("21 - Nouveau contrat apres contrat termine chez le meme employeur")
     AUTRE_EMPLOYEUR = "22", _("22 - Nouveau contrat apres contrat termine chez un autre employeur")
@@ -128,6 +146,8 @@ class CerfaTypeContratCode(models.TextChoices):
 
 
 class CerfaTypeDerogationCode(models.TextChoices):
+    """Nomenclature CERFA des types de dérogations."""
+
     AGE_INFERIEUR_16 = "11", _("11 - Age inferieur a 16 ans")
     AGE_SUPERIEUR_29 = "12", _("12 - Age superieur a 29 ans")
     REDUCTION_DUREE = "21", _("21 - Reduction de la duree")
@@ -137,6 +157,8 @@ class CerfaTypeDerogationCode(models.TextChoices):
 
 
 class CerfaProTypeQualificationViseeCode(models.TextChoices):
+    """Nomenclature CERFA des qualifications visées en professionnalisation."""
+
     RNCP = "1", _("1 - Certification enregistree au RNCP autre qu'un CQP")
     CQP = "2", _("2 - Certificat de qualification professionnelle (CQP)")
     CCN = "3", _("3 - Qualification reconnue dans les classifications d'une convention collective nationale")
@@ -154,6 +176,8 @@ class CerfaProTypeQualificationViseeCode(models.TextChoices):
 
 
 class CerfaNsfSpecialiteCode(models.TextChoices):
+    """Nomenclature CERFA des spécialités NSF."""
+
     INDUSTRIE_FONDAMENTALE = "200", _("200 - Technologies industrielles fondamentales")
     COMMANDES_INDUSTRIELLES = "201", _("201 - Technologies de commandes des transformations industrielles")
     AGROALIMENTAIRE = "221", _("221 - Agro-alimentaire, alimentation, cuisine")

@@ -1,3 +1,5 @@
+"""Modèle des commentaires d'appairage."""
+
 import logging
 
 from django.conf import settings

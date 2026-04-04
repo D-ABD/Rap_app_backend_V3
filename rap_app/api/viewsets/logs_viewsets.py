@@ -1,3 +1,5 @@
+"""ViewSet de consultation des logs utilisateurs."""
+
 import csv
 import io
 

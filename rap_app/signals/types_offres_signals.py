@@ -1,3 +1,10 @@
+"""Signaux de journalisation autour des types d'offres.
+
+Le fichier ne contient pas de logique métier de scope ou de contrat API : il
+sert principalement à produire de la traçabilité applicative lors des
+créations, mises à jour et suppressions physiques.
+"""
+
 import logging
 import sys
 

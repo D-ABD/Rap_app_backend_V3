@@ -1,3 +1,5 @@
+"""Modèle des statuts paramétrables."""
+
 import logging
 import re
 

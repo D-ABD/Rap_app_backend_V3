@@ -1,3 +1,5 @@
+"""Commande de diagnostic des doublons d'appairage avant contraintes uniques."""
+
 from collections import defaultdict
 
 from django.core.management.base import BaseCommand

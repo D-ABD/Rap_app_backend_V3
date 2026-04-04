@@ -1,3 +1,5 @@
+"""Configuration Django de l'application `rap_app`."""
+
 from django.apps import AppConfig
 
 

@@ -1,3 +1,5 @@
+"""Constantes et choix métier du module Prospection."""
+
 from django.utils.translation import gettext_lazy as _
 
 

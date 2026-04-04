@@ -1,4 +1,5 @@
-# utils/logging_utils.py
+"""Helpers de logging transverses."""
+
 import sys
 
 from django.apps import apps

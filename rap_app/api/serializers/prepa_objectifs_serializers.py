@@ -1,4 +1,5 @@
-# rap_app/api/serializers/prepa_objectifs_serializers.py
+"""Sérialiseurs des objectifs Prépa."""
+
 from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 

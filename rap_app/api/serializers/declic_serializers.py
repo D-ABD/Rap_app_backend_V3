@@ -1,4 +1,5 @@
-# rap_app/api/serializers/declic_serializers.py
+"""Sérialiseurs des séances Déclic et de leurs participants."""
+
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 

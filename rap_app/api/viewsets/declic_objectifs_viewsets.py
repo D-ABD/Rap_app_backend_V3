@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/declic_objectifs_viewset.py
+"""ViewSet des objectifs Déclic."""
 
 from collections import OrderedDict
 from io import BytesIO

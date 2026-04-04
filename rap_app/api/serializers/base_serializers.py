@@ -1,3 +1,5 @@
+"""Sérialiseurs techniques et réutilisables de bas niveau."""
+
 from rest_framework import serializers
 
 

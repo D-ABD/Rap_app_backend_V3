@@ -1,4 +1,5 @@
-# rap_app/api/viewsets/stats_viewsets/partenaires_stats_viewsets.py
+"""Statistiques agrégées sur les partenaires."""
+
 from __future__ import annotations
 
 from collections import OrderedDict

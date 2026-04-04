@@ -1,6 +1,4 @@
-# ⚙️ constants_cerfa.py
-# Généré automatiquement pour correspondre au CERFA 10103*14 (version PDF réelle)
-# Vérifie manuellement les correspondances pour chaque champ avant génération de PDF.
+"""Constantes de mapping entre zones PDF CERFA et champs métier."""
 
 CERFA_FIELD_MAP = {
     # ======================================================

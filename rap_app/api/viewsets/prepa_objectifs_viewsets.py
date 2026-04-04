@@ -1,4 +1,5 @@
-# rap_app/api/viewsets/prepa_objectifs_viewset.py
+"""ViewSet des objectifs Prépa."""
+
 from collections import OrderedDict
 from io import BytesIO
 

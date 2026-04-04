@@ -1,3 +1,5 @@
+"""Modèles du périmètre Prépa."""
+
 from datetime import date
 from typing import Any, Dict, Optional
 

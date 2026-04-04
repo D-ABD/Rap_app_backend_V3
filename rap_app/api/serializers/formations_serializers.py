@@ -1,3 +1,5 @@
+"""Sérialiseurs principaux des formations."""
+
 import logging
 
 from django.urls import reverse
@@ -28,18 +30,22 @@ logger = logging.getLogger("application.api.formation")
 
 
 def _resolved_inscrits_crif(obj) -> int:
+    """Retourne `inscrits_crif`, avec priorité à la valeur annotée si présente."""
     return int(getattr(obj, "inscrits_crif_calc", getattr(obj, "inscrits_crif", 0)) or 0)
 
 
 def _resolved_inscrits_mp(obj) -> int:
+    """Retourne `inscrits_mp`, avec priorité à la valeur annotée si présente."""
     return int(getattr(obj, "inscrits_mp_calc", getattr(obj, "inscrits_mp", 0)) or 0)
 
 
 def _resolved_total_inscrits(obj) -> int:
+    """Retourne le total saisi `inscrits_crif + inscrits_mp`."""
     return _resolved_inscrits_crif(obj) + _resolved_inscrits_mp(obj)
 
 
 def _resolved_nombre_candidats(obj) -> int:
+    """Retourne le nombre de candidats avec fallback sur valeur annotée."""
     annotated = getattr(obj, "nombre_candidats_calc", None)
     if annotated is not None:
         return int(annotated or 0)
@@ -47,6 +53,7 @@ def _resolved_nombre_candidats(obj) -> int:
 
 
 def _resolved_total_places(obj) -> int:
+    """Retourne le total théorique de places de la formation."""
     annotated = getattr(obj, "total_places_calc", None)
     if annotated is not None:
         return int(annotated or 0)
@@ -54,18 +61,22 @@ def _resolved_total_places(obj) -> int:
 
 
 def _resolved_places_restantes_crif(obj) -> int:
+    """Retourne le nombre de places restantes côté CRIF."""
     return max((getattr(obj, "prevus_crif", 0) or 0) - _resolved_inscrits_crif(obj), 0)
 
 
 def _resolved_places_restantes_mp(obj) -> int:
+    """Retourne le nombre de places restantes côté marché public."""
     return max((getattr(obj, "prevus_mp", 0) or 0) - _resolved_inscrits_mp(obj), 0)
 
 
 def _resolved_places_disponibles(obj) -> int:
+    """Retourne le total de places encore disponibles."""
     return max(_resolved_total_places(obj) - _resolved_total_inscrits(obj), 0)
 
 
 def _resolved_taux_saturation(obj) -> float:
+    """Calcule le taux de saturation courant à partir des inscrits saisis."""
     annotated = getattr(obj, "taux_saturation_calc", None)
     if annotated is not None:
         return round(float(annotated or 0.0), 2)
@@ -76,6 +87,7 @@ def _resolved_taux_saturation(obj) -> float:
 
 
 def _resolved_saturation(obj) -> float:
+    """Alias historique du taux de saturation courant."""
     annotated = getattr(obj, "saturation_calc", None)
     if annotated is not None:
         return round(float(annotated or 0.0), 2)

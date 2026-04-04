@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur les commentaires de formation."""
+
 from __future__ import annotations
 
 from datetime import timedelta

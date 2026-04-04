@@ -1,3 +1,5 @@
+"""Services métier de placement et de snapshots d'appairage."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -24,6 +26,7 @@ _DEFER_APPAIRAGE_SNAPSHOT_SYNC: ContextVar[bool] = ContextVar(
 
 @contextmanager
 def defer_appairage_snapshot_sync():
+    """Suspend temporairement la synchronisation de snapshot d'appairage."""
     token = _DEFER_APPAIRAGE_SNAPSHOT_SYNC.set(True)
     try:
         yield
@@ -32,6 +35,7 @@ def defer_appairage_snapshot_sync():
 
 
 def is_appairage_snapshot_sync_deferred() -> bool:
+    """Indique si la synchronisation de snapshot d'appairage est suspendue."""
     return _DEFER_APPAIRAGE_SNAPSHOT_SYNC.get()
 
 

@@ -1,3 +1,5 @@
+"""Vue de recherche globale multi-ressources."""
+
 from django.db.models import Q
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -29,7 +31,8 @@ from ..mixins import ApiResponseMixin
 
 
 class SmallPagination(PageNumberPagination):
-    # Pagination limitée à 5 éléments par ressource.
+    """Pagination courte utilisée par la recherche globale par ressource."""
+
     page_size = 5
     page_query_param = "page"
 

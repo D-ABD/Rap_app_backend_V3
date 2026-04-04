@@ -41,6 +41,7 @@ def get_user(instance):
 
 
 def _user_info(user):
+    """Retourne une signature lisible de l'auteur à injecter dans les logs."""
     if not user or not getattr(user, "is_authenticated", False):
         return "par Système"
 

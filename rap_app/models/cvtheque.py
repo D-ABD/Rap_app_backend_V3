@@ -1,4 +1,4 @@
-# rap_app/models/cvtheque.py
+"""Modèle de la CVthèque."""
 
 import logging
 import os

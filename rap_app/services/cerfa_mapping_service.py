@@ -240,10 +240,12 @@ PROFESSIONNALISATION_MANUAL_CODE_FIELDS = {
 
 
 def normalize_cerfa_type(cerfa_type: Any) -> str:
+    """Normalise un type CERFA en identifiant canonique exploitable."""
     return "professionnalisation" if str(cerfa_type or "").lower() == "professionnalisation" else "apprentissage"
 
 
 def _normalize_generic_label(value: Any) -> str:
+    """Normalise un libellé libre pour faciliter les comparaisons souples."""
     return str(value or "").strip().lower()
 
 
@@ -253,6 +255,7 @@ def resolve_cerfa_value(
     code: Any,
     current_label: Any = None,
 ) -> dict[str, str] | None:
+    """Résout le couple `{code, label}` à stocker pour un snapshot CERFA."""
     if code in (None, "", "null", "undefined"):
         return None
     normalized_type = normalize_cerfa_type(cerfa_type)
@@ -291,6 +294,7 @@ def resolve_cerfa_value(
 
 
 def resolve_cerfa_label(cerfa_type: Any, code_field: str, code: Any, current_label: Any = None) -> str | None:
+    """Résout uniquement le libellé CERFA à partir d'un code et d'un contexte type."""
     resolved = resolve_cerfa_value(cerfa_type, code_field, code, current_label=current_label)
     return resolved["label"] if resolved else None
 

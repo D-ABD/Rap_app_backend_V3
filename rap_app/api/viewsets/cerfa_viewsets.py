@@ -1,3 +1,5 @@
+"""ViewSet des contrats CERFA."""
+
 from __future__ import annotations
 
 import os

@@ -1,3 +1,5 @@
+"""Helpers de sanitation pour les champs rich text."""
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 
@@ -14,6 +16,7 @@ css_sanitizer = CSSSanitizer(
 
 
 def sanitize_rich_text(value: str | None) -> str:
+    """Nettoie un HTML riche en conservant seulement les tags/attributs autorisés."""
     raw = (value or "").strip()
     if not raw:
         return ""

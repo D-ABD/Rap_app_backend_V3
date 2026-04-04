@@ -1,3 +1,5 @@
+"""Modèles de test ou d'expérimentation locale."""
+
 from django.db import models
 
 from .base import BaseModel  # Assure-toi que le chemin est correct

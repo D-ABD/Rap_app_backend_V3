@@ -1,3 +1,5 @@
+"""ViewSet principal des partenaires."""
+
 import datetime
 from io import BytesIO
 from pathlib import Path

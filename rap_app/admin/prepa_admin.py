@@ -1,4 +1,5 @@
-# rap_app/admin/prepa_admin.py
+"""Configuration admin du périmètre Prépa."""
+
 import logging
 from io import BytesIO
 
@@ -20,6 +21,8 @@ logger = logging.getLogger("rap_app.admin.prepa")
 # 🔎 FILTRE PERSONNALISÉ : Code postal du centre (fallback)
 # -------------------------------------------------------------------
 class CodePostalFilter(SimpleListFilter):
+    """Filtre admin par code postal du centre rattaché à la séance."""
+
     title = "Code postal du centre"
     parameter_name = "code_postal"
 
@@ -45,6 +48,7 @@ class CodePostalFilter(SimpleListFilter):
 # -------------------------------------------------------------------
 @admin.action(description="📤 Exporter la sélection en Excel")
 def export_prepa_xlsx(modeladmin, request, queryset):
+    """Exporte la sélection Prépa en fichier Excel orienté séances."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Prépa – Séances"

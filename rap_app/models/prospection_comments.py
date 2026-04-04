@@ -1,3 +1,5 @@
+"""Modèle des commentaires de prospection."""
+
 import logging
 
 from django.core.exceptions import ValidationError

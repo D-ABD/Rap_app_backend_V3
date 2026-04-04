@@ -1,3 +1,5 @@
+"""ViewSet des statuts."""
+
 import logging
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view

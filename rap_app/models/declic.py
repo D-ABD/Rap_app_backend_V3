@@ -1,4 +1,5 @@
-# rap_app/models/declic.py
+"""Modèles du périmètre Déclic."""
+
 from datetime import date
 from typing import Any, Dict, Optional
 

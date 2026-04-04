@@ -1,3 +1,5 @@
+"""Sérialiseurs des appairages et objets liés."""
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
@@ -13,6 +15,7 @@ from ..roles import is_admin_like, is_centre_scoped_staff
 
 
 def _get_last_commentaire_body(obj) -> str | None:
+    """Retourne le contenu du dernier commentaire disponible pour l'appairage."""
     annotated = getattr(obj, "last_commentaire", None)
     if annotated not in (None, ""):
         return annotated

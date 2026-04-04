@@ -1,4 +1,4 @@
-# rap_app/api/viewsets/declic_viewset.py
+"""ViewSet des séances Déclic."""
 
 import logging
 from io import BytesIO

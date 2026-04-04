@@ -1,3 +1,5 @@
+"""ViewSet des événements."""
+
 import csv
 import logging
 

@@ -1,3 +1,5 @@
+"""Sérialiseurs des documents liés aux formations."""
+
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import (

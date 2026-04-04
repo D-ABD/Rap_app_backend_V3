@@ -1,3 +1,10 @@
+"""Endpoints techniques temporaires ou de support interne.
+
+Ces vues ne portent pas de logique métier coeur. Elles servent surtout au
+debug, au support et à quelques vérifications opérationnelles autour de
+l'authentification.
+"""
+
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -15,15 +22,18 @@ from ..permissions import IsStaffOrAbove
 
         🔒 Accès restreint :
             - Requiert un token d’authentification valide dans l'en-tête `Authorization`.
-            - Filtré par la permission `IsStaffOrAbove` : uniquement staff, staff_read, admin, superadmin.
-            - Les comptes candidats ne doivent pas utiliser cet endpoint (ils peuvent utiliser /api/me/ à la place).
+            - Filtré par la permission `IsStaffOrAbove` : `commercial`,
+              `charge_recrutement`, `staff`, `staff_read`, `admin`,
+              `superadmin`.
+            - Les comptes candidats/stagiaires ne doivent pas utiliser cet
+              endpoint (ils peuvent utiliser /api/me/ à la place).
 
         Ce point d’entrée est destiné au debug / support interne (test de token, affichage rapide du rôle),
         pas à un usage fonctionnel grand public côté frontend.
     """,
     responses={
         200: OpenApiResponse(
-            description="Token valide et utilisateur staff/admin authentifié",
+            description="Token valide et utilisateur interne autorisé authentifié",
             response={
                 "type": "object",
                 "properties": {
@@ -44,9 +54,16 @@ from ..permissions import IsStaffOrAbove
 @permission_classes([IsAuthenticated, IsStaffOrAbove])
 def test_token_view(request):
     """
-    Vérifie la validité du token pour un utilisateur interne
-    (staff/staff_read/admin/superadmin) et renvoie un résumé de son
-    profil (id, email, rôle, indicateurs staff/superuser).
+    Vérifie la validité du token pour un utilisateur interne autorisé par
+    `IsStaffOrAbove` et renvoie un résumé de son profil.
+
+    Sont donc inclus ici :
+    - `commercial`
+    - `charge_recrutement`
+    - `staff`
+    - `staff_read`
+    - `admin`
+    - `superadmin`
     """
     user = request.user
     role = getattr(user, "role", "inconnu")  # ✅ accès direct au champ `role`

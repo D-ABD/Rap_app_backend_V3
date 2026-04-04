@@ -1,3 +1,5 @@
+"""Mixins et briques de base pour l'admin Django."""
+
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.timezone import localtime

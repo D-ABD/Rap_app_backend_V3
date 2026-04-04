@@ -1,3 +1,5 @@
+"""Handler DRF unifié pour normaliser les réponses d'erreur de l'API."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,6 +26,7 @@ MESSAGE_ERROR_CODE_MAP = {
 
 
 def _normalize_error_value(value: Any) -> Any:
+    """Normalise récursivement une valeur d'erreur DRF en types simples."""
     if isinstance(value, dict):
         return {str(key): _normalize_error_value(subvalue) for key, subvalue in value.items()}
     if isinstance(value, list):
@@ -43,6 +46,7 @@ def _normalize_error_value(value: Any) -> Any:
 
 
 def _normalize_errors(detail: Any) -> dict[str, Any]:
+    """Convertit un détail DRF arbitraire en dictionnaire `errors` standardisé."""
     if isinstance(detail, dict):
         return {str(key): _normalize_error_value(value) for key, value in detail.items()}
     normalized = _normalize_error_value(detail)
@@ -52,6 +56,7 @@ def _normalize_errors(detail: Any) -> dict[str, Any]:
 
 
 def _extract_first_error_message(value: Any) -> str | None:
+    """Extrait le premier message lisible depuis une structure d'erreurs imbriquée."""
     if isinstance(value, list):
         for item in value:
             extracted = _extract_first_error_message(item)
@@ -72,12 +77,14 @@ def _extract_first_error_message(value: Any) -> str | None:
 
 
 def _resolve_error_code(message: str | None) -> str | None:
+    """Résout un code d'erreur fonctionnel stable à partir d'un message connu."""
     if not message:
         return None
     return MESSAGE_ERROR_CODE_MAP.get(message)
 
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
+    """Adapte les erreurs DRF à l'enveloppe JSON standard de l'application."""
     response = drf_exception_handler(exc, context)
     if response is None:
         return None

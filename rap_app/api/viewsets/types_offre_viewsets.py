@@ -1,4 +1,4 @@
-# viewsets/typeoffre_viewsets.py
+"""ViewSet des types d'offres."""
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, status, viewsets

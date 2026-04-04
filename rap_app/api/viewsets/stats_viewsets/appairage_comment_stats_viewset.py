@@ -1,3 +1,5 @@
+"""Statistiques agrégées sur les commentaires d'appairage."""
+
 from __future__ import annotations
 
 from typing import Literal, Optional

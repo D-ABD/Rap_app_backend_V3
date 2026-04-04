@@ -1,3 +1,5 @@
+"""ViewSet des participants Déclic."""
+
 from io import BytesIO
 
 from django.db.models import Q

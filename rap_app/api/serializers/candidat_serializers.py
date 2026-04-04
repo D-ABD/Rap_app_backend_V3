@@ -1,3 +1,5 @@
+"""Sérialiseurs principaux des candidats et de leurs vues enrichies."""
+
 from django.contrib.auth import get_user_model
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -32,6 +34,7 @@ PROFESSIONNALISATION_TYPE_CONTRAT_CODES = {"11", "12", "21", "22", "23", "24", "
 
 
 def _normalize_nom_prenom(instance):
+    """Retourne `(nom, prenom, nom_complet)` avec fallback sur le compte lié."""
     user = getattr(instance, "compte_utilisateur", None)
     nom = (getattr(instance, "nom", "") or "").strip()
     prenom = (getattr(instance, "prenom", "") or "").strip()
@@ -47,6 +50,7 @@ def _normalize_nom_prenom(instance):
 
 
 def _user_display(u):
+    """Construit un libellé utilisateur lisible pour l'affichage."""
     if not u:
         return None
     full = u.get_full_name()
@@ -59,6 +63,7 @@ def _can_manage_candidate_record(user) -> bool:
 
 
 def _ateliers_counts_for(obj) -> dict[str, int]:
+    """Retourne les compteurs d'ateliers TRE, annotés ou recalculés."""
     out: dict[str, int] = {}
     for key, _label in AtelierTRE.TypeAtelier.choices:
         annot_name = f"count_{key}"
@@ -83,6 +88,7 @@ def _ateliers_counts_for(obj) -> dict[str, int]:
 
 
 def _get_last_prefetched_commentaire_body(obj) -> str | None:
+    """Retourne le dernier commentaire disponible pour le candidat."""
     annotated = getattr(obj, "last_commentaire", None)
     if annotated not in (None, ""):
         return annotated
@@ -105,6 +111,7 @@ def _get_last_prefetched_commentaire_body(obj) -> str | None:
 
 
 def _get_last_prefetched_appairage(obj):
+    """Retourne le dernier appairage disponible pour le candidat."""
     prefetched = getattr(obj, "_prefetched_objects_cache", {}).get("appairages")
     if prefetched is not None:
         if not prefetched:

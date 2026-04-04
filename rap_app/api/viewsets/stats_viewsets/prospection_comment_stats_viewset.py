@@ -1,4 +1,5 @@
-# rap_app/api/viewsets/stats_viewsets/prospection_comment_stats_viewset.py
+"""Statistiques agrégées sur les commentaires de prospection."""
+
 from __future__ import annotations
 
 from typing import Optional

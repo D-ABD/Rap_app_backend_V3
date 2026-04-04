@@ -1,3 +1,5 @@
+"""Sérialiseurs des statuts."""
+
 import re
 
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer

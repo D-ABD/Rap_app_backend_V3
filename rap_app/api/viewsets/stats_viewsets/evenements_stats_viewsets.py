@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Reporting agrégé sur les événements visibles par l'utilisateur courant."""
+
+from __future__ import annotations
 
 from typing import Literal
 

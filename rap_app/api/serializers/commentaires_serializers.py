@@ -1,3 +1,5 @@
+"""Sérialiseurs des commentaires de formation."""
+
 import bleach
 from bleach.css_sanitizer import CSSSanitizer
 from django.utils.html import strip_tags
@@ -13,6 +15,7 @@ from ...models.commentaires import Commentaire
 
 
 def _commentaire_candidate_counts(formation):
+    """Retourne les compteurs candidats utiles à l'enrichissement commentaire."""
     if not formation:
         return 0, 0
     candidats = formation.candidats.all()
@@ -22,6 +25,7 @@ def _commentaire_candidate_counts(formation):
 
 
 def _commentaire_current_taux_saturation(formation):
+    """Calcule le taux de saturation courant à afficher avec le commentaire."""
     if not formation:
         return None
     total_places = getattr(formation, "total_places", 0) or 0
@@ -32,6 +36,7 @@ def _commentaire_current_taux_saturation(formation):
 
 
 def _commentaire_current_taux_transformation(formation):
+    """Calcule le taux de transformation courant à afficher avec le commentaire."""
     if not formation:
         return None
     nb_candidats, nb_inscrits_gespers = _commentaire_candidate_counts(formation)

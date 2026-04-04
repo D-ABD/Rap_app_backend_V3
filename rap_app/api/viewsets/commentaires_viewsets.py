@@ -1,4 +1,5 @@
-# rap_app/api/views/commentaires_views.py
+"""ViewSet des commentaires de formation."""
+
 import datetime
 from io import BytesIO
 from pathlib import Path

@@ -1,3 +1,5 @@
+"""Classes de base et helpers transverses pour les modèles."""
+
 import logging
 
 from django.conf import settings

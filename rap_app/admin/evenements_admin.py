@@ -1,3 +1,5 @@
+"""Configuration admin des événements."""
+
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -7,6 +9,8 @@ from ..models.evenements import Evenement
 
 @admin.register(Evenement)
 class EvenementAdmin(admin.ModelAdmin):
+    """Administration détaillée des événements liés aux formations."""
+
     list_display = (
         "id",
         "formation_nom",

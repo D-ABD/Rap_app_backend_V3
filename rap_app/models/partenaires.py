@@ -1,3 +1,5 @@
+"""Modèle principal des partenaires."""
+
 import logging
 
 from django.core.exceptions import ValidationError

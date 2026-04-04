@@ -1,3 +1,5 @@
+"""Endpoints liés à l'utilisateur courant."""
+
 from django.core.exceptions import ValidationError
 from django.utils import timezone as dj_timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema

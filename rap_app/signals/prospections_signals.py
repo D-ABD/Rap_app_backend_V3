@@ -1,3 +1,10 @@
+"""Signaux de journalisation autour des prospections et de leur historique.
+
+Ces signaux ne décident pas du propriétaire, du centre ou du scope d'accès :
+ils se limitent à la traçabilité applicative, au logging et à l'historique
+des changements de statut.
+"""
+
 import logging
 import sys
 
@@ -12,6 +19,7 @@ logger = logging.getLogger("rap_app.prospection")
 
 
 def skip_during_migrations():
+    """Désactive les signaux pendant `migrate` / `makemigrations`."""
     return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
@@ -36,7 +44,8 @@ def get_user(instance, kwargs=None):
 def _resolve_prochain_contact_from_history(hist: HistoriqueProspection):
     """
     Retourne la date à utiliser comme prochain contact pour un historique.
-    Priorité : champ direct puis champs liés à la prospection si renseignés.
+    Priorité : champ direct sur l'historique, puis champs dérivés de la
+    prospection si renseignés.
     """
     pc = getattr(hist, "prochain_contact", None)
     if pc:

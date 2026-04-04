@@ -1,3 +1,5 @@
+"""Services de synchronisation compte utilisateur <-> candidat."""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -19,6 +21,7 @@ _DEFER_CANDIDATE_USER_SYNC: ContextVar[bool] = ContextVar(
 
 @contextmanager
 def defer_candidate_user_sync():
+    """Suspend temporairement la synchronisation compte/candidat par contexte."""
     token = _DEFER_CANDIDATE_USER_SYNC.set(True)
     try:
         yield
@@ -27,6 +30,7 @@ def defer_candidate_user_sync():
 
 
 def is_candidate_user_sync_deferred() -> bool:
+    """Indique si la synchronisation compte/candidat est momentanément suspendue."""
     return _DEFER_CANDIDATE_USER_SYNC.get()
 
 
