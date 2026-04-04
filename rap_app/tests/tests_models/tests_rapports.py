@@ -1,5 +1,6 @@
 # tests/tests_models/test_rapport.py
 
+"""Tests relatifs a rapports."""
 from datetime import timedelta
 
 from django.core.cache import cache
@@ -19,6 +20,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 class RapportModelTest(BaseModelTestSetupMixin, TestCase):
 
+    """Cas de test pour Rapport Model Test."""
     def setUp(self):
         super().setUp()
 

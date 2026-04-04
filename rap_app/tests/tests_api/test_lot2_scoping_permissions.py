@@ -1,3 +1,4 @@
+"""Tests relatifs a lot2 scoping permissions."""
 from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -19,6 +20,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class Lot2ScopingPermissionsTests(APITestCase):
+    """Cas de test pour Lot2 Scoping Permissions Tests."""
     def setUp(self):
         self.admin = UserFactory(role=CustomUser.ROLE_ADMIN)
         self.staff_centre_a = UserFactory(role=CustomUser.ROLE_STAFF)

@@ -1,3 +1,4 @@
+"""Tests relatifs a stats error contracts."""
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -6,6 +7,7 @@ from rap_app.models.custom_user import CustomUser
 
 
 class StatsErrorContractTests(APITestCase):
+    """Cas de test pour Stats Error Contract Tests."""
     def setUp(self):
         self.user = CustomUser.objects.create_user_with_role(
             email="stats.errors@example.com",

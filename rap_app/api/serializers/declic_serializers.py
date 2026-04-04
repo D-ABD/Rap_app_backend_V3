@@ -1,6 +1,6 @@
 """Sérialiseurs des séances Déclic et de leurs participants."""
 
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
@@ -18,7 +18,7 @@ from .rich_text_utils import sanitize_rich_text
         }
     ]
 )
-class CentreLightSerializer(serializers.ModelSerializer):
+class DeclicCentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les Déclics.
     Lecture seule.
@@ -53,7 +53,7 @@ class ParticipantDeclicSerializer(serializers.ModelSerializer):
     Sérialiseur complet du suivi nominatif des participants Déclic.
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = DeclicCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
         queryset=Centre.objects.all(),
         source="centre",
@@ -111,7 +111,8 @@ class ParticipantDeclicSerializer(serializers.ModelSerializer):
             "date_declic",
         ]
 
-    def get_declic_origine_label(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_declic_origine_label(self, obj) -> str:
         declic = getattr(obj, "declic_origine", None)
         if not declic:
             return ""
@@ -129,7 +130,7 @@ class DeclicSerializer(serializers.ModelSerializer):
     create/update : passent request.user à save(user=user).
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = DeclicCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
         queryset=Centre.objects.all(),
         source="centre",
@@ -181,24 +182,29 @@ class DeclicSerializer(serializers.ModelSerializer):
             "updated_by",
         ]
 
-    def get_date_display(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_date_display(self, obj) -> str:
         """Retourne date_declic au format dd/mm/YYYY."""
         return obj.date_declic.strftime("%d/%m/%Y")
 
-    def get_taux_presence_atelier(self, obj):
+    @extend_schema_field(serializers.FloatField())
+    def get_taux_presence_atelier(self, obj) -> float:
         """Taux de présence en % (nb_presents / (nb_presents + nb_absents) * 100), une décimale ; 0 si total nul."""
         total = obj.nb_presents_declic + obj.nb_absents_declic
         return round(obj.nb_presents_declic / total * 100, 1) if total else 0
 
-    def get_objectif_annuel(self, obj):
+    @extend_schema_field(serializers.IntegerField())
+    def get_objectif_annuel(self, obj) -> int:
         """Retourne la propriété objectif_annuel du modèle."""
         return obj.objectif_annuel
 
-    def get_taux_atteinte_annuel(self, obj):
+    @extend_schema_field(serializers.FloatField())
+    def get_taux_atteinte_annuel(self, obj) -> float:
         """Retourne la propriété taux_atteinte_annuel du modèle."""
         return obj.taux_atteinte_annuel
 
-    def get_reste_a_faire(self, obj):
+    @extend_schema_field(serializers.IntegerField())
+    def get_reste_a_faire(self, obj) -> int:
         """Retourne la propriété reste_a_faire du modèle."""
         return obj.reste_a_faire
 

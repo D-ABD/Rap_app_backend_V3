@@ -1,3 +1,4 @@
+"""Tests relatifs a prospection ownership service."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -15,6 +16,7 @@ from rap_app.services.prospection_ownership_service import ProspectionOwnershipS
 
 
 class ProspectionOwnershipServiceTests(TestCase):
+    """Cas de test pour Prospection Ownership Service Tests."""
     def setUp(self):
         self.centre = Centre.objects.create(nom="Centre Prospection Service", code_postal="75000")
         self.type_offre = TypeOffre.objects.create(nom=TypeOffre.CRIF)

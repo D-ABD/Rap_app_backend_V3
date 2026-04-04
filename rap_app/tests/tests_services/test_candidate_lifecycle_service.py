@@ -1,3 +1,4 @@
+"""Tests relatifs a candidate lifecycle service."""
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -15,6 +16,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class CandidateLifecycleServiceTests(TestCase):
+    """Cas de test pour Candidate Lifecycle Service Tests."""
     def setUp(self):
         self.actor = UserFactory(role=CustomUser.ROLE_STAFF)
         self.centre = Centre.objects.create(nom="Centre Lifecycle", code_postal="75040")

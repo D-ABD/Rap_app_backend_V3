@@ -1,5 +1,6 @@
 # tests/test_typeoffre_viewsets.py
 
+"""Tests relatifs a types offre viewsets."""
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
@@ -12,6 +13,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class TypeOffreViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Type Offre View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

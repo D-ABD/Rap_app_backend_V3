@@ -1,3 +1,4 @@
+"""Tests relatifs a partenaires."""
 import pytest
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
@@ -7,6 +8,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class PartenaireModelTest(BaseModelTestSetupMixin):
+    """Cas de test pour Partenaire Model Test."""
     def setUp(self):
         super().setUp()
         self.partenaire = self.create_instance(

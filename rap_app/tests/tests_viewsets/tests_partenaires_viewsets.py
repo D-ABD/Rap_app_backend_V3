@@ -1,5 +1,6 @@
 # tests/test_partenaire_viewsets.py
 
+"""Tests relatifs a partenaires viewsets."""
 import unittest
 
 from django.contrib.contenttypes.models import ContentType
@@ -16,6 +17,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class PartenaireViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Partenaire View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

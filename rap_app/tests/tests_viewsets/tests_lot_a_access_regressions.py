@@ -1,3 +1,4 @@
+"""Tests relatifs a lot a access regressions."""
 from datetime import timedelta
 
 from django.urls import reverse
@@ -25,6 +26,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
+    """Cas de test pour Lot A Access Regressions Test Case."""
     def setUp(self):
         super().setUp()
         self.admin = UserFactory(role=CustomUser.ROLE_ADMIN)

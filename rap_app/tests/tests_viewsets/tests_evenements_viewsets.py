@@ -1,3 +1,4 @@
+"""Tests relatifs a evenements viewsets."""
 import datetime
 from datetime import timedelta
 
@@ -16,6 +17,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class EvenementViewSetTest(AuthenticatedTestCase):
+    """Cas de test pour Evenement View Set Test."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

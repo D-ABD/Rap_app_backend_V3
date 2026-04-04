@@ -1,3 +1,4 @@
+"""Tests relatifs a user profile viewsets."""
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
@@ -10,6 +11,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class CustomUserViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Custom User View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

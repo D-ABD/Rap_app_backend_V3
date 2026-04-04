@@ -1,3 +1,4 @@
+"""Tests relatifs a user."""
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -10,6 +11,7 @@ CustomUser = get_user_model()
 
 class CustomUserModelTest(TestCase):
 
+    """Cas de test pour Custom User Model Test."""
     def setUp(self):
         self.email = "test@example.com"
         self.password = "testpass123"

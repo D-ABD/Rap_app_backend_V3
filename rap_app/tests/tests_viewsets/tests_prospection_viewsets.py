@@ -1,4 +1,5 @@
 # Tests corrigés pour correspondre aux ViewSets nettoyés et à la pagination enrichie
+"""Tests relatifs a prospection viewsets."""
 import pytest
 from datetime import timedelta
 
@@ -23,6 +24,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class ProspectionViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Prospection View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)
@@ -204,6 +206,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
 
 @pytest.mark.django_db
 def test_candidate_create_prospection_infers_owner_formation_and_centre():
+    """Teste que Candidate create prospection infers owner formation and centre."""
     client = APIClient()
 
     centre = Centre.objects.create(nom="Centre Candidate Prospection", code_postal="75999")
@@ -260,6 +263,7 @@ def test_candidate_create_prospection_infers_owner_formation_and_centre():
 
 @pytest.mark.django_db
 def test_candidate_cannot_change_prospection_owner_or_formation_on_update():
+    """Teste que Candidate cannot change prospection owner or formation on update."""
     client = APIClient()
 
     centre = Centre.objects.create(nom="Centre Candidate Update", code_postal="75888")
@@ -333,6 +337,7 @@ def test_candidate_cannot_change_prospection_owner_or_formation_on_update():
 
 @pytest.mark.django_db
 def test_staff_create_prospection_with_candidate_owner_uses_owner_formation():
+    """Teste que Staff create prospection with candidate owner uses owner formation."""
     client = APIClient()
 
     centre_a = Centre.objects.create(nom="Centre Staff Owner A", code_postal="75111")
@@ -406,6 +411,7 @@ def test_staff_create_prospection_with_candidate_owner_uses_owner_formation():
 
 @pytest.mark.django_db
 def test_commercial_can_list_and_create_prospection_in_scope():
+    """Teste que Commercial can list and create prospection in scope."""
     client = APIClient()
 
     centre = Centre.objects.create(nom="Centre Commercial", code_postal="92000")
@@ -466,6 +472,7 @@ def test_commercial_can_list_and_create_prospection_in_scope():
 
 @pytest.mark.django_db
 def test_charge_recrutement_cannot_create_prospection_outside_centre_scope():
+    """Teste que Charge recrutement cannot create prospection outside centre scope."""
     client = APIClient()
 
     centre_a = Centre.objects.create(nom="Centre A", code_postal="92100")

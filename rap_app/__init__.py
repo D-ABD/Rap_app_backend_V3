@@ -1,0 +1,1 @@
+"""Initialisation du package `rap_app`."""

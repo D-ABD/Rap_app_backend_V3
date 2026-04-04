@@ -1,3 +1,4 @@
+"""Tests relatifs a prospection."""
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -14,6 +15,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class ProspectionModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour Prospection Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Prospection")
@@ -125,6 +127,7 @@ class ProspectionModelTest(BaseModelTestSetupMixin, TestCase):
 
 
 class HistoriqueProspectionModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour Historique Prospection Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Historique")

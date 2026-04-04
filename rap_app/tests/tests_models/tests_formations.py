@@ -25,6 +25,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class FormationModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour Formation Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")

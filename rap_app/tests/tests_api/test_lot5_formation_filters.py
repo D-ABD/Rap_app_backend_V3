@@ -1,3 +1,4 @@
+"""Tests relatifs a lot5 formation filters."""
 from datetime import timedelta
 
 from django.utils import timezone
@@ -12,6 +13,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class Lot5FormationFilterTests(APITestCase):
+    """Cas de test pour Lot5 Formation Filter Tests."""
     def setUp(self):
         self.centre = Centre.objects.create(nom="Centre Lot5")
         self.type_offre = TypeOffre.objects.create(nom=TypeOffre.CRIF)

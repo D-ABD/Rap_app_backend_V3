@@ -1,3 +1,4 @@
+"""Tests relatifs a auth jwt."""
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -6,6 +7,7 @@ from rap_app.models.custom_user import CustomUser
 
 
 class JwtAuthTests(APITestCase):
+    """Cas de test pour Jwt Auth Tests."""
     def setUp(self):
         self.password = "password123"
         self.user = CustomUser.objects.create_user_with_role(

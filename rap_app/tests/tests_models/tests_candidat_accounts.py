@@ -1,3 +1,4 @@
+"""Tests relatifs a candidat accounts."""
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -309,6 +310,7 @@ def test_lier_utilisateur_reutilise_la_source_de_verite_service():
 
 @pytest.mark.django_db
 def test_candidate_lifecycle_complete_formation_sets_sortie_phase():
+    """Teste que Candidate lifecycle complete formation sets sortie phase."""
     centre = Centre.objects.create(nom="Centre Test 9", code_postal="75009")
     formation = Formation.objects.create(
         nom="Formation Test 9",
@@ -342,6 +344,7 @@ def test_candidate_lifecycle_complete_formation_sets_sortie_phase():
 
 @pytest.mark.django_db
 def test_candidate_lifecycle_abandon_keeps_legacy_status_compatible():
+    """Teste que Candidate lifecycle abandon keeps legacy status compatible."""
     centre = Centre.objects.create(nom="Centre Test 10", code_postal="75010")
     formation = Formation.objects.create(
         nom="Formation Test 10",

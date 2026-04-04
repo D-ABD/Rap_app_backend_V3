@@ -1,0 +1,1 @@
+"""Tests relatifs a vae jury serializers."""

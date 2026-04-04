@@ -1,3 +1,4 @@
+"""Tests relatifs a prospection serializers."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -19,6 +20,7 @@ from ...models.types_offre import TypeOffre
 
 
 class ProspectionSerializerTestCase(TestCase):
+    """Cas de test pour Prospection Serializer Test Case."""
     def setUp(self):
         self.user = CustomUser.objects.create_user(email="test@example.com", username="testuser", password="testpass")
 
@@ -152,6 +154,7 @@ class ProspectionSerializerTestCase(TestCase):
 
 
 class ChangerStatutSerializerTestCase(TestCase):
+    """Cas de test pour Changer Statut Serializer Test Case."""
     def setUp(self):
         self.user = CustomUser.objects.create_user(email="test@example.com", username="testuser", password="testpass")
 

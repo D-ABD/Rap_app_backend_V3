@@ -1,0 +1,1 @@
+"""Vues Django historiques liees a parametres."""

@@ -1,3 +1,4 @@
+"""Tests relatifs a candidat write path."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -13,6 +14,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class CandidatWritePathTests(TestCase):
+    """Cas de test pour Candidat Write Path Tests."""
     def setUp(self):
         self.actor = UserFactory(role=CustomUser.ROLE_STAFF)
         self.centre = Centre.objects.create(nom="Centre Candidat Write Path", code_postal="75000")

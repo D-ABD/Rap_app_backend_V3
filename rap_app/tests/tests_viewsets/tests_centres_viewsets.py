@@ -1,3 +1,4 @@
+"""Tests relatifs a centres viewsets."""
 from django.urls import reverse
 from rest_framework import status
 
@@ -8,6 +9,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class CentreViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Centre View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

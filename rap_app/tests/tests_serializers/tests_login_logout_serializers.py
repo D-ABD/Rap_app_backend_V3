@@ -1,0 +1,1 @@
+"""Tests relatifs a login logout serializers."""

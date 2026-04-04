@@ -1,3 +1,4 @@
+"""Tests relatifs a types offre."""
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 

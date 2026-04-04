@@ -1,3 +1,4 @@
+"""Tests relatifs a lot4 front contracts."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -18,11 +19,13 @@ from rap_app.models.types_offre import TypeOffre
 
 
 class _MockRequest:
+    """Double de requete utilise par les tests de contrat front."""
     def __init__(self, user):
         self.user = user
 
 
 class Lot4FrontContractSerializerTests(TestCase):
+    """Cas de test pour Lot4 Front Contract Serializer Tests."""
     def setUp(self):
         self.user = CustomUser.objects.create_user_with_role(
             email="lot4@example.com",

@@ -1,3 +1,4 @@
+"""Tests relatifs a base."""
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -9,6 +10,7 @@ User = get_user_model()
 
 
 class BaseModelTestCase(TestCase):
+    """Cas de test pour Base Model Test Case."""
     def setUp(self):
         self.user = User.objects.create_user(
             username="testuser", email="testuser@example.com", password="securepassword123"

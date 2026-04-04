@@ -17,7 +17,7 @@ from .rich_text_utils import sanitize_rich_text
         )
     ]
 )
-class CentreLightSerializer(serializers.ModelSerializer):
+class PrepaCentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre pour le module Prépa.
     """
@@ -45,7 +45,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     Sérialiseur complet du suivi nominatif des stagiaires Prépa.
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = PrepaCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
         queryset=Centre.objects.all(),
         source="centre",
@@ -126,7 +126,8 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "dernier_atelier_date",
         ]
 
-    def get_prepa_origine_label(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_prepa_origine_label(self, obj) -> str:
         prepa = getattr(obj, "prepa_origine", None)
         if not prepa:
             return ""
@@ -134,16 +135,22 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
         suffix = f" - {centre_nom}" if centre_nom else ""
         return f"{prepa.get_type_prepa_display()} du {prepa.date_prepa:%d/%m/%Y}{suffix}"
 
-    def get_ateliers_realises_count(self, obj):
+    @extend_schema_field(serializers.IntegerField())
+    def get_ateliers_realises_count(self, obj) -> int:
         return obj.ateliers_realises_count
 
-    def get_ateliers_realises_labels(self, obj):
+    @extend_schema_field(
+        serializers.ListField(child=serializers.CharField(), allow_empty=True)
+    )
+    def get_ateliers_realises_labels(self, obj) -> list[str]:
         return obj.ateliers_realises_labels
 
-    def get_dernier_atelier_label(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_dernier_atelier_label(self, obj) -> str | None:
         return obj.dernier_atelier_label
 
-    def get_dernier_atelier_date(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_dernier_atelier_date(self, obj) -> str | None:
         return obj.dernier_atelier_date
 
     def validate(self, attrs):
@@ -202,7 +209,7 @@ class PrepaSerializer(serializers.ModelSerializer):
     Sérialiseur du module Prépa avec la liste compacte des stagiaires suivis.
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = PrepaCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
         queryset=Centre.objects.all(), source="centre", write_only=True, help_text="Identifiant du centre concerné."
     )

@@ -1,3 +1,4 @@
+"""Tests relatifs a candidat serializers."""
 from datetime import timedelta
 
 from django.test import RequestFactory, TestCase
@@ -18,6 +19,7 @@ from rap_app.models.types_offre import TypeOffre
 
 
 class CandidatSerializerTest(TestCase):
+    """Cas de test pour Candidat Serializer Test."""
     def setUp(self):
         self.factory = RequestFactory()
         self.user = CustomUser.objects.create_user_with_role(

@@ -1,3 +1,4 @@
+"""Tests relatifs a cerfa viewsets."""
 from django.urls import reverse
 from rest_framework import status
 
@@ -13,6 +14,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class CerfaContratViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Cerfa Contrat View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

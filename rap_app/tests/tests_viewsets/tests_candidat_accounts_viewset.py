@@ -1,3 +1,4 @@
+"""Tests relatifs a candidat accounts viewset."""
 import pytest
 from django.utils import timezone
 from django.urls import reverse
@@ -63,6 +64,7 @@ def test_staff_creer_compte_action():
 
 @pytest.mark.django_db
 def test_delete_candidate_archives_and_hides_from_default_list():
+    """Teste que Delete candidate archives and hides from default list."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet Delete", code_postal="75901")
     formation = Formation.objects.create(
@@ -104,6 +106,7 @@ def test_delete_candidate_archives_and_hides_from_default_list():
 
 @pytest.mark.django_db
 def test_list_can_include_archived_candidate():
+    """Teste que List can include archived candidate."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet Archived", code_postal="75902")
     formation = Formation.objects.create(
@@ -140,6 +143,7 @@ def test_list_can_include_archived_candidate():
 
 @pytest.mark.django_db
 def test_desarchiver_candidate():
+    """Teste que Desarchiver candidate."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet Restore", code_postal="75903")
     formation = Formation.objects.create(
@@ -278,6 +282,7 @@ def test_demande_compte_candidat_flow():
 
 @pytest.mark.django_db
 def test_demande_compte_candidat_duplicate_pending_uses_non_field_errors():
+    """Teste que Demande compte candidat duplicate pending uses non field errors."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet Duplicate Pending", code_postal="75107")
     formation = Formation.objects.create(
@@ -360,6 +365,7 @@ def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
 
 @pytest.mark.django_db
 def test_staff_valider_demande_compte_without_pending_request_uses_non_field_errors():
+    """Teste que Staff valider demande compte without pending request uses non field errors."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet No Pending", code_postal="75109")
     formation = Formation.objects.create(
@@ -398,6 +404,7 @@ def test_staff_valider_demande_compte_without_pending_request_uses_non_field_err
 
 @pytest.mark.django_db
 def test_staff_cannot_create_candidate_without_rgpd_legal_basis():
+    """Teste que Staff cannot create candidate without rgpd legal basis."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre RGPD 1", code_postal="75150")
     formation = Formation.objects.create(
@@ -432,6 +439,7 @@ def test_staff_cannot_create_candidate_without_rgpd_legal_basis():
 
 @pytest.mark.django_db
 def test_staff_create_candidate_sets_rgpd_manual_defaults():
+    """Teste que Staff create candidate sets rgpd manual defaults."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre RGPD 2", code_postal="75151")
     formation = Formation.objects.create(
@@ -471,6 +479,7 @@ def test_staff_create_candidate_sets_rgpd_manual_defaults():
 
 @pytest.mark.django_db
 def test_staff_create_candidate_with_consent_basis_requires_consent_flag():
+    """Teste que Staff create candidate with consent basis requires consent flag."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre RGPD 3", code_postal="75152")
     formation = Formation.objects.create(
@@ -506,6 +515,7 @@ def test_staff_create_candidate_with_consent_basis_requires_consent_flag():
 
 @pytest.mark.django_db
 def test_staff_create_candidate_normalizes_safe_text_fields():
+    """Teste que Staff create candidate normalizes safe text fields."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre RGPD 4", code_postal="75153")
     formation = Formation.objects.create(
@@ -549,6 +559,7 @@ def test_staff_create_candidate_normalizes_safe_text_fields():
 
 @pytest.mark.django_db
 def test_staff_can_validate_inscription_without_forcing_gespers_or_legacy_status():
+    """Teste que Staff can validate inscription without forcing gespers or legacy status."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2A", code_postal="75128")
     formation = Formation.objects.create(
@@ -588,6 +599,7 @@ def test_staff_can_validate_inscription_without_forcing_gespers_or_legacy_status
 
 @pytest.mark.django_db
 def test_staff_can_toggle_gespers_manually():
+    """Teste que Staff can toggle gespers manually."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet G1", code_postal="75140")
     formation = Formation.objects.create(
@@ -629,6 +641,7 @@ def test_staff_can_toggle_gespers_manually():
 
 @pytest.mark.django_db
 def test_staff_can_toggle_manual_admissible_accompagnement_and_appairage_statuses():
+    """Teste que Staff can toggle manual admissible accompagnement and appairage statuses."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet G2", code_postal="75141")
     formation = Formation.objects.create(
@@ -693,6 +706,7 @@ def test_staff_can_toggle_manual_admissible_accompagnement_and_appairage_statuse
 
 @pytest.mark.django_db
 def test_staff_can_filter_candidates_by_parcours_phase_alias():
+    """Teste que Staff can filter candidates by parcours phase alias."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M3A", code_postal="75132")
     formation = Formation.objects.create(
@@ -739,6 +753,7 @@ def test_staff_can_filter_candidates_by_parcours_phase_alias():
 
 @pytest.mark.django_db
 def test_staff_can_still_filter_candidates_by_legacy_statut_during_m3():
+    """Teste que Staff can still filter candidates by legacy statut during m3."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M3B", code_postal="75133")
     formation = Formation.objects.create(
@@ -787,6 +802,7 @@ def test_staff_can_still_filter_candidates_by_legacy_statut_during_m3():
 
 @pytest.mark.django_db
 def test_staff_can_order_candidates_by_parcours_phase_during_m3():
+    """Teste que Staff can order candidates by parcours phase during m3."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M3C", code_postal="75134")
     formation = Formation.objects.create(
@@ -835,6 +851,7 @@ def test_staff_can_order_candidates_by_parcours_phase_during_m3():
 
 @pytest.mark.django_db
 def test_staff_cannot_directly_patch_legacy_status_or_phase_fields():
+    """Teste que Staff cannot directly patch legacy status or phase fields."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet R2A", code_postal="75135")
     formation = Formation.objects.create(
@@ -883,6 +900,7 @@ def test_staff_cannot_directly_patch_legacy_status_or_phase_fields():
 
 @pytest.mark.django_db
 def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
+    """Teste que Staff can start formation and align stagiaire role when possible."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2B", code_postal="75129")
     formation = Formation.objects.create(
@@ -930,6 +948,7 @@ def test_staff_can_start_formation_and_align_stagiaire_role_when_possible():
 
 @pytest.mark.django_db
 def test_staff_can_cancel_start_formation_and_revert_role():
+    """Teste que Staff can cancel start formation and revert role."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2B2", code_postal="75129")
     formation = Formation.objects.create(
@@ -981,6 +1000,7 @@ def test_staff_can_cancel_start_formation_and_revert_role():
 
 @pytest.mark.django_db
 def test_staff_can_complete_formation_without_touching_legacy_status():
+    """Teste que Staff can complete formation without touching legacy status."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2C", code_postal="75130")
     formation = Formation.objects.create(
@@ -1020,6 +1040,7 @@ def test_staff_can_complete_formation_without_touching_legacy_status():
 
 @pytest.mark.django_db
 def test_staff_can_abandon_candidate_and_keep_legacy_status_compatible():
+    """Teste que Staff can abandon candidate and keep legacy status compatible."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet M2D", code_postal="75131")
     formation = Formation.objects.create(
@@ -1058,6 +1079,7 @@ def test_staff_can_abandon_candidate_and_keep_legacy_status_compatible():
 
 @pytest.mark.django_db
 def test_staff_can_bulk_validate_inscription_in_scope():
+    """Teste que Staff can bulk validate inscription in scope."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet R3A", code_postal="75136")
     formation = Formation.objects.create(
@@ -1113,6 +1135,7 @@ def test_staff_can_bulk_validate_inscription_in_scope():
 
 @pytest.mark.django_db
 def test_staff_bulk_start_formation_reports_out_of_scope_candidates_as_failed():
+    """Teste que Staff bulk start formation reports out of scope candidates as failed."""
     client = APIClient()
     centre_a = Centre.objects.create(nom="Centre ViewSet R3B-A", code_postal="75137")
     centre_b = Centre.objects.create(nom="Centre ViewSet R3B-B", code_postal="75138")
@@ -1176,6 +1199,7 @@ def test_staff_bulk_start_formation_reports_out_of_scope_candidates_as_failed():
 
 @pytest.mark.django_db
 def test_staff_can_bulk_assign_atelier_tre_in_scope():
+    """Teste que Staff can bulk assign atelier tre in scope."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet R3C", code_postal="75139")
     formation = Formation.objects.create(
@@ -1222,6 +1246,7 @@ def test_staff_can_bulk_assign_atelier_tre_in_scope():
 
 @pytest.mark.django_db
 def test_valider_demande_compte_refuse_collision_email_avec_autre_candidat_reel():
+    """Teste que Valider demande compte refuse collision email avec autre candidat reel."""
     client = APIClient()
     centre = Centre.objects.create(nom="Centre ViewSet 6B", code_postal="75118")
     formation = Formation.objects.create(

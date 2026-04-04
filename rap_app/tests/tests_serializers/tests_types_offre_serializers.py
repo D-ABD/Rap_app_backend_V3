@@ -1,5 +1,6 @@
 # tests/test_typeoffre_serializers.py
 
+"""Tests relatifs a types offre serializers."""
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -8,6 +9,7 @@ from ...models.types_offre import TypeOffre
 
 
 class TypeOffreSerializerTestCase(TestCase):
+    """Cas de test pour Type Offre Serializer Test Case."""
     def setUp(self):
         self.valid_data = {
             "nom": TypeOffre.CRIF,

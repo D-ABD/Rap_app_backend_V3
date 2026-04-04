@@ -1,6 +1,6 @@
 """Sérialiseurs des objectifs Prépa."""
 
-from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
+from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
@@ -17,7 +17,7 @@ from .rich_text_utils import sanitize_rich_text
         )
     ]
 )
-class CentreLightSerializer(serializers.ModelSerializer):
+class ObjectifPrepaCentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour les objectifs Prépa. Lecture seule.
     """
@@ -64,7 +64,7 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
     Sérialiseur pour ObjectifPrepa : centre (nested) / centre_id (write_only), annee, valeur_objectif, commentaire, departement (recalculé), et champs calculés (data_prepa, taux_*, reste_a_faire, taux_retention). create/update : recalculent departement à partir du code_postal du centre et passent user à save(user=user).
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = ObjectifPrepaCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(source="centre", queryset=Centre.objects.all(), write_only=True)
 
     data_prepa = serializers.SerializerMethodField()
@@ -102,31 +102,38 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
             "reste_a_faire",
         ]
 
-    def get_data_prepa(self, obj):
+    @extend_schema_field(serializers.JSONField())
+    def get_data_prepa(self, obj) -> dict:
         """Retourne la propriété data_prepa du modèle (dict) ou {}."""
         return getattr(obj, "data_prepa", {}) or {}
 
-    def get_taux_prescription(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_prescription(self, obj) -> float | None:
         """Retourne la propriété taux_prescription du modèle."""
         return getattr(obj, "taux_prescription", None)
 
-    def get_taux_presence(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_presence(self, obj) -> float | None:
         """Retourne la propriété taux_presence du modèle."""
         return getattr(obj, "taux_presence", None)
 
-    def get_taux_adhesion(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_adhesion(self, obj) -> float | None:
         """Retourne la propriété taux_adhesion du modèle."""
         return getattr(obj, "taux_adhesion", None)
 
-    def get_taux_atteinte(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_atteinte(self, obj) -> float | None:
         """Retourne la propriété taux_atteinte du modèle."""
         return getattr(obj, "taux_atteinte", None)
 
-    def get_reste_a_faire(self, obj):
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_reste_a_faire(self, obj) -> int | None:
         """Retourne la propriété reste_a_faire du modèle."""
         return getattr(obj, "reste_a_faire", None)
 
-    def get_taux_retention(self, obj):
+    @extend_schema_field(serializers.FloatField())
+    def get_taux_retention(self, obj) -> float:
         """Retourne Prepa.taux_retention(centre, annee) ou 0 si centre ou annee absent."""
         if not obj.centre or not obj.annee:
             return 0

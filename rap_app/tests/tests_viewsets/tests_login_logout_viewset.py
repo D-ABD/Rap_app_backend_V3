@@ -3,3 +3,4 @@
 # Authorization: Bearer <access_token> pour les requêtes protégées.
 # Pour tester les vues protégées, utiliser force_authenticate(user=...) ou obtenir un JWT
 # via le client (POST /api/token/, puis utiliser le token dans les en-têtes).
+"""Tests relatifs a login logout viewset."""

@@ -1,3 +1,4 @@
+"""Tests relatifs a candidate phase stats."""
 from datetime import timedelta
 
 from django.urls import reverse
@@ -14,6 +15,7 @@ from rap_app.models.types_offre import TypeOffre
 
 
 class CandidatePhaseStatsTests(APITestCase):
+    """Cas de test pour Candidate Phase Stats Tests."""
     def setUp(self):
         self.staff = CustomUser.objects.create_user_with_role(
             email="stats.phase.staff@example.com",

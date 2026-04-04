@@ -1,3 +1,4 @@
+"""Tests relatifs a commentaires."""
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -12,6 +13,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class CommentaireModelTest(BaseModelTestSetupMixin):
+    """Cas de test pour Commentaire Model Test."""
     def setUp(self):
         super().setUp()
 

@@ -1,3 +1,4 @@
+"""Tests relatifs a commentaires viewsets."""
 from datetime import timedelta
 
 from django.urls import reverse
@@ -15,6 +16,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class CommentaireViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Commentaire View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

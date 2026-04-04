@@ -1,3 +1,4 @@
+"""Tests relatifs a documents viewsets."""
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -13,6 +14,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class DocumentViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Document View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

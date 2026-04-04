@@ -1,3 +1,4 @@
+"""Tests relatifs a logs serializers."""
 from django.test import TestCase
 
 from ...api.serializers.logs_serializers import LogUtilisateurSerializer
@@ -7,6 +8,7 @@ from ...models.logs import LogUtilisateur
 
 
 class LogUtilisateurSerializerTestCase(TestCase):
+    """Cas de test pour Log Utilisateur Serializer Test Case."""
     def setUp(self):
         self.user = CustomUser.objects.create_user(
             email="log@test.com", username="loguser", password="testpass", role=CustomUser.ROLE_ADMIN, is_staff=True

@@ -1,12 +1,15 @@
 """Sérialiseurs de la CVthèque."""
 
+from datetime import date
+
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from ...models.candidat import Candidat
 from ...models.cvtheque import CVTheque
 
 
-class CandidatMiniSerializer(serializers.ModelSerializer):
+class CVThequeCandidatMiniSerializer(serializers.ModelSerializer):
     """
     Sérialiseur minimal du modèle Candidat pour inclusion en lecture seule dans les sérialiseurs CVthèque.
     """
@@ -32,7 +35,7 @@ class CVThequeBaseSerializer(serializers.ModelSerializer):
     Base commune pour list et detail : candidat (nested), extension, taille, download_url, preview_url, et champs formation_* (SerializerMethodField).
     """
 
-    candidat = CandidatMiniSerializer(read_only=True)
+    candidat = CVThequeCandidatMiniSerializer(read_only=True)
     extension = serializers.CharField(read_only=True)
     taille = serializers.CharField(read_only=True)
 
@@ -44,34 +47,40 @@ class CVThequeBaseSerializer(serializers.ModelSerializer):
     formation_type_offre = serializers.SerializerMethodField()
     formation_num_offre = serializers.SerializerMethodField()
 
-    def get_download_url(self, obj):
+    @extend_schema_field(serializers.URLField())
+    def get_download_url(self, obj) -> str:
         """URL absolue pour le téléchargement du CV (nécessite request dans le contexte)."""
         request = self.context.get("request")
         return request.build_absolute_uri(f"/api/cvtheque/{obj.id}/download/")
 
-    def get_preview_url(self, obj):
+    @extend_schema_field(serializers.URLField())
+    def get_preview_url(self, obj) -> str:
         """URL absolue pour la prévisualisation du CV (nécessite request dans le contexte)."""
         request = self.context.get("request")
         return request.build_absolute_uri(f"/api/cvtheque/{obj.id}/preview/")
 
-    def get_formation_nom(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_nom(self, obj) -> str | None:
         """Nom de la formation du candidat (candidat.formation.nom)."""
         f = getattr(obj.candidat, "formation", None)
         return getattr(f, "nom", None)
 
-    def get_formation_centre(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_centre(self, obj) -> str | None:
         """Nom du centre de la formation du candidat (candidat.formation.centre.nom)."""
         f = getattr(obj.candidat, "formation", None)
         c = getattr(f, "centre", None)
         return getattr(c, "nom", None)
 
-    def get_formation_type_offre(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_type_offre(self, obj) -> str | None:
         """Type d'offre de la formation (candidat.formation.type_offre.nom)."""
         f = getattr(obj.candidat, "formation", None)
         t = getattr(f, "type_offre", None)
         return getattr(t, "nom", None)
 
-    def get_formation_num_offre(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_num_offre(self, obj) -> str | None:
         """Numéro d'offre de la formation (candidat.formation.num_offre)."""
         f = getattr(obj.candidat, "formation", None)
         return getattr(f, "num_offre", None)
@@ -143,22 +152,26 @@ class CVThequeDetailSerializer(CVThequeBaseSerializer):
         """Retourne la formation du candidat ou None."""
         return getattr(obj.candidat, "formation", None)
 
-    def get_formation_statut(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_statut(self, obj) -> str | None:
         """Nom du statut de la formation (candidat.formation.statut.nom)."""
         f = self._formation(obj)
         return getattr(f.statut, "nom", None) if f and f.statut else None
 
-    def get_formation_start_date(self, obj):
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_formation_start_date(self, obj) -> date | None:
         """Date de début de la formation du candidat."""
         f = self._formation(obj)
         return getattr(f, "start_date", None)
 
-    def get_formation_end_date(self, obj):
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_formation_end_date(self, obj) -> date | None:
         """Date de fin de la formation du candidat."""
         f = self._formation(obj)
         return getattr(f, "end_date", None)
 
-    def get_formation_resume(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_formation_resume(self, obj) -> str | None:
         """Résumé de la formation (candidat.formation.resume)."""
         f = self._formation(obj)
         return getattr(f, "resume", None)

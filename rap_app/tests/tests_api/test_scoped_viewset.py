@@ -1,3 +1,4 @@
+"""Tests relatifs a scoped viewset."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -13,12 +14,14 @@ from rap_app.tests.factories import UserFactory
 
 
 class DummyFormationScopedViewSet(ScopedModelViewSet):
+    """Cas de test pour Dummy Formation Scoped View Set."""
     queryset = Formation.objects.all()
     scope_mode = "centre"
     centre_lookup_paths = ("centre_id",)
 
 
 class ScopedModelViewSetTests(TestCase):
+    """Cas de test pour Scoped Model View Set Tests."""
     def setUp(self):
         self.factory = APIRequestFactory()
         self.centre_visible = Centre.objects.create(nom="Centre visible")

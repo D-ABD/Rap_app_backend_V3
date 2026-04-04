@@ -1,3 +1,4 @@
+"""Tests relatifs a statut serializers."""
 from rest_framework.test import APITestCase
 
 from rap_app.api.serializers.statut_serializers import StatutSerializer
@@ -5,6 +6,7 @@ from rap_app.models.statut import Statut
 
 
 class StatutSerializerTestCase(APITestCase):
+    """Cas de test pour Statut Serializer Test Case."""
     def setUp(self):
         self.default_data = {
             "nom": Statut.RECRUTEMENT_EN_COURS,

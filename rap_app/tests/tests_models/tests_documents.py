@@ -1,3 +1,4 @@
+"""Tests relatifs a documents."""
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch

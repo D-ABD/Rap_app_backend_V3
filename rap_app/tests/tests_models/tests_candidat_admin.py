@@ -1,3 +1,4 @@
+"""Tests relatifs a candidat admin."""
 from datetime import timedelta
 from unittest.mock import Mock
 
@@ -15,6 +16,7 @@ from rap_app.models.types_offre import TypeOffre
 
 
 class CandidatAdminLifecycleActionsTests(TestCase):
+    """Cas de test pour Candidat Admin Lifecycle Actions Tests."""
     def setUp(self):
         self.factory = RequestFactory()
         self.site = AdminSite()

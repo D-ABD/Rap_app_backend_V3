@@ -1,3 +1,4 @@
+"""Tests relatifs a commentaires appairage serializers."""
 from django.test import TestCase
 
 from ...api.serializers.commentaires_appairage_serializers import CommentaireAppairageWriteSerializer
@@ -12,6 +13,7 @@ from ...models.types_offre import TypeOffre
 
 
 class CommentaireAppairageWriteSerializerTestCase(TestCase):
+    """Cas de test pour Commentaire Appairage Write Serializer Test Case."""
     def setUp(self):
         self.user = CustomUser.objects.create_user(
             email="appairage.comments@example.com",

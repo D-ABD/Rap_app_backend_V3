@@ -1,5 +1,6 @@
 # rap_app/tests/base.py
 
+"""Tests relatifs a setup base tests."""
 from django.test import TestCase
 from django.utils.timezone import now
 

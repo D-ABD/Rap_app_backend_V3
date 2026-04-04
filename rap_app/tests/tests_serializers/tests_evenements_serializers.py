@@ -1,3 +1,4 @@
+"""Tests relatifs a evenements serializers."""
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -17,6 +18,7 @@ User = get_user_model()
 
 
 class EvenementSerializerTestCase(TestCase):
+    """Cas de test pour Evenement Serializer Test Case."""
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
         self.formation = Formation.objects.create(

@@ -2,6 +2,8 @@
 
 Date du diagnostic: 2026-04-03
 
+Mise a jour de reference: 2026-04-04
+
 ## 0. Etat actuel du chantier
 
 Ce document de diagnostic a ete relu et mis a jour apres une phase importante de stabilisation.
@@ -19,10 +21,15 @@ Resume a date:
   - ajout d'une suppression definitive securisee separee du `DELETE` standard
   - mise en place des corbeilles visibles sur de nombreux modules principaux
   - gros realignement du frontend sur le format `success / message / data`
+  - implementation du nouveau cadre `roles / scope` (`commercial`, `charge_recrutement`, specialisations prepa/declic, candidats/stagiaires limites)
+  - audit et renforcement des docstrings backend sur le perimetre utile hors `views`
+  - fermeture de l'audit docstrings sur `rap_app / rap_app_project`
+  - normalisation structurelle du schema OpenAPI genere (`summaries`, `reponses`, `parametres`, exports fichiers)
 - `en attente de recette utilisateur`:
   - validation ecran par ecran des parcours `creer / modifier / archiver / restaurer / supprimer definitivement`
   - verification des droits reels selon les roles dans l'application
 - `reste hors perimetre courant`:
+  - refonte front / template MUI / nouvelle architecture UI si ce chantier est confirme
   - optimisation de performance frontend
   - unification complete du client HTTP frontend
   - refactors structurels lourds
@@ -47,6 +54,20 @@ Commandes executees:
 - `env/bin/python -m pytest rap_app/tests/tests_api/test_api_response_contract.py -q` -> stabilise et valide en execution reelle avec PostgreSQL disponible
 - plusieurs tests Django cibles sur les modules archives/restauration/hard delete ont ete executes avec succes
 - `npm run type-check`, `npm run lint`, `npm run build` -> verification partielle seulement; la validation frontend reste surtout fonctionnelle et utilisateur
+- scans AST et `py_compile` sur le backend utile -> campagne docstrings fermee sur le perimetre audite
+
+## 0.1 Lecture recommandee de la documentation projet
+
+Documents de reference a garder :
+- `DIAGNOSTIC_COMPLET_APP.md` : vue macro et priorites actuelles
+- `recommandation_roles_modules.md` : reference metier sur les roles et modules
+- `AUDIT_DOCSTRINGS_BACKEND.md` : etat final de l'audit documentaire backend
+- `audit_incoherences_doc_api.md` : diagnostic de la doc OpenAPI generee
+- `IMPLEMENTATION_BACKLOG.md` : historique de chantier et reste eventuel avant refonte UI
+
+Lecture pratique :
+- le backend est aujourd'hui une base suffisamment stable pour lancer une refonte front
+- la prochaine grosse priorite n'est plus un rattrapage backend, mais une decision claire sur la future interface
 
 ## 2. Vue d'ensemble de l'application
 

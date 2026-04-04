@@ -20,6 +20,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class SuiviJuryModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour Suivi Jury Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")
@@ -46,6 +47,7 @@ class SuiviJuryModelTest(BaseModelTestSetupMixin, TestCase):
 
 
 class VAEModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour V A E Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")

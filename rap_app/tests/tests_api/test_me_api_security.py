@@ -1,3 +1,4 @@
+"""Tests relatifs a me api security."""
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -7,6 +8,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class MeApiSecurityTests(APITestCase):
+    """Cas de test pour Me Api Security Tests."""
     def setUp(self):
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN, password="password123")
         self.client.force_authenticate(user=self.user)

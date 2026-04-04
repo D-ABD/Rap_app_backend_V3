@@ -1,5 +1,6 @@
 # tests/test_custom_user_serializers.py
 
+"""Tests relatifs a user profile serializers."""
 from django.test import TestCase
 
 from ...api.serializers.user_profil_serializers import (
@@ -11,6 +12,7 @@ from ...models.custom_user import CustomUser
 
 
 class CustomUserSerializerTestCase(TestCase):
+    """Cas de test pour Custom User Serializer Test Case."""
     def setUp(self):
         self.valid_data = {
             "email": "test@example.com",

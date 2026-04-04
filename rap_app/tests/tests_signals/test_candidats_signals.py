@@ -1,3 +1,4 @@
+"""Tests relatifs a candidats signals."""
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -8,6 +9,7 @@ User = get_user_model()
 
 @pytest.mark.django_db
 class TestSyncCandidatForUser:
+    """Cas de test pour Test Sync Candidat For User."""
     def test_reconciliation_does_not_run_in_audit_only_mode(self, caplog):
         """
         Vérifie que le signal ne lie plus automatiquement le candidat en mode audit-only.

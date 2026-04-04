@@ -1,5 +1,6 @@
 # tests/test_formation_serializers.py
 
+"""Tests relatifs a formations serializers."""
 import tempfile
 from datetime import date
 
@@ -29,6 +30,7 @@ User = get_user_model()
 
 
 class FormationSerializerTest(TestCase):
+    """Cas de test pour Formation Serializer Test."""
     def setUp(self):
         self.user = User.objects.create_user(username="commenter", email="commenter@example.com", password="pass")
         self.centre = Centre.objects.create(nom="Test Centre")
@@ -99,6 +101,7 @@ class FormationSerializerTest(TestCase):
 
 
 class CommentaireSerializerTest(TestCase):
+    """Cas de test pour Commentaire Serializer Test."""
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
         self.formation = Formation.objects.create(
@@ -118,6 +121,7 @@ class CommentaireSerializerTest(TestCase):
 
 
 class DocumentSerializerTest(TestCase):
+    """Cas de test pour Document Serializer Test."""
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
         self.formation = Formation.objects.create(
@@ -141,6 +145,7 @@ class DocumentSerializerTest(TestCase):
 
 
 class EvenementSerializerTest(TestCase):
+    """Cas de test pour Evenement Serializer Test."""
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", email="test@example.com", password="pass")
         self.formation = Formation.objects.create(

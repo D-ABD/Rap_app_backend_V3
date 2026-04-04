@@ -1,3 +1,4 @@
+"""Tests relatifs a documents serializers."""
 from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -18,6 +19,7 @@ from ...models.types_offre import TypeOffre
 
 
 class DocumentSerializerTestCase(TestCase):
+    """Cas de test pour Document Serializer Test Case."""
     def setUp(self):
         self.user = CustomUser.objects.create_user(
             email="test@example.com", username="testuser", password="testpass", is_staff=True

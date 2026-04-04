@@ -1,5 +1,6 @@
 # tests/tests_models/tests_logs.py
 
+"""Tests relatifs a logs."""
 from datetime import timedelta
 
 from django.test import TestCase
@@ -15,6 +16,7 @@ from .setup_base_tests import BaseModelTestSetupMixin
 
 
 class LogUtilisateurModelTest(BaseModelTestSetupMixin, TestCase):
+    """Cas de test pour Log Utilisateur Model Test."""
     def setUp(self):
         super().setUp()
         self.centre = self.create_instance(Centre, nom="Centre Test")

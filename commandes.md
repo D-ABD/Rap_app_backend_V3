@@ -2,6 +2,18 @@
 # GESTION DE PROJET DJANGO - CHEAT SHEET (Python3/Pip3)
 # ========================================================
  
+Swagger UI
+http://localhost:8000/api/docs/ 
+
+
+ReDoc
+http://localhost:8000/api/redoc/ 
+
+
+schéma telechargement
+http://localhost:8000/api/schema/ 
+
+
 python3 manage.py check    
 python3 manage.py makemigrations 
 python3 manage.py migrate 
@@ -116,7 +128,7 @@ Tu as fini le P0-01 (Signals) ? Fais un commit : git commit -am "Fix: Sécurisat
 
 Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourras revenir en arrière uniquement sur ce commit avec git revert au lieu de devoir restaurer tout ton Zip.
 
-# Configuration initiale
+# Configuration initiale 
 git init
 git add .
 git commit -m "Lock partner write access and fix inactive user reactivation"

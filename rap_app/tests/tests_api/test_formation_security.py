@@ -1,3 +1,4 @@
+"""Tests relatifs a formation security."""
 from datetime import timedelta
 
 from django.utils import timezone
@@ -13,6 +14,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class FormationSecurityTests(APITestCase):
+    """Cas de test pour Formation Security Tests."""
     def _create_formation(self, centre, nom="Formation Test"):
         today = timezone.localdate()
 
@@ -177,6 +179,7 @@ from rap_app.tests.factories import UserFactory
 @pytest.mark.django_db
 def test_export_xlsx_respects_centre_scope():
 
+    """Teste que Export xlsx respects centre scope."""
     client = APIClient()
 
     centre_a = Centre.objects.create(nom="Centre A")

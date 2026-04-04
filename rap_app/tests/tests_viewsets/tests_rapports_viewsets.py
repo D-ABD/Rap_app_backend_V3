@@ -1,3 +1,4 @@
+"""Tests relatifs a rapports viewsets."""
 from datetime import date, timedelta
 
 from django.contrib.contenttypes.models import ContentType
@@ -16,6 +17,7 @@ from ..test_utils import AuthenticatedTestCase
 
 
 class RapportViewSetTestCase(AuthenticatedTestCase):
+    """Cas de test pour Rapport View Set Test Case."""
     def setUp(self):
         super().setUp()
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)

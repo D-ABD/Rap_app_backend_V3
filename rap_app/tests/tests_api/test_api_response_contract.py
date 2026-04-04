@@ -1,3 +1,4 @@
+"""Tests relatifs a api response contract."""
 from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -29,6 +30,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class ApiResponseContractTests(APITestCase):
+    """Cas de test pour Api Response Contract Tests."""
     def setUp(self):
         self.user = UserFactory(role=CustomUser.ROLE_ADMIN)
         self.client.force_authenticate(user=self.user)

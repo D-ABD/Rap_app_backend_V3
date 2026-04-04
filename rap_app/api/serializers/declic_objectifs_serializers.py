@@ -1,6 +1,6 @@
 """Sérialiseurs des objectifs Déclic."""
 
-from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
+from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
@@ -17,7 +17,7 @@ from .rich_text_utils import sanitize_rich_text
         )
     ]
 )
-class CentreLightSerializer(serializers.ModelSerializer):
+class ObjectifDeclicCentreLightSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom, departement, code_postal) pour imbrication dans les objectifs Déclic.
     Lecture seule.
@@ -66,7 +66,7 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
     validate_valeur_objectif : valeur strictement positive. create/update : recalculent departement à partir du code_postal du centre.
     """
 
-    centre = CentreLightSerializer(read_only=True)
+    centre = ObjectifDeclicCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(source="centre", queryset=Centre.objects.all(), write_only=True)
 
     data_declic = serializers.SerializerMethodField()
@@ -108,27 +108,33 @@ class ObjectifDeclicSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("La valeur de l'objectif doit être strictement positive.")
         return value
 
-    def get_data_declic(self, obj):
+    @extend_schema_field(serializers.JSONField())
+    def get_data_declic(self, obj) -> dict:
         """Retourne la propriété data_declic du modèle (dict) ou {}."""
         return getattr(obj, "data_declic", {}) or {}
 
-    def get_taux_prescription(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_prescription(self, obj) -> float | None:
         """Retourne la propriété taux_prescription du modèle."""
         return getattr(obj, "taux_prescription", None)
 
-    def get_taux_presence(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_presence(self, obj) -> float | None:
         """Retourne la propriété taux_presence du modèle."""
         return getattr(obj, "taux_presence", None)
 
-    def get_taux_adhesion(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_adhesion(self, obj) -> float | None:
         """Retourne la propriété taux_adhesion du modèle."""
         return getattr(obj, "taux_adhesion", None)
 
-    def get_taux_atteinte(self, obj):
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_atteinte(self, obj) -> float | None:
         """Retourne la propriété taux_atteinte du modèle."""
         return getattr(obj, "taux_atteinte", None)
 
-    def get_reste_a_faire(self, obj):
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_reste_a_faire(self, obj) -> int | None:
         """Retourne la propriété reste_a_faire du modèle."""
         return getattr(obj, "reste_a_faire", None)
 

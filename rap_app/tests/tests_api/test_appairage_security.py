@@ -1,3 +1,4 @@
+"""Tests relatifs a appairage security."""
 from io import BytesIO
 
 from openpyxl import load_workbook
@@ -19,6 +20,7 @@ from rap_app.tests.factories import UserFactory
 
 
 class AppairageSecurityTests(APITestCase):
+    """Cas de test pour Appairage Security Tests."""
     def setUp(self):
         self.type_offre = TypeOffre.objects.create(nom=TypeOffre.CRIF)
         self.statut = Statut.objects.create(nom=Statut.NON_DEFINI)

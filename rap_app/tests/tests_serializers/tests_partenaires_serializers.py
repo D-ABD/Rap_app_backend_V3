@@ -1,5 +1,6 @@
 # tests/test_partenaire_serializers.py
 
+"""Tests relatifs a partenaires serializers."""
 from django.test import TestCase
 
 from ...api.serializers.partenaires_serializers import PartenaireSerializer
@@ -7,6 +8,7 @@ from ...models.partenaires import Partenaire
 
 
 class PartenaireSerializerTestCase(TestCase):
+    """Cas de test pour Partenaire Serializer Test Case."""
     def setUp(self):
         self.valid_data = {
             "nom": "ACME Corp",

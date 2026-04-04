@@ -1,3 +1,4 @@
+"""Tests relatifs a lot5 performance serializers."""
 from datetime import timedelta
 
 from django.db.models import Prefetch
@@ -21,6 +22,7 @@ from rap_app.models.types_offre import TypeOffre
 
 
 class Lot5PerformanceSerializerTests(TestCase):
+    """Cas de test pour Lot5 Performance Serializer Tests."""
     def setUp(self):
         self.user = CustomUser.objects.create_user_with_role(
             email="lot5@example.com",

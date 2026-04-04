@@ -15,10 +15,8 @@ un développeur en erreur :
 
 ## Périmètre audité
 
-- `rap_app/api`
-- `rap_app/services`
-- `rap_app/models`
-- `rap_app/signals`
+- `rap_app`
+- `rap_app_project`
 
 Le dépôt contient au total `327` fichiers Python sous `rap_app`. L'audit
 présent ici cible la qualité et la cohérence documentaire du backend, pas
@@ -34,15 +32,9 @@ seulement la présence brute d'une docstring.
 
 ## Résultat honnête
 
-Le backend n'est pas encore "100 % documenté" au sens strict.
+Le constat final sur le périmètre choisi est désormais bon.
 
-Constat principal :
-- beaucoup de fichiers n'ont pas encore de docstring de module ;
-- plusieurs helpers internes n'ont pas de docstring ;
-- les zones les plus sensibles côté rôles/scope et signals sont maintenant
-  beaucoup plus cohérentes après cette passe.
-
-Nouveau constat après les passes suivantes :
+Constat final :
 - `rap_app/api/viewsets` est fermé au scan AST sur les docstrings de module,
   classes et fonctions de premier niveau ;
 - `rap_app/api/serializers` est fermé au scan AST sur ce même périmètre ;
@@ -51,22 +43,29 @@ Nouveau constat après les passes suivantes :
 - `rap_app/signals` est fermé au scan AST sur ce même périmètre ;
 - la compilation Python sur `api / services / models / signals` est verte.
 
-Constat complémentaire sur le reste utile hors `views` :
+Constat complémentaire sur le reste du projet Python :
 - `rap_app/admin`
 - `rap_app/utils`
+- `rap_app/views`
+- `rap_app/tests`
 - `rap_app/apps.py`
 - `rap_app/middleware.py`
 - `rap_app/spectacular_hooks.py`
 - `rap_app/management`
 - `rap_app/forms`
 - `rap_app/templatetags`
+- `rap_app/__init__.py`
+- `rap_app/static`
+- `rap_app_project`
 
 sont eux aussi fermés au scan AST sur les docstrings de module, classes et
 fonctions de premier niveau, avec compilation Python verte sur ce périmètre.
 
 Donc :
-- cohérence documentaire critique : nettement améliorée ;
-- complétude absolue : pas encore atteinte.
+- cohérence documentaire critique : renforcée ;
+- couverture structurelle sur `rap_app / rap_app_project` : atteinte ;
+- les éventuelles améliorations restantes relèvent désormais du style ou d'une
+  relecture sémantique plus fine, pas d'un manque structurel de docstrings.
 
 ## Fichiers relus et corrigés dans cette passe
 
@@ -120,20 +119,23 @@ Le lot a été repris systématiquement :
 
 Le lot est désormais fermé au scan AST, y compris `signals/__init__.py`.
 
-### Reste utile hors `views`
+### Reste du projet Python
 
 Le périmètre suivant a été repris et fermé au scan AST :
 - `rap_app/admin`
 - `rap_app/utils`
+- `rap_app/views`
+- `rap_app/tests`
 - `rap_app/apps.py`
 - `rap_app/middleware.py`
 - `rap_app/spectacular_hooks.py`
 - `rap_app/management`
 - `rap_app/forms`
 - `rap_app/templatetags`
+- `rap_app_project`
 
-Ce point permet de considérer que la quasi-totalité du backend réellement
-utile au projet est maintenant couverte structurellement en docstrings.
+Ce point permet de considérer que le backend/projet Python utile est maintenant
+couverte structurellement en docstrings.
 
 ## Corrections de cohérence apportées
 
@@ -192,9 +194,8 @@ utile au projet est maintenant couverte structurellement en docstrings.
 ### Priorité haute
 
 - relecture sémantique fine des docstrings longues les plus sensibles si l'on
-  veut aller au-delà du scan structurel
-- homogénéisation éventuelle du style rédactionnel sur tout le backend
-- `views` Django historiques, si tu souhaites finalement les documenter aussi
+  veut aller au-delà du scan structurel ;
+- homogénéisation éventuelle du style rédactionnel sur tout le backend.
 
 ### Priorité moyenne
 
@@ -207,26 +208,27 @@ utile au projet est maintenant couverte structurellement en docstrings.
 
 ## Résumé du scan AST
 
-Le scan automatique a remonté un volume important de fichiers avec :
-- docstring de module absente
-- certaines classes sans docstring
-- certaines fonctions/helpers sans docstring
+Le scan AST a d'abord servi d'inventaire de rattrapage.
 
-Ce scan est utile comme inventaire, mais il ne suffit pas à lui seul pour
-prouver une incohérence métier. C'est pour cela que cette passe a priorisé les
-zones où une docstring erronée pouvait réellement tromper un développeur.
+Après correction :
+- le périmètre `rap_app / rap_app_project` audité est à `TOTAL 0` ;
+- ce résultat concerne les docstrings de module, classes de premier niveau et
+  fonctions de premier niveau ;
+- ce résultat ne vaut pas, à lui seul, validation sémantique absolue de chaque
+  phrase, mais il ferme bien le chantier structurel.
 
 ## Conclusion
 
-Le backend est maintenant fortement mieux documenté et le périmètre audité est
-fermé au scan structurel.
+Le backend et le projet Python associé sont maintenant bien documentés sur le
+périmètre audité et ce périmètre est fermé au scan structurel.
 
 Formulation honnête :
-- cohérence critique des docstrings : oui, nettement renforcée
+- cohérence critique des docstrings : oui
 - scan AST `module / classes / fonctions de premier niveau` sur
   `api / services / models / signals` : `TOTAL 0`
-- scan AST sur le reste utile hors `views` (`admin / utils / middleware /
-  apps / management / forms / templatetags`) : `TOTAL 0`
+- scan AST sur le reste du projet Python (`admin / utils / views / tests /
+  middleware / apps / management / forms / templatetags / rap_app_project`) :
+  `TOTAL 0`
 - vérification sémantique absolue ligne par ligne de chaque docstring : jamais
   garantie à 100 %, mais les zones les plus risquées ont été relues et corrigées
 
