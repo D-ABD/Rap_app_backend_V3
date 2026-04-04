@@ -30,7 +30,7 @@ export default function TypeOffresCreatePage() {
     api
       .get("/typeoffres/choices/")
       .then((res) => {
-        const payload = res.data.results?.results || res.data.results || res.data.data || [];
+        const payload = res.data?.data?.results ?? res.data?.data ?? [];
         setChoices(Array.isArray(payload) ? payload : []);
       })
       .catch(() => {

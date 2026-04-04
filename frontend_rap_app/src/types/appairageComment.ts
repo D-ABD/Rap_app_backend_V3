@@ -74,7 +74,7 @@ export interface AppairageCommentListParams {
   appairage_statut?: string;
 
   // 🆕 Filtres d’état / archivage
-  est_archive?: boolean;
+  est_archive?: boolean | "both";
   activite?: "actif" | "archive";
   statut_commentaire?: "actif" | "archive";
 

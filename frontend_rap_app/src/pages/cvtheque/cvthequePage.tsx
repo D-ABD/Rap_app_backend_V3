@@ -22,11 +22,13 @@ import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 
 import { CVThequeItem } from "src/types/cvtheque";
-import { useCVThequeList, useDeleteCV } from "src/hooks/useCvtheque";
+import { useCVThequeList, useDeleteCV, useRestoreCV, useHardDeleteCV } from "src/hooks/useCvtheque";
 import CVThequeFiltresPanel from "../../components/filters/CVThequeFiltresPanel";
 import { toast } from "react-toastify";
 import CVThequeTable from "./cvthequeTable";
 import CVThequePreview from "./cvthequePreview";
+import { useAuth } from "../../hooks/useAuth";
+import { isAdminLikeRole } from "../../utils/roleGroups";
 
 // -------------------------------
 // TYPES FILTRES
@@ -40,6 +42,8 @@ export type CVFilters = {
   type_offre_id?: number;
   statut_formation?: number;
   document_type?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 };
 
 const defaultFilters: CVFilters = {};
@@ -62,6 +66,9 @@ export default function CVThequePage() {
 
   const [previewItem, setPreviewItem] = useState<CVThequeItem | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const { user } = useAuth();
+  const canHardDelete = isAdminLikeRole(user?.role);
 
   const {
     page,
@@ -86,6 +93,8 @@ export default function CVThequePage() {
       formation_id: filters.formation_id || undefined,
       type_offre_id: filters.type_offre_id || undefined,
       statut_formation: filters.statut_formation || undefined,
+      avec_archivees: filters.avec_archivees ? true : undefined,
+      archives_seules: filters.archives_seules ? true : undefined,
       page,
       page_size: pageSize,
     }),
@@ -105,6 +114,8 @@ export default function CVThequePage() {
   // -------------------------------
   const { data, loading, reload } = useCVThequeList(queryParams);
   const { remove } = useDeleteCV();
+  const { restore } = useRestoreCV();
+  const { hardDelete } = useHardDeleteCV();
 
   const items: CVThequeItem[] = useMemo(
     () => (Array.isArray(data?.results) ? data.results : []),
@@ -124,22 +135,44 @@ export default function CVThequePage() {
   const handleDeleteMultiple = async () => {
     try {
       await Promise.all(selectedIds.map((id) => remove(id)));
-      toast.success("🗑️ CV supprimés !");
+      toast.success("📦 Documents archivés !");
       setConfirmOpen(false);
       setSelectedIds([]);
       reload();
     } catch {
-      toast.error("❌ Erreur lors de la suppression");
+      toast.error("❌ Erreur lors de l'archivage");
     }
   };
 
   const handleDeleteOne = async (id: number) => {
     try {
       await remove(id);
-      toast.success("🗑️ CV supprimé !");
+      toast.success("📦 Document archivé !");
       reload();
     } catch {
-      toast.error("❌ Erreur lors de la suppression");
+      toast.error("❌ Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestoreOne = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("♻️ Document restauré !");
+      reload();
+    } catch {
+      toast.error("❌ Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDeleteOne = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("🗑️ Document supprimé définitivement !");
+      setHardDeleteId(null);
+      reload();
+    } catch {
+      toast.error("❌ Erreur lors de la suppression définitive");
     }
   };
 
@@ -184,11 +217,43 @@ export default function CVThequePage() {
                 setFilters({
                   ...defaultFilters,
                   candidat: scopedCandidateId,
+                  avec_archivees: false,
+                  archives_seules: false,
                 });
                 setPage(1);
               }}
             >
               Réinitialiser
+            </Button>
+          )}
+
+          <Button
+            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                avec_archivees: !prev.avec_archivees && !prev.archives_seules,
+                archives_seules: false,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+
+          {(filters.avec_archivees || filters.archives_seules) && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  avec_archivees: false,
+                  archives_seules: !prev.archives_seules,
+                }));
+                setPage(1);
+              }}
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
             </Button>
           )}
 
@@ -212,14 +277,14 @@ export default function CVThequePage() {
             Ajouter un CV
           </Button>
 
-          {/* Suppression */}
+          {/* Archivage */}
           {selectedIds.length > 0 && (
             <Button
               color="error"
               startIcon={<DeleteIcon />}
               onClick={() => setConfirmOpen(true)}
             >
-              Supprimer ({selectedIds.length})
+              Archiver ({selectedIds.length})
             </Button>
           )}
         </Stack>
@@ -266,6 +331,9 @@ export default function CVThequePage() {
   onPreview={handlePreview}
   onEdit={handleEdit}   // ✅ CORRECTION ICI
   onDelete={handleDeleteOne}
+  onRestore={handleRestoreOne}
+  onHardDelete={(id) => setHardDeleteId(id)}
+  canHardDelete={canHardDelete}
 />
 
       )}
@@ -290,18 +358,33 @@ export default function CVThequePage() {
         </Stack>
       </Stack>
 
-      {/* CONFIRM DELETE MULTIPLE */}
+      {/* CONFIRM ARCHIVE MULTIPLE */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Confirmer la suppression de {selectedIds.length} document(s) ?
+            Confirmer l'archivage de {selectedIds.length} document(s) ?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDeleteMultiple}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Le document archivé sera supprimé définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDeleteOne}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

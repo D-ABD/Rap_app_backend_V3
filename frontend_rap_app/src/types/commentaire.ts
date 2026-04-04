@@ -29,6 +29,7 @@ export interface Commentaire {
   saturation?: number; // éventuel champ "legacy"
   saturation_formation?: number; // saturation au moment du commentaire
   taux_saturation?: number | null; // saturation actuelle de la formation
+  taux_transformation?: number | null; // transformation actuelle de la formation
   saturation_commentaires?: number | null; // moyenne des saturations des commentaires
 
   // --- Statut & logique d’archivage ---
@@ -113,6 +114,11 @@ export interface CommentaireFiltresValues {
   formation_etat?: string;
   auteur_id?: number; // ✅ ajout filtre par auteur
   formation_nom?: string; // ✅ ajout filtre texte sur le nom de formation
+  formation?: number;
+  search?: string;
+  date?: string;
+  date_from?: string;
+  date_to?: string;
   include_archived?: boolean;
 
   [key: string]: string | number | boolean | undefined;

@@ -44,8 +44,8 @@ export function useUsers() {
 
   useEffect(() => {
     api
-      .get<{ results: User[] }>("/users/")
-      .then((res) => setUsers(res.data.results || []))
+      .get<{ data?: { results?: User[] }; results?: User[] }>("/users/")
+      .then((res) => setUsers(res.data?.data?.results || res.data?.results || []))
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }, []);

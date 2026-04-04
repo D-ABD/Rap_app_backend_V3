@@ -54,9 +54,127 @@ def test_staff_creer_compte_action():
     data = resp.json()
     assert data["success"] is True
     assert data["message"] == "Compte candidat créé ou lié avec succès."
+    assert data["data"]["user_id"] == cand_user.id
+    assert data["data"]["user_role"] == CustomUser.ROLE_CANDIDAT_USER
 
     cand_user.refresh_from_db()
     assert cand_user.role == CustomUser.ROLE_CANDIDAT_USER
+
+
+@pytest.mark.django_db
+def test_delete_candidate_archives_and_hides_from_default_list():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet Delete", code_postal="75901")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet Delete",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_delete_candidate@example.com",
+        username="staff_delete_candidate",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    cand = Candidat.objects.create(
+        nom="Delete",
+        prenom="Candidate",
+        email="delete-candidate@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    delete_response = client.delete(reverse("candidat-detail", args=[cand.id]))
+    assert delete_response.status_code == 200
+
+    cand.refresh_from_db()
+    assert cand.is_active is False
+
+    list_response = client.get(reverse("candidat-list"))
+    assert list_response.status_code == 200
+    payload = list_response.json().get("data", list_response.json())
+    returned_ids = [item["id"] for item in payload["results"]]
+    assert cand.id not in returned_ids
+
+
+@pytest.mark.django_db
+def test_list_can_include_archived_candidate():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet Archived", code_postal="75902")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet Archived",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_archived_candidate@example.com",
+        username="staff_archived_candidate",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    cand = Candidat.objects.create(
+        nom="Archived",
+        prenom="Candidate",
+        email="archived-candidate@example.com",
+        formation=formation,
+        is_active=False,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    response = client.get(reverse("candidat-list"), {"avec_archivees": "true"})
+    assert response.status_code == 200
+    payload = response.json().get("data", response.json())
+    returned_ids = [item["id"] for item in payload["results"]]
+    assert cand.id in returned_ids
+
+
+@pytest.mark.django_db
+def test_desarchiver_candidate():
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre ViewSet Restore", code_postal="75903")
+    formation = Formation.objects.create(
+        nom="Formation ViewSet Restore",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_restore_candidate@example.com",
+        username="staff_restore_candidate",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    cand = Candidat.objects.create(
+        nom="Restore",
+        prenom="Candidate",
+        email="restore-candidate@example.com",
+        formation=formation,
+        is_active=False,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    response = client.post(reverse("candidat-desarchiver", args=[cand.id]))
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["message"] == "Candidat désarchivé avec succès."
+
+    cand.refresh_from_db()
+    assert cand.is_active is True
 
 
 @pytest.mark.django_db
@@ -102,6 +220,8 @@ def test_staff_creer_compte_refuse_si_deja_compte():
     payload = resp.json()
     assert payload["success"] is True
     assert payload["message"] == "Compte candidat créé ou lié avec succès."
+    assert payload["data"]["user_id"] == cand_user.id
+    assert payload["data"]["user_role"] == CustomUser.ROLE_CANDIDAT_USER
 
     cand_user.refresh_from_db()
     assert cand_user.role == CustomUser.ROLE_CANDIDAT_USER
@@ -227,10 +347,15 @@ def test_staff_valider_demande_compte_cree_compte_lorsque_pas_de_compte():
     url_valider = reverse("candidat-valider-demande-compte", args=[cand.id])
     resp2 = client.post(url_valider)
     assert resp2.status_code == 200
+    payload = resp2.json()
+    assert payload["success"] is True
+    assert payload["message"] == "Demande de compte validée et compte utilisateur créé ou lié."
 
     cand.refresh_from_db()
     assert cand.demande_compte_statut == Candidat.DemandeCompteStatut.ACCEPTEE
     assert cand.compte_utilisateur is not None
+    assert payload["data"]["user_id"] == cand.compte_utilisateur_id
+    assert payload["data"]["user_email"] == cand.compte_utilisateur.email
 
 
 @pytest.mark.django_db

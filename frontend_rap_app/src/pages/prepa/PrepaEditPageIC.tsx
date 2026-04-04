@@ -76,17 +76,17 @@ export default function PrepaEditPageIC() {
   };
 
   /* ─────────────────────────────── */
-  /* 🗑️ Suppression */
+  /* 📦 Archivage */
   /* ─────────────────────────────── */
   const handleDelete = async () => {
     if (Number.isNaN(id)) return;
-    if (!window.confirm("Supprimer cette séance Prépa ?")) return;
+    if (!window.confirm("Archiver cette séance Prépa ?")) return;
     try {
       await remove(id);
-      toast.success("🗑️ Séance supprimée avec succès");
+      toast.success("📦 Séance archivée avec succès");
       navigate("/prepa");
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -156,7 +156,7 @@ export default function PrepaEditPageIC() {
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

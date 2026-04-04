@@ -78,8 +78,40 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
-        self.assertIsNone(response.data["data"])
-        self.assertFalse(Document.objects.filter(id=self.document.id).exists())
+        self.document.refresh_from_db()
+        self.assertFalse(self.document.is_active)
+
+    def test_delete_document_hides_it_from_default_list(self):
+        response = self.client.delete(reverse("document-detail", args=[self.document.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        list_response = self.client.get(reverse("document-list"))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        results = list_response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertNotIn(self.document.id, returned_ids)
+
+    def test_list_documents_can_include_archived(self):
+        self.document.is_active = False
+        self.document.save(update_fields=["is_active"])
+
+        response = self.client.get(reverse("document-list"), {"avec_archivees": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(self.document.id, returned_ids)
+
+    def test_unarchive_document(self):
+        self.document.is_active = False
+        self.document.save(update_fields=["is_active"])
+
+        response = self.client.post(reverse("document-desarchiver", args=[self.document.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.document.refresh_from_db()
+        self.assertTrue(self.document.is_active)
 
     def test_documents_by_formation(self):
         url = reverse("document-par-formation")
@@ -161,3 +193,44 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(reverse("document-detail", args=[self.document.id]))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_commercial_can_list_but_cannot_create_document(self):
+        commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+        commercial.centres.add(self.centre)
+        self.client.force_authenticate(user=commercial)
+
+        list_response = self.client.get(reverse("document-list"))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+
+        file = SimpleUploadedFile("commercial.pdf", b"%PDF-1.4...", content_type="application/pdf")
+        create_response = self.client.post(
+            reverse("document-list"),
+            {
+                "formation": self.formation.id,
+                "nom_fichier": "commercial.pdf",
+                "type_document": Document.PDF,
+                "fichier": file,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_charge_recrutement_can_create_document_in_scope(self):
+        charge = UserFactory(role=CustomUser.ROLE_CHARGE_RECRUTEMENT)
+        charge.centres.add(self.centre)
+        self.client.force_authenticate(user=charge)
+
+        file = SimpleUploadedFile("charge.pdf", b"%PDF-1.4...", content_type="application/pdf")
+        response = self.client.post(
+            reverse("document-list"),
+            {
+                "formation": self.formation.id,
+                "nom_fichier": "charge.pdf",
+                "type_document": Document.PDF,
+                "fichier": file,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

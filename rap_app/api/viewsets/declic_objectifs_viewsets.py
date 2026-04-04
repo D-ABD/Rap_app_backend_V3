@@ -22,11 +22,12 @@ from ...api.roles import (
     is_admin_like,
     is_candidate,
     is_declic_staff,
-    is_staff_or_staffread,
+    is_staff_read,
+    is_staff_standard,
 )
 from ...models.centres import Centre
-from ...models.declic import Declic, ObjectifDeclic  # 🔁 on importe aussi Declic
-from ..mixins import ApiResponseMixin
+from ...models.declic import ObjectifDeclic
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..permissions import IsDeclicStaffOrAbove
 from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
 
@@ -57,20 +58,29 @@ from ..serializers.declic_objectifs_serializers import ObjectifDeclicSerializer
         ],
         responses={200: ObjectifDeclicSerializer(many=True)},
     ),
+    destroy=extend_schema(
+        summary="Archiver un objectif Déclic",
+        description="Archive logiquement un objectif Déclic en le désactivant (`is_active = False`).",
+        responses={200: ObjectifDeclicSerializer},
+    ),
 )
-class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class ObjectifDeclicViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des objectifs annuels Déclic.
 
     Le périmètre est restreint par centre selon le rôle :
-    admin-like, profils Déclic, staff/staff_read. Le fichier conserve un
-    helper local de scope historique et expose en plus des actions utilitaires
-    de filtres, synthèse et export Excel.
+    admin-like, profils Déclic, staff/staff_read. `declic_staff` reste le
+    rôle métier principal, `staff` et `staff_read` gardent un accès transverse,
+    et `commercial` / `charge_recrutement` restent exclus du bloc spécialisé.
+
+    Le fichier conserve un helper local de scope historique et expose en plus
+    des actions utilitaires de filtres, synthèse et export Excel.
     """
 
     serializer_class = ObjectifDeclicSerializer
     permission_classes = [IsAuthenticated, IsDeclicStaffOrAbove]
     queryset = ObjectifDeclic.objects.select_related("centre").all()
+    hard_delete_enabled = True
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["centre__nom", "centre__code_postal", "annee"]
     ordering_fields = ["annee", "centre__nom"]
@@ -88,7 +98,7 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         if is_declic_staff(user):
             centres = getattr(user, "centres_acces", None) or getattr(user, "centres", None)
             return list(centres.values_list("id", flat=True)) if centres else []
-        if is_staff_or_staffread(user):
+        if is_staff_standard(user) or is_staff_read(user):
             try:
                 return list(user.centres.values_list("id", flat=True))
             except Exception:
@@ -123,7 +133,7 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     # -----------------------------------------------------------
     def get_queryset(self):
         """
-        Retourne le queryset d'objectifs Déclic visibles par l'utilisateur actuel.
+        Retourne le queryset d'objectifs Déclic actifs visibles par l'utilisateur actuel.
 
         - Si admin-like : accès total à tous les ObjectifDeclic.
         - Si declic_staff : accès restreint aux centres autorisés (user.centres_acces ou user.centres).
@@ -139,7 +149,7 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
 
         La structure exacte du résultat dépend du serializer.
         """
-        qs = ObjectifDeclic.objects.select_related("centre")
+        qs = ObjectifDeclic.objects.select_related("centre").filter(is_active=True)
         qs = self._scope_qs_to_user_centres(qs)
 
         params = self.request.query_params
@@ -207,9 +217,26 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais remplace la
+        suppression physique par un archivage logique.
+        """
         instance = self.get_object()
-        self.perform_destroy(instance)
-        return self.success_response(data=None, message="Objectif Déclic supprimé avec succès.")
+        if not instance.is_active:
+            serializer = self.get_serializer(instance)
+            return self.success_response(
+                data=serializer.data,
+                message="Objectif Déclic déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Objectif Déclic archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
     # -----------------------------------------------------------
     # 🔹 create / update sécurisés
@@ -332,9 +359,9 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
             "Département",
             "Année",
             "Objectif",
-            "Réalisé (tous ateliers cumulés)",  # ✅ libellé mis à jour
+            "Réalisé (tous ateliers cumulés)",
             "Taux atteinte (%)",
-            "Taux rétention (%)",  # 🆕 calculé avec Declic.taux_retention
+            "Taux rétention (%)",
             "Reste à faire",
         ]
 
@@ -349,8 +376,9 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         # === Données ===
         for obj in qs:
             data = obj.synthese_globale()
-            # 🔢 Rétention A1 → A6 calculée côté modèle Déclic
-            taux_retention = Declic.taux_retention(obj.centre, obj.annee) if obj.centre and obj.annee else 0
+            # Le modèle ObjectifDeclic n'expose pas encore de helper dédié à la rétention.
+            # On laisse explicitement 0 tant qu'une source métier unifiée n'est pas disponible.
+            taux_retention = 0
 
             ws.append(
                 [
@@ -358,9 +386,6 @@ class ObjectifDeclicViewSet(ApiResponseMixin, viewsets.ModelViewSet):
                     obj.centre.departement,
                     data["annee"],
                     data["objectif"],
-                    data["realise"],  # 🔁 maintenant = total ateliers (1→6 + autre)
-                    data["taux_presence"],
-                    data["taux_adhesion"],
                     data["taux_atteinte"],
                     taux_retention,
                     data["reste_a_faire"],

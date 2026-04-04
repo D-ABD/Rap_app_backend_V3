@@ -91,7 +91,7 @@ class MeAPIView(APIView):
         user = request.user
         if user.is_active:
             return Response(
-                {"success": False, "message": "Votre compte est déjà actif."},
+                {"success": False, "message": "Votre compte est déjà actif.", "data": None},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

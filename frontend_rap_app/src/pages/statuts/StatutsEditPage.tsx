@@ -55,7 +55,7 @@ export default function StatutsEditPage() {
       setLibelle(statut.libelle || "");
       setInitialColor(statut.couleur || "#cccccc");
 
-      const rawChoices = choicesRes.data?.results;
+      const rawChoices = choicesRes.data?.data?.results;
       if (Array.isArray(rawChoices)) {
         setChoices(rawChoices);
       } else {

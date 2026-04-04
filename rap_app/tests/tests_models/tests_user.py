@@ -80,11 +80,15 @@ class CustomUserModelTest(TestCase):
         u2 = CustomUser(email="b@b.com", role=CustomUser.ROLE_SUPERADMIN)
         u3 = CustomUser(email="c@c.com", role=CustomUser.ROLE_STAGIAIRE)
         u4 = CustomUser(email="d@d.com", role=CustomUser.ROLE_STAFF)
+        u5 = CustomUser(email="e@e.com", role=CustomUser.ROLE_COMMERCIAL)
+        u6 = CustomUser(email="f@f.com", role=CustomUser.ROLE_CHARGE_RECRUTEMENT)
 
         self.assertTrue(u1.is_admin())
         self.assertTrue(u2.is_superadmin())
         self.assertTrue(u3.is_stagiaire())
         self.assertTrue(u4.is_staff_role())
+        self.assertTrue(u5.is_commercial())
+        self.assertTrue(u6.is_charge_recrutement())
 
     def test_has_module_perms(self):
         admin = CustomUser.objects.create_user(
@@ -98,6 +102,8 @@ class CustomUserModelTest(TestCase):
 
     def test_staff_roles_are_marked_as_staff(self):
         for role in [
+            CustomUser.ROLE_COMMERCIAL,
+            CustomUser.ROLE_CHARGE_RECRUTEMENT,
             CustomUser.ROLE_STAFF,
             CustomUser.ROLE_STAFF_READ,
             CustomUser.ROLE_PREPA_STAFF,
@@ -128,6 +134,8 @@ class CustomUserModelTest(TestCase):
     def test_has_centre_access_for_all_staff_roles(self):
         centre = Centre.objects.create(nom="Centre Staff Roles", code_postal="69001")
         for role in [
+            CustomUser.ROLE_COMMERCIAL,
+            CustomUser.ROLE_CHARGE_RECRUTEMENT,
             CustomUser.ROLE_STAFF,
             CustomUser.ROLE_STAFF_READ,
             CustomUser.ROLE_PREPA_STAFF,

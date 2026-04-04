@@ -26,6 +26,7 @@ from django.db.models import (
 )
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
@@ -1036,6 +1037,8 @@ class Formation(BaseModel):
 
         if type_evenement == Evenement.TypeEvenement.AUTRE and not description_autre:
             raise ValidationError("Veuillez fournir une description pour un événement de type 'Autre'.")
+        if isinstance(event_date, str):
+            event_date = parse_date(event_date) or event_date
         evenement = Evenement.objects.create(
             formation=self,
             type_evenement=type_evenement,
@@ -1108,7 +1111,7 @@ class Formation(BaseModel):
         """
         Retourne les documents liés, filtrés par est_public si précisé.
         """
-        queryset = self.documents.select_related("uploaded_by")
+        queryset = self.documents.select_related("created_by")
         if est_public is not None:
             queryset = queryset.filter(est_public=est_public)
         return queryset

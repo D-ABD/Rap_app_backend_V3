@@ -10,7 +10,7 @@ import { useCreateDeclic, useDeclicMeta } from "src/hooks/useDeclic";
 import DeclicForm from "./DeclicForm";
 
 /**
- * Page : Création directe d’une activité Déclic
+ * Page : création directe d’une séance Déclic
  * → redirige vers /declic après enregistrement
  */
 export default function DeclicCreatePage() {
@@ -30,8 +30,6 @@ export default function DeclicCreatePage() {
   function extractApiMessage(data: unknown): string | null {
     if (!isRecord(data)) return null;
     const maybeMessage = (data as { message?: unknown }).message;
-    if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
-
     const maybeErrors = (data as { errors?: unknown }).errors;
     const errorsObj = isRecord(maybeErrors) ? maybeErrors : data;
     const parts: string[] = [];
@@ -42,7 +40,9 @@ export default function DeclicCreatePage() {
         parts.push(`${field}: ${val.join(" · ")}`);
       }
     }
-    return parts.length ? parts.join(" | ") : null;
+    if (parts.length) return parts.join(" | ");
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
+    return null;
   }
 
   // Soumission du formulaire
@@ -54,13 +54,14 @@ export default function DeclicCreatePage() {
       ) as Partial<Declic>;
 
       await create(payload);
-      toast.success("✅ Activité Déclic créée avec succès");
+      toast.success("La séance Déclic a bien été créée.");
       navigate("/declic"); // 👉 redirection directe
     } catch (error) {
       const axiosErr = error as AxiosError<unknown>;
       const data = axiosErr.response?.data;
       const parsed = data ? extractApiMessage(data) : null;
-      const msg = parsed ?? axiosErr.message ?? "Erreur lors de la création de l’activité Déclic";
+      const msg =
+        parsed ?? axiosErr.message ?? "La séance Déclic n'a pas pu être créée. Vérifie les champs saisis.";
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -69,19 +70,19 @@ export default function DeclicCreatePage() {
 
   if (loadingMeta) {
     return (
-      <PageTemplate title="➕ Nouvelle activité Déclic" centered>
+      <PageTemplate title="➕ Nouvelle séance Déclic" centered>
         <CircularProgress />
-        <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
+        <Typography sx={{ mt: 2 }}>Chargement du formulaire Déclic…</Typography>
       </PageTemplate>
     );
   }
 
   return (
-    <PageTemplate title="➕ Nouvelle activité Déclic" backButton onBack={() => navigate(-1)}>
+    <PageTemplate title="➕ Nouvelle séance Déclic" backButton onBack={() => navigate(-1)}>
       {/* ✅ Affichage du centre sélectionné */}
       {selectedCentre && (
         <Typography variant="subtitle1" sx={{ mb: 2, color: "text.secondary", fontWeight: 500 }}>
-          🏫 Centre sélectionné : <strong>{selectedCentre}</strong>
+          Centre sélectionné : <strong>{selectedCentre}</strong>
         </Typography>
       )}
 

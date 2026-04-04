@@ -3,6 +3,7 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from ...api.serializers.types_offre_serializers import (
@@ -11,6 +12,7 @@ from ...api.serializers.types_offre_serializers import (
 )
 from ...models.logs import LogUtilisateur
 from ...models.types_offre import TypeOffre
+from ..mixins import HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import ReadWriteAdminReadStaff
 
@@ -41,25 +43,98 @@ from ..permissions import ReadWriteAdminReadStaff
         responses={200: OpenApiResponse(description="Mise à jour réussie.")},
     ),
     destroy=extend_schema(
-        summary="🗑️ Supprimer un type d’offre",
-        description="Suppression logique d’un type d’offre (désactivation).",
+        summary="📦 Archiver un type d’offre",
+        description="Archive un type d’offre via une désactivation logique (`is_active = False`).",
         tags=["TypesOffre"],
-        responses={204: OpenApiResponse(description="Suppression réussie.")},
+        responses={200: OpenApiResponse(description="Archivage réussi.")},
     ),
 )
-class TypeOffreViewSet(viewsets.ModelViewSet):
+class TypeOffreViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD pour les types d'offres avec recherche, tri et
     pagination, soumis aux permissions ReadWriteAdminReadStaff.
     """
 
-    queryset = TypeOffre.objects.all().order_by("nom")
     serializer_class = TypeOffreSerializer
+    hard_delete_enabled = True
     permission_classes = [ReadWriteAdminReadStaff]
     pagination_class = RapAppPagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ["nom", "created_at"]
     search_fields = ["nom", "autre"]
+
+    def get_queryset(self):
+        """
+        Retourne uniquement les types d'offres actifs afin que les
+        éléments archivés n'apparaissent plus dans les listes métier.
+        """
+        qs = TypeOffre.objects.all().order_by("nom")
+        include_archived = str(self.request.query_params.get("avec_archivees", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            return qs.filter(is_active=False)
+        if include_archived:
+            return qs
+        return qs.filter(is_active=True)
+
+    def get_archived_aware_object(self):
+        instance = TypeOffre.objects.filter(pk=self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)).first()
+        if instance is None:
+            raise NotFound("Type d'offre introuvable.")
+        return instance
+
+    def list(self, request, *args, **kwargs):
+        """
+        Retourne la liste paginée des types d'offres dans l'enveloppe API standard.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            paginated = self.get_paginated_response(serializer.data).data
+            if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys()):
+                paginated["message"] = "Liste des types d'offres récupérée avec succès."
+                return Response(paginated)
+            return Response(
+                {
+                    "success": True,
+                    "message": "Liste des types d'offres récupérée avec succès.",
+                    "data": paginated,
+                }
+            )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(
+            {
+                "success": True,
+                "message": "Liste des types d'offres récupérée avec succès.",
+                "data": serializer.data,
+            }
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un type d'offre dans l'enveloppe API standard.
+        """
+        instance = self.get_object()
+        return Response(
+            {
+                "success": True,
+                "message": "Type d'offre récupéré avec succès.",
+                "data": self.get_serializer(instance).data,
+            }
+        )
 
     def create(self, request, *args, **kwargs):
         """
@@ -109,20 +184,52 @@ class TypeOffreViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime réellement un type d'offre en base puis renvoie une
-        réponse JSON de confirmation.
+        Conserve `DELETE` pour compatibilité mais transforme
+        l'opération en archivage logique.
         """
         instance = self.get_object()
-        instance.delete()  # ✅ Suppression réelle
+        if not instance.is_active:
+            return Response(
+                {"success": True, "message": "Type d'offre déjà archivé.", "data": self.get_serializer(instance).data},
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
         LogUtilisateur.log_action(
             instance=instance,
-            action=LogUtilisateur.ACTION_DELETE,
+            action=LogUtilisateur.ACTION_UPDATE,
             user=request.user,
-            details=f"Suppression logique du type d'offre : {instance}",
+            details=f"Archivage logique du type d'offre : {instance}",
         )
         return Response(
-            {"success": True, "message": "Type d'offre supprimé avec succès.", "data": None},
-            status=status.HTTP_204_NO_CONTENT,
+            {"success": True, "message": "Type d'offre archivé avec succès.", "data": self.get_serializer(instance).data},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, *args, **kwargs):
+        """
+        Restaure un type d'offre archivé et renvoie l'enveloppe API standard.
+        """
+        instance = self.get_archived_aware_object()
+        if instance.is_active:
+            return Response(
+                {"success": True, "message": "Type d'offre déjà actif.", "data": self.get_serializer(instance).data},
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+        LogUtilisateur.log_action(
+            instance=instance,
+            action=LogUtilisateur.ACTION_UPDATE,
+            user=request.user,
+            details=f"Désarchivage du type d'offre : {instance}",
+        )
+        return Response(
+            {"success": True, "message": "Type d'offre désarchivé avec succès.", "data": self.get_serializer(instance).data},
+            status=status.HTTP_200_OK,
         )
 
     # views/typeoffre_viewsets.py

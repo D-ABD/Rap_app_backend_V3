@@ -57,6 +57,9 @@ function defaultReset(values: CommentaireFiltresValues): CommentaireFiltresValue
     type_offre_id: undefined,
     formation_etat: undefined,
     auteur_id: undefined,
+    date: undefined,
+    date_from: undefined,
+    date_to: undefined,
     include_archived: false,
   };
 }
@@ -125,6 +128,21 @@ export default React.memo(function FiltresCommentairesPanel({
         label: "📦 Type d’offre",
         type: "select" as const,
         options: withPlaceholder(toOptionsUnique(filtres.type_offres, "nom")),
+      },
+      {
+        key: "date" as const,
+        label: "📅 Date exacte",
+        type: "date" as const,
+      },
+      {
+        key: "date_from" as const,
+        label: "📆 Du",
+        type: "date" as const,
+      },
+      {
+        key: "date_to" as const,
+        label: "📆 Au",
+        type: "date" as const,
       },
       ...(filtres.formation_etats && filtres.formation_etats.length
         ? [

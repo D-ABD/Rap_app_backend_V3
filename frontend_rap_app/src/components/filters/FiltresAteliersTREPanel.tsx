@@ -11,6 +11,7 @@ type Props = {
   onChange: (next: AtelierTREFiltresValues) => void;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
 };
 
 const map = <T,>(arr?: T[]) => arr ?? [];
@@ -36,6 +37,7 @@ export default function FiltresAteliersTREPanel({
   onChange,
   onRefresh,
   onReset,
+  hideSearch = false,
 }: Props) {
   const typeChoices = map(options?.type_atelier);
   const centreChoices = map(options?.centre);
@@ -92,44 +94,45 @@ export default function FiltresAteliersTREPanel({
         </Box>
       ) : (
         <>
-          {/* 🔎 Recherche */}
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            mb={1.5}
-            flexWrap={{ xs: "wrap", md: "nowrap" }}
-          >
-            <label htmlFor="ateliers-search-input" style={visuallyHidden as React.CSSProperties}>
-              Rechercher des ateliers
-            </label>
-            <Typography component="span" id="ateliers-search-help" sx={visuallyHidden}>
-              Tapez votre recherche. Appuyez sur Échap pour effacer.
-            </Typography>
+          {!hideSearch && (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              mb={1.5}
+              flexWrap={{ xs: "wrap", md: "nowrap" }}
+            >
+              <label htmlFor="ateliers-search-input" style={visuallyHidden as React.CSSProperties}>
+                Rechercher des ateliers
+              </label>
+              <Typography component="span" id="ateliers-search-help" sx={visuallyHidden}>
+                Tapez votre recherche. Appuyez sur Échap pour effacer.
+              </Typography>
 
-            <TextField
-              id="ateliers-search-input"
-              type="search"
-              size="small"
-              fullWidth
-              value={values.search ?? ""}
-              onChange={onLocalSearchChange}
-              onKeyDown={onSearchKeyDown}
-              placeholder="🔎 Recherche (type, centre…)"
-              inputProps={{
-                "aria-describedby": "ateliers-search-help",
-              }}
-            />
+              <TextField
+                id="ateliers-search-input"
+                type="search"
+                size="small"
+                fullWidth
+                value={values.search ?? ""}
+                onChange={onLocalSearchChange}
+                onKeyDown={onSearchKeyDown}
+                placeholder="🔎 Recherche (type, centre…)"
+                inputProps={{
+                  "aria-describedby": "ateliers-search-help",
+                }}
+              />
 
-            {values.search && (
-              <Button
-                variant="outlined"
-                onClick={() => onChange({ ...values, search: "", page: 1 })}
-              >
-                ✕
-              </Button>
-            )}
-          </Stack>
+              {values.search && (
+                <Button
+                  variant="outlined"
+                  onClick={() => onChange({ ...values, search: "", page: 1 })}
+                >
+                  ✕
+                </Button>
+              )}
+            </Stack>
+          )}
 
           {/* 📅 Dates */}
           <Stack direction="row" spacing={1} mb={1.5} flexWrap={{ xs: "wrap", md: "nowrap" }}>

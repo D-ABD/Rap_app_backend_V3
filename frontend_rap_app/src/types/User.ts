@@ -6,12 +6,14 @@ export type CustomUserRole =
   | "admin"
   | "staff"
   | "staff_read"
+  | "commercial"
+  | "charge_recrutement"
   | "stagiaire"
   | "candidat"
-  | "candidatuser" // ← seulement si backend le renvoie
+  | "candidatuser" // rôle transitoire du cycle de vie candidat
   | "declic_staff"
   | "prepa_staff"
-  | "test"; // ← seulement si backend le renvoie
+  | "test"; // rôle technique uniquement, à ne pas exposer comme rôle métier normal
 
 // ✅ Interface principale utilisée dans tout le frontend
 export interface User {
@@ -62,6 +64,8 @@ export interface User {
 
   // ✅ Ajoutés ici, pas dedans
   centre?: { id: number; nom: string } | null;
+  centre_lie?: { id: number; nom: string } | null;
+  role_lie?: { value: CustomUserRole; label: string } | null;
   centres?: { id: number; nom: string }[];
   type_offre?: {
     id: number;

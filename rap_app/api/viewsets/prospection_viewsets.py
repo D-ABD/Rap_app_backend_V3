@@ -32,8 +32,8 @@ from ...api.paginations import RapAppPagination
 from ...api.roles import (
     is_admin_like,
     is_candidate,
+    is_centre_scoped_staff,
     is_staff_like,
-    is_staff_or_staffread,
     role_of,
     staff_centre_ids,
 )
@@ -48,6 +48,7 @@ from ...services.prospection_ownership_service import (
     ProspectionOwnershipService,
     defer_prospection_owner_sync,
 )
+from ..mixins import HardDeleteArchivedMixin
 from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 from ...utils.filters import ProspectionFilterSet
 from ..permissions import CanAccessProspectionComment, IsOwnerOrStaffOrAbove
@@ -201,7 +202,7 @@ class CandidatReadMinimalSerializer(serializers.ModelSerializer):
     update=extend_schema(summary="✏️ Modifier une prospection", tags=["Prospections"]),
     destroy=extend_schema(summary="🗑️ Annuler une prospection", tags=["Prospections"]),
 )
-class ProspectionViewSet(viewsets.ModelViewSet):
+class ProspectionViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet principal des prospections.
 
@@ -226,6 +227,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         "formation__statut",
         "formation__centre",
     )
+    hard_delete_enabled = True
     permission_classes = [IsOwnerOrStaffOrAbove]  # Permission personnalisée (cf. commentaire docstring ci-dessus).
     pagination_class = RapAppPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -260,8 +262,9 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         Restreint le queryset pour ne donner à voir que les objets accessibles à l'utilisateur
         en fonction de son rôle et de ses centres.
         - admin_like : accès complet.
-        - staff/staffread : voir prospections relatives à leur(s) centre(s), où ils sont owner, ou créées par eux-mêmes,
-                            ou où ils ont commenté.
+        - rôles coeur centre-scopés : voir prospections relatives à leur(s)
+          centre(s), où ils sont owner, ou créées par eux-mêmes, ou où ils
+          ont commenté.
         - candidat : uniquement prospections où il est owner.
         - autre utilisateur : prospections où il est owner ou qu'il a créées.
         - anonymes : rien.
@@ -272,7 +275,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
         if is_admin_like(user):
             return qs
 
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             centre_ids = staff_centre_ids(user) or []
             conds = Q(formation__centre_id__in=centre_ids) if centre_ids else Q()
             return qs.filter(
@@ -298,7 +301,7 @@ class ProspectionViewSet(viewsets.ModelViewSet):
             return
         if is_admin_like(user):
             return
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if formation.centre_id not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centres).")
@@ -743,17 +746,33 @@ class ProspectionViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime définitivement une prospection après journalisation et
-        retourne un message de confirmation.
+        Conserve la compatibilité avec `DELETE /prospections/<id>/` mais
+        remplace la suppression destructive par un archivage logique.
         """
         instance = self.get_object()
-        instance_id = instance.id
+
+        if instance.activite == Prospection.ACTIVITE_ARCHIVEE:
+            serializer = self.get_serializer(instance)
+            return Response(
+                {
+                    "success": True,
+                    "message": f"Prospection #{instance.id} déjà archivée.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        instance.archiver(user=request.user)
         LogUtilisateur.log_action(
-            instance, LogUtilisateur.ACTION_DELETE, request.user, "Suppression définitive de la prospection"
+            instance, LogUtilisateur.ACTION_UPDATE, request.user, "Archivage logique de la prospection via DELETE"
         )
-        instance.delete()
+        serializer = self.get_serializer(instance)
         return Response(
-            {"success": True, "message": f"Prospection #{instance_id} supprimée définitivement."},
+            {
+                "success": True,
+                "message": f"Prospection #{instance.id} archivée avec succès.",
+                "data": serializer.data,
+            },
             status=status.HTTP_200_OK,
         )
 

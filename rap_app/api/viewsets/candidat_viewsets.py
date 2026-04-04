@@ -38,6 +38,7 @@ from ...models.commentaires_appairage import CommentaireAppairage
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
+from ...models.logs import LogUtilisateur
 from ...models.prospection import Prospection
 from ...services.candidate_account_service import CandidateAccountService
 from ...services.candidate_bulk_service import CandidateBulkService
@@ -45,7 +46,7 @@ from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...utils.filters import CandidatFilter
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..roles import is_admin_like, is_centre_scoped_staff, staff_centre_ids
 from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 from .scoped_viewset import ScopedModelViewSet
 from ..serializers.candidat_serializers import (
@@ -116,7 +117,7 @@ def _build_candidat_meta(user=None) -> dict:
         formations_qs = (
             Formation.objects.select_related("centre").only("id", "nom", "num_offre", "centre__nom").order_by("nom")
         )
-    elif is_staff_or_staffread(user):
+    elif is_centre_scoped_staff(user):
         centre_ids = staff_centre_ids(user) or []
         centres_qs = Centre.objects.filter(id__in=centre_ids).order_by("nom").only("id", "nom")
         formations_qs = (
@@ -314,13 +315,13 @@ class CandidatViewSet(ScopedModelViewSet):
             logger.exception("Erreur pendant le logging des filtres.")
 
     def _assert_staff_can_use_formation(self, formation):
-        """Lève PermissionDenied si staff et formation.centre_id hors de user.centres."""
+        """Lève PermissionDenied si un rôle coeur centre-scopé vise une formation hors périmètre."""
         if not formation:
             return
         user = self.request.user
         if is_admin_like(user):
             return
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
@@ -420,6 +421,50 @@ class CandidatViewSet(ScopedModelViewSet):
         qs = atelier_tre.AtelierTRE.annotate_candidats_with_atelier_flags(qs)
         return qs
 
+    def get_queryset(self):
+        """
+        Retourne les candidats visibles dans le périmètre courant.
+
+        Par défaut, les candidats archivés logiquement (`is_active=False`)
+        sont exclus de la liste et des opérations de masse. Le paramètre
+        `avec_archivees=true` permet de les réinclure, et
+        `archives_seules=true` de n'afficher que les archivés.
+        """
+        qs = super().get_queryset()
+
+        if self.action in {"retrieve", "update", "partial_update", "destroy"}:
+            return qs
+
+        archives_seules = str(self.request.query_params.get("archives_seules", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "oui",
+            "on",
+        }
+        avec_archivees = str(self.request.query_params.get("avec_archivees", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "oui",
+            "on",
+        }
+        if archives_seules:
+            return qs.filter(is_active=False)
+        if not avec_archivees:
+            qs = qs.filter(is_active=True)
+        return qs
+
+    def get_archived_aware_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        queryset = super().get_queryset()
+        obj = queryset.filter(**{self.lookup_field: lookup_value}).first()
+        if obj is None:
+            raise NotFound("Candidat introuvable.")
+        self.check_object_permissions(self.request, obj)
+        return obj
+
     def list(self, request, *args, **kwargs):
         """
         Liste paginée des candidats visibles après validation souple des
@@ -495,9 +540,57 @@ class CandidatViewSet(ScopedModelViewSet):
                 candidat=updated, old_form=old_formation, new_form=new_formation
             )
 
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE /candidats/<id>/` pour compatibilité mais remplace
+        la suppression destructive par une désactivation logique.
+        """
+        instance = self.get_object()
+        if not instance.is_active:
+            return self.success_response(
+                data={"status": "archived"},
+                message="Candidat déjà archivé.",
+            )
+
+        instance.is_active = False
+        instance.save(update_fields=["is_active"], user=request.user)
+        LogUtilisateur.log_action(
+            instance=instance,
+            action=LogUtilisateur.ACTION_DELETE,
+            user=request.user,
+            details="Archivage logique du candidat",
+        )
+        return self.success_response(
+            data={"status": "archived"},
+            message="Candidat archivé avec succès.",
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, pk=None):
+        """POST : restaure un candidat archivé avec enveloppe API standard."""
+        candidat = self.get_archived_aware_object()
+        if candidat.is_active:
+            return self.success_response(
+                data={"id": candidat.id, "is_active": True},
+                message="Candidat déjà actif.",
+            )
+
+        candidat.is_active = True
+        candidat.save(update_fields=["is_active"], user=request.user)
+        LogUtilisateur.log_action(
+            instance=candidat,
+            action=LogUtilisateur.ACTION_UPDATE,
+            user=request.user,
+            details="Désarchivage du candidat",
+        )
+        return self.success_response(
+            data={"id": candidat.id, "is_active": True},
+            message="Candidat désarchivé avec succès.",
+        )
+
     @action(detail=True, methods=["post"], url_path="creer-compte")
     def creer_compte(self, request, pk=None):
-        """POST : crée ou lie un compte candidat sans promotion immédiate en stagiaire."""
+        """POST : crée ou lie un compte candidat et renvoie l'enveloppe API standard."""
         candidat = self.get_object()
         try:
             user = CandidateAccountService.ensure_candidate_user(candidat, actor=request.user)
@@ -510,18 +603,17 @@ class CandidatViewSet(ScopedModelViewSet):
                 status_code=400,
             )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Compte candidat créé ou lié avec succès.",
+        return self.success_response(
+            data={
                 "user_id": user.id,
                 "user_role": user.role,
-            }
+            },
+            message="Compte candidat créé ou lié avec succès.",
         )
 
     @action(detail=True, methods=["post"], url_path="validate-inscription")
     def validate_inscription(self, request, pk=None):
-        """POST : valide l'entrée dans le parcours de recrutement sans forcer l'état GESPERS."""
+        """POST : valide l'entrée dans le parcours de recrutement avec enveloppe API standard."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.validate_inscription(candidat, actor=request.user)
@@ -636,7 +728,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="start-formation")
     def start_formation(self, request, pk=None):
-        """POST : positionne la phase métier sur `stagiaire_en_formation` et aligne le rôle si possible."""
+        """POST : positionne la phase métier sur `stagiaire_en_formation` avec enveloppe API standard."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.start_formation(candidat, actor=request.user)
@@ -665,7 +757,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="cancel-start-formation")
     def cancel_start_formation(self, request, pk=None):
-        """POST : annule une entrée en formation enregistrée par erreur."""
+        """POST : annule une entrée en formation enregistrée par erreur avec enveloppe API standard."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.cancel_start_formation(candidat, actor=request.user)
@@ -693,7 +785,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="complete-formation")
     def complete_formation(self, request, pk=None):
-        """POST : positionne la phase métier sur `sorti` sans casser le contrat legacy."""
+        """POST : positionne la phase métier sur `sorti` avec enveloppe API standard."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.complete_formation(candidat, actor=request.user)
@@ -720,7 +812,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="abandon")
     def abandon(self, request, pk=None):
-        """POST : enregistre un abandon sur la nouvelle phase et le statut legacy."""
+        """POST : enregistre un abandon avec enveloppe API standard."""
         candidat = self.get_object()
         try:
             candidat = CandidateLifecycleService.abandon(candidat, actor=request.user)
@@ -748,7 +840,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="valider-demande-compte")
     def valider_demande_compte(self, request, pk=None):
-        """POST : demande_compte en_attente et pas de compte lié ; creer_ou_lier_compte_utilisateur puis statut acceptee."""
+        """POST : valide une demande de compte et renvoie l'enveloppe API standard."""
         candidat = self.get_object()
 
         try:
@@ -762,18 +854,17 @@ class CandidatViewSet(ScopedModelViewSet):
                 status_code=400,
             )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Demande de compte validée et compte utilisateur créé ou lié.",
+        return self.success_response(
+            data={
                 "user_id": user.id,
                 "user_email": user.email,
-            }
+            },
+            message="Demande de compte validée et compte utilisateur créé ou lié.",
         )
 
     @action(detail=True, methods=["post"], url_path="refuser-demande-compte")
     def refuser_demande_compte(self, request, pk=None):
-        """POST : demande_compte en_attente ; passe statut à refusee."""
+        """POST : refuse une demande de compte et renvoie l'enveloppe API standard."""
         candidat = self.get_object()
 
         try:
@@ -787,11 +878,9 @@ class CandidatViewSet(ScopedModelViewSet):
                 status_code=400,
             )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Demande de compte refusée.",
-            }
+        return self.success_response(
+            data=None,
+            message="Demande de compte refusée.",
         )
 
     def _cascade_update_prospections_on_formation_change(self, candidat, old_form, new_form):
@@ -854,6 +943,46 @@ class CandidatViewSet(ScopedModelViewSet):
         return self.success_response(
             data=result,
             message="Transition bulk 'inscription validée' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/set-admissible")
+    def bulk_set_admissible(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_set_admissible(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'candidat admissible' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/clear-admissible")
+    def bulk_clear_admissible(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_clear_admissible(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'candidat admissible retiré' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/set-gespers")
+    def bulk_set_gespers(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_set_gespers(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'inscription GESPERS' exécutée.",
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/clear-gespers")
+    def bulk_clear_gespers(self, request):
+        candidate_ids = _parse_candidate_ids(request.data)
+        qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
+        result = CandidateBulkService.bulk_clear_gespers(qs, actor=request.user)
+        return self.success_response(
+            data=result,
+            message="Transition bulk 'inscription GESPERS annulée' exécutée.",
         )
 
     @action(detail=False, methods=["post"], url_path="bulk/start-formation")
@@ -1152,3 +1281,4 @@ class CandidatViewSet(ScopedModelViewSet):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response["Content-Length"] = len(binary_content)
         return response
+    hard_delete_enabled = True

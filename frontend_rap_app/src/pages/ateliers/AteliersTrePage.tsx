@@ -30,6 +30,7 @@ import {
 import PageTemplate from "../../components/PageTemplate";
 import AtelierTREDetailModal from "./AtelierTREDetailModal";
 import ExportButtonAteliersTRE from "../../components/export_buttons/ExportButtonAteliersTRE";
+import SearchInput from "../../components/SearchInput";
 
 export default function AteliersTrePage() {
   const navigate = useNavigate();
@@ -94,21 +95,23 @@ export default function AteliersTrePage() {
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [items]);
 
-  // suppression
+  // archivage
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleDelete = async () => {
-    if (!selectedId) return;
+    const idsToDelete = selectedId ? [selectedId] : selectedIds;
+    if (!idsToDelete.length) return;
     try {
-      await remove(selectedId);
-      toast.success("🗑️ Atelier supprimé");
+      await Promise.all(idsToDelete.map((id) => remove(id)));
+      toast.success(`📦 ${idsToDelete.length} atelier(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
-      setPage((p) => (items.length - 1 <= 0 && p > 1 ? p - 1 : p));
+      setSelectedIds([]);
+      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
       setFilters((f) => ({ ...f })); // refresh soft
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -139,6 +142,15 @@ export default function AteliersTrePage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
+          <SearchInput
+            placeholder="🔍 Rechercher un atelier TRE..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
+
           <Select
             size="small"
             value={pageSize}
@@ -160,6 +172,20 @@ export default function AteliersTrePage() {
 
           {/* ✅ Bouton Export Excel */}
           <ExportButtonAteliersTRE data={items} selectedIds={selectedIds} />
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+                📦 Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+                ✅ Tout sélectionner
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
         </Stack>
       }
       filters={
@@ -170,6 +196,7 @@ export default function AteliersTrePage() {
           <FiltresAteliersTREPanel
             options={options}
             values={effectiveFilters}
+            hideSearch
             onChange={(v) => {
               setFilters((f) => ({ ...f, ...v }));
               setPage(1);
@@ -233,12 +260,16 @@ export default function AteliersTrePage() {
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer cet atelier ?</DialogContentText>
+          <DialogContentText>
+            {selectedId
+              ? "Archiver cet atelier ?"
+              : `Archiver les ${selectedIds.length} ateliers sélectionnés ?`}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

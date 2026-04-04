@@ -41,7 +41,8 @@ export default function UsersEditPage() {
     formation: undefined,
   });
 
-  const isCandidatOuStagiaire = values.role === "stagiaire" || values.role === "candidat";
+  const isCandidatOuStagiaire =
+    values.role === "stagiaire" || values.role === "candidat" || values.role === "candidatuser";
 
   useEffect(() => {
     if (!id) return;

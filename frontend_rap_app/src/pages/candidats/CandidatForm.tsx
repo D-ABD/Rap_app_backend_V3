@@ -12,6 +12,7 @@ import { Candidat, CandidatFormData, CandidatMeta } from "../../types/candidat";
 import { User } from "../../types/User";
 import FormationSelectModal, { FormationPick } from "../../components/modals/FormationSelectModal";
 import UsersSelectModal, { UserPick } from "../../components/modals/UsersSelectModal";
+import { isCoreWriteRole } from "../../utils/roleGroups";
 
 // Sections
 import { mapFormationInfo } from "./FormSections/utils";
@@ -106,7 +107,7 @@ export default function CandidatForm({
   const requiresRgpdForManualCreate =
     !initialValues &&
     !!currentUser &&
-    ["admin", "superadmin", "staff"].includes(currentUser.role) &&
+    isCoreWriteRole(currentUser.role) &&
     !!meta?.rgpd_legal_basis_choices?.length;
   const effectiveFormation = form.formation ?? initialValues?.formation;
 
@@ -511,7 +512,7 @@ export default function CandidatForm({
       <UsersSelectModal
         show={showUsersModal}
         onClose={() => setShowUsersModal(false)}
-        allowedRoles={["staff", "admin", "superadmin"]}
+        allowedRoles={["staff", "admin", "superadmin", "commercial", "charge_recrutement"]}
         onSelect={handleSelectUser}
       />
     </Box>

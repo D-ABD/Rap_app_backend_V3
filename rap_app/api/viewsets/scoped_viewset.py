@@ -4,7 +4,7 @@ from typing import Literal
 
 from django.db.models import Q, QuerySet
 
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..roles import is_admin_like, is_centre_scoped_staff, staff_centre_ids
 from .base import BaseApiViewSet
 
 ScopeMode = Literal["none", "centre", "owner", "centre_or_owner"]
@@ -59,7 +59,7 @@ class ScopedModelViewSet(BaseApiViewSet):
         user = getattr(self.request, "user", None)
         if is_admin_like(user):
             return qs
-        if not is_staff_or_staffread(user):
+        if not is_centre_scoped_staff(user):
             return qs.none()
 
         centre_q = self.build_centre_scope_q()
@@ -82,7 +82,7 @@ class ScopedModelViewSet(BaseApiViewSet):
         centre_q = self.build_centre_scope_q()
         owner_q = self.build_owner_scope_q()
 
-        if is_staff_or_staffread(user) and centre_q is not None:
+        if is_centre_scoped_staff(user) and centre_q is not None:
             q |= centre_q
         if getattr(user, "is_authenticated", False) and owner_q is not None:
             q |= owner_q

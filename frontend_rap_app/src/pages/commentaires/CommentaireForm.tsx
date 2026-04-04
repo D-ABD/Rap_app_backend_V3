@@ -105,7 +105,7 @@ export default function CommentaireForm({
     if (!scopedFormationId) return;
     api
       .get(`/formations/${scopedFormationId}/`)
-      .then((res) => setFormationNom(res.data.nom))
+      .then((res) => setFormationNom(res.data?.data?.nom ?? res.data?.nom))
       .catch(() => toast.error("La formation sélectionnée est introuvable."))
       .finally(() => setLoading(false));
   }, [scopedFormationId]);

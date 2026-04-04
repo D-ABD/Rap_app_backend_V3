@@ -9,6 +9,7 @@ import type {
   ProspectionTypeProspection,
   ProspectionMoyenContact,
 } from "../../types/prospection";
+import { isCoreStaffRole } from "../../utils/roleGroups";
 
 type Props = {
   filtres:
@@ -77,10 +78,7 @@ export default React.memo(function FiltresProspectionsPanel({
     [filtres]
   );
 
-  const canSeeOwners = useMemo(
-    () => ["staff", "admin", "superadmin"].includes(safe.user_role),
-    [safe.user_role]
-  );
+  const canSeeOwners = useMemo(() => isCoreStaffRole(safe.user_role), [safe.user_role]);
 
   const defaultReset = useCallback(() => {
     onChange({

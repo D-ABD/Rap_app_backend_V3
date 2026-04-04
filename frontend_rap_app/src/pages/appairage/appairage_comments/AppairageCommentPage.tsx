@@ -21,10 +21,8 @@ import type {
   AppairageCommentDTO,
   AppairageCommentListParams,
 } from "../../../types/appairageComment";
-import {
-  useListAppairageComments,
-  useDeleteAppairageComment,
-} from "../../../hooks/useAppairageComments";
+import { useListAppairageComments, useDeleteAppairageComment } from "../../../hooks/useAppairageComments";
+import api from "../../../api/axios";
 import { useMe } from "../../../hooks/useUsers";
 import { CustomUserRole, User } from "../../../types/User";
 import AppairageCommentTable from "./AppairageCommentTable";
@@ -37,11 +35,12 @@ type NormalizedRole = "superadmin" | "admin" | "staff" | "stagiaire" | "candidat
 
 function normalizeRole(u: User | null): NormalizedRole {
   if (!u) return "autre";
-  if (u.is_superuser) return "superadmin";
   const r = (u.role || "").toLowerCase() as CustomUserRole | string;
   if (r === "superadmin") return "superadmin";
   if (r === "admin") return "admin";
-  if (u.is_staff || r === "staff") return "staff";
+  if (["staff", "staff_read", "commercial", "charge_recrutement", "prepa_staff", "declic_staff"].includes(r)) {
+    return "staff";
+  }
   if (r === "stagiaire") return "stagiaire";
   if (r === "candidat" || r === "candidatuser") return "candidat";
   return "autre";
@@ -54,6 +53,7 @@ export default function AppairageCommentPage() {
 
   const { user: me } = useMe();
   const role: NormalizedRole = useMemo(() => normalizeRole(me), [me]);
+  const canHardDelete = ["superadmin", "admin"].includes(role);
 
   const showFilters = ["superadmin", "admin", "staff"].includes(role);
   const panelMode: "default" | "candidate" = showFilters ? "default" : "candidate";
@@ -112,9 +112,10 @@ export default function AppairageCommentPage() {
     };
   }, [rows, role]);
 
-  // suppression
+  // archivage logique
   const [selectedRow, setSelectedRow] = useState<AppairageCommentDTO | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteRow, setHardDeleteRow] = useState<AppairageCommentDTO | null>(null);
 
   // ✅ Correction ici : on passe un id même s'il est null
   const { remove, loading: deleting } = useDeleteAppairageComment(selectedRow?.id ?? 0);
@@ -123,14 +124,36 @@ export default function AppairageCommentPage() {
     if (!selectedRow) return;
     try {
       await remove();
-      toast.success(`🗑️ Commentaire #${selectedRow.id} supprimé`);
+      toast.success(`📦 Commentaire #${selectedRow.id} archivé`);
       setShowConfirm(false);
       setSelectedRow(null);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   }, [remove, selectedRow]);
+
+  const handleRestore = useCallback(async (row: AppairageCommentDTO) => {
+    try {
+      await api.post(`/appairage-commentaires/${row.id}/desarchiver/`);
+      toast.success(`♻️ Commentaire #${row.id} restauré`);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  }, []);
+
+  const handleHardDelete = useCallback(async () => {
+    if (!hardDeleteRow) return;
+    try {
+      await api.post(`/appairage-commentaires/${hardDeleteRow.id}/hard-delete/`);
+      toast.success(`🗑️ Commentaire #${hardDeleteRow.id} supprimé définitivement`);
+      setHardDeleteRow(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
+    }
+  }, [hardDeleteRow]);
 
   return (
     <PageTemplate
@@ -141,6 +164,28 @@ export default function AppairageCommentPage() {
       onRefresh={() => setReloadKey((k) => k + 1)}
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setParams((prev) => ({
+                ...prev,
+                est_archive: prev.est_archive === "both" ? undefined : "both",
+              }))
+            }
+          >
+            {params.est_archive === "both" ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setParams((prev) => ({
+                ...prev,
+                est_archive: prev.est_archive === true ? undefined : true,
+              }))
+            }
+          >
+            {params.est_archive === true ? "📂 Voir tout" : "🗄️ Archives seules"}
+          </Button>
           <Chip label={`Rôle : ${role}`} color="primary" variant="outlined" />
           <ExportButtonAppairageComment data={rows} selectedIds={[]} />
           <Button
@@ -200,6 +245,9 @@ export default function AppairageCommentPage() {
             setSelectedRow(r);
             setShowConfirm(true);
           }}
+          onRestore={handleRestore}
+          onHardDelete={(r) => setHardDeleteRow(r)}
+          canHardDelete={canHardDelete}
           onEdit={(r) => navigate(`/appairage-commentaires/${r.id}/edit`)}
           linkToAppairage={(id: number) => `/appairages/${id}`}
         />
@@ -212,12 +260,30 @@ export default function AppairageCommentPage() {
           Confirmation
         </DialogTitle>
         <DialogContent>
-          <DialogContentText>Voulez-vous supprimer ce commentaire&nbsp;?</DialogContentText>
+          <DialogContentText>Voulez-vous archiver ce commentaire&nbsp;?</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete} disabled={deleting}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteRow !== null} onClose={() => setHardDeleteRow(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="error" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Le commentaire archivé sera supprimé définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteRow(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

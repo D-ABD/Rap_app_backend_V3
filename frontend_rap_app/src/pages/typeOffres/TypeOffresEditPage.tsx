@@ -45,7 +45,7 @@ export default function TypeOffresEditPage() {
         api.get("/typeoffres/choices/"),
       ]);
 
-      const offre = res.data;
+      const offre = res.data?.data ?? {};
       setValues({
         nom: offre.nom || "",
         autre: offre.autre || "",
@@ -55,9 +55,11 @@ export default function TypeOffresEditPage() {
       setLibelle(offre.libelle || "");
       setInitialColor(offre.couleur || "#6c757d");
 
-      const rawChoices = choicesRes.data?.data;
+      const rawChoices = choicesRes.data?.data?.results ?? choicesRes.data?.data;
       if (Array.isArray(rawChoices)) {
         setChoices(rawChoices);
+      } else {
+        setChoices([]);
       }
     } catch {
       toast.error("Erreur lors du chargement");

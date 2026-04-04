@@ -81,6 +81,74 @@ class AppairageSecurityTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_commercial_can_create_appairage_in_scope(self):
+        centre = Centre.objects.create(nom="Centre Commercial")
+        user = UserFactory(role="commercial")
+        user.centres.add(centre)
+
+        formation = Formation.objects.create(
+            nom="Formation Commerciale",
+            centre=centre,
+            type_offre=self.type_offre,
+            statut=self.statut,
+        )
+        candidat = Candidat.objects.create(
+            nom="Martin",
+            prenom="Luc",
+            formation=formation,
+        )
+        partenaire = Partenaire.objects.create(nom="Entreprise Commerciale")
+
+        self.client.force_authenticate(user=user)
+        response = self.client.post(
+            "/api/appairages/",
+            {
+                "candidat": candidat.id,
+                "partenaire": partenaire.id,
+                "formation": formation.id,
+                "statut": AppairageStatut.TRANSMIS,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        payload = response.data.get("data", response.data)
+        self.assertEqual(payload["formation"], formation.id)
+
+    def test_charge_recrutement_cannot_create_appairage_outside_scope(self):
+        centre_autorise = Centre.objects.create(nom="Centre Autorise")
+        centre_hors_scope = Centre.objects.create(nom="Centre Hors Scope")
+
+        user = UserFactory(role="charge_recrutement")
+        user.centres.add(centre_autorise)
+
+        formation = Formation.objects.create(
+            nom="Formation Hors Scope",
+            centre=centre_hors_scope,
+            type_offre=self.type_offre,
+            statut=self.statut,
+        )
+        candidat = Candidat.objects.create(
+            nom="Durand",
+            prenom="Lea",
+            formation=formation,
+        )
+        partenaire = Partenaire.objects.create(nom="Entreprise Hors Scope")
+
+        self.client.force_authenticate(user=user)
+        response = self.client.post(
+            "/api/appairages/",
+            {
+                "candidat": candidat.id,
+                "partenaire": partenaire.id,
+                "formation": formation.id,
+                "statut": AppairageStatut.TRANSMIS,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_staff_read_cannot_archive_appairage(self):
         centre = Centre.objects.create(nom="Centre A")
 
@@ -175,7 +243,7 @@ class AppairageSecurityTests(APITestCase):
         self.assertIsNone(candidat.placement_appairage_id)
         self.assertIsNone(candidat.entreprise_placement_id)
 
-    def test_deleting_last_appairage_clears_candidate_snapshot(self):
+    def test_delete_archives_last_appairage_and_clears_candidate_snapshot(self):
         centre = Centre.objects.create(nom="Centre A")
         user = UserFactory(role="staff")
         user.centres.add(centre)
@@ -190,6 +258,8 @@ class AppairageSecurityTests(APITestCase):
         response = self.client.delete(f"/api/appairages/{appairage.id}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        appairage.refresh_from_db()
+        self.assertEqual(appairage.activite, "archive")
         candidat.refresh_from_db()
         self.assertIsNone(candidat.placement_appairage_id)
         self.assertIsNone(candidat.entreprise_placement_id)
@@ -214,7 +284,41 @@ class AppairageSecurityTests(APITestCase):
         self.assertEqual(candidat.placement_appairage_id, appairage.id)
         self.assertEqual(candidat.entreprise_placement_id, appairage.partenaire_id)
 
-    def test_deleting_active_appairage_falls_back_to_other_active_one(self):
+    def test_list_appairages_can_include_archived_items(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        appairage = self._create_appairage(centre)
+        appairage.archiver(user=user)
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get("/api/appairages/", {"avec_archivees": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data.get("data", response.data)
+        returned_ids = [item["id"] for item in payload["results"]]
+        self.assertIn(appairage.id, returned_ids)
+
+    def test_list_appairages_can_show_archived_only(self):
+        centre = Centre.objects.create(nom="Centre A")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        archived = self._create_appairage(centre, formation_nom="Formation Archivee")
+        archived.archiver(user=user)
+        active = self._create_appairage(centre, formation_nom="Formation Active", partenaire_nom="Entreprise Active")
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get("/api/appairages/", {"activite": "archive"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data.get("data", response.data)
+        returned_ids = [item["id"] for item in payload["results"]]
+        self.assertIn(archived.id, returned_ids)
+        self.assertNotIn(active.id, returned_ids)
+
+    def test_delete_archives_active_appairage_and_falls_back_to_other_active_one(self):
         centre = Centre.objects.create(nom="Centre A")
         user = UserFactory(role="staff")
         user.centres.add(centre)
@@ -239,6 +343,8 @@ class AppairageSecurityTests(APITestCase):
         response = self.client.delete(f"/api/appairages/{fallback_appairage.id}/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        fallback_appairage.refresh_from_db()
+        self.assertEqual(fallback_appairage.activite, "archive")
         candidat.refresh_from_db()
         self.assertEqual(candidat.placement_appairage_id, appairage.id)
         self.assertEqual(candidat.entreprise_placement_id, appairage.partenaire_id)

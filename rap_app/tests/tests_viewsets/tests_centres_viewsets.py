@@ -32,7 +32,17 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Liste des centres récupérée avec succès.")
         self.assertGreaterEqual(len(response.data["data"]["results"]), 2)
+
+    def test_retrieve_centre_uses_standard_envelope(self):
+        centre = Centre.objects.create(nom="Centre Detail", code_postal="75020")
+        response = self.client.get(reverse("centre-detail", args=[centre.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Centre récupéré avec succès.")
+        self.assertEqual(response.data["data"]["id"], centre.id)
 
     def test_update_centre(self):
         centre = Centre.objects.create(nom="Modifiable", code_postal="75010")
@@ -46,9 +56,9 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         centre = Centre.objects.create(nom="Centre Test", code_postal="75000", is_active=True)
         url = reverse("centre-detail", args=[centre.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        # API fait une suppression réelle (hard delete)
-        self.assertEqual(Centre.objects.filter(pk=centre.pk).count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        centre.refresh_from_db()
+        self.assertFalse(centre.is_active)
 
     def test_staff_read_cannot_create_centre(self):
         staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)
@@ -90,3 +100,15 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         returned_ids = [item["id"] for item in results]
         self.assertIn(visible.id, returned_ids)
         self.assertNotIn(hidden.id, returned_ids)
+
+    def test_list_excludes_archived_centres(self):
+        archived = Centre.objects.create(nom="Centre Archive", code_postal="13001", is_active=False)
+        visible = Centre.objects.create(nom="Centre Visible", code_postal="75001", is_active=True)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(archived.id, returned_ids)

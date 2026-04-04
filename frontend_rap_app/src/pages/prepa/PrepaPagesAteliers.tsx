@@ -19,7 +19,7 @@ import {
 
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
-import { usePrepaFiltersOptions, usePrepaList, useDeletePrepa } from "src/hooks/usePrepa";
+import { usePrepaFiltersOptions, usePrepaList, useDeletePrepa, useDesarchiverPrepa, useHardDeletePrepa } from "src/hooks/usePrepa";
 
 import { Prepa } from "src/types/prepa";
 import type { PrepaFiltresValues } from "src/types/prepa";
@@ -29,6 +29,7 @@ import PrepaDetailModal from "./PrepaDetailModal";
 
 import ExportButtonPrepa from "src/components/export_buttons/ExportButtonPrepa";
 import FiltresPrepaPanel from "src/components/filters/FiltresPrepaPanel";
+import SearchInput from "src/components/SearchInput";
 
 export default function PrepaPageAteliers() {
   const navigate = useNavigate();
@@ -78,6 +79,8 @@ export default function PrepaPageAteliers() {
   // Données
   const { data, loading, error } = usePrepaList(effectiveFilters);
   const { remove } = useDeletePrepa();
+  const { restore } = useDesarchiverPrepa();
+  const { hardDelete } = useHardDeletePrepa();
 
   const items: Prepa[] = useMemo(() => data?.results ?? [], [data]);
 
@@ -92,22 +95,46 @@ export default function PrepaPageAteliers() {
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [items]);
 
-  // Suppression
+  // Archivage
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
 
   const handleDelete = async () => {
-    if (!selectedId) return;
+    const idsToDelete = selectedId ? [selectedId] : selectedIds;
+    if (!idsToDelete.length) return;
     try {
-      await remove(selectedId);
-      toast.success("🗑️ Séance supprimée");
+      await Promise.all(idsToDelete.map((id) => remove(id)));
+      toast.success(`📦 ${idsToDelete.length} séance(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
-
-      setPage((p) => (items.length - 1 <= 0 && p > 1 ? p - 1 : p));
+      setSelectedIds([]);
+      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
       setFilters((f) => ({ ...f }));
     } catch {
-      toast.error("Erreur de suppression");
+      toast.error("Erreur d'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Séance restaurée");
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur de restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Séance supprimée définitivement");
+      setHardDeleteId(null);
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur de suppression définitive");
     }
   };
 
@@ -138,6 +165,15 @@ export default function PrepaPageAteliers() {
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
 
+          <SearchInput
+            placeholder="🔍 Rechercher une séance Prépa..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
+
           <Select
             size="small"
             value={pageSize}
@@ -158,6 +194,48 @@ export default function PrepaPageAteliers() {
           </Button>
 
           <ExportButtonPrepa data={items} selectedIds={selectedIds} />
+
+          <Button
+            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            onClick={() =>
+              setFilters((prev) =>
+                prev.avec_archivees || prev.archives_seules
+                  ? { ...prev, avec_archivees: undefined, archives_seules: undefined }
+                  : { ...prev, avec_archivees: true, archives_seules: undefined }
+              )
+            }
+          >
+            {filters.avec_archivees || filters.archives_seules ? "Masquer archivées" : "Inclure archivées"}
+          </Button>
+
+          {(filters.avec_archivees || filters.archives_seules) && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() =>
+                setFilters((prev) =>
+                  prev.archives_seules
+                    ? { ...prev, archives_seules: undefined, avec_archivees: undefined }
+                    : { ...prev, archives_seules: true, avec_archivees: true }
+                )
+              }
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+                📦 Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+                ✅ Tout sélectionner
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
         </Stack>
       }
       footer={
@@ -188,6 +266,7 @@ export default function PrepaPageAteliers() {
           <FiltresPrepaPanel
             options={loadingFilters ? undefined : filterOptions}
             values={filters}
+            hideSearch
             onChange={(n) => {
               setFilters(n);
               setPage(1);
@@ -216,6 +295,8 @@ export default function PrepaPageAteliers() {
               setSelectedId(id);
               setShowConfirm(true);
             }}
+            onToggleArchive={(id) => handleRestore(id)}
+            onHardDelete={(id) => setHardDeleteId(id)}
             onRowClick={handleRowClick}
           />
         )}
@@ -229,16 +310,35 @@ export default function PrepaPageAteliers() {
         onEdit={(id) => navigate(`/prepa/${id}/edit`)}
       />
 
-      {/* Confirmation Suppression */}
+      {/* Confirmation Archivage */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer cette séance ?</DialogContentText>
+          <DialogContentText>
+            {selectedId
+              ? "Archiver cette séance ?"
+              : `Archiver les ${selectedIds.length} séances sélectionnées ?`}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button onClick={handleDelete} color="error" variant="contained">
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette séance Prépa archivée sera supprimée définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button onClick={handleHardDelete} color="error" variant="contained">
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

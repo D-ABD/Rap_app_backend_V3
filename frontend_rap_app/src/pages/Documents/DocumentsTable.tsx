@@ -23,9 +23,19 @@ interface Props {
   documents: Document[];
   showActions?: boolean;
   onDelete?: (id: number) => void;
+  onRestore?: (id: number) => void;
+  onHardDelete?: (id: number) => void;
+  canHardDelete?: boolean;
 }
 
-export default function DocumentsTable({ documents, showActions = false, onDelete }: Props) {
+export default function DocumentsTable({
+  documents,
+  showActions = false,
+  onDelete,
+  onRestore,
+  onHardDelete,
+  canHardDelete = false,
+}: Props) {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -130,14 +140,34 @@ export default function DocumentsTable({ documents, showActions = false, onDelet
                         >
                           ⬇️ Télécharger
                         </Button>
-                        {onDelete && (
+                        {(doc.is_active ?? true) && onDelete && (
                           <Button
                             variant="outlined"
                             color="error"
                             size="small"
                             onClick={() => onDelete(doc.id)}
                           >
-                            🗑️ Supprimer
+                            Archiver
+                          </Button>
+                        )}
+                        {!(doc.is_active ?? true) && onRestore && (
+                          <Button
+                            variant="outlined"
+                            color="success"
+                            size="small"
+                            onClick={() => onRestore(doc.id)}
+                          >
+                            Restaurer
+                          </Button>
+                        )}
+                        {!(doc.is_active ?? true) && canHardDelete && onHardDelete && (
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            onClick={() => onHardDelete(doc.id)}
+                          >
+                            Supprimer définitivement
                           </Button>
                         )}
                       </Stack>
@@ -220,14 +250,35 @@ export default function DocumentsTable({ documents, showActions = false, onDelet
                       ⬇️ Télécharger
                     </Button>
 
-                    {onDelete && (
+                    {(doc.is_active ?? true) && onDelete && (
                       <Button
                         variant="outlined"
                         color="error"
                         size="small"
                         onClick={() => onDelete(doc.id)}
                       >
-                        🗑️ Supprimer
+                        Archiver
+                      </Button>
+                    )}
+
+                    {!(doc.is_active ?? true) && onRestore && (
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        size="small"
+                        onClick={() => onRestore(doc.id)}
+                      >
+                        Restaurer
+                      </Button>
+                    )}
+                    {!(doc.is_active ?? true) && canHardDelete && onHardDelete && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        onClick={() => onHardDelete(doc.id)}
+                      >
+                        Supprimer définitivement
                       </Button>
                     )}
                   </Stack>

@@ -11,6 +11,8 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
 
@@ -23,6 +25,9 @@ interface Props {
   rows: ProspectionCommentDTO[];
   onEdit?: (row: ProspectionCommentDTO) => void;
   onDelete?: (row: ProspectionCommentDTO) => void;
+  onRestore?: (row: ProspectionCommentDTO) => void;
+  onHardDelete?: (row: ProspectionCommentDTO) => void;
+  canHardDelete?: boolean;
   linkToProspection?: (prospectionId: number) => string;
   onSelectionChange?: (ids: number[]) => void; // 🔹 pour l’export
 }
@@ -44,6 +49,9 @@ export default function ProspectionCommentTable({
   rows,
   onEdit,
   onDelete,
+  onRestore,
+  onHardDelete,
+  canHardDelete = false,
   linkToProspection,
   onSelectionChange,
 }: Props) {
@@ -211,7 +219,7 @@ export default function ProspectionCommentTable({
       getRowId={(r) => r.id}
       cardTitle={(r) => `#${r.id} • ${r.created_by_username || "—"}`}
       actions={(r) =>
-        (onEdit || onDelete) && (
+        (onEdit || onDelete || onHardDelete) && (
           <Stack direction="row" spacing={1}>
             {onEdit && (
               <IconButton
@@ -226,17 +234,46 @@ export default function ProspectionCommentTable({
               </IconButton>
             )}
             {onDelete && (
-              <IconButton
-                size="small"
-                aria-label={`Supprimer le commentaire #${r.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(r);
-                }}
-                color="error"
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+              r.est_archive ? (
+                <>
+                  <IconButton
+                    size="small"
+                    aria-label={`Restaurer le commentaire #${r.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestore?.(r);
+                    }}
+                    color="success"
+                  >
+                    <RestoreFromTrashIcon fontSize="small" />
+                  </IconButton>
+                  {canHardDelete && onHardDelete && (
+                    <IconButton
+                      size="small"
+                      aria-label={`Supprimer définitivement le commentaire #${r.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onHardDelete(r);
+                      }}
+                      color="error"
+                    >
+                      <DeleteForeverIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </>
+              ) : (
+                <IconButton
+                  size="small"
+                  aria-label={`Archiver le commentaire #${r.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(r);
+                  }}
+                  color="error"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )
             )}
           </Stack>
         )

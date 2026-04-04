@@ -25,6 +25,7 @@ import { useObjectifsPrepa, useObjectifsPrepaFiltersOptions } from "src/hooks/us
 import type { ObjectifPrepaFiltresValues } from "src/types/prepa";
 import FiltresObjectifsPrepaPanel from "src/components/filters/FiltresObjectifsPrepaPanel";
 import ExportButtonObjectifsPrepa from "src/components/export_buttons/ExportButtonPrepaObjectifs";
+import SearchInput from "src/components/SearchInput";
 
 export default function ObjectifPrepaPage() {
   const [searchParams] = useSearchParams();
@@ -125,6 +126,8 @@ export default function ObjectifPrepaPage() {
           <FiltresObjectifsPrepaPanel
             options={options ?? { annee: [], centre: [], departement: [] }} // ✅ fallback vide
             values={filters}
+            hideSearch
+            hideToggle
             onChange={handleFiltersChange}
             onRefresh={() => refetch()}
           />
@@ -138,6 +141,15 @@ export default function ObjectifPrepaPage() {
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
+
+          <SearchInput
+            placeholder="🔍 Rechercher un objectif Prépa..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
 
           {/* 📄 Taille page */}
           <Select

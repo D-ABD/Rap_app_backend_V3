@@ -89,6 +89,8 @@ class CustomUserManager(BaseUserManager):
             in [
                 CustomUser.ROLE_ADMIN,
                 CustomUser.ROLE_SUPERADMIN,
+                CustomUser.ROLE_COMMERCIAL,
+                CustomUser.ROLE_CHARGE_RECRUTEMENT,
                 CustomUser.ROLE_STAFF,
                 CustomUser.ROLE_STAFF_READ,
                 CustomUser.ROLE_PREPA_STAFF,
@@ -119,17 +121,23 @@ class CustomUser(AbstractUser):
     ROLE_SUPERADMIN = "superadmin"
     ROLE_ADMIN = "admin"
     ROLE_STAGIAIRE = "stagiaire"
+    ROLE_COMMERCIAL = "commercial"
+    ROLE_CHARGE_RECRUTEMENT = "charge_recrutement"
     ROLE_STAFF = "staff"
     ROLE_STAFF_READ = "staff_read"
     ROLE_PREPA_STAFF = "prepa_staff"
     ROLE_DECLIC_STAFF = "declic_staff"
     ROLE_CANDIDAT = "candidat"
+    # Rôle transitoire utilisé par le cycle de vie candidat avant promotion en stagiaire.
     ROLE_CANDIDAT_USER = "candidatuser"
+    # Rôle strictement technique / de support, non destiné au pilotage métier courant.
     ROLE_TEST = "test"
 
     ROLE_CHOICES = [
         (ROLE_SUPERADMIN, "Super administrateur"),
         (ROLE_ADMIN, "Administrateur"),
+        (ROLE_COMMERCIAL, "Commercial"),
+        (ROLE_CHARGE_RECRUTEMENT, "Chargé de recrutement"),
         (ROLE_STAFF, "Membre du staff"),
         (ROLE_STAFF_READ, "Staff lecture seule"),
         (ROLE_PREPA_STAFF, "Staff PrépaComp"),
@@ -143,11 +151,15 @@ class CustomUser(AbstractUser):
     STAFF_ROLES = {
         ROLE_SUPERADMIN,
         ROLE_ADMIN,
+        ROLE_COMMERCIAL,
+        ROLE_CHARGE_RECRUTEMENT,
         ROLE_STAFF,
         ROLE_STAFF_READ,
         ROLE_PREPA_STAFF,
         ROLE_DECLIC_STAFF,
     }
+    # Les rôles "candidate-like" gardent un périmètre personnel et très limité.
+    # `candidatuser` reste inclus tant que le cycle de vie candidat n'a pas été simplifié.
     CANDIDATE_ROLES = {ROLE_STAGIAIRE, ROLE_CANDIDAT, ROLE_CANDIDAT_USER}
 
     email = models.EmailField(
@@ -217,7 +229,8 @@ class CustomUser(AbstractUser):
         Contrat de synchronisation des flags :
         - ``superadmin`` => ``is_superuser=True`` et ``is_staff=True`` ;
         - ``admin`` => ``is_staff=True`` et ``is_superuser=False`` ;
-        - rôles staff métier (``staff``, ``staff_read``, ``prepa_staff``, ``declic_staff``)
+        - rôles staff métier (``commercial``, ``charge_recrutement``, ``staff``,
+          ``staff_read``, ``prepa_staff``, ``declic_staff``)
           => ``is_staff=True`` et ``is_superuser=False`` ;
         - rôles candidats / test => ``is_staff=False`` et ``is_superuser=False``.
 
@@ -246,6 +259,8 @@ class CustomUser(AbstractUser):
             self.is_superuser = False
             self.is_staff = True
         elif self.role in {
+            self.ROLE_COMMERCIAL,
+            self.ROLE_CHARGE_RECRUTEMENT,
             self.ROLE_STAFF,
             self.ROLE_STAFF_READ,
             self.ROLE_PREPA_STAFF,
@@ -311,6 +326,14 @@ class CustomUser(AbstractUser):
         """Retourne True si rôle staff."""
         return self.role == self.ROLE_STAFF
 
+    def is_commercial(self):
+        """Retourne True si rôle commercial."""
+        return self.role == self.ROLE_COMMERCIAL
+
+    def is_charge_recrutement(self):
+        """Retourne True si rôle chargé de recrutement."""
+        return self.role == self.ROLE_CHARGE_RECRUTEMENT
+
     def is_staff_read(self):
         """Retourne True si rôle staff_read."""
         return self.role == self.ROLE_STAFF_READ
@@ -328,7 +351,7 @@ class CustomUser(AbstractUser):
         return self.role == self.ROLE_CANDIDAT
 
     def is_candidatuser(self):
-        """Retourne True si rôle candidat validé."""
+        """Retourne True si rôle candidat validé/transitoire."""
         return self.role == self.ROLE_CANDIDAT_USER
 
     def is_stagiaire(self):
@@ -336,7 +359,7 @@ class CustomUser(AbstractUser):
         return self.role == self.ROLE_STAGIAIRE
 
     def is_candidat_or_stagiaire(self):
-        """Retourne True si rôle stagiaire, candidat ou candidat validé."""
+        """Retourne True si rôle stagiaire, candidat ou candidat validé/transitoire."""
         return self.role in self.CANDIDATE_ROLES
 
     def has_role(self, *roles):
@@ -357,6 +380,8 @@ class CustomUser(AbstractUser):
         if self.role in {
             self.ROLE_SUPERADMIN,
             self.ROLE_ADMIN,
+            self.ROLE_COMMERCIAL,
+            self.ROLE_CHARGE_RECRUTEMENT,
             self.ROLE_STAFF,
             self.ROLE_STAFF_READ,
             self.ROLE_PREPA_STAFF,

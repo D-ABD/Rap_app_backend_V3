@@ -5,14 +5,15 @@ from typing import Any
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 
 
-class BaseApiViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class BaseApiViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """
     Base commune pour homogénéiser les réponses CRUD des ViewSets DRF.
     """
 
+    hard_delete_enabled: bool = False
     list_message: str = "Liste recuperee avec succes."
     retrieve_message: str = "Element recupere avec succes."
     create_message: str = "Element cree avec succes."

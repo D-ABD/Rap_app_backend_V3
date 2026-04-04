@@ -25,6 +25,7 @@ export interface CVThequeItem {
   document_type: DocumentType;
   date_depot: string;
   est_public: boolean;
+  is_active: boolean;
   mots_cles?: string;
 
   // 🌐 URLs SÉCURISÉES

@@ -21,6 +21,7 @@ import FiltresObjectifsDeclicPanel from "src/components/filters/FiltresObjectifs
 import ExportButtonObjectifsDeclic from "src/components/export_buttons/ExportButtonDeclicObjectifs";
 import usePagination from "src/hooks/usePagination";
 import ObjectifDeclicForm from "./ObjectifDeclicForm";
+import SearchInput from "src/components/SearchInput";
 
 import { useObjectifsDeclic, useObjectifsDeclicFiltersOptions } from "src/hooks/useDeclicObjectifs";
 
@@ -125,6 +126,8 @@ export default function ObjectifDeclicPage() {
           <FiltresObjectifsDeclicPanel
             options={options ?? { annee: [], centre: [], departement: [] }} // ✅ fallback vide
             values={filters}
+            hideSearch
+            hideToggle
             onChange={handleFiltersChange}
             onRefresh={() => refetch()}
           />
@@ -138,6 +141,15 @@ export default function ObjectifDeclicPage() {
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
+
+          <SearchInput
+            placeholder="🔍 Rechercher un objectif Déclic..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
 
           {/* 📄 Taille page */}
           <Select

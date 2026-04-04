@@ -12,10 +12,13 @@ import {
   TableContainer,
   Paper,
   TablePagination,
+  Box,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import type { AppairageCommentDTO } from "../../../types/appairageComment";
 import { useState } from "react";
 import CommentaireContent from "../../commentaires/CommentaireContent";
@@ -24,6 +27,9 @@ interface Props {
   rows: AppairageCommentDTO[];
   onEdit?: (row: AppairageCommentDTO) => void;
   onDelete?: (row: AppairageCommentDTO) => void;
+  onRestore?: (row: AppairageCommentDTO) => void;
+  onHardDelete?: (row: AppairageCommentDTO) => void;
+  canHardDelete?: boolean;
   linkToAppairage?: (appairageId: number) => string;
   onSelectionChange?: (ids: number[]) => void;
 }
@@ -47,6 +53,9 @@ export default function AppairageCommentTable({
   rows,
   onEdit,
   onDelete,
+  onRestore,
+  onHardDelete,
+  canHardDelete = false,
   linkToAppairage,
   onSelectionChange,
 }: Props) {
@@ -99,7 +108,7 @@ export default function AppairageCommentTable({
               {/* 🆕 Colonne État */}
               <TableCell>État</TableCell>
               <TableCell>Commentaire</TableCell>
-              {(onEdit || onDelete) && <TableCell>Actions</TableCell>}
+              {(onEdit || onDelete || onHardDelete) && <TableCell>Actions</TableCell>}
             </TableRow>
           </TableHead>
 
@@ -204,7 +213,7 @@ export default function AppairageCommentTable({
                     </Box>
                   </TableCell>
 
-                  {(onEdit || onDelete) && (
+                  {(onEdit || onDelete || onHardDelete) && (
                     <TableCell>
                       {onEdit && (
                         <IconButton aria-label="Éditer" size="small" onClick={() => onEdit(r)}>
@@ -212,14 +221,37 @@ export default function AppairageCommentTable({
                         </IconButton>
                       )}
                       {onDelete && (
-                        <IconButton
-                          aria-label="Supprimer"
-                          size="small"
-                          color="error"
-                          onClick={() => onDelete(r)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        etat === "archive" ? (
+                          <>
+                            <IconButton
+                              aria-label="Restaurer"
+                              size="small"
+                              color="success"
+                              onClick={() => onRestore?.(r)}
+                            >
+                              <RestoreFromTrashIcon fontSize="small" />
+                            </IconButton>
+                            {canHardDelete && onHardDelete && (
+                              <IconButton
+                                aria-label="Supprimer définitivement"
+                                size="small"
+                                color="error"
+                                onClick={() => onHardDelete(r)}
+                              >
+                                <DeleteForeverIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </>
+                        ) : (
+                          <IconButton
+                            aria-label="Archiver"
+                            size="small"
+                            color="error"
+                            onClick={() => onDelete(r)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )
                       )}
                     </TableCell>
                   )}

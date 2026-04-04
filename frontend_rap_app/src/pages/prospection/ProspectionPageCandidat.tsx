@@ -97,7 +97,7 @@ export default function ProspectionPageCandidat() {
   const toggleSelect = (id: number) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
 
-  // ── suppression
+  // ── archivage via DELETE legacy
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -107,13 +107,13 @@ export default function ProspectionPageCandidat() {
     try {
       const api = (await import("../../api/axios")).default;
       await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/candidat`)));
-      toast.success(`🗑️ ${idsToDelete.length} prospection(s) supprimée(s)`);
+      toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Impossible de supprimer une ou plusieurs prospections.");
+      toast.error("Impossible d'archiver une ou plusieurs prospections.");
     }
   };
 
@@ -131,6 +131,17 @@ export default function ProspectionPageCandidat() {
     setShowConfirm(true);
   };
 
+  const handleRestoreClick = async (id: number) => {
+    try {
+      const api = (await import("../../api/axios")).default;
+      await api.post(`/prospections/${id}/desarchiver/`);
+      toast.success("♻️ Prospection restaurée");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de restaurer cette prospection.");
+    }
+  };
+
   return (
     <PageTemplate
       title="📈 Mes prospections"
@@ -141,6 +152,37 @@ export default function ProspectionPageCandidat() {
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const next = !prev.avec_archivees;
+                if (!next && prev.activite === "archivee") {
+                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                }
+                return { ...prev, avec_archivees: next ? true : undefined };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const archivesOnly = prev.activite === "archivee";
+                return archivesOnly
+                  ? { ...prev, activite: undefined, avec_archivees: undefined }
+                  : { ...prev, activite: "archivee", avec_archivees: true };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.activite === "archivee" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
           <SearchInput
@@ -234,11 +276,12 @@ export default function ProspectionPageCandidat() {
             onToggleSelect={toggleSelect}
             onRowClick={handleRowClick}
             onDeleteClick={handleDeleteClick}
+            onRestoreClick={handleRestoreClick}
           />
         </Box>
       )}
 
-      {/* ───────────── Confirmation suppression ───────────── */}
+      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -247,14 +290,14 @@ export default function ProspectionPageCandidat() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer cette prospection ?"
-              : `Supprimer les ${selectedIds.length} prospections sélectionnées ?`}
+              ? "Archiver cette prospection ?"
+              : `Archiver les ${selectedIds.length} prospections sélectionnées ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

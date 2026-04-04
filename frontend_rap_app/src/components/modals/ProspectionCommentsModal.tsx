@@ -115,13 +115,13 @@ export default function ProspectionCommentsModal({
   }, [rows, search, visibility]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm(`Supprimer le commentaire #${id} ?`)) return;
+    if (!confirm(`Archiver le commentaire #${id} ?`)) return;
     try {
       setDeletingId(id);
       await api.delete(`/prospection-commentaires/${id}/`);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Suppression impossible.");
+      toast.error("Archivage impossible.");
     } finally {
       setDeletingId(null);
     }

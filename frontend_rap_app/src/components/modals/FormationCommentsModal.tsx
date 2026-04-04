@@ -131,7 +131,7 @@ export default function FormationCommentsModal({
 
   // --- Suppression d’un commentaire ---
   const handleDelete = async (id: number) => {
-    if (!confirm(`Supprimer le commentaire #${id} ?`)) return;
+    if (!confirm(`Archiver le commentaire #${id} ?`)) return;
     try {
       setDeletingId(id);
       await deleteCommentaire(id); // ✅ version dynamique
@@ -139,9 +139,9 @@ export default function FormationCommentsModal({
     } catch (err) {
       if (import.meta.env.MODE !== "production") {
         // eslint-disable-next-line no-console
-        console.error("Erreur lors de la suppression du commentaire :", err);
+        console.error("Erreur lors de l’archivage du commentaire :", err);
       }
-      alert("Suppression impossible.");
+      alert("Archivage impossible.");
     } finally {
       setDeletingId(null);
     }

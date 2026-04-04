@@ -160,14 +160,14 @@ class CustomUserViewSet(BaseApiViewSet):
         description="Supprime définitivement toutes les données personnelles de l'utilisateur connecté.",
         tags=["Utilisateurs"],
         responses={
-            200: OpenApiResponse(description="Compte supprimé conformément au RGPD."),
+            200: OpenApiResponse(description="Réponse JSON standard confirmant la suppression RGPD."),
             403: OpenApiResponse(description="Authentification requise."),
         },
     )
     def delete_account(self, request):
         """
         Désactive et anonymise le compte de l'utilisateur connecté puis
-        journalise l'opération et renvoie un message de confirmation.
+        journalise l'opération et renvoie l'enveloppe API standard.
         """
         user = request.user
         email = user.email
@@ -193,6 +193,7 @@ class CustomUserViewSet(BaseApiViewSet):
             {
                 "success": True,
                 "message": f"Le compte associé à {email} a été supprimé conformément au RGPD.",
+                "data": None,
             },
             status=status.HTTP_200_OK,
         )
@@ -225,7 +226,7 @@ class CustomUserViewSet(BaseApiViewSet):
     def deactivate_self(self, request):
         """
         Désactive le compte de l'utilisateur connecté (sans suppression
-        des données) et enregistre un log d'auto-désactivation.
+        des données) et renvoie l'enveloppe API standard.
         """
         user = request.user
         user.is_active = False
@@ -240,6 +241,7 @@ class CustomUserViewSet(BaseApiViewSet):
             {
                 "success": True,
                 "message": "Votre compte a été désactivé. Vous pouvez demander une réactivation.",
+                "data": None,
             },
             status=status.HTTP_200_OK,
         )
@@ -248,7 +250,7 @@ class CustomUserViewSet(BaseApiViewSet):
     def reactivate(self, request, pk=None):
         """
         Réactive un utilisateur désactivé (admin uniquement) et
-        journalise la réactivation.
+        journalise la réactivation avec enveloppe API standard.
         """
         user = self.get_object()
         user.is_active = True
@@ -263,6 +265,7 @@ class CustomUserViewSet(BaseApiViewSet):
             {
                 "success": True,
                 "message": "Utilisateur réactivé avec succès.",
+                "data": None,
             },
             status=status.HTTP_200_OK,
         )
@@ -474,4 +477,11 @@ class RoleChoicesView(APIView):
     )
     def get(self, request):
         data = [{"value": value, "label": label} for value, label in CustomUser.ROLE_CHOICES]
-        return Response(data)
+        return Response(
+            {
+                "success": True,
+                "message": "Liste des rôles récupérée avec succès.",
+                "data": data,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -118,7 +118,7 @@ export function useUpdateAppairage(id: number) {
   return { update, loading, error };
 }
 
-/* ──────────────── Suppression ──────────────── */
+/* ──────────────── Archivage via endpoint DELETE legacy ──────────────── */
 export function useDeleteAppairage(id: number) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -173,7 +173,7 @@ export function useAppairageHistoriques(appairageId: number) {
 
     api
       .get(`/appairages/${appairageId}/historiques/`)
-      .then((res) => setData(res.data as HistoriqueAppairage[]))
+      .then((res) => setData((res.data?.data || res.data) as HistoriqueAppairage[]))
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }, [appairageId]);
@@ -193,15 +193,16 @@ export function useAppairageComments(appairageId: number) {
 
     api
       .get(`/appairages/${appairageId}/commentaires/`)
-      .then((res) => setData(res.data))
+      .then((res) => setData((res.data?.data || res.data) as CommentaireAppairage[]))
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
   }, [appairageId]);
 
   const addComment = async (payload: { body: string; is_internal?: boolean }) => {
     const res = await api.post(`/appairages/${appairageId}/commentaires/`, payload);
-    setData((prev) => (prev ? [res.data, ...prev] : [res.data]));
-    return res.data;
+    const created = (res.data?.data || res.data) as CommentaireAppairage;
+    setData((prev) => (prev ? [created, ...prev] : [created]));
+    return created;
   };
 
   return { data, loading, error, addComment };

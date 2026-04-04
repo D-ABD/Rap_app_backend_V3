@@ -58,8 +58,34 @@ class EvenementViewSetTest(AuthenticatedTestCase):
         url = reverse("evenement-detail", args=[self.evenement.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Événement récupéré avec succès.")
         data = response.data.get("data", response.data)
         self.assertEqual(data["id"], self.evenement.id)
+
+    def test_create_evenement_uses_standard_envelope(self):
+        url = reverse("evenement-list")
+        payload = {
+            "formation_id": self.formation.id,
+            "type_evenement": Evenement.TypeEvenement.FORUM,
+            "event_date": (timezone.now().date() + timedelta(days=7)).isoformat(),
+            "lieu": "Marseille",
+        }
+        response = self.client.post(url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Événement créé avec succès.")
+        self.assertEqual(response.data["data"]["lieu"], "Marseille")
+
+    def test_update_evenement_uses_standard_envelope(self):
+        url = reverse("evenement-detail", args=[self.evenement.id])
+        response = self.client.patch(url, {"lieu": "Lyon"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Événement mis à jour avec succès.")
+        self.assertEqual(response.data["data"]["lieu"], "Lyon")
 
     def test_creation_evenement_autre_sans_description(self):
         url = reverse("evenement-list")
@@ -85,3 +111,70 @@ class EvenementViewSetTest(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("data", response.data)
         self.assertIn("forum", response.data["data"])
+
+    def test_delete_evenement_archives_instance(self):
+        url = reverse("evenement-detail", args=[self.evenement.id])
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.evenement.refresh_from_db()
+        self.assertFalse(self.evenement.is_active)
+
+    def test_list_excludes_archived_evenement(self):
+        self.evenement.is_active = False
+        self.evenement.save(update_fields=["is_active"])
+
+        url = reverse("evenement-list")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = response.data.get("data", response.data)
+        results = payload["results"] if isinstance(payload, dict) and "results" in payload else payload
+        self.assertEqual(len(results), 0)
+
+    def test_commercial_can_create_evenement_in_scope(self):
+        commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+        commercial.centres.add(self.centre)
+        self.client.force_authenticate(user=commercial)
+
+        response = self.client.post(
+            reverse("evenement-list"),
+            {
+                "formation_id": self.formation.id,
+                "type_evenement": Evenement.TypeEvenement.FORUM,
+                "event_date": (timezone.now().date() + timedelta(days=8)).isoformat(),
+                "lieu": "Nanterre",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_commercial_cannot_create_evenement_outside_scope(self):
+        commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+        commercial.centres.add(self.centre)
+        self.client.force_authenticate(user=commercial)
+
+        other_centre = Centre.objects.create(nom="Autre Centre", code_postal="78000")
+        other_formation = Formation.objects.create(
+            nom="Formation Hors Scope",
+            centre=other_centre,
+            statut=self.statut,
+            type_offre=self.type_offre,
+            start_date=datetime.date.today(),
+            end_date=datetime.date.today() + datetime.timedelta(days=10),
+            created_by=self.user,
+        )
+
+        response = self.client.post(
+            reverse("evenement-list"),
+            {
+                "formation_id": other_formation.id,
+                "type_evenement": Evenement.TypeEvenement.FORUM,
+                "event_date": (timezone.now().date() + timedelta(days=8)).isoformat(),
+                "lieu": "Versailles",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

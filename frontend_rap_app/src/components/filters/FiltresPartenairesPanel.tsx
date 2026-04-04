@@ -16,6 +16,8 @@ export type PartenaireFilters = {
   type?: string;
   has_appairages?: string;
   has_prospections?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
   page?: number;
 };
 
@@ -45,6 +47,8 @@ function buildReset(values: PartenaireFilters): PartenaireFilters {
     type: undefined,
     has_appairages: undefined,
     has_prospections: undefined,
+    avec_archivees: undefined,
+    archives_seules: undefined,
     page: 1,
   };
 }

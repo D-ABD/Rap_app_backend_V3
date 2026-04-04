@@ -27,6 +27,8 @@ import {
   useCandidats,
   useCandidatFiltres,
   useDeleteCandidat,
+  useDesarchiverCandidat,
+  useHardDeleteCandidat,
   useCandidateBulkActions,
 } from "../../hooks/useCandidats";
 import usePagination from "../../hooks/usePagination";
@@ -38,6 +40,7 @@ import PageTemplate from "../../components/PageTemplate";
 import ExportButtonCandidat from "../../components/export_buttons/ExportButtonCandidat";
 import CandidatDetailModal from "./CandidatDetailModal";
 import api from "../../api/axios";
+import SearchInput from "../../components/SearchInput";
 
 type AtelierTreOption = {
   id: number;
@@ -142,9 +145,15 @@ export default function CandidatsPage() {
   const { data: pageData, loading } = useCandidats(effectiveFilters, refreshNonce);
   const { options, loading: loadingOptions } = useCandidatFiltres();
   const { remove } = useDeleteCandidat();
+  const { restore } = useDesarchiverCandidat();
+  const { hardDelete } = useHardDeleteCandidat();
   const {
     loading: bulkLoading,
     bulkValidateInscription,
+    bulkSetAdmissible,
+    bulkClearAdmissible,
+    bulkSetGespers,
+    bulkClearGespers,
     bulkStartFormation,
     bulkAbandon,
     bulkAssignAtelierTre,
@@ -199,22 +208,47 @@ export default function CandidatsPage() {
     []
   );
 
-  // Suppression
+  // Archivage logique
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
-      toast.success(`🗑️ ${idsToDelete.length} candidat(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} candidat(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setPage((p) => p); // refresh soft
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Candidat restauré.");
+      refreshList();
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Candidat supprimé définitivement.");
+      setShowHardDeleteConfirm(false);
+      setHardDeleteId(null);
+      refreshList();
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -239,6 +273,54 @@ export default function CandidatsPage() {
       refreshList();
     } catch (error: any) {
       toast.error(error?.message || "Impossible d'enregistrer l'entrée en formation.");
+    }
+  };
+
+  const handleBulkSetAdmissible = async () => {
+    if (!selectedIds.length) return;
+    try {
+      const result = await bulkSetAdmissible(selectedIds);
+      summarizeBulkResult(result, "Passage en admissible enregistré pour");
+      clearSelection();
+      refreshList();
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de marquer ces candidats comme admissibles.");
+    }
+  };
+
+  const handleBulkClearAdmissible = async () => {
+    if (!selectedIds.length) return;
+    try {
+      const result = await bulkClearAdmissible(selectedIds);
+      summarizeBulkResult(result, "Retrait du statut admissible enregistré pour");
+      clearSelection();
+      refreshList();
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible de retirer le statut admissible.");
+    }
+  };
+
+  const handleBulkSetGespers = async () => {
+    if (!selectedIds.length) return;
+    try {
+      const result = await bulkSetGespers(selectedIds);
+      summarizeBulkResult(result, "Inscription GESPERS enregistrée pour");
+      clearSelection();
+      refreshList();
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible d'inscrire ces candidats dans GESPERS.");
+    }
+  };
+
+  const handleBulkClearGespers = async () => {
+    if (!selectedIds.length) return;
+    try {
+      const result = await bulkClearGespers(selectedIds);
+      summarizeBulkResult(result, "Retrait GESPERS enregistré pour");
+      clearSelection();
+      refreshList();
+    } catch (error: any) {
+      toast.error(error?.message || "Impossible d'annuler l'inscription GESPERS.");
     }
   };
 
@@ -371,6 +453,15 @@ export default function CandidatsPage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
+          <SearchInput
+            placeholder="🔍 Rechercher un candidat..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value }));
+              setPage(1);
+            }}
+          />
+
           <ExportButtonCandidat
             selectedIds={selectedIds}
             label="⬇️ Exporter"
@@ -401,10 +492,56 @@ export default function CandidatsPage() {
             ➕ Nouveau candidat
           </Button>
 
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const next = !prev.avec_archivees;
+                return {
+                  ...prev,
+                  avec_archivees: next ? true : undefined,
+                  archives_seules: next ? prev.archives_seules : undefined,
+                };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const next = !prev.archives_seules;
+                return {
+                  ...prev,
+                  avec_archivees: next ? true : prev.avec_archivees,
+                  archives_seules: next ? true : undefined,
+                };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.archives_seules ? "📂 Quitter archives seules" : "🗄️ Archives seules"}
+          </Button>
+
           {selectedIds.length > 0 && (
             <>
               <Button variant="contained" onClick={handleBulkValidate} disabled={bulkLoading}>
                 Valider le parcours ({selectedIds.length})
+              </Button>
+              <Button variant="contained" onClick={handleBulkSetAdmissible} disabled={bulkLoading}>
+                Mettre admissible
+              </Button>
+              <Button variant="outlined" onClick={handleBulkClearAdmissible} disabled={bulkLoading}>
+                Retirer admissible
+              </Button>
+              <Button variant="contained" onClick={handleBulkSetGespers} disabled={bulkLoading}>
+                Marquer GESPERS
+              </Button>
+              <Button variant="outlined" onClick={handleBulkClearGespers} disabled={bulkLoading}>
+                Retirer GESPERS
               </Button>
               <Button variant="contained" onClick={handleBulkStartFormation} disabled={bulkLoading}>
                 Passer en formation
@@ -416,7 +553,7 @@ export default function CandidatsPage() {
                 Enregistrer un abandon
               </Button>
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
@@ -436,6 +573,7 @@ export default function CandidatsPage() {
           <FiltresCandidatsPanel
             options={options}
             values={effectiveFilters}
+            hideSearch
             onChange={(v) => {
               setFilters((f) => ({ ...f, ...v }));
               setPage(1);
@@ -482,6 +620,11 @@ export default function CandidatsPage() {
             setSelectedId(id);
             setShowConfirm(true);
           }}
+          onRestore={handleRestore}
+          onHardDelete={(id) => {
+            setHardDeleteId(id);
+            setShowHardDeleteConfirm(true);
+          }}
           onRowClick={handleRowClick} // ✅ clic → ouvre la modale
         />
       )}
@@ -492,14 +635,33 @@ export default function CandidatsPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer ce candidat ?"
-              : `Supprimer les ${selectedIds.length} candidats sélectionnés ?`}
+              ? "Archiver ce candidat ?"
+              : `Archiver les ${selectedIds.length} candidats sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={showHardDeleteConfirm}
+        onClose={() => setShowHardDeleteConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action supprime définitivement le candidat archivé. Elle est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowHardDeleteConfirm(false)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

@@ -11,6 +11,7 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     OpenApiTypes,
     extend_schema,
+    extend_schema_view,
 )
 from rest_framework import status
 from rest_framework.decorators import action
@@ -30,7 +31,7 @@ from ...api.serializers.documents_serializers import (
 )
 from ...models.documents import Document
 from ...models.logs import LogUtilisateur
-from ..roles import is_admin_like
+from ..roles import can_write_documents, is_admin_like, is_centre_scoped_staff
 from .scoped_viewset import ScopedModelViewSet
 
 logger = logging.getLogger("application.api")
@@ -55,6 +56,12 @@ class DocumentFilter(django_filters.FilterSet):
         fields = ["centre_id", "statut_id", "type_offre_id"]
 
 
+@extend_schema_view(
+    desarchiver=extend_schema(
+        summary="♻️ Restaurer un document",
+        responses={200: OpenApiResponse(response=DocumentSerializer)},
+    )
+)
 @extend_schema(tags=["Documents"])
 class DocumentViewSet(ScopedModelViewSet):
     """
@@ -96,10 +103,15 @@ class DocumentViewSet(ScopedModelViewSet):
         user = self.request.user
         if is_admin_like(user):
             return
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
+
+    def _assert_can_write_documents(self):
+        """Refuse l'écriture aux rôles ayant seulement la lecture sur les documents."""
+        if not can_write_documents(self.request.user):
+            raise PermissionDenied("Vous avez un accès en lecture seule sur les documents.")
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -117,9 +129,31 @@ class DocumentViewSet(ScopedModelViewSet):
         Le filtrage par rôle/centre n'est pas fait ici : il est appliqué ensuite
         par `ScopedModelViewSet.get_queryset()`.
         """
-        return Document.objects.select_related(
+        qs = Document.objects.select_related(
             "formation", "formation__centre", "formation__statut", "formation__type_offre", "created_by"
-        ).all()
+        )
+
+        if self.action in {"retrieve", "destroy", "desarchiver", "download"}:
+            return qs
+
+        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "false")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            return qs.filter(is_active=False)
+        if inclure_archivees:
+            return qs
+        return qs.filter(is_active=True)
 
     # ------------------------------ list/retrieve -------------------------
 
@@ -160,6 +194,7 @@ class DocumentViewSet(ScopedModelViewSet):
         Crée un document après validation du serializer et contrôle explicite
         du périmètre centre sur la formation cible.
         """
+        self._assert_can_write_documents()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         formation = serializer.validated_data.get("formation")
@@ -188,6 +223,7 @@ class DocumentViewSet(ScopedModelViewSet):
         Met à jour un document visible pour l'utilisateur courant et vérifie
         que la formation finale reste dans le périmètre autorisé.
         """
+        self._assert_can_write_documents()
         instance = self.get_object()
         data = request.data.copy()
 
@@ -214,31 +250,68 @@ class DocumentViewSet(ScopedModelViewSet):
         )
 
     @extend_schema(
-        summary="🗑️ Supprimer un document",
-        responses={200: OpenApiResponse(description="Document supprimé avec succès avec enveloppe JSON.")},
+        summary="📦 Archiver un document",
+        responses={200: OpenApiResponse(description="Document archivé avec succès avec enveloppe JSON.")},
     )
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime définitivement un document puis renvoie actuellement un
-        `200 OK` avec l'enveloppe JSON standard.
-
-        La convention `DELETE` est donc, dans le code actuel, un succès
-        enveloppé et non un `204 No Content`.
+        Conserve la compatibilité avec `DELETE /documents/<id>/` mais
+        remplace la suppression destructive par une désactivation logique.
         """
+        self._assert_can_write_documents()
         document = self.get_object()
         # verrouille la suppression au périmètre centre
         self._assert_staff_can_use_formation(getattr(document, "formation", None))
 
-        document.delete(user=request.user)
+        if not document.is_active:
+            response_serializer = self.get_serializer(document)
+            return self.success_response(
+                data=response_serializer.data,
+                message="Document déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        document.is_active = False
+        document.save(user=request.user, update_fields=["is_active"])
         LogUtilisateur.log_action(
             instance=document,
             user=request.user,
-            action=LogUtilisateur.ACTION_DELETE,
-            details=f"Suppression du document « {document.nom_fichier} »",
+            action=LogUtilisateur.ACTION_UPDATE,
+            details=f"Archivage logique du document « {document.nom_fichier} » via DELETE",
         )
         return self.success_response(
-            data=None,
-            message="Document supprimé avec succès.",
+            data=self.get_serializer(document).data,
+            message="Document archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, *args, **kwargs):
+        """
+        Restaure un document archivé en réactivant `is_active`.
+        """
+        self._assert_can_write_documents()
+        document = self.get_object()
+        self._assert_staff_can_use_formation(getattr(document, "formation", None))
+
+        if document.is_active:
+            return self.success_response(
+                data=self.get_serializer(document).data,
+                message="Document déjà actif.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        document.is_active = True
+        document.save(user=request.user, update_fields=["is_active"])
+        LogUtilisateur.log_action(
+            instance=document,
+            user=request.user,
+            action=LogUtilisateur.ACTION_UPDATE,
+            details=f"Restauration logique du document « {document.nom_fichier} »",
+        )
+        return self.success_response(
+            data=self.get_serializer(document).data,
+            message="Document restauré avec succès.",
             status_code=status.HTTP_200_OK,
         )
 
@@ -452,3 +525,4 @@ class DocumentViewSet(ScopedModelViewSet):
         response["Expires"] = "0"
 
         return response
+    hard_delete_enabled = True

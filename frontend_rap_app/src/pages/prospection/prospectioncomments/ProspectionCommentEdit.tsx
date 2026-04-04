@@ -10,6 +10,7 @@ import {
   useArchiveProspectionComment, // 🆕 import
 } from "../../../hooks/useProspectionComments";
 import { useAuth } from "../../../hooks/useAuth";
+import { isCoreStaffRole } from "../../../utils/roleGroups";
 
 export default function ProspectionCommentEditPage() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function ProspectionCommentEditPage() {
   const hasValidId = !!id && Number.isFinite(numericId);
 
   const { user } = useAuth();
-  const canSetInternal = ["staff", "admin", "superadmin"].includes(user?.role ?? "");
+  const canSetInternal = isCoreStaffRole(user?.role);
 
   const handleSubmit = async (data: { body: string; is_internal?: boolean }) => {
     try {

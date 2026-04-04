@@ -38,6 +38,7 @@ import SearchInput from "../../components/SearchInput";
 import ExportButtonPartenaires from "../../components/export_buttons/ExportButtonPartenaires";
 import PartenairesTable from "./PartenaireTable";
 import PartenaireCandidatDetailModal from "./PartenaireCandidatDetailModal";
+import { isCoreStaffRole } from "../../utils/roleGroups";
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -92,7 +93,7 @@ export default function PartenairesCandidatPage() {
   const { data: partenaireChoices } = usePartenaireChoices();
   const { data: filterOptions, loading: filtersLoading } = usePartenaireFilters();
 
-  const isStaff = Boolean(user?.is_staff) || Boolean(user?.is_superuser) || user?.role === "admin";
+  const isStaff = isCoreStaffRole(user?.role);
 
   const [filters, setFilters] = useState<PartenaireFilters>(defaultFilters);
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -124,7 +125,7 @@ export default function PartenairesCandidatPage() {
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
 
   const queryParams = useMemo(() => {
-    const base: Record<string, string | number> = {
+    const base: Record<string, string | number | boolean> = {
       search: filters.search ?? "",
       page,
       page_size: pageSize,
@@ -161,13 +162,13 @@ export default function PartenairesCandidatPage() {
     if (!idsToDelete.length) return;
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
-      toast.success(`🗑️ ${idsToDelete.length} partenaire(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} partenaire(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -267,7 +268,7 @@ export default function PartenairesCandidatPage() {
           {selectedIds.length > 0 && (
             <>
               <Button color="error" onClick={() => setShowConfirm(true)}>
-                Supprimer ({selectedIds.length})
+                Archiver ({selectedIds.length})
               </Button>
               <Button
                 variant="outlined"
@@ -363,7 +364,7 @@ export default function PartenairesCandidatPage() {
         onEdit={handleEdit}
       />
 
-      {/* ───────────── Confirmation suppression ───────────── */}
+      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -372,14 +373,14 @@ export default function PartenairesCandidatPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer ce partenaire ?"
-              : `Supprimer les ${selectedIds.length} partenaires sélectionnés ?`}
+              ? "Archiver ce partenaire ?"
+              : `Archiver les ${selectedIds.length} partenaires sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

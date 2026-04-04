@@ -296,6 +296,24 @@ export function useListPartenaires(params: Record<string, string | number | bool
   return { data, loading, error };
 }
 
+export function useDesarchiverPartenaire() {
+  return {
+    restore: async (id: number) => {
+      const res = await api.post<unknown>(`/partenaires/${id}/desarchiver/`);
+      return unwrap<Partenaire>(res.data);
+    },
+  };
+}
+
+export function useHardDeletePartenaire() {
+  return {
+    hardDelete: async (id: number) => {
+      const res = await api.post<unknown>(`/partenaires/${id}/hard-delete/`);
+      return unwrap<{ id: number; hard_deleted: boolean; resource: string }>(res.data);
+    },
+  };
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    Détail d’un partenaire
    ──────────────────────────────────────────────────────────────────────────── */

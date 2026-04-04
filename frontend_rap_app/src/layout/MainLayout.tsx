@@ -38,6 +38,13 @@ import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import HomeIcon from "@mui/icons-material/Home";
+import {
+  canAccessDeclicRole,
+  canAccessPrepaRole,
+  isAdminLikeRole,
+  isCoreStaffRole,
+  normalizeRole,
+} from "../utils/roleGroups";
 import EmojiObjectsIcon from "@mui/icons-material/EmojiObjects";
 import InsightsIcon from "@mui/icons-material/Insights";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
@@ -47,7 +54,7 @@ import EventIcon from "@mui/icons-material/Event";
 
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 
-import { sidebarItems } from "./SidebarItems";
+import { useSidebarItems } from "./SidebarItems";
 import { useAuth } from "../hooks/useAuth";
 import { ThemeContext } from "../contexts/ThemeContext";
 import logo from "../assets/logo.png";
@@ -70,6 +77,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
 
   const { user, isAuthenticated, logout } = useAuth();
+  const sidebarItems = useSidebarItems();
 
   // ✅ Contexte thème
   const themeContext = useContext(ThemeContext);
@@ -109,11 +117,11 @@ export default function MainLayout() {
     navigate("/login");
   };
 
-  const canSeeAdvanced =
-    !!user &&
-    (user.is_superuser === true ||
-      user.is_staff === true ||
-      ["admin", "superadmin", "staff", "staff_read"].includes((user.role ?? "").toLowerCase()));
+  const role = normalizeRole(user?.role);
+  const isCoreStaff = isCoreStaffRole(role);
+  const canSeeDeclic = canAccessDeclicRole(role);
+  const canSeePrepa = canAccessPrepaRole(role);
+  const canSeeParametres = isAdminLikeRole(role);
 
   // ✅ Fil d’Ariane
   const pathnames = location.pathname.split("/").filter((x) => x);
@@ -169,71 +177,79 @@ export default function MainLayout() {
               </Button>
 
               {/* Déclic */}
-              <Button
-                color="inherit"
-                onClick={(e) => setAnchorDeclic(e.currentTarget)}
-                endIcon={<EmojiObjectsIcon />}
-              >
-                Déclic
-              </Button>
-              <Menu
-                anchorEl={anchorDeclic}
-                open={Boolean(anchorDeclic)}
-                onClose={() => setAnchorDeclic(null)}
-                PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
-              >
-                <MenuItem component={Link} to="/declic" onClick={() => setAnchorDeclic(null)}>
-                  <EmojiObjectsIcon fontSize="small" sx={{ mr: 1 }} /> Séances Déclic
-                </MenuItem>
-                <MenuItem
-                  component={Link}
-                  to="/declic/objectifs"
-                  onClick={() => setAnchorDeclic(null)}
-                >
-                  <TrackChangesIcon fontSize="small" sx={{ mr: 1 }} /> Objectifs Déclic
-                </MenuItem>
-              </Menu>
+              {canSeeDeclic && (
+                <>
+                  <Button
+                    color="inherit"
+                    onClick={(e) => setAnchorDeclic(e.currentTarget)}
+                    endIcon={<EmojiObjectsIcon />}
+                  >
+                    Déclic
+                  </Button>
+                  <Menu
+                    anchorEl={anchorDeclic}
+                    open={Boolean(anchorDeclic)}
+                    onClose={() => setAnchorDeclic(null)}
+                    PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                  >
+                    <MenuItem component={Link} to="/declic" onClick={() => setAnchorDeclic(null)}>
+                      <EmojiObjectsIcon fontSize="small" sx={{ mr: 1 }} /> Séances Déclic
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/declic/objectifs"
+                      onClick={() => setAnchorDeclic(null)}
+                    >
+                      <TrackChangesIcon fontSize="small" sx={{ mr: 1 }} /> Objectifs Déclic
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
 
               {/* Prépa Comp */}
-              <Button
-                color="inherit"
-                onClick={(e) => setAnchorPrepa(e.currentTarget)}
-                endIcon={<InsightsIcon />}
-              >
-                Prépa Comp
-              </Button>
-              <Menu
-                anchorEl={anchorPrepa}
-                open={Boolean(anchorPrepa)}
-                onClose={() => setAnchorPrepa(null)}
-                PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
-              >
-                <MenuItem component={Link} to="/prepa/ic" onClick={() => setAnchorPrepa(null)}>
-                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> IC Prépa
-                </MenuItem>
-                <MenuItem
-                  component={Link}
-                  to="/prepa/ateliers"
-                  onClick={() => setAnchorPrepa(null)}
-                >
-                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Ateliers Prépa
-                </MenuItem>
-                <MenuItem
-                  component={Link}
-                  to="/prepa/stagiaires"
-                  onClick={() => setAnchorPrepa(null)}
-                >
-                  <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Stagiaires Prépa
-                </MenuItem>
+              {canSeePrepa && (
+                <>
+                  <Button
+                    color="inherit"
+                    onClick={(e) => setAnchorPrepa(e.currentTarget)}
+                    endIcon={<InsightsIcon />}
+                  >
+                    Prépa Comp
+                  </Button>
+                  <Menu
+                    anchorEl={anchorPrepa}
+                    open={Boolean(anchorPrepa)}
+                    onClose={() => setAnchorPrepa(null)}
+                    PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                  >
+                    <MenuItem component={Link} to="/prepa/ic" onClick={() => setAnchorPrepa(null)}>
+                      <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> IC Prépa
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/prepa/ateliers"
+                      onClick={() => setAnchorPrepa(null)}
+                    >
+                      <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Ateliers Prépa
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/prepa/stagiaires"
+                      onClick={() => setAnchorPrepa(null)}
+                    >
+                      <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Stagiaires Prépa
+                    </MenuItem>
 
-                <MenuItem
-                  component={Link}
-                  to="/prepa/objectifs"
-                  onClick={() => setAnchorPrepa(null)}
-                >
-                  <BarChartIcon fontSize="small" sx={{ mr: 1 }} /> objectifs Prépa
-                </MenuItem>
-              </Menu>
+                    <MenuItem
+                      component={Link}
+                      to="/prepa/objectifs"
+                      onClick={() => setAnchorPrepa(null)}
+                    >
+                      <BarChartIcon fontSize="small" sx={{ mr: 1 }} /> objectifs Prépa
+                    </MenuItem>
+                  </Menu>
+                </>
+              )}
 
               {/* CVThèque */}
               <Button
@@ -290,10 +306,10 @@ export default function MainLayout() {
                   Partenaires
                 </MenuItem>
                 <MenuItem component={Link} to="/cerfa">
-                  Contrats CERFA
+                    Contrats CERFA
                 </MenuItem>
 
-                {canSeeAdvanced && (
+                {isCoreStaff && (
                   <>
                     <MenuItem component={Link} to="/appairages">
                       Appairage
@@ -312,7 +328,7 @@ export default function MainLayout() {
               </Menu>
 
               {/* Revue d’offres */}
-              {canSeeAdvanced && (
+              {isCoreStaff && (
                 <>
                   <Button
                     color="inherit"
@@ -348,9 +364,11 @@ export default function MainLayout() {
               <Button color="inherit" component={Link} to="/about">
                 À propos
               </Button>
-              <Button color="inherit" component={Link} to="/parametres">
-                Paramètres
-              </Button>
+              {canSeeParametres && (
+                <Button color="inherit" component={Link} to="/parametres">
+                  Paramètres
+                </Button>
+              )}
             </Stack>
           )}
 

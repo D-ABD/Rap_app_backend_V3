@@ -1,6 +1,8 @@
 import { Chip, IconButton, Link, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import BlockIcon from "@mui/icons-material/Block";
+import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Link as RouterLink } from "react-router-dom";
 import type { StagiairePrepa } from "src/types/prepa";
@@ -9,6 +11,8 @@ type Props = {
   items: StagiairePrepa[];
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
+  onRestore?: (id: number) => void;
+  onHardDelete?: (id: number) => void;
   onRowClick?: (id: number) => void;
 };
 
@@ -16,7 +20,7 @@ const boolChip = (value?: boolean) => (
   <Chip size="small" color={value ? "success" : "default"} label={value ? "Oui" : "Non"} />
 );
 
-export default function StagiairesPrepaTable({ items, onEdit, onDelete, onRowClick }: Props) {
+export default function StagiairesPrepaTable({ items, onEdit, onDelete, onRestore, onHardDelete, onRowClick }: Props) {
   if (!items.length) {
     return (
       <Typography sx={{ p: 2, textAlign: "center", color: "text.secondary" }}>
@@ -101,9 +105,19 @@ export default function StagiairesPrepaTable({ items, onEdit, onDelete, onRowCli
                       <EditIcon fontSize="inherit" />
                     </IconButton>
                   ) : null}
-                  {item.id && onDelete ? (
+                  {item.id && onDelete && (item.is_active ?? true) ? (
                     <IconButton size="small" color="error" onClick={() => onDelete(item.id!)}>
                       <DeleteIcon fontSize="inherit" />
+                    </IconButton>
+                  ) : null}
+                  {item.id && onRestore && !(item.is_active ?? true) ? (
+                    <IconButton size="small" color="success" onClick={() => onRestore(item.id!)}>
+                      <RestoreFromTrashIcon fontSize="inherit" />
+                    </IconButton>
+                  ) : null}
+                  {item.id && onHardDelete && !(item.is_active ?? true) ? (
+                    <IconButton size="small" color="error" onClick={() => onHardDelete(item.id!)}>
+                      <BlockIcon fontSize="inherit" />
                     </IconButton>
                   ) : null}
                 </Stack>

@@ -39,6 +39,14 @@ const nn = (s?: string | number | null) =>
 
 const yn = (b?: boolean | null) => (typeof b === "boolean" ? (b ? "Oui" : "Non") : "—");
 
+const getDepartementLabel = (zipCode?: string | null): string => {
+  if (!zipCode) return "—";
+  const digits = zipCode.replace(/\s+/g, "");
+  if (/^97\d{2}$/.test(digits) || /^98\d{2}$/.test(digits)) return digits.slice(0, 3);
+  if (/^\d{5}$/.test(digits)) return digits.slice(0, 2);
+  return "—";
+};
+
 const TYPE_EMPLOYEUR_CODE_LABELS: Record<string, string> = {
   "11": "11 - Repertoire des metiers",
   "12": "12 - RCS",
@@ -170,6 +178,7 @@ export default function PartenaireDetailModal({
                 <Field label="Rue" value={nn(partenaire.street_name)} />
                 <Field label="Complément" value={nn(partenaire.street_complement)} />
                 <Field label="Code postal" value={nn(partenaire.zip_code)} />
+                <Field label="Département" value={getDepartementLabel(partenaire.zip_code)} />
                 <Field label="Ville" value={nn(partenaire.city)} />
                 <Field label="Pays" value={nn(partenaire.country)} />
                 <Field label="Adresse complète" value={nn(partenaire.full_address)} />

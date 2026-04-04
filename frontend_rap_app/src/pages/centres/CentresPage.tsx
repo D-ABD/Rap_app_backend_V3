@@ -31,6 +31,7 @@ type Centre = {
   id: number;
   nom: string;
   code_postal: string;
+  is_active: boolean;
 };
 
 export default function CentresPage() {
@@ -38,6 +39,9 @@ export default function CentresPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination(1, 5);
@@ -49,7 +53,13 @@ export default function CentresPage() {
   const { data, loading, error, fetchData } = useFetch<{
     results: Centre[];
     count: number;
-  }>("/centres/", { search: search.trim(), page, page_size: pageSize });
+  }>("/centres/", {
+    search: search.trim(),
+    page,
+    page_size: pageSize,
+    ...(includeArchived ? { avec_archivees: true } : {}),
+    ...(archivesOnly ? { archives_seules: true } : {}),
+  });
 
   const centres = data?.results || [];
 
@@ -78,13 +88,39 @@ export default function CentresPage() {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
       await Promise.all(idsToDelete.map((id) => api.delete(`/centres/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} centre(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} centre(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/centres/${id}/desarchiver/`);
+      toast.success("Centre restauré");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/centres/${hardDeleteId}/hard-delete/`);
+      toast.success("Centre supprimé définitivement");
+      setHardDeleteId(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -120,10 +156,43 @@ export default function CentresPage() {
             ➕ Ajouter un centre
           </Button>
 
+          <Button
+            variant={includeArchived || archivesOnly ? "contained" : "outlined"}
+            onClick={() => {
+              if (includeArchived || archivesOnly) {
+                setIncludeArchived(false);
+                setArchivesOnly(false);
+              } else {
+                setIncludeArchived(true);
+              }
+              setPage(1);
+            }}
+          >
+            {includeArchived || archivesOnly ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+
+          {(includeArchived || archivesOnly) && (
+            <Button
+              variant={archivesOnly ? "contained" : "outlined"}
+              onClick={() => {
+                if (archivesOnly) {
+                  setArchivesOnly(false);
+                  setIncludeArchived(false);
+                } else {
+                  setArchivesOnly(true);
+                  setIncludeArchived(true);
+                }
+                setPage(1);
+              }}
+            >
+              {archivesOnly ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
           {selectedIds.length > 0 && (
             <>
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
@@ -211,17 +280,44 @@ export default function CentresPage() {
                 </Box>
               </Stack>
 
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedId(centre.id);
-                  setShowConfirm(true);
-                }}
-              >
-                🗑️ Supprimer
-              </Button>
+              <Stack direction="row" spacing={1}>
+                {centre.is_active ? (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedId(centre.id);
+                      setShowConfirm(true);
+                    }}
+                  >
+                    📦 Archiver
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleRestore(centre.id);
+                      }}
+                    >
+                      Restaurer
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHardDeleteId(centre.id);
+                      }}
+                    >
+                      Supprimer définitivement
+                    </Button>
+                  </>
+                )}
+              </Stack>
             </Paper>
           ))}
         </Stack>
@@ -236,14 +332,32 @@ export default function CentresPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Voulez-vous vraiment supprimer ce centre ?"
-              : `Voulez-vous vraiment supprimer les ${selectedIds.length} centres sélectionnés ?`}
+              ? "Voulez-vous vraiment archiver ce centre ?"
+              : `Voulez-vous vraiment archiver les ${selectedIds.length} centres sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="warning" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Supprimer définitivement ce centre archivé ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

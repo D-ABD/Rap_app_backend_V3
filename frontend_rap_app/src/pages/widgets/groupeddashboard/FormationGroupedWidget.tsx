@@ -32,14 +32,21 @@ function toFixed0(n?: number | null) {
   return n == null ? "—" : Math.round(n).toString();
 }
 
+function formatPercent(n?: number | null) {
+  if (n == null || Number.isNaN(n)) return "—";
+  if (n > 0 && n < 1) return `${n.toFixed(2)}%`;
+  if (n < 10) return `${n.toFixed(1).replace(/\.0$/, "")}%`;
+  return `${Math.round(n)}%`;
+}
+
 const COLUMNS = [
   "Formations",
   "Places CRIF",
-  "Inscrits CRIF",
+  "Inscrits saisis CRIF",
   "Places MP",
-  "Inscrits MP",
+  "Inscrits saisis MP",
   "Dispo",
-  "Saturation",
+  "Saturation GESPERS",
   "Entrées (formations)",
   "Événements",
   "Prospections",
@@ -52,7 +59,7 @@ const COLUMNS = [
   "En accompagnement TRE",
   "En appairage",
   "Inscrits GESPERS",
-  "Ecart inscrits",
+  "Ecart saisis / GESPERS",
   "Sortie / fin de formation",
   "Abandons",
   "Contrats Appr.",
@@ -91,9 +98,11 @@ export default function FormationGroupedWidget({
     const sum = (key: keyof GroupRow) =>
       data.results.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
 
-    const moyenneSaturation =
-      data.results.reduce((acc, r) => acc + (Number(r.taux_saturation) || 0), 0) /
-      data.results.length;
+    const totalPlaces =
+      data.results.reduce((acc, row) => acc + (Number(row.total_places) || 0), 0);
+    const totalGespers =
+      data.results.reduce((acc, row) => acc + (Number(row.nb_inscrits_gespers) || 0), 0);
+    const moyenneSaturation = totalPlaces > 0 ? (100 * totalGespers) / totalPlaces : 0;
 
     return {
       nbFormations: sum("nb_formations"),
@@ -117,7 +126,7 @@ export default function FormationGroupedWidget({
       totalTest: sum("nb_test_ok"),
       totalAccompagnementTre: sum("nb_en_accompagnement_tre"),
       totalEnAppairage: sum("nb_en_appairage"),
-      totalGespers: sum("nb_inscrits_gespers"),
+      totalGespers,
       totalEcartInscrits: sum("ecart_inscrits_vs_gespers"),
       totalSortis: sum("nb_sortis"),
       totalAbandons: sum("nb_abandons_phase"),
@@ -349,7 +358,7 @@ export default function FormationGroupedWidget({
                     <TableCell align="right">{toFixed0(r.total_inscrits_mp)}</TableCell>
                     <TableCell align="right">{toFixed0(r.total_disponibles)}</TableCell>
                     <TableCell align="right" sx={{ color: saturationColor, fontWeight: 600 }}>
-                      {Math.round(saturation)}%
+                      {formatPercent(saturation)}
                     </TableCell>
                     <TableCell align="right">{toFixed0(r.entrees_formation)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_evenements)}</TableCell>
@@ -394,7 +403,7 @@ export default function FormationGroupedWidget({
                   <TableCell align="right">{toFixed0(totals.totalInscritsMp)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalDispo)}</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {Math.round(totals.moyenneSaturation)}%
+                    {formatPercent(totals.moyenneSaturation)}
                   </TableCell>
                 <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
                 <TableCell align="right">{toFixed0(totals.totalEvenements)}</TableCell>

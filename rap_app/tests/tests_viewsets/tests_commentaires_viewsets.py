@@ -44,7 +44,9 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
         url = reverse("commentaire-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(isinstance(response.data, list) or "results" in response.data or "data" in response.data)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Commentaires récupérés")
+        self.assertIn("results", self.get_data(response))
 
     def test_detail_commentaire(self):
         url = reverse("commentaire-detail", args=[self.commentaire.id])
@@ -87,11 +89,71 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.get_data(response)["contenu"], "Contenu modifié")
 
-    def test_delete_commentaire(self):
+    def test_delete_commentaire_archive_logiquement(self):
         url = reverse("commentaire-detail", args=[self.commentaire.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Commentaire.objects.filter(pk=self.commentaire.id).exists())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.commentaire.refresh_from_db()
+        self.assertEqual(self.commentaire.statut_commentaire, Commentaire.STATUT_ARCHIVE)
+
+    def test_delete_commentaire_archive_and_hides_from_default_list(self):
+        url = reverse("commentaire-detail", args=[self.commentaire.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        list_response = self.client.get(reverse("commentaire-list"))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        payload = self.get_data(list_response)
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        results = results if isinstance(results, list) else [results]
+        ids = [item.get("id") for item in results if isinstance(item, dict)]
+        self.assertNotIn(self.commentaire.id, ids)
+
+    def test_list_commentaires_can_include_archived_items(self):
+        self.commentaire.archiver(user=self.user, save=True)
+
+        response = self.client.get(reverse("commentaire-list"), {"statut": "all"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = self.get_data(response)
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        results = results if isinstance(results, list) else [results]
+        ids = [item.get("id") for item in results if isinstance(item, dict)]
+        self.assertIn(self.commentaire.id, ids)
+
+    def test_list_commentaires_can_show_archived_only(self):
+        self.commentaire.archiver(user=self.user, save=True)
+
+        active_comment = Commentaire.objects.create(
+            formation=self.formation,
+            contenu="Commentaire actif",
+            saturation=70,
+            created_by=self.user,
+        )
+
+        response = self.client.get(reverse("commentaire-list"), {"statut": "archive"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = self.get_data(response)
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        results = results if isinstance(results, list) else [results]
+        ids = [item.get("id") for item in results if isinstance(item, dict)]
+        self.assertIn(self.commentaire.id, ids)
+        self.assertNotIn(active_comment.id, ids)
+
+    def test_archiver_puis_desarchiver_commentaire(self):
+        archive_response = self.client.post(reverse("commentaire-archiver", args=[self.commentaire.id]))
+        self.assertEqual(archive_response.status_code, status.HTTP_200_OK)
+
+        self.commentaire.refresh_from_db()
+        self.assertEqual(self.commentaire.statut_commentaire, Commentaire.STATUT_ARCHIVE)
+
+        restore_response = self.client.post(reverse("commentaire-desarchiver", args=[self.commentaire.id]))
+        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
+
+        self.commentaire.refresh_from_db()
+        self.assertEqual(self.commentaire.statut_commentaire, Commentaire.STATUT_ACTIF)
 
     def test_filtrage_par_formation(self):
         url = reverse("commentaire-list") + f"?formation_id={self.formation.id}"
@@ -120,3 +182,31 @@ class CommentaireViewSetTestCase(AuthenticatedTestCase):
         stats = self.get_data(response)
         self.assertIn("avg", stats)
         self.assertEqual(stats["count"], 1)
+
+    def test_commercial_can_list_but_cannot_create_commentaire(self):
+        commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+        commercial.centres.add(self.centre)
+        self.client.force_authenticate(user=commercial)
+
+        list_response = self.client.get(reverse("commentaire-list"))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+
+        create_response = self.client.post(
+            reverse("commentaire-list"),
+            {"formation": self.formation.id, "contenu": "Commentaire commercial", "saturation": 70},
+            format="json",
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_charge_recrutement_can_create_commentaire_in_scope(self):
+        charge = UserFactory(role=CustomUser.ROLE_CHARGE_RECRUTEMENT)
+        charge.centres.add(self.centre)
+        self.client.force_authenticate(user=charge)
+
+        response = self.client.post(
+            reverse("commentaire-list"),
+            {"formation": self.formation.id, "contenu": "Commentaire recrutement", "saturation": 75},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -35,7 +35,7 @@ export default function CentreDetailPage({ centre: propCentre }: Props) {
     const fetchCentre = async () => {
       try {
         const res = await api.get(`/centres/${id}/`);
-        setCentre(res.data);
+        setCentre(res.data?.data ?? null);
       } catch {
         toast.error("Erreur lors du chargement du centre");
         navigate("/centres");

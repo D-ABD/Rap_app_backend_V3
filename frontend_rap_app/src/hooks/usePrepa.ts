@@ -70,6 +70,8 @@ export interface PrepaFilters {
   page?: number;
   page_size?: number;
   ordering?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export function usePrepaList(filters: Partial<PrepaFilters> = {}) {
@@ -121,7 +123,7 @@ export function usePrepaDetail(id: number | null) {
     (async () => {
       try {
         const res = await api.get(`/prepa/${id}/`, { signal: ctrl.signal });
-        setData(res.data);
+        setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -159,6 +161,22 @@ export function useDeletePrepa() {
     await api.delete(`/prepa/${id}/`);
   };
   return { remove };
+}
+
+export function useDesarchiverPrepa() {
+  const restore = async (id: number) => {
+    const r = await api.post(`/prepa/${id}/desarchiver/`);
+    return r.data;
+  };
+  return { restore };
+}
+
+export function useHardDeletePrepa() {
+  const hardDelete = async (id: number) => {
+    const r = await api.post(`/prepa/${id}/hard-delete/`);
+    return r.data;
+  };
+  return { hardDelete };
 }
 
 // ────────────────────────────────────────────────────────────────

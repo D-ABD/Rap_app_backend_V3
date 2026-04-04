@@ -1,6 +1,7 @@
 # rap_app/api/viewsets/centre_viewsets.py
 
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
@@ -12,7 +13,7 @@ from rest_framework.views import APIView
 
 from ...models.centres import Centre
 from ...models.logs import LogUtilisateur
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import ReadWriteAdminReadStaff
 from ..roles import is_admin_like, is_staff_or_staffread
@@ -25,14 +26,15 @@ from ..serializers.centres_serializers import CentreSerializer
     create=extend_schema(summary="Créer un centre", tags=["Centres"]),
     update=extend_schema(summary="Mettre à jour un centre", tags=["Centres"]),
     partial_update=extend_schema(summary="Mettre à jour partiellement un centre", tags=["Centres"]),
-    destroy=extend_schema(summary="Supprimer un centre", tags=["Centres"]),
+    destroy=extend_schema(summary="Archiver un centre", tags=["Centres"]),
 )
-class CentreViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class CentreViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """ViewSet CRUD pour Centre. Permission ReadWriteAdminReadStaff ; staff limité à user.centres. Filtres, search, ordering. Action liste-simple (GET) pour id/label."""
 
     serializer_class = CentreSerializer
     pagination_class = RapAppPagination
     permission_classes = [IsAuthenticated & ReadWriteAdminReadStaff]
+    hard_delete_enabled = True
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
     filterset_fields = [
@@ -63,9 +65,26 @@ class CentreViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     ordering = ["nom"]
 
     def get_queryset(self):
-        """Staff (non superuser) : centres dans user.centres ; sinon tous. Tri par nom."""
+        """Retourne les centres actifs visibles par rôle, triés par nom."""
         user = self.request.user
         qs = Centre.objects.all().order_by("nom")
+        include_archived = str(self.request.query_params.get("avec_archivees", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            qs = qs.filter(is_active=False)
+        elif not include_archived:
+            qs = qs.filter(is_active=True)
 
         if is_admin_like(user):
             return qs
@@ -77,6 +96,53 @@ class CentreViewSet(ApiResponseMixin, viewsets.ModelViewSet):
                 return qs.none()
 
         return qs.none()
+
+    def get_archived_aware_object(self):
+        """Récupère un centre en incluant les archives tout en respectant le scope utilisateur."""
+        lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        user = self.request.user
+        qs = Centre.objects.all().order_by("nom")
+
+        if is_admin_like(user):
+            scoped_qs = qs
+        elif is_staff_or_staffread(user):
+            try:
+                scoped_qs = qs.filter(id__in=user.centres.values_list("id", flat=True))
+            except Exception:
+                scoped_qs = qs.none()
+        else:
+            scoped_qs = qs.none()
+
+        return get_object_or_404(scoped_qs, **{self.lookup_field: lookup_value})
+
+    def list(self, request, *args, **kwargs):
+        """Retourne la liste paginée des centres dans l'enveloppe API standard."""
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            paginated = self.get_paginated_response(serializer.data).data
+            if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys()):
+                paginated["message"] = "Liste des centres récupérée avec succès."
+                return Response(paginated)
+            return self.success_response(
+                data=paginated,
+                message="Liste des centres récupérée avec succès.",
+            )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return self.success_response(
+            data=serializer.data,
+            message="Liste des centres récupérée avec succès.",
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """Retourne le détail d'un centre dans l'enveloppe API standard."""
+        instance = self.get_object()
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Centre récupéré avec succès.",
+        )
 
     @action(detail=False, methods=["get"], url_path="liste-simple")
     def liste_simple(self, request):
@@ -153,22 +219,54 @@ class CentreViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        """Supprime le centre, LogUtilisateur.log_action ACTION_DELETE, retourne success/message/data None, 204."""
+        """Archive logiquement le centre et le retire des listes actives."""
         instance = self.get_object()
-        instance.delete()
+        if not instance.is_active:
+            return self.success_response(
+                data=instance.to_serializable_dict(),
+                message="Centre déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
 
         LogUtilisateur.log_action(
             instance=instance,
-            action=LogUtilisateur.ACTION_DELETE,
+            action=LogUtilisateur.ACTION_UPDATE,
             user=request.user,
-            details=f"Suppression du centre : {instance.nom}",
+            details=f"Archivage logique du centre : {instance.nom}",
         )
 
-        return Response(
-            {
-                "success": True,
-                "message": "Centre supprimé avec succès.",
-                "data": None,
-            },
-            status=status.HTTP_204_NO_CONTENT,
+        return self.success_response(
+            data=instance.to_serializable_dict(),
+            message="Centre archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, *args, **kwargs):
+        """Restaure un centre archivé."""
+        instance = self.get_archived_aware_object()
+        if instance.is_active:
+            return self.success_response(
+                data=instance.to_serializable_dict(),
+                message="Centre déjà actif.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+
+        LogUtilisateur.log_action(
+            instance=instance,
+            action=LogUtilisateur.ACTION_UPDATE,
+            user=request.user,
+            details=f"Désarchivage du centre : {instance.nom}",
+        )
+
+        return self.success_response(
+            data=instance.to_serializable_dict(),
+            message="Centre désarchivé avec succès.",
+            status_code=status.HTTP_200_OK,
         )

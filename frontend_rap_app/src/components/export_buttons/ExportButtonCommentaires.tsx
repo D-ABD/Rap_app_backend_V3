@@ -39,12 +39,16 @@ type Props = {
   data: CommentaireRow[];
   selectedIds?: number[];
   label?: string;
+  requestParams?: Record<string, unknown>;
+  totalCount?: number;
 };
 
 export default function ExportButtonCommentaires({
   data,
   selectedIds = [],
   label = "⬇️ Exporter",
+  requestParams = {},
+  totalCount,
 }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("pdf");
@@ -52,7 +56,7 @@ export default function ExportButtonCommentaires({
   const [includeArchived, setIncludeArchived] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const total = data?.length ?? 0;
+  const total = totalCount ?? data?.length ?? 0;
   const selectedCount = selectedIds.length;
 
   const openModal = () => {
@@ -73,7 +77,19 @@ export default function ExportButtonCommentaires({
       setBusy(true);
 
       const baseUrl = `/commentaires/export/`;
-      const params = includeArchived ? { include_archived: true } : undefined;
+      const filteredParams = Object.fromEntries(
+        Object.entries(requestParams).filter(
+          ([key, value]) =>
+            value !== undefined &&
+            value !== null &&
+            value !== "" &&
+            !["page", "page_size"].includes(key)
+        )
+      );
+      const params = {
+        ...filteredParams,
+        ...(includeArchived ? { include_archived: true } : {}),
+      };
       let res;
 
       if (scope === "selected" && selectedCount > 0) {

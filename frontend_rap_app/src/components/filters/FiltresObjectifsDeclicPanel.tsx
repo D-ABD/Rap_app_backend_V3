@@ -9,6 +9,8 @@ type Props = {
   onChange: (next: ObjectifDeclicFiltresValues) => void;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
+  hideToggle?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +41,8 @@ export default function FiltresObjectifsDeclicPanel({
   onChange,
   onRefresh,
   onReset,
+  hideSearch = false,
+  hideToggle = false,
 }: Props) {
   const [showFilters, setShowFilters] = useState(false); // 👈 Masqué par défaut
 
@@ -78,14 +82,15 @@ export default function FiltresObjectifsDeclicPanel({
   /* ------------------------------------------------------------------ */
   return (
     <>
-      {/* Bouton pour afficher/masquer */}
-      <Stack direction="row" justifyContent="flex-end" mb={1.5}>
-        <Button variant="outlined" size="small" onClick={() => setShowFilters((prev) => !prev)}>
-          {showFilters ? "Masquer les filtres ▲" : "Afficher les filtres ▼"}
-        </Button>
-      </Stack>
+      {!hideToggle && (
+        <Stack direction="row" justifyContent="flex-end" mb={1.5}>
+          <Button variant="outlined" size="small" onClick={() => setShowFilters((prev) => !prev)}>
+            {showFilters ? "Masquer les filtres ▲" : "Afficher les filtres ▼"}
+          </Button>
+        </Stack>
+      )}
 
-      <Collapse in={showFilters} timeout="auto" unmountOnExit>
+      <Collapse in={hideToggle ? true : showFilters} timeout="auto" unmountOnExit>
         {!ready ? (
           <Box
             role="status"
@@ -105,32 +110,33 @@ export default function FiltresObjectifsDeclicPanel({
           </Box>
         ) : (
           <>
-            {/* 🔍 Recherche */}
-            <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
-              <label htmlFor="objectifs-search-input" style={visuallyHidden as React.CSSProperties}>
-                Rechercher un objectif Déclic
-              </label>
+            {!hideSearch && (
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
+                <label htmlFor="objectifs-search-input" style={visuallyHidden as React.CSSProperties}>
+                  Rechercher un objectif Déclic
+                </label>
 
-              <TextField
-                id="objectifs-search-input"
-                type="search"
-                size="small"
-                fullWidth
-                value={values.search ?? ""}
-                onChange={onLocalSearchChange}
-                onKeyDown={onSearchKeyDown}
-                placeholder="🔎 Recherche (centre, département…)"
-              />
+                <TextField
+                  id="objectifs-search-input"
+                  type="search"
+                  size="small"
+                  fullWidth
+                  value={values.search ?? ""}
+                  onChange={onLocalSearchChange}
+                  onKeyDown={onSearchKeyDown}
+                  placeholder="🔎 Recherche (centre, département…)"
+                />
 
-              {values.search && (
-                <Button
-                  variant="outlined"
-                  onClick={() => onChange({ ...values, search: "", page: 1 })}
-                >
-                  ✕
-                </Button>
-              )}
-            </Stack>
+                {values.search && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => onChange({ ...values, search: "", page: 1 })}
+                  >
+                    ✕
+                  </Button>
+                )}
+              </Stack>
+            )}
 
             {/* 🗓️ Année */}
             <TextField

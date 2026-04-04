@@ -15,6 +15,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -33,6 +36,9 @@ import { AppairageFilters } from "../../components/filters/FiltresAppairagePanel
 import ExportButtonAppairage from "../../components/export_buttons/ExportButtonAppairage";
 import PageTemplate from "../../components/PageTemplate";
 import AppairageDetailModal from "./AppairageDetailModal";
+import { useAuth } from "../../hooks/useAuth";
+import SearchInput from "../../components/SearchInput";
+import { isAdminLikeRole } from "../../utils/roleGroups";
 
 type AppairagePageFilters = AppairageFiltresValues & {
   centre?: number;
@@ -43,6 +49,8 @@ export const AppairagesPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { user } = useAuth();
+  const canHardDelete = isAdminLikeRole(user?.role);
 
   const toNum = (value: string | null): number | undefined => {
     if (!value) return undefined;
@@ -77,6 +85,10 @@ export const AppairagesPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   // 🔹 Modale de détail
@@ -132,6 +144,9 @@ export const AppairagesPage: React.FC = () => {
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [appairages]);
 
+  const clearSelection = () => setSelectedIds([]);
+  const selectAll = () => setSelectedIds(appairages.map((a) => a.id));
+
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
@@ -139,13 +154,13 @@ export const AppairagesPage: React.FC = () => {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
       await Promise.all(idsToDelete.map((id) => api.delete(`/appairages/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} appairage(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} appairage(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Impossible de supprimer un ou plusieurs appairages.");
+      toast.error("Impossible d'archiver un ou plusieurs appairages.");
     }
   };
 
@@ -161,6 +176,68 @@ export const AppairagesPage: React.FC = () => {
   const handleDeleteClick = (id: number) => {
     setSelectedId(id);
     setShowConfirm(true);
+  };
+
+  const handleRestoreClick = async (id: number) => {
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/appairages/${id}/desarchiver/`);
+      toast.success("♻️ Appairage restauré");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de restaurer cet appairage.");
+    }
+  };
+
+  const handleHardDeleteClick = async () => {
+    if (!hardDeleteId) return;
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/appairages/${hardDeleteId}/hard-delete/`);
+      toast.success("🗑️ Appairage supprimé définitivement");
+      setHardDeleteId(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de supprimer définitivement cet appairage.");
+    }
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (!selectedIds.length || !bulkStatus) {
+      toast.error("Choisis d'abord un statut à appliquer.");
+      return;
+    }
+
+    setBulkStatusLoading(true);
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => api.patch(`/appairages/${id}/`, { statut: bulkStatus }))
+      );
+
+      const succeeded = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - succeeded;
+
+      if (failed === 0) {
+        toast.success(`Statut mis à jour pour ${succeeded} appairage(s).`);
+      } else if (succeeded === 0) {
+        toast.error("Aucun appairage n'a pu être mis à jour.");
+      } else {
+        toast.warning(`Statut mis à jour pour ${succeeded} appairage(s). ${failed} échec(s).`);
+      }
+
+      setShowBulkStatusDialog(false);
+      setBulkStatus("");
+      setSelectedIds([]);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de changer le statut des appairages sélectionnés.");
+    } finally {
+      setBulkStatusLoading(false);
+    }
   };
 
   const handleHistoryClick = (id: number) => navigate(`/appairages/${id}/historiques`);
@@ -187,6 +264,48 @@ export const AppairagesPage: React.FC = () => {
           >
             {showFilters ? "Masquer filtres" : "Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+
+          <SearchInput
+            placeholder="🔍 Rechercher un appairage..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
+
+          <Button
+            variant="outlined"
+            fullWidth={isMobile}
+            onClick={() => {
+              setFilters((prev) => {
+                const next = !prev.avec_archivees;
+                if (!next && prev.activite === "archive") {
+                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                }
+                return { ...prev, avec_archivees: next ? true : undefined };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            fullWidth={isMobile}
+            onClick={() => {
+              setFilters((prev) => {
+                const archivesOnly = prev.activite === "archive";
+                return archivesOnly
+                  ? { ...prev, activite: undefined, avec_archivees: undefined }
+                  : { ...prev, activite: "archive", avec_archivees: true };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.activite === "archive" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
           <ExportButtonAppairage
@@ -218,6 +337,23 @@ export const AppairagesPage: React.FC = () => {
           >
             ➕ Nouvel appairage
           </Button>
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button variant="contained" onClick={() => setShowBulkStatusDialog(true)}>
+                Changer le statut ({selectedIds.length})
+              </Button>
+              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+                📦 Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={selectAll}>
+                ✅ Tout sélectionner
+              </Button>
+              <Button variant="outlined" onClick={clearSelection}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
         </Stack>
       }
       filters={
@@ -229,6 +365,7 @@ export const AppairagesPage: React.FC = () => {
               <AppairageFilters
                 meta={meta as AppairageMeta}
                 values={filters}
+                hideSearch
                 onChange={(newValues: AppairageFiltresValues) => {
                   setFilters(newValues);
                   setPage(1);
@@ -281,6 +418,9 @@ export const AppairagesPage: React.FC = () => {
           onSelectionChange={setSelectedIds}
           onRowClick={handleRowClick} // ✅ clic ligne → ouvre la modale
           onDeleteClick={handleDeleteClick}
+          onRestoreClick={handleRestoreClick}
+          onHardDeleteClick={(id) => setHardDeleteId(id)}
+          canHardDelete={canHardDelete}
           onHistoryClick={handleHistoryClick}
         />
       )}
@@ -293,7 +433,7 @@ export const AppairagesPage: React.FC = () => {
         onEdit={handleEdit}
       />
 
-      {/* ───────────── Confirmation suppression ───────────── */}
+      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -302,14 +442,62 @@ export const AppairagesPage: React.FC = () => {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer cet appairage ?"
-              : `Supprimer les ${selectedIds.length} appairages sélectionnés ?`}
+              ? "Archiver cet appairage ?"
+              : `Archiver les ${selectedIds.length} appairages sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showBulkStatusDialog} onClose={() => setShowBulkStatusDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Changer le statut des appairages sélectionnés</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Choisis le nouveau statut à appliquer aux {selectedIds.length} appairage(s) sélectionné(s).
+          </DialogContentText>
+          <FormControl fullWidth>
+            <InputLabel id="bulk-appairage-status-label">Nouveau statut</InputLabel>
+            <Select
+              labelId="bulk-appairage-status-label"
+              value={bulkStatus}
+              label="Nouveau statut"
+              onChange={(event: SelectChangeEvent) => setBulkStatus(event.target.value)}
+            >
+              {(meta as AppairageMeta | undefined)?.statut_choices?.map((choice) => (
+                <MenuItem key={choice.value} value={choice.value}>
+                  {choice.label}
+                </MenuItem>
+              )) ?? []}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkStatusDialog(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleBulkStatusChange} disabled={bulkStatusLoading || !bulkStatus}>
+            {bulkStatusLoading ? "Mise à jour..." : "Appliquer"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="error" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. L'appairage archivé sera supprimé définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDeleteClick}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

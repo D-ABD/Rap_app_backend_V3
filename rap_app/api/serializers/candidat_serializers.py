@@ -22,6 +22,7 @@ from ...models.formations import Formation
 from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...services.french_text_normalizer import normalize_candidate_payload
 from ..mixins import FieldMaskingMixin
+from ..roles import is_admin_like, is_centre_scoped_staff
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
 )
@@ -50,6 +51,11 @@ def _user_display(u):
         return None
     full = u.get_full_name()
     return full or getattr(u, "email", None) or getattr(u, "username", None)
+
+
+def _can_manage_candidate_record(user) -> bool:
+    """Retourne True pour les rôles coeur autorisés à modifier une fiche candidat."""
+    return bool(user and (is_admin_like(user) or is_centre_scoped_staff(user)))
 
 
 def _ateliers_counts_for(obj) -> dict[str, int]:
@@ -486,7 +492,7 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
         user = request.user if request and request.user.is_authenticated else None
         if not user:
             return False
-        return user.role in ["admin", "superadmin", "staff"] or instance.compte_utilisateur == user
+        return _can_manage_candidate_record(user) or instance.compte_utilisateur == user
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -498,7 +504,7 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
 
         request = self.context.get("request")
         user = request.user if request and request.user.is_authenticated else None
-        is_staff_or_admin = user and user.role in ["staff", "admin", "superadmin"]
+        is_staff_or_admin = user and _can_manage_candidate_record(user)
 
         reserved = [
             "notes",
@@ -528,7 +534,8 @@ class CandidatSerializer(FieldMaskingMixin, serializers.ModelSerializer):
                 data.pop(f, None)
 
         can_see_nir = user and (
-            user.role in ["staff", "staff_read", "admin", "superadmin"]
+            is_admin_like(user)
+            or is_centre_scoped_staff(user)
             or getattr(instance, "compte_utilisateur_id", None) == user.id
         )
         if not can_see_nir:
@@ -707,7 +714,7 @@ class CandidatListSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             return False
-        return user.role in ["admin", "superadmin", "staff"] or instance.compte_utilisateur == user
+        return _can_manage_candidate_record(user) or instance.compte_utilisateur == user
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -718,7 +725,7 @@ class CandidatListSerializer(serializers.ModelSerializer):
         data["nom_complet"] = nom_complet
 
         user = getattr(self.context.get("request"), "user", None)
-        is_staff_or_admin = user and user.role in ["staff", "admin", "superadmin"]
+        is_staff_or_admin = user and _can_manage_candidate_record(user)
 
         if not is_staff_or_admin:
             RESERVED = [
@@ -747,7 +754,8 @@ class CandidatListSerializer(serializers.ModelSerializer):
                 data.pop(f, None)
 
         can_see_nir = user and (
-            user.role in ["staff", "staff_read", "admin", "superadmin"]
+            is_admin_like(user)
+            or is_centre_scoped_staff(user)
             or getattr(instance, "compte_utilisateur_id", None) == user.id
         )
         if not can_see_nir:
@@ -760,6 +768,8 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
     """Création/mise à jour candidat ; validate selon rôle (champs réservés, numero_osia, formation) ; pas de création compte ici."""
 
     compte_utilisateur = serializers.PrimaryKeyRelatedField(read_only=True)
+    role_lie = serializers.SerializerMethodField(read_only=True)
+    centre_lie = serializers.SerializerMethodField(read_only=True)
 
     def run_validation(self, data=...):
         allowed = set(self.fields.keys())
@@ -770,7 +780,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Candidat
 
-        fields = [f.name for f in Candidat._meta.concrete_fields] + ["compte_utilisateur"]
+        fields = [f.name for f in Candidat._meta.concrete_fields] + ["compte_utilisateur", "role_lie", "centre_lie"]
 
         read_only_fields = [
             "id",
@@ -792,7 +802,27 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "rgpd_notice_sent_by",
             "rgpd_data_reviewed_at",
             "rgpd_data_reviewed_by",
+            "role_lie",
+            "centre_lie",
         ]
+
+    @extend_schema_field(str)
+    def get_role_lie(self, obj):
+        user = getattr(obj, "compte_utilisateur", None)
+        if not user:
+            return None
+        return {
+            "value": getattr(user, "role", None),
+            "label": user.get_role_display() if hasattr(user, "get_role_display") else getattr(user, "role", None),
+        }
+
+    @extend_schema_field(str)
+    def get_centre_lie(self, obj):
+        formation = getattr(obj, "formation", None)
+        centre = getattr(formation, "centre", None) if formation else None
+        if not centre:
+            return None
+        return {"id": centre.id, "nom": centre.nom}
 
     def create(self, validated_data):
         validated_data.pop("compte_utilisateur", None)
@@ -821,14 +851,14 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             "courrier_rentree",
             "vu_par",
         ]
-        if user.role not in ["admin", "superadmin"]:
+        if not is_admin_like(user):
             for field in restricted_fields:
                 if field in data:
                     raise serializers.ValidationError(
                         {field: "Ce champ ne peut être modifié que par un administrateur."}
                     )
 
-        if user.role not in ["admin", "superadmin", "staff"]:
+        if not _can_manage_candidate_record(user):
             for field in ["admissible", "inscrit_gespers", "en_accompagnement_tre", "en_appairage"]:
                 if field in data:
                     raise serializers.ValidationError(
@@ -836,7 +866,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
                     )
 
         if "numero_osia" in data:
-            if user.role not in ["admin", "superadmin", "staff"]:
+            if not _can_manage_candidate_record(user):
                 raise serializers.ValidationError({"numero_osia": "Non autorisé."})
 
             if self.instance and self.instance.numero_osia and data["numero_osia"] != self.instance.numero_osia:
@@ -857,7 +887,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         if cu and not email:
             raise serializers.ValidationError({"email": "Un compte utilisateur nécessite une adresse email."})
 
-        if self.instance is None and user.role in ["admin", "superadmin", "staff"]:
+        if self.instance is None and _can_manage_candidate_record(user):
             if not data.get("rgpd_legal_basis"):
                 raise serializers.ValidationError(
                     {"rgpd_legal_basis": "Ce champ est requis pour une création manuelle de fiche candidat."}
@@ -912,7 +942,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = request.user if request and request.user.is_authenticated else None
 
-        if not user or user.role not in ["admin", "superadmin", "staff"]:
+        if not user or not _can_manage_candidate_record(user):
             raise serializers.ValidationError("Seul le staff peut créer/modifier la formation d’un candidat.")
 
         return value
@@ -994,6 +1024,7 @@ class CandidatQueryParamsSerializer(serializers.Serializer):
     cv_statut = LabelOrValueChoiceField(choices=dict(Candidat.CVStatut.choices), required=False)
 
     contrat_signe = LabelOrValueChoiceField(choices=dict(Candidat.ContratSigne.choices), required=False)
+    avec_archivees = serializers.BooleanField(required=False)
 
     parcours_phase__in = serializers.CharField(required=False)
     parcoursPhase = serializers.CharField(required=False)

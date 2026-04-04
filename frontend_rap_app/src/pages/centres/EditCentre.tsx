@@ -22,7 +22,7 @@ export default function EditCentre() {
     setLoading(true);
     try {
       const res = await api.get<Centre>(`/centres/${id}/`);
-      setInitialValues(res.data);
+      setInitialValues((res.data as { data?: Centre })?.data ?? null);
     } catch {
       toast.error("Erreur lors du chargement du centre");
       navigate("/centres");

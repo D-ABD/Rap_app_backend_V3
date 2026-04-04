@@ -74,13 +74,13 @@ export default function StagiairesPrepaEditPage() {
   };
 
   const handleDelete = async () => {
-    if (Number.isNaN(id) || !window.confirm("Supprimer ce stagiaire Prépa ?")) return;
+    if (Number.isNaN(id) || !window.confirm("Archiver ce stagiaire Prépa ?")) return;
     try {
       await remove(id);
-      toast.success("Stagiaire Prépa supprimé");
+      toast.success("Stagiaire Prépa archivé");
       navigate("/prepa/stagiaires");
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -115,7 +115,7 @@ export default function StagiairesPrepaEditPage() {
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

@@ -25,7 +25,7 @@ export function useCentres(params?: {
     queryKey,
     queryFn: async (): Promise<PaginatedResponse<Centre>> => {
       const response = await api.get("/centres/", { params });
-      return response.data;
+      return response.data?.data ?? response.data;
     },
     placeholderData: keepPreviousData,
   });
@@ -39,7 +39,7 @@ export function useCentre(id?: number | string) {
     queryKey: ["centre", id],
     queryFn: async (): Promise<Centre> => {
       const response = await api.get(`/centres/${id}/`);
-      return response.data;
+      return response.data?.data ?? response.data;
     },
     enabled: !!id, // ne fait la requête que si un id est fourni
   });
@@ -55,7 +55,8 @@ export function useCentresSimple(search?: string) {
       const response = await api.get("/centres/liste-simple/", {
         params: { search },
       });
-      return response.data;
+      const payload = response.data?.data ?? response.data;
+      return Array.isArray(payload) ? { results: payload } : payload;
     },
   });
 }
@@ -102,7 +103,7 @@ export function useUpdateCentre() {
 }
 
 /* ============================================================
-   🔹 6️⃣ — SUPPRESSION D’UN CENTRE
+   🔹 6️⃣ — ARCHIVAGE D’UN CENTRE VIA DELETE LEGACY
    ============================================================ */
 export function useDeleteCentre() {
   const queryClient = useQueryClient();
@@ -128,7 +129,7 @@ export function useCentreConstants() {
       code_postal_length: number;
     }> => {
       const response = await api.get("/centres/constants/");
-      return response.data;
+      return response.data?.data ?? response.data;
     },
   });
 }

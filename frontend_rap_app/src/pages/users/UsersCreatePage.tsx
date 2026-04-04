@@ -26,7 +26,8 @@ export default function UsersCreatePage() {
     role: "stagiaire", // ✅ valeur par défaut
   });
 
-  const isCandidatOuStagiaire = values.role === "stagiaire" || values.role === "candidat";
+  const isCandidatOuStagiaire =
+    values.role === "stagiaire" || values.role === "candidat" || values.role === "candidatuser";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

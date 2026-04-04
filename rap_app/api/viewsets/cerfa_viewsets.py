@@ -6,9 +6,10 @@ from django.conf import settings
 from django.http import FileResponse
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import filters
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 
 from ...api.paginations import RapAppPagination
@@ -16,12 +17,23 @@ from ...api.permissions import IsStaffOrAbove
 from ...models import Candidat, CerfaContrat, Formation, Partenaire
 from ...services.placement_services import AppairagePlacementService
 from ...utils.pdf_cerfa_utils import build_cerfa_export_filename, generer_pdf_cerfa
+from ..roles import is_admin_like, is_centre_scoped_staff, staff_centre_ids
 from ..serializers.cerfa_serializers import CerfaContratSerializer, _sync_choice_labels
 from .base import BaseApiViewSet
 
 
 class CerfaContratViewSet(BaseApiViewSet):
+    """
+    ViewSet des contrats CERFA.
+
+    La visibilité opérationnelle suit le même principe que les modules coeur :
+    - admin / superadmin : vue globale
+    - rôles coeur centre-scopés (`commercial`, `charge_recrutement`, `staff`, `staff_read`) :
+      vue limitée aux centres explicitement attribués
+    """
+
     queryset = CerfaContrat.objects.all()
+    hard_delete_enabled = True
     serializer_class = CerfaContratSerializer
     permission_classes = [IsAuthenticated, IsStaffOrAbove]
     pagination_class = RapAppPagination
@@ -40,15 +52,43 @@ class CerfaContratViewSet(BaseApiViewSet):
     retrieve_message = "CERFA recupere avec succes."
     create_message = "CERFA cree avec succes."
     update_message = "CERFA mis a jour avec succes."
-    destroy_message = "CERFA supprime avec succes."
+    destroy_message = "CERFA archive avec succes."
+
+    def _assert_cerfa_scope(self, candidat=None, formation=None):
+        """Refuse une écriture CERFA hors centres attribués pour les rôles coeur centre-scopés."""
+        user = getattr(self.request, "user", None)
+        if is_admin_like(user) or not is_centre_scoped_staff(user):
+            return
+
+        centre_ids = set(staff_centre_ids(user) or [])
+        formation_centre_id = getattr(formation, "centre_id", None) if formation is not None else None
+        candidat_centre_id = (
+            getattr(getattr(candidat, "formation", None), "centre_id", None) if candidat is not None else None
+        )
+
+        if formation_centre_id and formation_centre_id not in centre_ids:
+            raise PermissionDenied("Formation hors de votre périmètre (centre).")
+        if candidat_centre_id and candidat_centre_id not in centre_ids:
+            raise PermissionDenied("Candidat hors de votre périmètre (centre).")
 
     def get_queryset(self):
+        """
+        Retourne les contrats CERFA actifs avec leurs relations utiles,
+        puis applique les filtres de recherche et de périmètre demandés.
+        """
         queryset = super().get_queryset().select_related(
             "candidat",
             "formation",
             "formation__centre",
             "employeur",
-        )
+        ).filter(is_active=True)
+
+        user = getattr(self.request, "user", None)
+        if not is_admin_like(user) and is_centre_scoped_staff(user):
+            centre_ids = staff_centre_ids(user) or []
+            queryset = queryset.filter(
+                Q(formation__centre_id__in=centre_ids) | Q(candidat__formation__centre_id__in=centre_ids)
+            )
 
         params = self.request.query_params
         centre_id = params.get("centre")
@@ -78,17 +118,46 @@ class CerfaContratViewSet(BaseApiViewSet):
 
         return queryset
 
+    def perform_create(self, serializer):
+        candidat_id = serializer.validated_data.get("candidat_id")
+        formation_id = serializer.validated_data.get("formation_id")
+
+        candidat = Candidat.objects.select_related("formation").filter(pk=candidat_id).first() if candidat_id else None
+        formation = Formation.objects.select_related("centre").filter(pk=formation_id).first() if formation_id else None
+        self._assert_cerfa_scope(candidat=candidat, formation=formation)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        candidat_id = serializer.validated_data.get("candidat_id", getattr(instance, "candidat_id", None))
+        formation_id = serializer.validated_data.get("formation_id", getattr(instance, "formation_id", None))
+
+        candidat = Candidat.objects.select_related("formation").filter(pk=candidat_id).first() if candidat_id else None
+        formation = Formation.objects.select_related("centre").filter(pk=formation_id).first() if formation_id else None
+        self._assert_cerfa_scope(candidat=candidat, formation=formation)
+        serializer.save()
+
+    @extend_schema(
+        summary="Archiver un contrat CERFA",
+        description="Conserve `DELETE` pour compatibilité mais archive logiquement le contrat CERFA via `is_active = False`.",
+        responses={200: OpenApiResponse(description="Contrat CERFA archivé avec succès.")},
+    )
     def destroy(self, request, *args, **kwargs):
+        """
+        Archive logiquement un contrat CERFA et le retire des listes
+        actives sans supprimer le snapshot ni le PDF associé.
+        """
         instance = self.filter_queryset(self.get_queryset()).filter(pk=kwargs.get("pk")).first()
         if instance is None:
             return self.success_response(
                 data=None,
-                message="CERFA deja absent ou deja supprime.",
+                message="CERFA deja absent ou deja archive.",
             )
 
-        instance.delete()
+        instance.is_active = False
+        instance.save(update_fields=["is_active", "updated_at"])
         return self.success_response(
-            data=None,
+            data=self.get_serializer(instance).data,
             message=self.destroy_message,
         )
 

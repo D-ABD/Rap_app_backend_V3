@@ -5,6 +5,7 @@ from .roles import (
     get_staff_centre_ids_cached,
     is_admin_like,
     is_candidate,
+    is_centre_scoped_staff,
     is_declic_staff,
     is_prepa_staff,
     is_staff_like,
@@ -112,10 +113,20 @@ class ReadWriteAdminReadStaff(BasePermission):
 
 class IsStaffOrAbove(BasePermission):
     """
-    Autorise staff, staff_read, admin ou superadmin. Refuse les candidats et autres.
+    Autorise les rôles coeur opérés par centre ainsi que les admins.
+
+    Inclut :
+    - commercial
+    - charge_recrutement
+    - staff
+    - staff_read
+    - admin
+    - superadmin
+
+    Refuse les candidats et autres.
     """
 
-    message = "Accès réservé au staff, staff_read, admin ou superadmin."
+    message = "Accès réservé aux rôles métier internes autorisés."
 
     def has_permission(self, request, view):
         user = request.user
@@ -131,7 +142,7 @@ class IsStaffOrAbove(BasePermission):
         role = str(getattr(user, "role", "")).lower()
         if role == "staff_read":
             return request.method in SAFE_METHODS
-        if role == "staff":
+        if is_centre_scoped_staff(user):
             return True
         return False
 
@@ -279,7 +290,10 @@ class IsStaffReadOnly(BasePermission):
 
 class IsDeclicStaffOrAbove(BasePermission):
     """
-    Autorise admin, superadmin, staff, declic_staff ; staff_read en lecture seule. Refuse les candidats et autres.
+    Autorise admin, superadmin, staff standard, declic_staff ; staff_read en lecture seule.
+
+    Les rôles coeur centre-scopés `commercial` et `charge_recrutement` ne
+    sont volontairement pas inclus dans ce module spécialisé.
     """
 
     message = "Accès réservé au staff Déclic ou supérieur."
@@ -291,10 +305,10 @@ class IsDeclicStaffOrAbove(BasePermission):
 
         if is_admin_like(user):
             return True
-        if is_staff_like(user):
-            if str(getattr(user, "role", "")).lower() == "staff_read":
-                return request.method in SAFE_METHODS
+        if is_staff_standard(user):
             return True
+        if is_staff_read(user):
+            return request.method in SAFE_METHODS
         if is_declic_staff(user):
             return True
         if is_candidate(user):

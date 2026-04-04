@@ -77,7 +77,7 @@ export default function DeclicDetailModal({
         }}
       >
         <Typography component="span" variant="h6" fontWeight={700}>
-          💡 Détail activité Déclic
+          Détail de la séance Déclic
         </Typography>
         <Button onClick={onClose} variant="outlined">
           Fermer
@@ -104,7 +104,7 @@ export default function DeclicDetailModal({
               <Grid item xs={12}>
                 <Section title="Informations générales">
                   <Field
-                    label="Type d’activité"
+                    label="Type de séance"
                     value={nn(declic.type_declic_display ?? declic.type_declic)}
                   />
                   <Field label="Date de la séance" value={fmt(declic.date_declic)} />
@@ -135,7 +135,7 @@ export default function DeclicDetailModal({
 
               {/* ───────────── Données Ateliers Déclic ───────────── */}
               <Grid item xs={12}>
-                <Section title="Ateliers Déclic">
+                <Section title="Données de la séance">
                   <Field label="Inscrits" value={declic.nb_inscrits_declic} />
                   <Field label="Présents" value={declic.nb_presents_declic} />
                   <Field label="Absents" value={declic.nb_absents_declic} />
@@ -143,7 +143,7 @@ export default function DeclicDetailModal({
               </Grid>
 
               <Grid item xs={12}>
-                <Section title="Participants Déclic liés">
+                <Section title="Participants liés à la séance">
                   {declic.participants_declic?.length ? (
                     <Grid item xs={12}>
                       <Box component="ul" sx={{ mt: 0, mb: 0, pl: 2.5 }}>
@@ -162,7 +162,7 @@ export default function DeclicDetailModal({
                       </Box>
                     </Grid>
                   ) : (
-                    <Field label="Participants" value="Aucun participant Déclic renseigné" />
+                    <Field label="Participants" value="Aucun participant n'est encore renseigné pour cette séance." />
                   )}
                 </Section>
               </Grid>
@@ -224,13 +224,13 @@ export default function DeclicDetailModal({
                 Voir les objectifs du centre
               </Button>
             ) : null}
-            <Button
-              component={RouterLink}
-              to={`/participants-declic?declic_origine=${declic.id}`}
-              variant="outlined"
-            >
-              Voir les participants Déclic
-            </Button>
+              <Button
+                component={RouterLink}
+                to={`/participants-declic?declic_origine=${declic.id}`}
+                variant="outlined"
+              >
+              Voir les participants
+              </Button>
             <Button
               component={RouterLink}
               to={`/participants-declic/create?declic_origine=${declic.id}`}

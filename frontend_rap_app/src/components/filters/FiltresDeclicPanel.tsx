@@ -16,6 +16,7 @@ type Props = {
   onChange: (next: DeclicFiltresValues) => void;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +50,7 @@ export default function FiltresDeclicPanel({
   onChange,
   onRefresh,
   onReset,
+  hideSearch = false,
 }: Props) {
   const typeChoices = map(options?.type_declic);
   const centreChoices = map(options?.centres);
@@ -103,32 +105,33 @@ export default function FiltresDeclicPanel({
         </Box>
       ) : (
         <>
-          {/* 🔎 Recherche */}
-          <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
-            <label htmlFor="declic-search-input" style={visuallyHidden as React.CSSProperties}>
-              Rechercher des activités Déclic
-            </label>
+          {!hideSearch && (
+            <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
+              <label htmlFor="declic-search-input" style={visuallyHidden as React.CSSProperties}>
+                Rechercher des activités Déclic
+              </label>
 
-            <TextField
-              id="declic-search-input"
-              type="search"
-              size="small"
-              fullWidth
-              value={values.search ?? ""}
-              onChange={onLocalSearchChange}
-              onKeyDown={onSearchKeyDown}
-              placeholder="🔎 Recherche (type, centre, département…)"
-            />
+              <TextField
+                id="declic-search-input"
+                type="search"
+                size="small"
+                fullWidth
+                value={values.search ?? ""}
+                onChange={onLocalSearchChange}
+                onKeyDown={onSearchKeyDown}
+                placeholder="🔎 Recherche (type, centre, département…)"
+              />
 
-            {values.search && (
-              <Button
-                variant="outlined"
-                onClick={() => onChange({ ...values, search: "", page: 1 })}
-              >
-                ✕
-              </Button>
-            )}
-          </Stack>
+              {values.search && (
+                <Button
+                  variant="outlined"
+                  onClick={() => onChange({ ...values, search: "", page: 1 })}
+                >
+                  ✕
+                </Button>
+              )}
+            </Stack>
+          )}
 
           {/* 📆 Année / Type / Département / Centre */}
           <Stack direction="row" spacing={2} mb={1.5} flexWrap="wrap">
@@ -242,6 +245,8 @@ export default function FiltresDeclicPanel({
               size="small"
               label="📅 Du"
               InputLabelProps={{ shrink: true }}
+              inputProps={{ autoComplete: "off" }}
+              autoComplete="new-password"
               value={values.date_min ?? ""}
               onChange={(e) =>
                 onChange({
@@ -257,6 +262,8 @@ export default function FiltresDeclicPanel({
               size="small"
               label="📅 Au"
               InputLabelProps={{ shrink: true }}
+              inputProps={{ autoComplete: "off" }}
+              autoComplete="new-password"
               value={values.date_max ?? ""}
               onChange={(e) =>
                 onChange({

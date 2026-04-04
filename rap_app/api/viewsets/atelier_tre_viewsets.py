@@ -34,7 +34,7 @@ from ...models.atelier_tre import (
     PresenceStatut,
 )
 from ...models.candidat import Candidat
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove, is_staff_or_staffread
 from ..roles import is_admin_like
@@ -46,7 +46,7 @@ from ..serializers.atelier_tre_serializers import (
 logger = logging.getLogger(__name__)
 
 
-class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class AtelierTREViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet des ateliers TRE.
 
@@ -60,6 +60,7 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
     serializer_class = AtelierTRESerializer
+    hard_delete_enabled = True
 
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = {
@@ -124,7 +125,10 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
                 raise PermissionDenied("Centre hors de votre périmètre.")
 
     def get_queryset(self):
-        """Queryset annoté (nb_inscrits_calc, pres_*), select_related/prefetch_related ; _scope_qs_to_user_centres."""
+        """
+        Retourne les ateliers TRE actifs, annotés et restreints
+        au périmètre de centres visible pour l'utilisateur courant.
+        """
         base = (
             AtelierTRE.objects.annotate(
                 nb_inscrits_calc=Count("candidats", distinct=True),
@@ -135,8 +139,35 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
             )
             .select_related("centre", "created_by", "updated_by")
             .prefetch_related("candidats", "presences__candidat")
+            .filter(is_active=True)
         )
         return self._scope_qs_to_user_centres(base)
+
+    @extend_schema(
+        summary="Archiver un atelier TRE",
+        description="Archive logiquement un atelier TRE en le désactivant (`is_active = False`).",
+        responses={200: AtelierTRESerializer},
+    )
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais archive
+        logiquement l'atelier TRE.
+        """
+        instance = self.get_object()
+        if not instance.is_active:
+            return self.success_response(
+                data=self.get_serializer(instance).data,
+                message="Atelier TRE déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Atelier TRE archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
     def perform_create(self, serializer):
         """
@@ -162,6 +193,49 @@ class AtelierTREViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         self._assert_staff_can_use_centre(new_centre)
 
         serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crée un atelier TRE et renvoie l'enveloppe API standard pour
+        aligner le CRUD avec le reste des ressources métier.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "success": True,
+                "message": "Atelier TRE créé avec succès.",
+                "data": self.get_serializer(serializer.instance).data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un atelier TRE dans l'enveloppe API standard.
+        """
+        instance = self.get_object()
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Atelier TRE récupéré avec succès.",
+        )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Met à jour un atelier TRE et renvoie l'enveloppe API standard.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return self.success_response(
+            data=self.get_serializer(serializer.instance).data,
+            message="Atelier TRE mis à jour avec succès.",
+        )
 
     @extend_schema(responses=AtelierTREMetaSerializer)
     @action(detail=False, methods=["get"], url_path="meta", url_name="meta", permission_classes=[IsStaffOrAbove])

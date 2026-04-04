@@ -23,6 +23,7 @@ from weasyprint import CSS, HTML
 
 from ...models.commentaires_appairage import CommentaireAppairage
 from ...models.logs import LogUtilisateur
+from ..mixins import HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove
 from ..roles import is_admin_like, is_candidate, is_staff_like, staff_centre_ids
@@ -35,9 +36,19 @@ logger = logging.getLogger("APPARIAGE_COMMENT")
 
 
 @extend_schema(tags=["Commentaires Appairages"])
-class CommentaireAppairageViewSet(viewsets.ModelViewSet):
+class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
-    ViewSet pour les commentaires d'appairage. Permission IsStaffOrAbove. get_queryset : selon rôle (candidat = ses commentaires, staff = centres autorisés, admin = tout) ; filtres est_archive, partenaire_nom, candidat_nom, formation_nom. get_serializer_class : Write pour create/update/partial_update, lecture pour list/retrieve. perform_* : log via LogUtilisateur. Actions : archiver, desarchiver (POST detail), export_xlsx, export_pdf (GET list).
+    ViewSet pour les commentaires d'appairage.
+
+    Source de vérité actuelle :
+    - permission `IsStaffOrAbove`
+    - visibilité selon le rôle et le périmètre centre
+    - filtre `est_archive` :
+      - absent => actifs uniquement
+      - `true|1|yes|oui|archive` => archivés uniquement
+      - `false|0|no|non|actif` => actifs uniquement
+      - `both|all|tous|tout` => actifs + archivés
+    - actions custom : `archiver`, `desarchiver`, exports XLSX/PDF
     """
 
     queryset = CommentaireAppairage.objects.select_related(
@@ -51,6 +62,7 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
     serializer_class = CommentaireAppairageSerializer
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
+    hard_delete_enabled = True
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["appairage", "created_by", "appairage__partenaire", "appairage__formation"]
     search_fields = [
@@ -76,7 +88,10 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
         return Response(payload, status=status_code)
 
     def get_queryset(self):
-        """Filtre selon rôle (candidat / staff / admin), est_archive, partenaire_nom, candidat_nom, formation_nom. Anonyme : none()."""
+        """
+        Filtre selon rôle (candidat / staff / admin), état d'archivage et
+        critères texte. Un anonyme ne voit aucun commentaire.
+        """
         u = getattr(self.request, "user", None)
         base = super().get_queryset()
 
@@ -100,9 +115,13 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
             qs = qs.filter(statut_commentaire="actif")
         else:
             val = est_archive.lower()
-            if val in ("1", "true", "yes", "oui"):
+            if val in ("both", "all", "tous", "tout"):
+                pass
+            elif val in ("1", "true", "yes", "oui", "archive", "archived"):
                 qs = qs.filter(statut_commentaire="archive")
-            elif val in ("0", "false", "no", "non"):
+            elif val in ("0", "false", "no", "non", "actif", "active"):
+                qs = qs.filter(statut_commentaire="actif")
+            else:
                 qs = qs.filter(statut_commentaire="actif")
 
         partenaire_nom = (qp.get("partenaire_nom") or "").strip()
@@ -150,6 +169,42 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
             return CommentaireAppairageWriteSerializer
         return CommentaireAppairageSerializer
 
+    def list(self, request, *args, **kwargs):
+        """
+        Retourne la liste paginée des commentaires d'appairage dans
+        l'enveloppe API standard.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            payload = self.get_paginated_response(serializer.data).data
+            if isinstance(payload, dict) and {"success", "message", "data"}.issubset(payload.keys()):
+                payload["message"] = "Commentaires d'appairage récupérés avec succès."
+                return Response(payload)
+        else:
+            serializer = self.get_serializer(queryset, many=True)
+            payload = {
+                "count": len(serializer.data),
+                "next": None,
+                "previous": None,
+                "results": serializer.data,
+            }
+        return self._json_message_response(True, "Commentaires d'appairage récupérés avec succès.", data=payload)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un commentaire d'appairage dans l'enveloppe
+        API standard.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return self._json_message_response(
+            True,
+            "Commentaire d'appairage récupéré avec succès.",
+            data=serializer.data,
+        )
+
     def perform_create(self, serializer):
         """Sauvegarde avec created_by=request.user et log LogUtilisateur (ACTION_CREATE)."""
         commentaire = serializer.save(created_by=self.request.user)
@@ -171,15 +226,29 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        """Supprime l'instance et log LogUtilisateur (ACTION_DELETE)."""
+        """Archive logiquement l'instance et journalise l'action."""
         pk = instance.pk
-        instance.delete()
+        if not instance.est_archive:
+            instance.archiver(save=True)
         LogUtilisateur.log_action(
             instance=instance,
-            action=LogUtilisateur.ACTION_DELETE,
+            action=LogUtilisateur.ACTION_UPDATE,
             user=self.request.user,
-            details=f"Suppression du commentaire d'appairage #{pk}",
+            details=f"Archivage logique du commentaire d'appairage #{pk} via DELETE",
         )
+
+    @extend_schema(summary="Archiver un commentaire d'appairage via DELETE")
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE /appairage-commentaires/<id>/` pour compatibilité
+        mais remplace la suppression destructive par un archivage logique
+        avec enveloppe API standard.
+        """
+        instance = self.get_object()
+        already_archived = instance.est_archive
+        self.perform_destroy(instance)
+        message = "Commentaire déjà archivé." if already_archived else "Commentaire archivé."
+        return self._json_message_response(True, message, status_code=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
@@ -261,7 +330,7 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
             cell.alignment = Alignment(horizontal="center")
 
         for c in qs:
-            statut_display = dict(c.STATUT_CHOICES).get(c.statut_commentaire, c.statut_commentaire)
+            statut_display = str(dict(c.STATUT_CHOICES).get(c.statut_commentaire, c.statut_commentaire))
             statut_color = "C8E6C9" if c.statut_commentaire == "actif" else "E0E0E0"
 
             ws.append(
@@ -269,10 +338,10 @@ class CommentaireAppairageViewSet(viewsets.ModelViewSet):
                     c.id,
                     statut_display,
                     getattr(c.appairage, "id", "—"),
-                    getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—"),
-                    getattr(getattr(c.appairage, "partenaire", None), "nom", "—"),
-                    getattr(getattr(c.appairage, "formation", None), "nom", "—"),
-                    getattr(c.created_by, "username", "—"),
+                    str(getattr(getattr(c.appairage, "candidat", None), "nom_complet", "—")),
+                    str(getattr(getattr(c.appairage, "partenaire", None), "nom", "—")),
+                    str(getattr(getattr(c.appairage, "formation", None), "nom", "—")),
+                    str(getattr(c.created_by, "username", "—")),
                     strip_tags(c.body or ""),
                     c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "—",
                 ]

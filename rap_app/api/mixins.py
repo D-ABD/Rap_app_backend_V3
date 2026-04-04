@@ -1,9 +1,15 @@
 from typing import Any, Mapping, Optional, Tuple
 
+from django.db import models
 from django.db.models import Q, QuerySet
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
+from ..models.logs import LogUtilisateur
+from .permissions import IsAdminLikeOnly
 from .roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread, is_staff_like
 
 
@@ -221,3 +227,144 @@ class ApiResponseMixin:
         if error_code is not None:
             payload["error_code"] = error_code
         return Response(payload, status=status_code)
+
+
+class HardDeleteArchivedMixin:
+    """
+    Ajoute une suppression physique explicite et sécurisée.
+
+    Le contrat cible est volontairement strict :
+    - action séparée `POST .../<id>/hard-delete/`
+    - réservée aux profils admin/superadmin
+    - refusée tant que la ressource n'est pas déjà archivée
+    """
+
+    hard_delete_enabled: bool = False
+
+    def _hard_delete_response(
+        self,
+        success: bool,
+        message: str,
+        data: Any = None,
+        status_code: int = status.HTTP_200_OK,
+    ) -> Response:
+        return Response(
+            {
+                "success": success,
+                "message": message,
+                "data": data,
+            },
+            status=status_code,
+        )
+
+    def get_hard_delete_model(self):
+        for queryset_attr in ("base_queryset", "queryset"):
+            queryset = getattr(self, queryset_attr, None)
+            model = getattr(queryset, "model", None)
+            if model is not None:
+                return model
+
+        serializer_factory = getattr(self, "get_serializer_class", None)
+        serializer_cls = serializer_factory() if callable(serializer_factory) else None
+        return getattr(getattr(serializer_cls, "Meta", None), "model", None)
+
+    def get_hard_delete_queryset(self):
+        model = self.get_hard_delete_model()
+        if model is None:
+            raise NotFound("Modele introuvable pour la suppression definitive.")
+
+        manager = model._default_manager
+        if hasattr(manager, "all_including_archived"):
+            return manager.all_including_archived()
+        return manager.all()
+
+    def get_hard_delete_object(self):
+        lookup_field = getattr(self, "lookup_field", "pk")
+        lookup_url_kwarg = getattr(self, "lookup_url_kwarg", None) or lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        instance = self.get_hard_delete_queryset().filter(**{lookup_field: lookup_value}).first()
+        if instance is None:
+            raise NotFound("Element introuvable pour suppression definitive.")
+        return instance
+
+    def is_instance_archived_for_hard_delete(self, instance) -> bool:
+        for attr in ("est_archivee", "est_archive"):
+            if hasattr(instance, attr):
+                value = getattr(instance, attr)
+                return bool(value() if callable(value) else value)
+
+        if hasattr(instance, "is_active"):
+            return not bool(getattr(instance, "is_active"))
+
+        if hasattr(instance, "activite"):
+            return str(getattr(instance, "activite", "")).lower() in {"archive", "archivee", "archived"}
+
+        return False
+
+    def get_hard_delete_label(self, instance) -> str:
+        return str(getattr(instance._meta, "verbose_name", instance.__class__.__name__)).strip()
+
+    def get_hard_delete_success_message(self, instance) -> str:
+        return f"Suppression definitive de {self.get_hard_delete_label(instance)} effectuee avec succes."
+
+    def get_hard_delete_requires_archive_message(self, instance) -> str:
+        return f"{self.get_hard_delete_label(instance).capitalize()} doit d'abord etre archive avant suppression definitive."
+
+    def build_hard_delete_payload(self, instance) -> dict[str, Any]:
+        return {
+            "id": instance.pk,
+            "hard_deleted": True,
+            "resource": instance._meta.model_name,
+        }
+
+    def cleanup_hard_delete_files(self, instance) -> None:
+        for field in instance._meta.fields:
+            if isinstance(field, models.FileField):
+                file_ref = getattr(instance, field.name, None)
+                if file_ref:
+                    try:
+                        file_ref.delete(save=False)
+                    except Exception:
+                        continue
+
+    def perform_hard_delete(self, instance, user=None) -> None:
+        details = f"Suppression definitive de {self.get_hard_delete_label(instance)} #{instance.pk}"
+        LogUtilisateur.log_action(instance, LogUtilisateur.ACTION_DELETE, user, details)
+        self.cleanup_hard_delete_files(instance)
+        instance.delete()
+
+    @extend_schema(
+        summary="Supprimer définitivement un élément archivé",
+        description=(
+            "Action explicite réservée aux admins/superadmins. "
+            "Elle ne fonctionne que sur un élément déjà archivé et réalise "
+            "une suppression physique irréversible."
+        ),
+        responses={200: OpenApiResponse(description="Suppression définitive effectuée avec succès.")},
+    )
+    @action(detail=True, methods=["post"], url_path="hard-delete", permission_classes=[IsAdminLikeOnly])
+    def hard_delete(self, request, *args, **kwargs):
+        """
+        Supprime physiquement une ressource déjà archivée.
+        """
+        if not getattr(self, "hard_delete_enabled", False):
+            raise NotFound("Action indisponible sur cette ressource.")
+
+        instance = self.get_hard_delete_object()
+        if not self.is_instance_archived_for_hard_delete(instance):
+            return self._hard_delete_response(
+                success=False,
+                message=self.get_hard_delete_requires_archive_message(instance),
+                data=None,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = self.build_hard_delete_payload(instance)
+        success_message = self.get_hard_delete_success_message(instance)
+        self.perform_hard_delete(instance, user=request.user)
+        return self._hard_delete_response(
+            success=True,
+            message=success_message,
+            data=payload,
+            status_code=status.HTTP_200_OK,
+        )

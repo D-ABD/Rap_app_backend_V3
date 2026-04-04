@@ -68,6 +68,16 @@ class CVThequeFilterSet(django_filters.FilterSet):
         responses={200: OpenApiResponse(response=CVThequeDetailSerializer)},
         tags=["CVThèque"],
     ),
+    destroy=extend_schema(
+        summary="Archiver un document CVThèque",
+        responses={200: OpenApiResponse(response=CVThequeDetailSerializer)},
+        tags=["CVThèque"],
+    ),
+    desarchiver=extend_schema(
+        summary="Restaurer un document CVThèque",
+        responses={200: OpenApiResponse(response=CVThequeDetailSerializer)},
+        tags=["CVThèque"],
+    ),
 )
 class CVThequeViewSet(BaseApiViewSet):
     """ViewSet CRUD pour CVTheque. CanAccessCVTheque. get_queryset : admin tout, candidat ses docs, staff par user.centres ; preview/download sans scope. list retourne results + filters (_get_filter_values). download (attachment), preview (inline PDF)."""
@@ -108,23 +118,97 @@ class CVThequeViewSet(BaseApiViewSet):
     ordering = ["-date_depot"]
 
     def get_queryset(self):
-        """Admin : tout ; candidat : ses docs ; staff : par user.centres ; sinon none()."""
+        """
+        Retourne les documents CVThèque visibles pour l'utilisateur courant.
+
+        Par défaut les documents archivés sont exclus. Ils peuvent être
+        inclus via `avec_archivees=true` ou limités via
+        `archives_seules=true`.
+        """
         qs = super().get_queryset()
         user = self.request.user
 
         if is_admin_like(user):
-            return qs
-
-        if is_candidate(user):
-            return qs.filter(candidat__compte_utilisateur=user)
-
-        if is_staff_like(user) or is_staff_or_staffread(user):
+            scoped = qs
+        elif is_candidate(user):
+            scoped = qs.filter(candidat__compte_utilisateur=user)
+        elif is_staff_like(user) or is_staff_or_staffread(user):
             centre_ids = list(user.centres.values_list("id", flat=True))
             if centre_ids:
-                return qs.filter(candidat__formation__centre_id__in=centre_ids)
-            return qs.none()
+                scoped = qs.filter(candidat__formation__centre_id__in=centre_ids)
+            else:
+                scoped = qs.none()
+        else:
+            scoped = qs.none()
 
-        return qs.none()
+        if self.action in {"retrieve", "destroy", "desarchiver", "download", "preview"}:
+            return scoped
+
+        inclure_archivees = str(self.request.query_params.get("avec_archivees", "false")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "false")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            return scoped.filter(is_active=False)
+        if inclure_archivees:
+            return scoped
+        return scoped.filter(is_active=True)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais archive
+        logiquement le document CVThèque.
+        """
+        instance = self.get_object()
+        if not instance.is_active:
+            serializer = CVThequeDetailSerializer(instance, context=self.get_serializer_context())
+            return self.success_response(
+                data=serializer.data,
+                message="Document CVThèque déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        serializer = CVThequeDetailSerializer(instance, context=self.get_serializer_context())
+        return self.success_response(
+            data=serializer.data,
+            message="Document CVThèque archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, pk=None):
+        """
+        Restaure logiquement un document CVThèque archivé.
+        """
+        instance = self.get_object()
+        serializer = CVThequeDetailSerializer(instance, context=self.get_serializer_context())
+
+        if instance.is_active:
+            return self.success_response(
+                data=serializer.data,
+                message="Document CVThèque déjà actif.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+        serializer = CVThequeDetailSerializer(instance, context=self.get_serializer_context())
+        return self.success_response(
+            data=serializer.data,
+            message="Document CVThèque restauré avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
     # 🔧 SERIALIZERS
     def get_serializer_class(self):
@@ -263,3 +347,4 @@ class CVThequeViewSet(BaseApiViewSet):
         response["Content-Disposition"] = f"inline; filename*=UTF-8''{filename}"
 
         return response
+    hard_delete_enabled = True

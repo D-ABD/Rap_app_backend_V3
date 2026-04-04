@@ -66,11 +66,13 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     ateliers_realises_labels = serializers.SerializerMethodField()
     dernier_atelier_label = serializers.SerializerMethodField()
     dernier_atelier_date = serializers.SerializerMethodField()
+    is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = StagiairePrepa
         fields = [
             "id",
+            "is_active",
             "prepa_origine_id",
             "prepa_origine_label",
             "centre",
@@ -218,6 +220,7 @@ class PrepaSerializer(serializers.ModelSerializer):
 
     type_prepa_display = serializers.CharField(source="get_type_prepa_display", read_only=True)
     date_display = serializers.SerializerMethodField()
+    is_active = serializers.BooleanField(read_only=True)
 
     inscrits = serializers.SerializerMethodField()
     presents = serializers.SerializerMethodField()
@@ -232,6 +235,7 @@ class PrepaSerializer(serializers.ModelSerializer):
             "type_prepa_display",
             "date_prepa",
             "date_display",
+            "is_active",
             "centre",
             "centre_id",
             "centre_nom",

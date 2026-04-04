@@ -45,8 +45,18 @@ class TypeOffreViewSetTestCase(AuthenticatedTestCase):
         TypeOffre.objects.create(nom="crif", couleur="#4e73df")
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["message"], "Liste des types d'offres récupérée avec succès.")
         self.assertIn("results", response.data["data"])
         self.assertTrue(response.data["success"])
+
+    def test_retrieve_typeoffre_uses_standard_envelope(self):
+        instance = TypeOffre.objects.create(nom="crif", couleur="#4e73df")
+        response = self.client.get(reverse("typeoffre-detail", args=[instance.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Type d'offre récupéré avec succès.")
+        self.assertEqual(response.data["data"]["id"], instance.id)
 
     def test_update_typeoffre(self):
         instance = TypeOffre.objects.create(nom="crif", couleur="#4e73df")
@@ -70,8 +80,21 @@ class TypeOffreViewSetTestCase(AuthenticatedTestCase):
         pk = instance.id
         url = reverse("typeoffre-detail", args=[pk])
         response = self.client.delete(url)
-        self.assertIn(response.status_code, (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT))
-        self.assertFalse(TypeOffre.objects.filter(pk=pk).exists())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_active)
+
+    def test_list_excludes_archived_typeoffres(self):
+        archived = TypeOffre.objects.create(nom="crif", couleur="#4e73df", is_active=False)
+        visible = TypeOffre.objects.create(nom="poec", couleur="#260a5b")
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["data"]["results"]
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(archived.id, returned_ids)
 
     def test_staff_read_cannot_create_typeoffre(self):
         staff_read = UserFactory(role=CustomUser.ROLE_STAFF_READ)

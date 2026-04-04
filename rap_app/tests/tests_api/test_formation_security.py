@@ -91,6 +91,51 @@ class FormationSecurityTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_commercial_can_list_formations_in_scope_but_cannot_create(self):
+        centre = Centre.objects.create(nom="Centre Commercial")
+        user = UserFactory(role="commercial")
+        user.centres.add(centre)
+
+        self._create_formation(centre, nom="Formation Commerciale")
+
+        self.client.force_authenticate(user=user)
+
+        list_response = self.client.get("/api/formations/")
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["data"]["count"], 1)
+
+        payload = {
+            "nom": "Nouvelle formation commerciale",
+            "centre_id": centre.id,
+            "type_offre_id": TypeOffre.objects.create(nom=TypeOffre.CRIF).id,
+            "statut_id": Statut.objects.create(nom=Statut.NON_DEFINI).id,
+            "start_date": str(timezone.localdate() + timedelta(days=3)),
+            "end_date": str(timezone.localdate() + timedelta(days=10)),
+        }
+        create_response = self.client.post("/api/formations/", payload, format="json")
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_charge_recrutement_can_retrieve_but_cannot_update_formation(self):
+        centre = Centre.objects.create(nom="Centre Recrutement")
+        user = UserFactory(role="charge_recrutement")
+        user.centres.add(centre)
+
+        formation = self._create_formation(centre, nom="Formation Recrutement")
+
+        self.client.force_authenticate(user=user)
+
+        detail_response = self.client.get(f"/api/formations/{formation.id}/")
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+
+        patch_response = self.client.patch(
+            f"/api/formations/{formation.id}/",
+            data={"nom": "Formation Interdite"},
+            format="json",
+        )
+        self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
+        formation.refresh_from_db()
+        self.assertEqual(formation.nom, "Formation Recrutement")
+
     def test_list_dans_filter_stays_scoped_to_user_centres(self):
         centre_a = Centre.objects.create(nom="Centre A")
         centre_b = Centre.objects.create(nom="Centre B")

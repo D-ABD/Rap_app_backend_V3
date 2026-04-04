@@ -10,7 +10,7 @@ from ..serializers.base_serializers import HealthStatusSerializer
 
 
 class HealthViewSet(viewsets.ViewSet):
-    """ViewSet santé. AllowAny. list (GET /api/health/) renvoie status, database, timestamp."""
+    """ViewSet santé. AllowAny. `GET /api/health/` renvoie l'enveloppe API standard."""
 
     permission_classes = [permissions.AllowAny]
 
@@ -20,12 +20,16 @@ class HealthViewSet(viewsets.ViewSet):
         responses={200: OpenApiResponse(response=HealthStatusSerializer)},
     )
     def list(self, request):
-        """GET /api/health/ : ensure_connection puis Response status/database/timestamp."""
+        """GET /api/health/ : teste la connexion DB et renvoie l'état de santé dans l'enveloppe standard."""
         connection.ensure_connection()
         return Response(
             {
-                "status": "healthy",
-                "database": "ok",
-                "timestamp": timezone.now().isoformat(),
+                "success": True,
+                "message": "API en bonne santé.",
+                "data": {
+                    "status": "healthy",
+                    "database": "ok",
+                    "timestamp": timezone.now().isoformat(),
+                },
             }
         )

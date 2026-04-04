@@ -226,7 +226,7 @@ export const useCerfaPatch = (
     ...options,
   });
 
-// DELETE
+// DELETE legacy -> archivage logique
 export const useCerfaDelete = (options?: UseMutationOptions<void, any, number | string>) =>
   useMutation({
     mutationFn: (id) => cerfaService.delete(id),

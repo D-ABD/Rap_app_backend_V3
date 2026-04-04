@@ -43,6 +43,9 @@ interface Props {
   onToggleSelect: (id: number) => void;
   onRowClick: (id: number) => void;
   onDeleteClick: (id: number) => void;
+  onRestoreClick?: (id: number) => void;
+  onHardDeleteClick?: (id: number) => void;
+  canHardDelete?: boolean;
 }
 
 const dtfFR = typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
@@ -81,6 +84,9 @@ export default function ProspectionTable({
   onToggleSelect,
   onRowClick,
   onDeleteClick,
+  onRestoreClick,
+  onHardDeleteClick,
+  canHardDelete = false,
 }: Props) {
   const columns: TableColumn<ProspectionWithLast>[] = [
     {
@@ -375,17 +381,36 @@ export default function ProspectionTable({
       getRowId={(p) => p.id}
       cardTitle={(p) => p.partenaire_nom || "—"}
       actions={(p) => (
-        <Button
-          size="small"
-          color="error"
-          variant="outlined"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteClick(p.id);
-          }}
-        >
-          Supprimer
-        </Button>
+        <Box display="flex" gap={1} flexWrap="wrap">
+          <Button
+            size="small"
+            color={p.activite === "archivee" ? "success" : "error"}
+            variant="outlined"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (p.activite === "archivee") {
+                onRestoreClick?.(p.id);
+                return;
+              }
+              onDeleteClick(p.id);
+            }}
+          >
+            {p.activite === "archivee" ? "Restaurer" : "Archiver"}
+          </Button>
+          {p.activite === "archivee" && canHardDelete && onHardDeleteClick && (
+            <Button
+              size="small"
+              color="error"
+              variant="contained"
+              onClick={(e) => {
+                e.stopPropagation();
+                onHardDeleteClick(p.id);
+              }}
+            >
+              Supprimer définitivement
+            </Button>
+          )}
+        </Box>
       )}
       onRowClick={(p) => onRowClick(p.id)}
       rowSx={(row) =>

@@ -132,7 +132,7 @@ export function useUpdateObjectifPrepa() {
 }
 
 // -----------------------------------------------------------------------------
-// ❌ 4️⃣ Suppression d’un Objectif Prépa
+// 📦 4️⃣ Archivage d’un Objectif Prépa via DELETE legacy
 // -----------------------------------------------------------------------------
 export function useDeleteObjectifPrepa() {
   const queryClient = useQueryClient();
@@ -142,14 +142,14 @@ export function useDeleteObjectifPrepa() {
       await api.delete(`${OBJECTIFS_PREPA_ENDPOINT}/${id}/`);
     },
     onSuccess: () => {
-      toast.success("Objectif Prépa supprimé 🗑️");
+      toast.success("Objectif Prépa archivé ✅");
       queryClient.invalidateQueries({ queryKey: OBJECTIFS_PREPA_KEY });
     },
     onError: (error) => {
       const message =
         error.response?.data?.message ??
         error.response?.data?.detail ??
-        "Erreur lors de la suppression de l’objectif Prépa";
+        "Erreur lors de l'archivage de l’objectif Prépa";
       toast.error(message);
     },
   });

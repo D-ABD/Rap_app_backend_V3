@@ -50,6 +50,8 @@ type Props = {
   onSelectionChange: (ids: number[]) => void;
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
+  onToggleArchive?: (id: number, archived: boolean) => void;
+  onHardDelete?: (id: number) => void;
   onRowClick?: (id: number) => void;
   maxHeight?: string;
 };
@@ -60,6 +62,8 @@ export default function DeclicTable({
   onSelectionChange,
   onEdit,
   onDelete,
+  onToggleArchive,
+  onHardDelete,
   onRowClick,
   maxHeight,
 }: Props) {
@@ -122,7 +126,7 @@ export default function DeclicTable({
   if (!items.length) {
     return (
       <Typography sx={{ p: 2, color: "text.secondary", textAlign: "center" }}>
-        Aucune séance Déclic.
+        Aucune séance Déclic à afficher.
       </Typography>
     );
   }
@@ -368,9 +372,31 @@ export default function DeclicTable({
                       <EditIcon fontSize="inherit" />
                     </IconButton>
 
-                    {onDelete && (
+                    {onDelete && (d.is_active ?? true) && (
                       <IconButton size="small" color="error" onClick={() => onDelete(d.id)}>
                         <DeleteIcon fontSize="inherit" />
+                      </IconButton>
+                    )}
+
+                    {onToggleArchive && !(d.is_active ?? true) && (
+                      <IconButton
+                        size="small"
+                        color="success"
+                        aria-label="Restaurer"
+                        onClick={() => onToggleArchive(d.id, true)}
+                      >
+                        ↩
+                      </IconButton>
+                    )}
+
+                    {onHardDelete && !(d.is_active ?? true) && (
+                      <IconButton
+                        size="small"
+                        color="error"
+                        aria-label="Supprimer définitivement"
+                        onClick={() => onHardDelete(d.id)}
+                      >
+                        ✖
                       </IconButton>
                     )}
                   </Stack>

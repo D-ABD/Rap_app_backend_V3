@@ -348,9 +348,11 @@ type CandidateBulkResult = {
 type CandidateAccountActionResponse = {
   success: boolean;
   message: string;
-  user_id?: number;
-  user_email?: string;
-  user_role?: string;
+  data?: {
+    user_id?: number;
+    user_email?: string;
+    user_role?: string;
+  } | null;
 };
 
 const LIFECYCLE_ACTION_PATHS: Record<CandidateLifecycleActionKey, string> = {
@@ -403,12 +405,20 @@ export function useCandidateLifecycleActions() {
 
 type CandidateBulkActionKey =
   | "validate_inscription"
+  | "set_admissible"
+  | "clear_admissible"
+  | "set_gespers"
+  | "clear_gespers"
   | "start_formation"
   | "abandon"
   | "assign_atelier_tre";
 
 const BULK_ACTION_PATHS: Record<CandidateBulkActionKey, string> = {
   validate_inscription: "bulk/validate-inscription",
+  set_admissible: "bulk/set-admissible",
+  clear_admissible: "bulk/clear-admissible",
+  set_gespers: "bulk/set-gespers",
+  clear_gespers: "bulk/clear-gespers",
   start_formation: "bulk/start-formation",
   abandon: "bulk/abandon",
   assign_atelier_tre: "bulk/assign-atelier-tre",
@@ -441,6 +451,11 @@ export function useCandidateBulkActions() {
     loading,
     bulkValidateInscription: (candidateIds: number[]) =>
       runBulkAction("validate_inscription", candidateIds),
+    bulkSetAdmissible: (candidateIds: number[]) => runBulkAction("set_admissible", candidateIds),
+    bulkClearAdmissible: (candidateIds: number[]) =>
+      runBulkAction("clear_admissible", candidateIds),
+    bulkSetGespers: (candidateIds: number[]) => runBulkAction("set_gespers", candidateIds),
+    bulkClearGespers: (candidateIds: number[]) => runBulkAction("clear_gespers", candidateIds),
     bulkStartFormation: (candidateIds: number[]) => runBulkAction("start_formation", candidateIds),
     bulkAbandon: (candidateIds: number[]) => runBulkAction("abandon", candidateIds),
     bulkAssignAtelierTre: (candidateIds: number[], atelierTreId: number) =>
@@ -464,7 +479,7 @@ export function useCandidateAccountActions() {
     try {
       const path = ACCOUNT_ACTION_PATHS[action];
       const res = await api.post(`${API_BASE}/candidats/${candidateId}/${path}/`);
-      return unwrap<CandidateAccountActionResponse>(res.data as unknown);
+      return res.data as CandidateAccountActionResponse;
     } catch (error) {
       throw toApiError(error);
     } finally {
@@ -520,7 +535,7 @@ export function useCandidat(id?: number) {
 }
 
 // ===================================================
-// ➕ Créer / ✏️ Modifier / 🗑 Supprimer
+// ➕ Créer / ✏️ Modifier / 📦 Archiver
 // ===================================================
 export function useCreateCandidat() {
   const [loading, setLoading] = useState(false);
@@ -588,6 +603,46 @@ export function useDeleteCandidat() {
   };
 
   return { remove, loading, error };
+}
+
+export function useDesarchiverCandidat() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const restore = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post(`${API_BASE}/candidats/${id}/desarchiver/`);
+    } catch (e) {
+      setError(e as Error);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { restore, loading, error };
+}
+
+export function useHardDeleteCandidat() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const hardDelete = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post(`${API_BASE}/candidats/${id}/hard-delete/`);
+    } catch (e) {
+      setError(e as Error);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { hardDelete, loading, error };
 }
 
 // ===================================================

@@ -116,6 +116,8 @@ export interface DeclicFilters {
   page?: number;
   page_size?: number;
   ordering?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export function useDeclicList(filters: Partial<DeclicFilters> = {}) {
@@ -153,6 +155,22 @@ export function useDeclicList(filters: Partial<DeclicFilters> = {}) {
   return { data, loading, error };
 }
 
+export function useDesarchiverDeclic() {
+  const restore = async (id: number) => {
+    const r = await api.post(`/declic/${id}/desarchiver/`);
+    return r.data;
+  };
+  return { restore };
+}
+
+export function useHardDeleteDeclic() {
+  const hardDelete = async (id: number) => {
+    const r = await api.post(`/declic/${id}/hard-delete/`);
+    return r.data;
+  };
+  return { hardDelete };
+}
+
 // ────────────────────────────────────────────────────────────────
 // 📘 useDeclicDetail — détail d’une séance
 // ────────────────────────────────────────────────────────────────
@@ -167,7 +185,7 @@ export function useDeclicDetail(id: number | null) {
     (async () => {
       try {
         const res = await api.get<Declic>(`/declic/${id}/`, { signal: ctrl.signal });
-        setData(res.data);
+        setData(unwrapApiData<Declic>(res.data));
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {

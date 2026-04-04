@@ -26,6 +26,7 @@ interface Props {
   loading: boolean;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
 }
 
 const map = <T extends { value: string | number; label: string }>(arr?: T[]) => arr ?? [];
@@ -54,6 +55,7 @@ export const AppairageFilters: React.FC<Props> = ({
   loading,
   onRefresh,
   onReset,
+  hideSearch = false,
 }) => {
   const onLocalSearchChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     (e) => {
@@ -250,44 +252,45 @@ export const AppairageFilters: React.FC<Props> = ({
         </Box>
       ) : (
         <>
-          {/* 🔎 Recherche */}
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            mb={1.5}
-            flexWrap={{ xs: "wrap", md: "nowrap" }}
-          >
-            <label htmlFor="appairages-search-input" style={visuallyHidden as React.CSSProperties}>
-              Rechercher des appairages
-            </label>
-            <Typography component="span" id="appairages-search-help" sx={visuallyHidden}>
-              Tapez votre recherche. Appuyez sur Échap pour effacer.
-            </Typography>
+          {!hideSearch && (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              mb={1.5}
+              flexWrap={{ xs: "wrap", md: "nowrap" }}
+            >
+              <label htmlFor="appairages-search-input" style={visuallyHidden as React.CSSProperties}>
+                Rechercher des appairages
+              </label>
+              <Typography component="span" id="appairages-search-help" sx={visuallyHidden}>
+                Tapez votre recherche. Appuyez sur Échap pour effacer.
+              </Typography>
 
-            <TextField
-              id="appairages-search-input"
-              type="search"
-              size="small"
-              fullWidth
-              value={values.search ?? ""}
-              onChange={onLocalSearchChange}
-              onKeyDown={onSearchKeyDown}
-              placeholder="🔎 Recherche (nom, partenaire, formation, créateur…)"
-              inputProps={{
-                "aria-describedby": "appairages-search-help",
-              }}
-            />
+              <TextField
+                id="appairages-search-input"
+                type="search"
+                size="small"
+                fullWidth
+                value={values.search ?? ""}
+                onChange={onLocalSearchChange}
+                onKeyDown={onSearchKeyDown}
+                placeholder="🔎 Recherche (nom, partenaire, formation, créateur…)"
+                inputProps={{
+                  "aria-describedby": "appairages-search-help",
+                }}
+              />
 
-            {values.search && (
-              <Button
-                variant="outlined"
-                onClick={() => onChange({ ...values, search: undefined, page: 1 })}
-              >
-                ✕
-              </Button>
-            )}
-          </Stack>
+              {values.search && (
+                <Button
+                  variant="outlined"
+                  onClick={() => onChange({ ...values, search: undefined, page: 1 })}
+                >
+                  ✕
+                </Button>
+              )}
+            </Stack>
+          )}
 
           {/* 📋 Filtres dynamiques */}
           <FilterTemplate<WithSearchAndCentre>

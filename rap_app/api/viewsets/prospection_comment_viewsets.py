@@ -30,6 +30,7 @@ from weasyprint import HTML
 
 from ...models.prospection import HistoriqueProspection
 from ...models.prospection_comments import ProspectionComment
+from ..mixins import HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import IsOwnerOrStaffOrAbove
 from ..roles import (
@@ -65,9 +66,9 @@ logger = logging.getLogger("PROSPECTION_COMMENT")
     create=extend_schema(summary="➕ Créer un commentaire", tags=["ProspectionComments"]),
     update=extend_schema(summary="✏️ Modifier un commentaire", tags=["ProspectionComments"]),
     partial_update=extend_schema(summary="✏️ Modifier partiellement un commentaire", tags=["ProspectionComments"]),
-    destroy=extend_schema(summary="🗑️ Supprimer un commentaire", tags=["ProspectionComments"]),
+    destroy=extend_schema(summary="📦 Archiver un commentaire", tags=["ProspectionComments"]),
 )
-class ProspectionCommentViewSet(viewsets.ModelViewSet):
+class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet des commentaires de prospection.
 
@@ -91,6 +92,7 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ProspectionCommentSerializer
     permission_classes = [IsOwnerOrStaffOrAbove]
     pagination_class = RapAppPagination
+    hard_delete_enabled = True
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -159,9 +161,9 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         elif not is_admin_like(u):
             return base.none()
 
-        # ✅ Ne pas filtrer sur "actif" pour la vue de détail
-        # (permet d'afficher les commentaires archivés)
-        if getattr(self, "action", None) == "retrieve":
+        # ✅ Ne pas filtrer sur "actif" pour les actions qui doivent pouvoir
+        # relire un commentaire déjà archivé.
+        if getattr(self, "action", None) in {"retrieve", "desarchiver"}:
             return qs.order_by("-created_at", "-id").distinct()
 
         # 🔹 Filtre supplémentaire : ?est_archive=true|false|both
@@ -261,18 +263,24 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
-                "formations": formations_choices,
-                "partenaires": partenaires_choices,
-                "authors": authors_choices,
-                "centres": centres_choices,
-                "owners": owners_choices,
-            }
+                "success": True,
+                "message": "Filtres commentaires de prospection récupérés avec succès.",
+                "data": {
+                    "formations": formations_choices,
+                    "partenaires": partenaires_choices,
+                    "authors": authors_choices,
+                    "centres": centres_choices,
+                    "owners": owners_choices,
+                },
+            },
+            status=status.HTTP_200_OK,
         )
 
     def list(self, request, *args, **kwargs):
         """
         Liste paginée des commentaires accessibles, enrichis avec les
-        informations de centre et type d'offre de la formation liée.
+        informations de centre et type d'offre de la formation liée,
+        dans l'enveloppe API standard.
         """
         qs = self.filter_queryset(self.get_queryset())
 
@@ -291,10 +299,22 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
                     item["formation_centre_nom"] = None
                     item["formation_type_offre_nom"] = None
 
-            response = self.get_paginated_response(data)
+            paginated = self.get_paginated_response(data).data
+            if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys()):
+                paginated["message"] = "Commentaires de prospection récupérés avec succès."
+                response = Response(paginated, status=status.HTTP_200_OK)
+            else:
+                response = Response(
+                    {
+                        "success": True,
+                        "message": "Commentaires de prospection récupérés avec succès.",
+                        "data": paginated,
+                    },
+                    status=status.HTTP_200_OK,
+                )
 
         else:
-            # fallback si pagination désactivée, mais on garde la même forme
+            # fallback si pagination désactivée
             serializer = self.get_serializer(qs, many=True)
             data = serializer.data
             for item, obj in zip(data, qs):
@@ -308,11 +328,16 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
 
             response = Response(
                 {
-                    "count": len(data),
-                    "next": None,
-                    "previous": None,
-                    "results": data,
-                }
+                    "success": True,
+                    "message": "Commentaires de prospection récupérés avec succès.",
+                    "data": {
+                        "count": len(data),
+                        "next": None,
+                        "previous": None,
+                        "results": data,
+                    },
+                },
+                status=status.HTTP_200_OK,
             )
 
         # extra headers si tu veux les garder
@@ -325,7 +350,8 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """
         Retourne le détail d'un commentaire et ajoute les informations
-        de centre et type d'offre de la formation associée.
+        de centre et type d'offre de la formation associée, dans
+        l'enveloppe API standard.
         """
         obj: ProspectionComment = self.get_object()
         serializer = self.get_serializer(obj)
@@ -340,7 +366,14 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
             data["formation_centre_nom"] = None
             data["formation_type_offre_nom"] = None
 
-        return Response(data)
+        return Response(
+            {
+                "success": True,
+                "message": "Commentaire de prospection récupéré avec succès.",
+                "data": data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     def perform_create(self, serializer):
         """
@@ -394,8 +427,8 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime un commentaire après vérification que le candidat
-        respecte les contraintes de propriété et de visibilité.
+        Conserve la compatibilité avec `DELETE` mais remplace la suppression
+        destructive par un archivage logique.
         """
         u = request.user
         obj: ProspectionComment = self.get_object()
@@ -403,7 +436,13 @@ class ProspectionCommentViewSet(viewsets.ModelViewSet):
         if is_candidate(u):
             if obj.prospection.owner_id != u.id or obj.created_by_id != u.id or obj.is_internal:
                 raise PermissionDenied("Vous ne pouvez pas supprimer ce commentaire.")
-        return super().destroy(request, *args, **kwargs)
+
+        if obj.est_archive:
+            return self._json_message_response(True, "Commentaire déjà archivé.", status_code=status.HTTP_200_OK)
+
+        obj.archiver(save=True)
+        logger.info("Commentaire #%s archivé via DELETE par %s", obj.pk, request.user)
+        return self._json_message_response(True, "Commentaire archivé.", status_code=status.HTTP_200_OK)
 
     # ------------------------------------------------------------------
     # 🔒 ARCHIVER / DÉSARCHIVER un commentaire

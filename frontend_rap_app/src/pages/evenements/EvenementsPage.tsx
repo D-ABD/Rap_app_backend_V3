@@ -73,11 +73,11 @@ export default function EvenementsPage() {
     if (!deleteTarget) return;
     try {
       await deleteEvenement(deleteTarget.id);
-      toast.success("Événement supprimé avec succès.");
+      toast.success("Événement archivé avec succès.");
       setDeleteTarget(null);
       setReloadKey((k) => k + 1);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Impossible de supprimer l'événement.");
+      toast.error(err instanceof Error ? err.message : "Impossible d'archiver l'événement.");
     }
   };
 
@@ -240,17 +240,16 @@ export default function EvenementsPage() {
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Voulez-vous vraiment supprimer cet événement ?
+            Voulez-vous vraiment archiver cet événement ?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>
     </PageTemplate>
   );
 }
-

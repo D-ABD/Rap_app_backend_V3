@@ -16,7 +16,17 @@ function normalizeUser(userData: User): User {
   const isAdmin = userData.is_admin ?? ["admin", "superadmin"].includes(role);
   const isSuperuser = userData.is_superuser ?? role === "superadmin";
   const isStaff =
-    userData.is_staff ?? ["staff", "staff_read", "declic_staff", "prepa_staff", "admin", "superadmin"].includes(role);
+    userData.is_staff ??
+    [
+      "staff",
+      "staff_read",
+      "commercial",
+      "charge_recrutement",
+      "declic_staff",
+      "prepa_staff",
+      "admin",
+      "superadmin",
+    ].includes(role);
 
   return {
     ...userData,

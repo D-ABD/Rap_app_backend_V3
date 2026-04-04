@@ -85,13 +85,13 @@ export default function AppairageCommentsModal({
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(`Supprimer le commentaire #${id} ?`)) return;
+    if (!confirm(`Archiver le commentaire #${id} ?`)) return;
     try {
       setDeletingId(id);
       await remove(); // ✅ id déjà passé au hook
       refetch();
     } catch {
-      alert("Suppression impossible.");
+      alert("Archivage impossible.");
     } finally {
       setDeletingId(null);
     }

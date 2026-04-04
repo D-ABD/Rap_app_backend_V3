@@ -1,29 +1,42 @@
 from io import BytesIO
 
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.utils.timezone import localdate
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from ...models.centres import Centre
 from ...models.prepa import Prepa, StagiairePrepa
+from ..mixins import HardDeleteArchivedMixin
 from ..permissions import IsPrepaStaffOrAbove
-from ..roles import is_admin_like, is_candidate, is_prepa_staff, is_staff_or_staffread
+from ..roles import is_admin_like, is_candidate, is_prepa_staff, is_staff_read, is_staff_standard
 from ..serializers.prepa_serializers import StagiairePrepaSerializer
 
 
-class StagiairePrepaViewSet(viewsets.ModelViewSet):
+class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     CRUD et exports du suivi nominatif des stagiaires Prépa.
+
+    Accès :
+    - admin/superadmin : accès global ;
+    - staff + staff_read : accès transverse restreint à leurs centres ;
+    - prepa_staff : accès principal restreint à leurs centres ;
+    - commercial / charge_recrutement / candidats : aucun accès métier.
+
+    Les créations et mises à jour contrôlent à la fois le `centre` direct
+    et la `prepa_origine`, afin d'éviter un rattachement inter-centres.
     """
 
     serializer_class = StagiairePrepaSerializer
     permission_classes = [IsPrepaStaffOrAbove]
+    hard_delete_enabled = True
     queryset = StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
 
     def _admin_like(self, user) -> bool:
@@ -32,12 +45,26 @@ class StagiairePrepaViewSet(viewsets.ModelViewSet):
     def _accessible_centre_ids(self, user):
         if self._admin_like(user):
             return None
-        if is_prepa_staff(user) or is_staff_or_staffread(user):
+        if is_prepa_staff(user) or is_staff_standard(user) or is_staff_read(user):
             centres = getattr(user, "centres", None)
             if not centres or not centres.exists():
                 return []
             return list(centres.values_list("id", flat=True))
         return []
+
+    def _assert_user_can_use_centre(self, centre):
+        if not centre:
+            return
+        centre_ids = self._accessible_centre_ids(self.request.user)
+        if centre_ids is None:
+            return
+        if getattr(centre, "id", None) not in set(centre_ids):
+            raise PermissionDenied("Centre hors de votre périmètre d'accès.")
+
+    def _assert_user_can_use_prepa_origine(self, prepa):
+        if not prepa:
+            return
+        self._assert_user_can_use_centre(getattr(prepa, "centre", None))
 
     def _scope_qs(self, qs):
         user = self.request.user
@@ -62,9 +89,18 @@ class StagiairePrepaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = self._scope_qs(
-            StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre")
+            StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
         )
         params = self.request.query_params
+        truthy = {"1", "true", "yes", "on"}
+
+        include_archived = str(params.get("avec_archivees", "")).lower() in truthy
+        archived_only = str(params.get("archives_seules", "")).lower() in truthy
+
+        if archived_only:
+            qs = qs.filter(is_active=False)
+        elif not include_archived:
+            qs = qs.filter(is_active=True)
 
         search = params.get("search")
         centre = params.get("centre")
@@ -113,8 +149,138 @@ class StagiairePrepaViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    def get_archived_aware_object(self):
+        lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        base_qs = self._scope_qs(
+            StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
+        )
+        return get_object_or_404(base_qs, **{self.lookup_field: lookup_value})
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais archive
+        logiquement le stagiaire Prépa.
+        """
+        instance = self.get_object()
+        if not instance.is_active:
+            return Response(
+                {
+                    "success": True,
+                    "message": "Stagiaire Prépa déjà archivé.",
+                    "data": self.get_serializer(instance).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return Response(
+            {
+                "success": True,
+                "message": "Stagiaire Prépa archivé avec succès.",
+                "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, pk=None):
+        """
+        Restaure un stagiaire Prépa archivé et renvoie l'enveloppe API standard.
+        """
+        instance = self.get_archived_aware_object()
+        if instance.is_active:
+            return Response(
+                {
+                    "success": True,
+                    "message": "Stagiaire Prépa déjà actif.",
+                    "data": self.get_serializer(instance).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+        return Response(
+            {
+                "success": True,
+                "message": "Stagiaire Prépa désarchivé avec succès.",
+                "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crée un stagiaire Prépa et renvoie l'enveloppe API standard.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "success": True,
+                "message": "Stagiaire Prépa créé avec succès.",
+                "data": self.get_serializer(serializer.instance).data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un stagiaire Prépa dans l'enveloppe API standard.
+        """
+        instance = self.get_object()
+        return Response(
+            {
+                "success": True,
+                "message": "Stagiaire Prépa récupéré avec succès.",
+                "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Met à jour un stagiaire Prépa et renvoie l'enveloppe API standard.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(
+            {
+                "success": True,
+                "message": "Stagiaire Prépa mis à jour avec succès.",
+                "data": self.get_serializer(serializer.instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def perform_create(self, serializer):
+        centre = serializer.validated_data.get("centre")
+        prepa_origine = serializer.validated_data.get("prepa_origine")
+        self._assert_user_can_use_centre(centre)
+        self._assert_user_can_use_prepa_origine(prepa_origine)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        centre = serializer.validated_data.get("centre", getattr(instance, "centre", None))
+        prepa_origine = serializer.validated_data.get("prepa_origine", getattr(instance, "prepa_origine", None))
+        self._assert_user_can_use_centre(centre)
+        self._assert_user_can_use_prepa_origine(prepa_origine)
+        serializer.save()
+
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
+        """
+        Retourne les métadonnées utiles au frontend dans l'enveloppe
+        API standard (centres, statuts, ateliers, séances et années).
+        """
         centres = self._scope_qs(Centre.objects.all()).order_by("nom")
         annees = (
             self.get_queryset()
@@ -130,28 +296,33 @@ class StagiairePrepaViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
-                "centres": [
-                    {"id": c.id, "nom": c.nom, "departement": c.departement, "code_postal": c.code_postal}
-                    for c in centres
-                ],
-                "statut_parcours": [
-                    {"value": value, "label": label} for value, label in StagiairePrepa.StatutParcours.choices
-                ],
-                "type_atelier": [
-                    {"value": value, "label": label}
-                    for value, label in Prepa.TypePrepa.choices
-                    if value.startswith("atelier") or value == Prepa.TypePrepa.AUTRE
-                ],
-                "prepas_origine": [
-                    {
-                        "id": p.id,
-                        "label": f"{p.get_type_prepa_display()} du {p.date_prepa:%d/%m/%Y}"
-                        + (f" - {p.centre.nom}" if p.centre else ""),
-                    }
-                    for p in prepas_origine
-                ],
-                "annees": annees or [localdate().year],
-            }
+                "success": True,
+                "message": "Métadonnées stagiaires Prépa récupérées avec succès.",
+                "data": {
+                    "centres": [
+                        {"id": c.id, "nom": c.nom, "departement": c.departement, "code_postal": c.code_postal}
+                        for c in centres
+                    ],
+                    "statut_parcours": [
+                        {"value": value, "label": label} for value, label in StagiairePrepa.StatutParcours.choices
+                    ],
+                    "type_atelier": [
+                        {"value": value, "label": label}
+                        for value, label in Prepa.TypePrepa.choices
+                        if value.startswith("atelier") or value == Prepa.TypePrepa.AUTRE
+                    ],
+                    "prepas_origine": [
+                        {
+                            "id": p.id,
+                            "label": f"{p.get_type_prepa_display()} du {p.date_prepa:%d/%m/%Y}"
+                            + (f" - {p.centre.nom}" if p.centre else ""),
+                        }
+                        for p in prepas_origine
+                    ],
+                    "annees": annees or [localdate().year],
+                },
+            },
+            status=status.HTTP_200_OK,
         )
 
     def _filtered_export_qs(self, request):

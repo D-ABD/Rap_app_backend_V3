@@ -61,6 +61,15 @@ class LogUtilisateurViewSetTestCase(AuthenticatedTestCase):
         response = self.client.delete(self.detail_url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    def test_log_choices_uses_success_structure(self):
+        response = self.client.get(reverse("log-choices"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Choix des logs récupérés avec succès.")
+        self.assertIn("actions", response.data["data"])
+        self.assertIn("models", response.data["data"])
+
     def test_permissions_required(self):
         """
         🚫 Accès refusé sans authentification → 401 Unauthorized

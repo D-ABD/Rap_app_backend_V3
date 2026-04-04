@@ -25,8 +25,6 @@ function extractApiMessage(data: unknown): string | null {
   if (!isRecord(data)) return null;
 
   const maybeMessage = (data as { message?: unknown }).message;
-  if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
-
   const maybeErrors = (data as { errors?: unknown }).errors;
   const errorsObj = isRecord(maybeErrors) ? (maybeErrors as Record<string, unknown>) : data;
 
@@ -38,7 +36,9 @@ function extractApiMessage(data: unknown): string | null {
       parts.push(`${field}: ${val.join(" · ")}`);
     }
   }
-  return parts.length ? parts.join(" | ") : null;
+  if (parts.length) return parts.join(" | ");
+  if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
+  return null;
 }
 
 /* ─────────────────────────────── */
@@ -58,7 +58,7 @@ export default function DeclicEditPage() {
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
 
   /* ─────────────────────────────── */
-  /* 💾 Mise à jour du Déclic */
+  /* 💾 Mise à jour de la séance */
   /* ─────────────────────────────── */
   const handleSubmit = async (values: Partial<Declic>) => {
     if (Number.isNaN(id)) return;
@@ -69,29 +69,31 @@ export default function DeclicEditPage() {
       ) as Partial<Declic>;
 
       await update(id, payload);
-      toast.success("Séance Declic mise à jour avec succès.");
+      toast.success("La séance Déclic a bien été mise à jour.");
       navigate("/declic");
     } catch (e) {
       const axiosErr = e as AxiosError<unknown>;
       const parsed = axiosErr.response?.data ? extractApiMessage(axiosErr.response.data) : null;
-      toast.error(parsed ?? axiosErr.message ?? "La séance Declic n'a pas pu être mise à jour.");
+      toast.error(
+        parsed ?? axiosErr.message ?? "La séance Déclic n'a pas pu être mise à jour. Vérifie les champs saisis."
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   /* ─────────────────────────────── */
-  /* 🗑️ Suppression */
+  /* 📦 Archivage */
   /* ─────────────────────────────── */
   const handleDelete = async () => {
     if (Number.isNaN(id)) return;
-    if (!window.confirm("Supprimer cette séance Déclic ?")) return;
+    if (!window.confirm("Archiver cette séance Déclic ?")) return;
     try {
       await remove(id);
-      toast.success("Séance Declic supprimée avec succès.");
+      toast.success("La séance Déclic a bien été archivée.");
       navigate("/declic");
     } catch {
-      toast.error("La séance Declic n'a pas pu être supprimée.");
+      toast.error("La séance Déclic n'a pas pu être archivée.");
     }
   };
 
@@ -101,25 +103,25 @@ export default function DeclicEditPage() {
   if (Number.isNaN(id)) {
     return (
       <PageTemplate title="Modifier une séance Déclic">
-        <Alert severity="error">L'identifiant de la séance Declic est invalide.</Alert>
+        <Alert severity="error">L'identifiant de la séance Déclic est invalide.</Alert>
       </PageTemplate>
     );
   }
 
   if (loading || loadingMeta) {
     return (
-      <PageTemplate title={`Modifier Déclic #${id}`} centered>
+      <PageTemplate title={`Modifier la séance Déclic #${id}`} centered>
         <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Chargement de la séance Declic...</Typography>
+        <Typography sx={{ mt: 2 }}>Chargement de la séance Déclic…</Typography>
       </PageTemplate>
     );
   }
 
   if (error) {
     return (
-      <PageTemplate title={`Modifier Déclic #${id}`}>
+      <PageTemplate title={`Modifier la séance Déclic #${id}`}>
         <Alert severity="error">
-          Les données de la séance Declic n'ont pas pu être chargées.
+          Les données de la séance Déclic n'ont pas pu être chargées.
         </Alert>
       </PageTemplate>
     );
@@ -127,8 +129,8 @@ export default function DeclicEditPage() {
 
   if (!data) {
     return (
-      <PageTemplate title={`Modifier Déclic #${id}`}>
-        <Alert severity="error">La séance Declic demandée est introuvable.</Alert>
+      <PageTemplate title={`Modifier la séance Déclic #${id}`}>
+        <Alert severity="error">La séance Déclic demandée est introuvable.</Alert>
       </PageTemplate>
     );
   }
@@ -152,12 +154,12 @@ export default function DeclicEditPage() {
   /* ─────────────────────────────── */
   return (
     <PageTemplate
-      title={`Modifier la séance Declic #${id}`}
+      title={`Modifier la séance Déclic #${id}`}
       backButton
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

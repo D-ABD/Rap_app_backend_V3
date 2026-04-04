@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
 
 import {
   usePrepaResume,
@@ -47,7 +48,7 @@ export default function PrepaStatsSummary({
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const { user } = useAuth();
-  const isAdminLike = ["admin", "superadmin"].includes((user?.role ?? "").toLowerCase());
+  const isAdminLike = isAdminLikeRole(user?.role);
 
   // 🔹 Filtres locaux
   const [filters, setFilters] = React.useState<PrepaFilters>({

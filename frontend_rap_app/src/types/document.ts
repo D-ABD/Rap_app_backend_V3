@@ -16,6 +16,7 @@ export interface Document {
   created_by?: string;
   updated_at?: string;
   is_viewable_in_browser?: boolean;
+  is_active?: boolean;
 
   // 🔗 Liaison formation
   formation: number | null;
@@ -86,6 +87,8 @@ export interface DocumentQueryParams {
   ordering?: string;
   formation?: number;
   type_document?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export interface DocumentAPIResponse {

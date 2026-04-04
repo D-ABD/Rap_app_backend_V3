@@ -25,6 +25,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from PIL import Image as PILImage
 from rest_framework import filters, serializers, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -43,7 +44,7 @@ from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
 from ...models.candidat import Candidat
 from .scoped_viewset import ScopedModelViewSet
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..roles import can_write_formations, is_admin_like, is_staff_or_staffread, staff_centre_ids
 
 logger = logging.getLogger("application.api")
 
@@ -67,18 +68,7 @@ def strip_html_tags_pretty(html: str) -> str:
     return text.strip()
 
 
-FORMATION_COUNTED_CANDIDATE_Q = (
-    Q(candidats__inscrit_gespers=True)
-    | Q(candidats__date_validation_inscription__isnull=False)
-    | Q(candidats__date_entree_formation_effective__isnull=False)
-    | Q(
-        candidats__parcours_phase__in=[
-            Candidat.ParcoursPhase.INSCRIT_VALIDE,
-            Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
-            Candidat.ParcoursPhase.SORTI,
-        ]
-    )
-)
+FORMATION_GESPERS_CANDIDATE_Q = Q(candidats__inscrit_gespers=True)
 
 
 class FormationSearchFilter(filters.SearchFilter):
@@ -105,6 +95,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     """
 
     queryset = Formation.objects.all()
+    hard_delete_enabled = True
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
     scope_mode = "centre"
@@ -178,6 +169,20 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
             raise ValidationError({"detail": f"Champs obligatoires manquants: {', '.join(missing)}"})
 
+    def _assert_can_write_formations(self, user):
+        """
+        Refuse les écritures sur les formations pour les rôles métier qui
+        n'ont qu'un accès de lecture sur ce module.
+
+        Règle métier actuelle :
+        - `admin`, `superadmin` et `staff` peuvent écrire ;
+        - `commercial` et `charge_recrutement` restent en lecture seule ;
+        - les autres rôles sont déjà filtrés plus haut par permission/scope.
+        """
+        if can_write_formations(user):
+            return
+        raise PermissionDenied("Ce rôle peut consulter les formations mais ne peut pas les modifier.")
+
     def get_serializer_class(self):
         """Sélectionne le serializer selon l'action CRUD appelée."""
         if self.action == "list":
@@ -198,6 +203,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         Crée une formation après normalisation des FK et vérification des
         références obligatoires, puis renvoie le détail enrichi.
         """
+        self._assert_can_write_formations(request.user)
         payload = self._normalize_payload_for_fk(request.data)
         self._ensure_required_refs(payload)
         serializer = self.get_serializer(data=payload)
@@ -225,6 +231,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         Met à jour une formation existante après normalisation du payload
         et renvoie la ressource rechargée avec ses relations utiles.
         """
+        self._assert_can_write_formations(request.user)
         instance = self.get_object()
         payload = self._normalize_payload_for_fk(request.data)
         serializer = self.get_serializer(instance, data=payload, partial=True)
@@ -297,7 +304,8 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         return (
             self._build_base_queryset()
             .annotate(
-                counted_candidates=Count("candidats", filter=FORMATION_COUNTED_CANDIDATE_Q, distinct=True),
+                counted_candidates=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
+                nombre_candidats_calc=Count("candidats", distinct=True),
             )
             .annotate(
                 inscrits_crif_calc=Case(
@@ -347,7 +355,8 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         qs = (
             Formation.objects.all_including_archived()
             .annotate(
-                counted_candidates=Count("candidats", filter=FORMATION_COUNTED_CANDIDATE_Q, distinct=True),
+                counted_candidates=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
+                nombre_candidats_calc=Count("candidats", distinct=True),
             )
             .annotate(
                 inscrits_crif_calc=Case(
@@ -519,53 +528,71 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     @extend_schema(summary="Obtenir l'historique d'une formation")
     @action(detail=True, methods=["get"])
     def historique(self, request, pk=None):
-        """GET : historique de la formation (get_historique)."""
+        """GET : historique de la formation dans l'enveloppe API standard."""
         data = [h.to_serializable_dict() for h in self.get_object().get_historique()]
-        return Response({"success": True, "data": data})
+        return Response({"success": True, "message": "Historique de la formation récupéré.", "data": data})
 
     @extend_schema(summary="Lister les partenaires d'une formation")
     @action(detail=True, methods=["get"])
     def partenaires(self, request, pk=None):
-        """GET : partenaires de la formation (get_partenaires)."""
+        """GET : partenaires de la formation dans l'enveloppe API standard."""
         data = [p.to_serializable_dict() for p in self.get_object().get_partenaires()]
-        return Response({"success": True, "data": data})
+        return Response({"success": True, "message": "Partenaires de la formation récupérés.", "data": data})
 
     @extend_schema(summary="Lister les commentaires d'une formation")
     @action(detail=True, methods=["get"])
     def commentaires(self, request, pk=None):
-        """GET : commentaires de la formation ; params limit, saturation."""
+        """GET : commentaires de la formation ; params limit, saturation ; enveloppe API standard."""
         f = self.get_object()
         limit = request.query_params.get("limit")
         with_saturation = request.query_params.get("saturation") == "true"
         qs = f.get_commentaires(include_saturation=with_saturation, limit=int(limit) if limit else None)
-        return Response({"success": True, "data": [c.to_serializable_dict(include_full_content=True) for c in qs]})
+        return Response(
+            {
+                "success": True,
+                "message": "Commentaires de la formation récupérés.",
+                "data": [c.to_serializable_dict(include_full_content=True) for c in qs],
+            }
+        )
 
     @extend_schema(summary="Lister les documents d'une formation")
     @action(detail=True, methods=["get"])
     def documents(self, request, pk=None):
-        """GET : documents de la formation ; param est_public optionnel."""
+        """GET : documents de la formation ; param est_public optionnel ; enveloppe API standard."""
         est_public = request.query_params.get("est_public")
         est_public = est_public.lower() == "true" if est_public is not None else None
         docs = self.get_object().get_documents(est_public)
-        return Response({"success": True, "data": [d.to_serializable_dict() for d in docs]})
+        return Response(
+            {
+                "success": True,
+                "message": "Documents de la formation récupérés.",
+                "data": [d.to_serializable_dict() for d in docs],
+            }
+        )
 
     @extend_schema(summary="Lister les prospections liées à une formation")
     @action(detail=True, methods=["get"])
     def prospections(self, request, pk=None):
-        """GET : prospections de la formation."""
+        """GET : prospections de la formation dans l'enveloppe API standard."""
         formation = self.get_object()
         prosps = formation.prospections.all()
-        return Response({"success": True, "data": [p.to_serializable_dict() for p in prosps]})
+        return Response(
+            {
+                "success": True,
+                "message": "Prospections liées à la formation récupérées.",
+                "data": [p.to_serializable_dict() for p in prosps],
+            }
+        )
 
     @extend_schema(summary="Ajouter un commentaire à une formation")
     @action(detail=True, methods=["post"])
     def ajouter_commentaire(self, request, pk=None):
-        """POST : add_commentaire(contenu, saturation) ; retourne success/data ou 400."""
+        """POST : ajoute un commentaire à une formation avec enveloppe API standard."""
         try:
             c = self.get_object().add_commentaire(
                 user=request.user, contenu=request.data.get("contenu"), saturation=request.data.get("saturation")
             )
-            return Response({"success": True, "data": c.to_serializable_dict()})
+            return Response({"success": True, "message": "Commentaire ajouté à la formation.", "data": c.to_serializable_dict()})
         except Exception as e:
             logger.exception("Ajout commentaire échoué")
             return Response({"success": False, "message": str(e)}, status=400)
@@ -573,7 +600,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     @extend_schema(summary="Ajouter un événement à une formation")
     @action(detail=True, methods=["post"])
     def ajouter_evenement(self, request, pk=None):
-        """POST : add_evenement(type_evenement, event_date, details, description_autre) ; success/data ou 400."""
+        """POST : ajoute un événement à une formation avec enveloppe API standard."""
         try:
             e = self.get_object().add_evenement(
                 type_evenement=request.data.get("type_evenement"),
@@ -582,7 +609,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 description_autre=request.data.get("description_autre"),
                 user=request.user,
             )
-            return Response({"success": True, "data": e.to_serializable_dict()})
+            return Response({"success": True, "message": "Événement ajouté à la formation.", "data": e.to_serializable_dict()})
         except Exception as e:
             logger.exception("Ajout événement échoué")
             return Response({"success": False, "message": str(e)}, status=400)
@@ -590,15 +617,15 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     @extend_schema(summary="Ajouter un document à une formation")
     @action(detail=True, methods=["post"])
     def ajouter_document(self, request, pk=None):
-        """POST : add_document(fichier, nom_fichier, type_document) ; success/data ou 400."""
+        """POST : ajoute un document à une formation avec enveloppe API standard."""
         try:
             doc = self.get_object().add_document(
                 user=request.user,
                 fichier=request.FILES.get("fichier"),
-                nom_fichier=request.data.get("nom_fichier"),
+                titre=request.data.get("nom_fichier") or request.data.get("titre"),
                 type_document=request.data.get("type_document"),
             )
-            return Response({"success": True, "data": doc.to_serializable_dict()})
+            return Response({"success": True, "message": "Document ajouté à la formation.", "data": doc.to_serializable_dict()})
         except Exception as e:
             logger.exception("Ajout document échoué")
             return Response({"success": False, "message": str(e)}, status=400)
@@ -637,10 +664,16 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             out.append({"mois": f"{m.year:04d}-{m.month:02d}", "total": row["total"]})
         return out
 
-    @extend_schema(summary="Statistiques mensuelles des formations (global + par centre)")
+    @extend_schema(
+        summary="Statistiques mensuelles des formations (global + par centre)",
+        description=(
+            "Retourne les statistiques mensuelles des formations dans l'enveloppe JSON "
+            "standard avec `success`, `message`, `data` et `extra`."
+        ),
+    )
     @action(detail=False, methods=["get"])
     def stats_par_mois(self, request):
-        """GET : stats mensuelles (data, extra.global_scoped, extra.par_centre)."""
+        """GET : stats mensuelles avec enveloppe API standard."""
         annee = request.query_params.get("annee")
         try:
             stats_global = Formation.get_stats_par_mois(annee=annee)
@@ -665,6 +698,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         return Response(
             {
                 "success": True,
+                "message": "Statistiques mensuelles des formations récupérées.",
                 "data": stats_global,
                 "extra": {
                     "global_scoped": stats_global_scoped,
@@ -675,38 +709,71 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
     @extend_schema(
         summary="Liste simplifiée des formations (sans pagination)",
-        description="Retourne une liste allégée (id, nom, num_offre) de toutes les formations actives, sans pagination.",
+        description=(
+            "Retourne une liste allégée (id, nom, num_offre) de toutes les formations "
+            "actives, sans pagination, dans l'enveloppe JSON standard."
+        ),
     )
     @action(detail=False, methods=["get"], url_path="liste-simple")
     def liste_simple(self, request):
-        """GET : liste id/nom/num_offre des formations visibles, non paginée."""
+        """GET : liste id/nom/num_offre des formations visibles dans l'enveloppe API standard."""
         formations = self._build_base_queryset().only("id", "nom", "num_offre").order_by("nom")
         data = [{"id": f.id, "nom": f.nom, "num_offre": getattr(f, "num_offre", None)} for f in formations]
-        return Response({"success": True, "data": data})
+        return Response({"success": True, "message": "Liste simplifiée des formations récupérée.", "data": data})
 
     @extend_schema(summary="Archiver une formation")
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
-        """POST : archiver la formation ; 400 si déjà archivée."""
+        """POST : archive logiquement une formation et renvoie l'enveloppe API standard."""
         formation = self.get_object()
 
         if formation.est_archivee:
             return self.error_response(message="Déjà archivée.", status_code=status.HTTP_400_BAD_REQUEST)
 
         formation.archiver(user=request.user, commentaire="Archivage manuel via API")
-        return Response({"status": "archived"}, status=status.HTTP_200_OK)
+        return self.success_response(
+            data={"status": "archived"},
+            message="Formation archivée avec succès.",
+        )
 
     @extend_schema(summary="Restaurer une formation archivée")
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
-        """POST : desarchiver la formation ; 400 si déjà active."""
+        """POST : restaure une formation archivée et renvoie l'enveloppe API standard."""
         formation = self.get_object()
 
         if not formation.est_archivee:
             return self.error_response(message="Déjà active.", status_code=status.HTTP_400_BAD_REQUEST)
 
         formation.desarchiver(user=request.user, commentaire="Restauration manuelle via API")
-        return Response({"status": "unarchived"}, status=status.HTTP_200_OK)
+        return self.success_response(
+            data={"status": "unarchived"},
+            message="Formation désarchivée avec succès.",
+        )
+
+    @extend_schema(summary="Archiver une formation via DELETE")
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE /formations/<id>/` pour compatibilité mais remplace
+        la suppression destructive par un archivage logique.
+
+        Les rôles en lecture seule sur les formations, comme `commercial`
+        et `charge_recrutement`, ne peuvent pas archiver.
+        """
+        self._assert_can_write_formations(request.user)
+        formation = self.get_object()
+
+        if formation.est_archivee:
+            return self.success_response(
+                data={"status": "archived"},
+                message="Formation déjà archivée.",
+            )
+
+        formation.archiver(user=request.user, commentaire="Archivage via endpoint DELETE legacy")
+        return self.success_response(
+            data={"status": "archived"},
+            message="Formation archivée avec succès.",
+        )
 
     @extend_schema(summary="Lister uniquement les formations archivées")
     @action(detail=False, methods=["get"], url_path="archivees")

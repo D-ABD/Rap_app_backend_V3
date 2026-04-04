@@ -261,17 +261,18 @@ class Commentaire(BaseModel):
 
     def save(self, *args, **kwargs):
         """
-        Clamp la saturation et copie la saturation de la formation à la création.
+        Clamp la saturation et fige la saturation métier de la formation à la création.
         """
         if self.saturation is not None:
             self.saturation = max(self.SATURATION_MIN, min(self.SATURATION_MAX, self.saturation))
 
         is_new = self.pk is None
 
-        if is_new and self.formation_id:
-            saturation_db = Formation.objects.filter(pk=self.formation_id).values_list("saturation", flat=True).first()
-            if saturation_db is not None:
-                self.saturation_formation = int(saturation_db) if isinstance(saturation_db, float) else saturation_db
+        if is_new and self.formation_id and self.saturation_formation is None:
+            formation = Formation.objects.filter(pk=self.formation_id).first()
+            if formation is not None:
+                taux = getattr(formation, "taux_saturation", None)
+                self.saturation_formation = round(float(taux), 2) if taux is not None else None
             else:
                 self.saturation_formation = None
 

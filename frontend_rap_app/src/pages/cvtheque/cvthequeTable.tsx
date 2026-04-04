@@ -30,6 +30,9 @@ type Props = {
   onPreview: (item: CVThequeItem) => void;
   onEdit: (id: number) => void;
   onDelete?: (id: number) => void;
+  onRestore?: (id: number) => void;
+  onHardDelete?: (id: number) => void;
+  canHardDelete?: boolean;
 };
 
 export default function CVThequeTable({
@@ -39,6 +42,9 @@ export default function CVThequeTable({
   onPreview,
   onEdit,
   onDelete,
+  onRestore,
+  onHardDelete,
+  canHardDelete = false,
 }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -187,15 +193,40 @@ export default function CVThequeTable({
                           </Button>
                         </Tooltip>
 
-                        {onDelete && (
-                          <Tooltip title="Supprimer">
+                        {doc.is_active && onDelete && (
+                          <Tooltip title="Archiver">
                             <Button
                               size="small"
                               variant="outlined"
                               color="error"
                               onClick={() => onDelete(doc.id)}
                             >
-                              🗑️
+                              Archiver
+                            </Button>
+                          </Tooltip>
+                        )}
+
+                        {!doc.is_active && onRestore && (
+                          <Tooltip title="Restaurer">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              onClick={() => onRestore(doc.id)}
+                            >
+                              Restaurer
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {!doc.is_active && canHardDelete && onHardDelete && (
+                          <Tooltip title="Supprimer définitivement">
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              onClick={() => onHardDelete(doc.id)}
+                            >
+                              Supprimer définitivement
                             </Button>
                           </Tooltip>
                         )}
@@ -261,7 +292,7 @@ export default function CVThequeTable({
                       ✏️
                     </Button>
 
-                    {onDelete && (
+                    {doc.is_active && onDelete && (
                       <Button
                         size="small"
                         variant="outlined"
@@ -271,7 +302,34 @@ export default function CVThequeTable({
                           onDelete(doc.id);
                         }}
                       >
-                        🗑️
+                        Archiver
+                      </Button>
+                    )}
+
+                    {!doc.is_active && onRestore && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRestore(doc.id);
+                        }}
+                      >
+                        Restaurer
+                      </Button>
+                    )}
+                    {!doc.is_active && canHardDelete && onHardDelete && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onHardDelete(doc.id);
+                        }}
+                      >
+                        Supprimer définitivement
                       </Button>
                     )}
                   </Stack>

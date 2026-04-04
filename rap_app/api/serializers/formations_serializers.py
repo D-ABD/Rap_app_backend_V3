@@ -39,6 +39,13 @@ def _resolved_total_inscrits(obj) -> int:
     return _resolved_inscrits_crif(obj) + _resolved_inscrits_mp(obj)
 
 
+def _resolved_nombre_candidats(obj) -> int:
+    annotated = getattr(obj, "nombre_candidats_calc", None)
+    if annotated is not None:
+        return int(annotated or 0)
+    return int(getattr(obj, "nombre_candidats", 0) or 0)
+
+
 def _resolved_total_places(obj) -> int:
     annotated = getattr(obj, "total_places_calc", None)
     if annotated is not None:
@@ -115,7 +122,11 @@ def _resolved_saturation(obj) -> float:
 )
 class FormationListSerializer(serializers.Serializer):
     """
-    Structure de sortie pour la liste des formations : champs du modèle et champs calculés (inscrits_total, prevus_total, taux_transformation, transformation_badge, saturation_badge, centre, statut, type_offre).
+    Structure de sortie pour la liste des formations avec :
+    - les compteurs saisis CRIF / MP ;
+    - les agrégats calculés utiles à l'affichage ;
+    - un taux de saturation basé sur les inscrits recalculés ;
+    - un taux de transformation basé sur les candidats liés à la formation.
     """
 
     id = serializers.IntegerField()
@@ -212,10 +223,11 @@ class FormationListSerializer(serializers.Serializer):
 
     @extend_schema_field(str)
     def get_taux_transformation(self, obj):
-        """Taux inscrits_total / nombre_candidats en %, ou None si nombre_candidats nul."""
-        if obj.nombre_candidats:
+        """Taux de transformation = inscrits retenus pour la formation / candidats liés, en %."""
+        nombre_candidats = _resolved_nombre_candidats(obj)
+        if nombre_candidats:
             total_inscrits = self.get_inscrits_total(obj)
-            return round((total_inscrits / obj.nombre_candidats) * 100)
+            return round((total_inscrits / nombre_candidats) * 100)
         return None
 
     @extend_schema_field(str)
@@ -464,10 +476,11 @@ class FormationDetailSerializer(serializers.Serializer):
 
     @extend_schema_field(float)
     def get_taux_transformation(self, obj):
-        """Taux inscrits_total / nombre_candidats en %, ou None si pas de candidats."""
-        if obj.nombre_candidats:
+        """Taux de transformation = inscrits retenus pour la formation / candidats liés, en %."""
+        nombre_candidats = _resolved_nombre_candidats(obj)
+        if nombre_candidats:
             total_inscrits = self.get_inscrits_total(obj)
-            return round((total_inscrits / obj.nombre_candidats) * 100)
+            return round((total_inscrits / nombre_candidats) * 100)
         return None
 
     @extend_schema_field(str)

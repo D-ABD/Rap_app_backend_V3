@@ -55,6 +55,22 @@ class CandidateBulkService:
         return cls._run_transition(candidates, actor=actor, transition_name="validate_inscription")
 
     @classmethod
+    def bulk_set_admissible(cls, candidates: Iterable[Candidat], actor):
+        return cls._run_transition(candidates, actor=actor, transition_name="set_admissible")
+
+    @classmethod
+    def bulk_clear_admissible(cls, candidates: Iterable[Candidat], actor):
+        return cls._run_transition(candidates, actor=actor, transition_name="clear_admissible")
+
+    @classmethod
+    def bulk_set_gespers(cls, candidates: Iterable[Candidat], actor):
+        return cls._run_transition(candidates, actor=actor, transition_name="mark_gespers")
+
+    @classmethod
+    def bulk_clear_gespers(cls, candidates: Iterable[Candidat], actor):
+        return cls._run_transition(candidates, actor=actor, transition_name="clear_gespers")
+
+    @classmethod
     def bulk_start_formation(cls, candidates: Iterable[Candidat], actor):
         return cls._run_transition(candidates, actor=actor, transition_name="start_formation")
 

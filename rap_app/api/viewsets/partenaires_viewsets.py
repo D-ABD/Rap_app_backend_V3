@@ -5,6 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.db.models import Count, Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone as dj_timezone
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from django_filters.rest_framework import filters as dj_filters
@@ -22,12 +23,11 @@ from rest_framework.response import Response
 from ...api.permissions import (
     IsOwnerOrStaffOrAbove,
     UserVisibilityScopeMixin,
-    is_staff_or_staffread,
 )
-from ...api.roles import is_admin_like, is_staff_read
+from ...api.roles import is_admin_like, is_centre_scoped_staff, is_staff_read
 from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..serializers.partenaires_serializers import (
     PartenaireChoicesResponseSerializer,
     PartenaireSerializer,
@@ -56,7 +56,7 @@ class PartenaireAccessPermission(BasePermission):
         # Ferme explicitement la création et les écritures globales aux profils
         # non-staff et au rôle staff_read.
         if getattr(view, "action", None) == "create":
-            return is_admin_like(user) or (is_staff_or_staffread(user) and not is_staff_read(user))
+            return is_admin_like(user) or (is_centre_scoped_staff(user) and not is_staff_read(user))
 
         return True
 
@@ -65,7 +65,7 @@ class PartenaireAccessPermission(BasePermission):
         if is_admin_like(user):
             return True
 
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             if is_staff_read(user):
                 return request.method in SAFE_METHODS
             return True
@@ -175,12 +175,12 @@ class InlinePartenaireFilter(FilterSet):
         responses={200: OpenApiResponse(description="Mise à jour réussie")},
     ),
     destroy=extend_schema(
-        summary="Supprimer un partenaire",
+        summary="Archiver un partenaire",
         tags=["Partenaires"],
-        responses={204: OpenApiResponse(description="Suppression réussie")},
+        responses={204: OpenApiResponse(description="Archivage réussi")},
     ),
 )
-class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.ModelViewSet):
+class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilityScopeMixin, viewsets.ModelViewSet):
     """
     ViewSet gérant les partenaires avec opérations CRUD, filtrage,
     permissions de périmètre et actions utilitaires (métadonnées,
@@ -188,6 +188,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
     """
 
     serializer_class = PartenaireSerializer
+    hard_delete_enabled = True
     # ✅ utilise la permission locale pour autoriser la lecture des partenaires attribués via prospection
     permission_classes = [PartenaireAccessPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -233,7 +234,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
         """
         if self._is_admin_like(user):
             return None  # accès global
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             return list(user.centres.values_list("id", flat=True))
         return []  # non-staff
 
@@ -276,7 +277,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
         """
         if self._is_admin_like(user):
             return True
-        if not is_staff_or_staffread(user):
+        if not is_centre_scoped_staff(user):
             # non-staff : déjà géré par permission/queryset
             return True
         centre_ids = set(user.centres.values_list("id", flat=True))
@@ -304,7 +305,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
         user = self.request.user
 
         qs = (
-            Partenaire.objects.filter(is_active=True)
+            Partenaire.objects.all()
             .select_related("created_by", "default_centre")  # ✅ pas de N+1 sur centre
             .annotate(
                 prospections_count=Count("prospections", distinct=True),
@@ -325,16 +326,72 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             )
         )
 
+        include_archived = str(self.request.query_params.get("avec_archivees", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            qs = qs.filter(is_active=False)
+        elif not include_archived:
+            qs = qs.filter(is_active=True)
+
         # ✅ Admins : tout voir
         if self._is_admin_like(user):
             return qs
 
         # ✅ Staff ou StaffRead : visibilité restreinte à leur périmètre
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             return self._scoped_for_user(qs, user)
 
         # ✅ Candidat·e : créés par lui/elle ou associés via prospections
         return qs.filter(Q(created_by=user) | Q(prospections__owner=user)).distinct()
+
+    def get_archived_aware_object(self):
+        """
+        Récupère un partenaire en incluant les archives tout en respectant le
+        scope utilisateur déjà appliqué sur la liste.
+        """
+        lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        user = self.request.user
+        queryset = (
+            Partenaire.objects.all()
+            .select_related("created_by", "default_centre")
+            .annotate(
+                prospections_count=Count("prospections", distinct=True),
+                appairages_count=Count("appairages", distinct=True),
+                formations_count=(
+                    Count(
+                        "appairages__formation",
+                        filter=Q(appairages__formation__isnull=False),
+                        distinct=True,
+                    )
+                    + Count(
+                        "prospections__formation",
+                        filter=Q(prospections__formation__isnull=False),
+                        distinct=True,
+                    )
+                ),
+                candidats_count=Count("appairages__candidat", distinct=True),
+            )
+        )
+
+        if self._is_admin_like(user):
+            scoped_qs = queryset
+        elif is_centre_scoped_staff(user):
+            scoped_qs = self._scoped_for_user(queryset, user)
+        else:
+            scoped_qs = queryset.filter(Q(created_by=user) | Q(prospections__owner=user)).distinct()
+
+        return get_object_or_404(scoped_qs, **{self.lookup_field: lookup_value})
 
     # -------------------- endpoints utilitaires --------------------
 
@@ -401,6 +458,37 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
 
     # -------------------- CRUD --------------------
 
+    def create(self, request, *args, **kwargs):
+        """
+        Crée un partenaire et renvoie l'enveloppe API standard pour
+        homogénéiser le contrat avec les autres endpoints métier.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = serializer.instance
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "success": True,
+                "message": "Partenaire créé avec succès.",
+                "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un partenaire dans l'enveloppe API
+        standard afin d'aligner lecture et écriture.
+        """
+        instance = self.get_object()
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Partenaire récupéré avec succès.",
+        )
+
     def perform_create(self, serializer):
         """
         Crée un partenaire en contrôlant le centre par défaut en
@@ -414,7 +502,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             default_centre = serializer.validated_data.get("default_centre")
 
         # 🔎 Cas 2 — Staff / Staff_read : doit avoir un centre autorisé
-        elif is_staff_or_staffread(user):
+        elif is_centre_scoped_staff(user):
             centres = list(user.centres.all())
             if not centres:
                 raise PermissionDenied("❌ Vous n’êtes rattaché à aucun centre.")
@@ -447,18 +535,19 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
     def update(self, request, *args, **kwargs):
         """
         Met à jour un partenaire après contrôle explicite des droits
-        d'édition et du centre par défaut associé.
+        d'édition et du centre par défaut associé, puis renvoie
+        l'enveloppe API standard.
         """
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         user = request.user
 
         # 🔒 Vérifications d’accès
-        if not is_staff_or_staffread(user) and not getattr(user, "is_superuser", False):
+        if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
             if instance.created_by_id != user.id:
                 raise PermissionDenied("Vous ne pouvez modifier que vos propres partenaires.")
 
-        if is_staff_or_staffread(user) and not self._is_admin_like(user):
+        if is_centre_scoped_staff(user) and not self._is_admin_like(user):
             if not self._user_can_access_partenaire(instance, user):
                 raise PermissionDenied("Partenaire hors de votre périmètre (centres).")
 
@@ -471,7 +560,7 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             if self._is_admin_like(user):
                 # Admin : ne rien forcer
                 default_centre = serializer.validated_data.get("default_centre")
-            elif is_staff_or_staffread(user):
+            elif is_centre_scoped_staff(user):
                 centres = list(user.centres.all())
                 if not centres:
                     raise PermissionDenied("Vous n’êtes rattaché à aucun centre.")
@@ -490,21 +579,24 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             details="Modification d'un partenaire",
         )
 
-        return Response(self.get_serializer(instance).data, status=status.HTTP_200_OK)
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Partenaire mis à jour avec succès.",
+        )
 
     def destroy(self, request, *args, **kwargs):
         """
-        Effectue une suppression logique du partenaire (désactivation)
+        Effectue un archivage logique du partenaire (désactivation)
         avec vérification des droits liés au rôle et au périmètre.
         """
         instance = self.get_object()  # respecte le scope
         user = request.user
 
-        if not is_staff_or_staffread(user) and not getattr(user, "is_superuser", False):
+        if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
             if instance.created_by_id != user.id:
                 raise PermissionDenied("Vous ne pouvez supprimer que vos propres partenaires.")
 
-        if is_staff_or_staffread(user) and not self._is_admin_like(user):
+        if is_centre_scoped_staff(user) and not self._is_admin_like(user):
             if not self._user_can_access_partenaire(instance, user):
                 raise PermissionDenied("Partenaire hors de votre périmètre (centres).")
 
@@ -514,9 +606,48 @@ class PartenaireViewSet(ApiResponseMixin, UserVisibilityScopeMixin, viewsets.Mod
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
             user=request.user,
-            details="Suppression logique d'un partenaire",
+            details="Archivage logique d'un partenaire",
         )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {"success": True, "message": "Partenaire archivé avec succès.", "data": None},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, *args, **kwargs):
+        """
+        Restaure un partenaire archivé en respectant le même périmètre d'accès
+        que les autres opérations du viewset.
+        """
+        instance = self.get_archived_aware_object()
+        user = request.user
+
+        if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
+            if instance.created_by_id != user.id:
+                raise PermissionDenied("Vous ne pouvez restaurer que vos propres partenaires.")
+
+        if is_centre_scoped_staff(user) and not self._is_admin_like(user):
+            if not self._user_can_access_partenaire(instance, user):
+                raise PermissionDenied("Partenaire hors de votre périmètre (centres).")
+
+        if instance.is_active:
+            return self.success_response(
+                data=self.get_serializer(instance).data,
+                message="Partenaire déjà actif.",
+            )
+
+        instance.is_active = True
+        instance.save()
+        LogUtilisateur.log_action(
+            instance=instance,
+            action=LogUtilisateur.ACTION_UPDATE,
+            user=request.user,
+            details="Désarchivage d'un partenaire",
+        )
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Partenaire désarchivé avec succès.",
+        )
 
     # -------------------- détail enrichi --------------------
 

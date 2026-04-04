@@ -19,7 +19,13 @@ import {
 
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
-import { useDeclicFiltersOptions, useDeclicList, useDeleteDeclic } from "src/hooks/useDeclic";
+import {
+  useDeclicFiltersOptions,
+  useDeclicList,
+  useDeleteDeclic,
+  useDesarchiverDeclic,
+  useHardDeleteDeclic,
+} from "src/hooks/useDeclic";
 import { Declic } from "src/types/declic";
 import type { DeclicFiltresValues } from "src/types/declic";
 import FiltresDeclicPanel from "src/components/filters/FiltresDeclicPanel";
@@ -27,6 +33,7 @@ import FiltresDeclicPanel from "src/components/filters/FiltresDeclicPanel";
 import DeclicTable from "./DeclicTable";
 import DeclicDetailModal from "./DeclicDetailModal";
 import ExportButtonDeclic from "src/components/export_buttons/ExportButtonDeclic";
+import SearchInput from "src/components/SearchInput";
 
 export default function DeclicPage() {
   const navigate = useNavigate();
@@ -36,6 +43,23 @@ export default function DeclicPage() {
     ordering: "-date_declic",
     page: 1,
   });
+
+  const resetAllFilters = () => {
+    setFilters({
+      ordering: "-date_declic",
+      page: 1,
+      search: undefined,
+      type_declic: undefined,
+      centre: undefined,
+      departement: undefined,
+      annee: undefined,
+      date_min: undefined,
+      date_max: undefined,
+      avec_archivees: undefined,
+      archives_seules: undefined,
+    });
+    setPage(1);
+  };
 
   // 🔹 Récupération dynamique des options de filtres
   const { data: filterOptions, isLoading: loadingFilters } = useDeclicFiltersOptions();
@@ -55,6 +79,18 @@ export default function DeclicPage() {
   // ───────────── Pagination ─────────────
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
 
+  const hasActiveFilters = Boolean(
+    filters.search ||
+      filters.type_declic ||
+      filters.centre ||
+      filters.departement ||
+      filters.annee ||
+      filters.date_min ||
+      filters.date_max ||
+      filters.avec_archivees ||
+      filters.archives_seules
+  );
+
   const effectiveFilters = useMemo(
     () => ({ ...filters, page, page_size: pageSize }),
     [filters, page, pageSize]
@@ -63,6 +99,8 @@ export default function DeclicPage() {
   // ───────────── Données Déclic ─────────────
   const { data, loading, error } = useDeclicList(effectiveFilters);
   const { remove } = useDeleteDeclic();
+  const { restore } = useDesarchiverDeclic();
+  const { hardDelete } = useHardDeleteDeclic();
 
   const items: Declic[] = useMemo(() => data?.results ?? [], [data]);
 
@@ -77,21 +115,46 @@ export default function DeclicPage() {
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [items]);
 
-  // ───────────── Suppression ─────────────
+  // ───────────── Archivage ─────────────
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
 
   const handleDelete = async () => {
-    if (!selectedId) return;
+    const idsToDelete = selectedId ? [selectedId] : selectedIds;
+    if (!idsToDelete.length) return;
     try {
-      await remove(selectedId);
-      toast.success("🗑️ Séance Déclic supprimée");
+      await Promise.all(idsToDelete.map((id) => remove(id)));
+      toast.success(`${idsToDelete.length} séance(s) Déclic archivée(s) avec succès.`);
       setShowConfirm(false);
       setSelectedId(null);
-      setPage((p) => (items.length - 1 <= 0 && p > 1 ? p - 1 : p));
+      setSelectedIds([]);
+      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
       setFilters((f) => ({ ...f })); // refresh soft
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("La séance Déclic n'a pas pu être archivée.");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("La séance Déclic a bien été restaurée.");
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("La séance Déclic n'a pas pu être restaurée.");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("La séance Déclic archivée a été supprimée définitivement.");
+      setHardDeleteId(null);
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("La suppression définitive de la séance Déclic a échoué.");
     }
   };
 
@@ -110,7 +173,7 @@ export default function DeclicPage() {
   // ───────────── Rendu principal ─────────────
   return (
     <PageTemplate
-      title="Activités Déclic"
+      title="Séances Déclic"
       refreshButton
       onRefresh={() => {
         setPage((p) => p);
@@ -122,6 +185,21 @@ export default function DeclicPage() {
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
+
+          <SearchInput
+            placeholder="🔍 Rechercher une séance Déclic..."
+            value={filters.search ?? ""}
+            onChange={(e) => {
+              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+              setPage(1);
+            }}
+          />
+
+          {hasActiveFilters && (
+            <Button variant="outlined" color="warning" onClick={resetAllFilters}>
+              ♻️ Réinitialiser filtres
+            </Button>
+          )}
 
           {/* Taille de page */}
           <Select
@@ -141,15 +219,57 @@ export default function DeclicPage() {
 
           {/* Création */}
           <Button variant="contained" onClick={() => navigate("/declic/create")}>
-            ➕ Nouvelle séance
+            ➕ Ajouter une séance
           </Button>
 
           <Button variant="outlined" onClick={() => navigate("/participants-declic")}>
-            👥 Participants Déclic
+            👥 Gérer les participants
           </Button>
 
           {/* ✅ Export Excel */}
           <ExportButtonDeclic data={items} selectedIds={selectedIds} />
+
+          <Button
+            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            onClick={() =>
+              setFilters((prev) =>
+                prev.avec_archivees || prev.archives_seules
+                  ? { ...prev, avec_archivees: undefined, archives_seules: undefined }
+                  : { ...prev, avec_archivees: true, archives_seules: undefined }
+              )
+            }
+          >
+            {filters.avec_archivees || filters.archives_seules ? "Masquer archivées" : "Inclure archivées"}
+          </Button>
+
+          {(filters.avec_archivees || filters.archives_seules) && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() =>
+                setFilters((prev) =>
+                  prev.archives_seules
+                    ? { ...prev, archives_seules: undefined, avec_archivees: undefined }
+                    : { ...prev, archives_seules: true, avec_archivees: true }
+                )
+              }
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+                📦 Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+                ✅ Tout sélectionner
+              </Button>
+              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
         </Stack>
       }
       footer={
@@ -179,11 +299,13 @@ export default function DeclicPage() {
           <FiltresDeclicPanel
             options={loadingFilters ? undefined : filterOptions}
             values={filters}
+            hideSearch
             onChange={(next) => {
               setFilters(next);
               setPage(1);
             }}
             onRefresh={() => setFilters({ ...filters })}
+            onReset={resetAllFilters}
           />
         </Box>
       )}
@@ -193,11 +315,11 @@ export default function DeclicPage() {
         <CircularProgress />
       ) : error ? (
         <Typography color="error">
-          ⚠️ {error.message || "Erreur de chargement des séances Déclic."}
+          ⚠️ {error.message || "Impossible de charger les séances Déclic."}
         </Typography>
       ) : !items.length ? (
         <Box textAlign="center" color="text.secondary" my={4}>
-          <Typography>Aucune séance Déclic trouvée.</Typography>
+          <Typography>Aucune séance Déclic ne correspond aux filtres actuels.</Typography>
         </Box>
       ) : (
         <DeclicTable
@@ -208,6 +330,8 @@ export default function DeclicPage() {
             setSelectedId(id);
             setShowConfirm(true);
           }}
+          onToggleArchive={(id) => handleRestore(id)}
+          onHardDelete={(id) => setHardDeleteId(id)}
           onRowClick={handleRowClick}
         />
       )}
@@ -220,16 +344,35 @@ export default function DeclicPage() {
         onEdit={(id) => navigate(`/declic/${id}/edit`)}
       />
 
-      {/* ───────────── Confirmation suppression ───────────── */}
+      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
-        <DialogTitle>Confirmation</DialogTitle>
+        <DialogTitle>Archiver la séance</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer cette séance Déclic ?</DialogContentText>
+          <DialogContentText>
+            {selectedId
+              ? "Cette séance disparaîtra des listes standard, mais restera disponible dans les archives."
+              : `Les ${selectedIds.length} séances sélectionnées disparaîtront des listes standard, mais resteront disponibles dans les archives.`}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette séance Déclic archivée sera supprimée définitivement. Cette action est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

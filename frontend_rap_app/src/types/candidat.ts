@@ -152,6 +152,8 @@ export interface Candidat {
   formation_info?: FormationInfo | null;
   centre_id?: number | null;
   centre_nom?: string | null;
+  centre_lie?: { id: number; nom: string } | null;
+  role_lie?: { value: string | null; label: string | null } | null;
   // Champs dérivés de formation (backend 2025-10)
   formation_nom?: string | null;
   formation_centre_nom?: string | null;
@@ -257,6 +259,7 @@ export interface Candidat {
   age?: number | null; // calculé côté backend
   vu_par?: number | null;
   vu_par_nom?: string | null;
+  is_active?: boolean;
 }
 
 export interface CandidatListResponse {
@@ -362,6 +365,8 @@ export interface CandidatFiltresValues {
   page?: number;
   page_size?: number;
   ordering?: string; // ex: "-date_inscription"
+  avec_archivees?: boolean | "true";
+  archives_seules?: boolean | "true";
 }
 
 export type CandidatFiltresOptions = Partial<Record<keyof CandidatFiltresValues, ChoiceOption[]>>;

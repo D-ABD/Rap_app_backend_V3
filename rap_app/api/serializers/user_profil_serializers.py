@@ -58,6 +58,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
     centres_info = serializers.SerializerMethodField(read_only=True)
 
     centre = serializers.SerializerMethodField(read_only=True)
+    centre_lie = serializers.SerializerMethodField(read_only=True)
+    role_lie = serializers.SerializerMethodField(read_only=True)
 
     is_staff = serializers.BooleanField(read_only=True)
     is_superuser = serializers.BooleanField(read_only=True)
@@ -115,6 +117,19 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
         return None
 
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_centre_lie(self, obj):
+        """Alias explicite du centre lié pour les écrans `me`."""
+        return self.get_centre(obj)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_role_lie(self, obj):
+        """Rôle lié à l'utilisateur courant avec valeur et libellé."""
+        role = getattr(obj, "role", None)
+        if not role:
+            return None
+        return {"value": role, "label": obj.get_role_display()}
+
     class Meta:
         model = CustomUser
         fields = [
@@ -141,6 +156,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             "centres",
             "centres_info",
             "centre",
+            "centre_lie",
+            "role_lie",
             "consent_rgpd",
             "consent_date",
         ]
@@ -153,6 +170,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             "formation_info",
             "centres_info",
             "centre",
+            "centre_lie",
+            "role_lie",
             "consent_date",
             "is_staff",
             "is_superuser",

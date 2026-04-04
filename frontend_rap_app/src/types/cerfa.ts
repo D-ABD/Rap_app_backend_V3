@@ -264,6 +264,7 @@ export type CerfaContratBase = {
 
 export type CerfaContrat = CerfaContratBase & {
   id: number;
+  is_active?: boolean;
   created_at: string; // ISO datetime
   updated_at: string; // ISO datetime
   created_by?: number | null;

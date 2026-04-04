@@ -24,6 +24,13 @@ from rest_framework.response import Response
 from ....models.declic import Declic, ObjectifDeclic
 from ...paginations import RapAppPagination
 from ...permissions import IsDeclicStaffOrAbove
+from ...roles import (
+    build_department_scope_q,
+    get_staff_centre_ids_cached,
+    get_staff_department_codes_cached,
+    is_admin_like,
+    use_department_stats_scope,
+)
 from ...serializers.base_serializers import EmptySerializer
 
 
@@ -61,32 +68,28 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         - Si aucun centre/département ne peut être déterminé : retourne un queryset vide pour l'utilisateur courant.
         - Les filtres possibles par query_params : annee (par défaut année courante), centre, type_declic.
         """
-        from ...roles import is_admin_like
-
         qs = self.queryset
         user = request.user
 
         annee = int(request.query_params.get("annee", localdate().year))
         centre_param = request.query_params.get("centre")
         type_declic = request.query_params.get("type_declic")
+        department_scope = use_department_stats_scope(request)
 
         if is_admin_like(user):
             qs = qs.filter(date_declic__year=annee)
         else:
-            centre_ids = list(getattr(user, "staff_centre_ids", []) or [])
-
-            departements = (
-                {(c.code_postal or "")[:2] for c in getattr(user, "centres", []).all()}
-                if hasattr(user, "centres") and user.centres.exists()
-                else set()
-            )
+            centre_ids = list(get_staff_centre_ids_cached(request) or [])
+            departements = set(get_staff_department_codes_cached(request) or [])
 
             if centre_param:
                 qs = qs.filter(centre_id=centre_param)
+            elif department_scope and departements:
+                qs = qs.filter(build_department_scope_q("centre__code_postal", departements))
             elif centre_ids:
                 qs = qs.filter(centre_id__in=centre_ids)
             elif departements:
-                qs = qs.filter(centre__code_postal__startswith=tuple(departements))
+                qs = qs.filter(build_department_scope_q("centre__code_postal", departements))
             else:
                 # Aucun accès explicite autorisé pour cet utilisateur
                 return Declic.objects.none()
@@ -209,8 +212,6 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         Structure de la réponse JSON :
             - Voir ci-dessous, contrat explicitement visible.
         """
-        from ...roles import is_admin_like
-
         qs = self._filtered_qs(request)
 
         agg = qs.aggregate(
@@ -230,12 +231,18 @@ class DeclicStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # Objectifs →
         annee = int(request.query_params.get("annee", localdate().year))
         centre_param = request.query_params.get("centre")
+        department_scope = use_department_stats_scope(request)
 
         if is_admin_like(request.user):
             objectifs = ObjectifDeclic.objects.filter(annee=annee)
         else:
-            centre_ids = getattr(request.user, "staff_centre_ids", []) or []
-            objectifs = ObjectifDeclic.objects.filter(centre_id__in=centre_ids, annee=annee)
+            centre_ids = list(get_staff_centre_ids_cached(request) or [])
+            departements = set(get_staff_department_codes_cached(request) or [])
+            objectifs = ObjectifDeclic.objects.filter(annee=annee)
+            if department_scope and departements:
+                objectifs = objectifs.filter(build_department_scope_q("centre__code_postal", departements))
+            else:
+                objectifs = objectifs.filter(centre_id__in=centre_ids)
 
         if centre_param:
             objectifs = objectifs.filter(centre_id=centre_param)

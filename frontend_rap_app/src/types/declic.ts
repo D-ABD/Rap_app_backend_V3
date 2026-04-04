@@ -12,6 +12,7 @@ export interface CentreLight {
 
 export interface ParticipantDeclic {
   id?: number;
+  is_active?: boolean;
   nom: string;
   prenom: string;
   telephone?: string | null;
@@ -80,6 +81,7 @@ export interface ObjectifDeclic {
 // -----------------------------------------------------------------------------
 export interface Declic {
   id: number;
+  is_active?: boolean;
 
   type_declic: string;
   type_declic_display?: string;
@@ -167,6 +169,8 @@ export interface DeclicFiltresValues {
   date_max?: string;
   ordering?: string;
   page?: number;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export interface DeclicFiltersOptions {
@@ -184,6 +188,8 @@ export interface ParticipantDeclicFiltersValues {
   present?: "true" | "false";
   ordering?: string;
   page?: number;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 // -----------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import InsightsIcon from "@mui/icons-material/Insights";
 import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
 
 import {
   useDeclicResume,
@@ -48,7 +49,7 @@ export default function DeclicStatsOperations({
   const isDark = theme.palette.mode === "dark";
 
   const { user } = useAuth();
-  const isAdminLike = ["admin", "superadmin"].includes((user?.role ?? "").toLowerCase());
+  const isAdminLike = isAdminLikeRole(user?.role);
 
   // -------------------------------------------------------
   // 🔹 Filtres locaux

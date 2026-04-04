@@ -21,8 +21,11 @@ import DashboardTemplateSaturation from "../../../components/dashboard/Dashboard
 /* --------------------------
 🔢 Utils
 --------------------------- */
-function toFixed0(n?: number) {
-  return n == null ? "—" : Math.round(n).toString();
+function formatPercent(n?: number | null) {
+  if (n == null || Number.isNaN(n)) return "—";
+  if (n > 0 && n < 1) return n.toFixed(2);
+  if (n < 10) return n.toFixed(1).replace(/\.0$/, "");
+  return Math.round(n).toString();
 }
 
 function omit<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K> {
@@ -206,9 +209,12 @@ export default function FormationSaturationWidget({
           {/* 📊 Valeurs */}
           <Box flex={1}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 0.5 }}>
-              {toFixed0(k.taux_saturation)}%
+              {formatPercent(k.taux_saturation)}%
             </Typography>
             <ColoredProgressBar value={k.taux_saturation} />
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
+              Base de calcul : inscrits GESPERS / places prevues
+            </Typography>
           </Box>
         </Box>
       )}

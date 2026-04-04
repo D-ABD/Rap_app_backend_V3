@@ -50,6 +50,8 @@ export interface ParticipantDeclicFilters {
   page?: number;
   page_size?: number;
   ordering?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export function useParticipantsDeclicList(filters: Partial<ParticipantDeclicFilters> = {}) {
@@ -92,7 +94,7 @@ export function useParticipantDeclicDetail(id: number | null) {
     (async () => {
       try {
         const res = await api.get(`/participants-declic/${id}/`, { signal: ctrl.signal });
-        setData(res.data);
+        setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -116,7 +118,7 @@ export function useParticipantsDeclicMeta() {
     (async () => {
       try {
         const res = await api.get("/participants-declic/meta/", { signal: ctrl.signal });
-        setData(res.data);
+        setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -151,6 +153,24 @@ export function useDeleteParticipantDeclic() {
   return {
     remove: async (id: number) => {
       await api.delete(`/participants-declic/${id}/`);
+    },
+  };
+}
+
+export function useDesarchiverParticipantDeclic() {
+  return {
+    restore: async (id: number) => {
+      const res = await api.post(`/participants-declic/${id}/desarchiver/`);
+      return res.data;
+    },
+  };
+}
+
+export function useHardDeleteParticipantDeclic() {
+  return {
+    hardDelete: async (id: number) => {
+      const res = await api.post(`/participants-declic/${id}/hard-delete/`);
+      return res.data;
     },
   };
 }

@@ -185,6 +185,8 @@ class CustomUserAdmin(DjangoUserAdmin):
         color = {
             CustomUser.ROLE_SUPERADMIN: "#b71c1c",
             CustomUser.ROLE_ADMIN: "#d84315",
+            CustomUser.ROLE_COMMERCIAL: "#00897b",
+            CustomUser.ROLE_CHARGE_RECRUTEMENT: "#5e35b1",
             CustomUser.ROLE_STAFF: "#1565c0",
             CustomUser.ROLE_STAFF_READ: "#0277bd",
             CustomUser.ROLE_STAGIAIRE: "#2e7d32",

@@ -14,6 +14,8 @@ import {
   Box,
   Grid,
   Typography,
+  Chip,
+  Stack,
 } from "@mui/material";
 import { toast } from "react-toastify";
 import axios, { AxiosError } from "axios"; // ✅ import correct
@@ -93,6 +95,36 @@ function unwrap<T>(payload: ApiEnvelope<T>): T {
   return isRecord(payload) && "data" in payload ? (payload as { data: T }).data : (payload as T);
 }
 
+function compact(parts: Array<string | null | undefined>): string {
+  return parts.filter((part): part is string => typeof part === "string" && part.trim() !== "").join(" • ");
+}
+
+function getDepartementLabel(zipCode?: string | null): string | null {
+  if (!zipCode) return null;
+  const digits = zipCode.replace(/\s+/g, "");
+  if (/^97\d{2}$/.test(digits) || /^98\d{2}$/.test(digits)) return digits.slice(0, 3);
+  if (/^\d{5}$/.test(digits)) return digits.slice(0, 2);
+  return null;
+}
+
+function getPartenaireLocation(partenaire: Pick<Partenaire, "city" | "zip_code">): string | null {
+  const departement = getDepartementLabel(partenaire.zip_code);
+  return compact([
+    partenaire.city ?? null,
+    departement ? `Dpt ${departement}` : null,
+    partenaire.zip_code ?? null,
+  ]);
+}
+
+function getPartenaireSummary(partenaire: Partenaire): string {
+  return compact([
+    partenaire.type_display ?? partenaire.type ?? null,
+    partenaire.secteur_activite ?? null,
+    partenaire.contact_nom ?? null,
+    partenaire.contact_email ?? partenaire.contact_telephone ?? null,
+  ]);
+}
+
 /* ---------- Component ---------- */
 export default function PartenaireSelectModal({
   show,
@@ -140,7 +172,7 @@ export default function PartenaireSelectModal({
     );
   }, [partenaires, search]);
 
-  const canCreate = !!onCreate || typeof prospectionId === "number";
+  const canCreate = true;
   const createDisabled = creating || nom.trim() === "";
 
   const handleCreate = async () => {
@@ -167,7 +199,8 @@ export default function PartenaireSelectModal({
         );
         created = unwrap<PartenaireMinimal>(res.data);
       } else {
-        return;
+        const res = await api.post<ApiEnvelope<PartenaireMinimal>>("/partenaires/", payload);
+        created = unwrap<PartenaireMinimal>(res.data);
       }
 
       toast.success("Partenaire créé et sélectionné.");
@@ -218,7 +251,45 @@ export default function PartenaireSelectModal({
               {filtered.map((partenaire) => (
                 <ListItem key={partenaire.id} disablePadding>
                   <ListItemButton onClick={() => onSelect(partenaire)}>
-                    <ListItemText primary={partenaire.nom} secondary={partenaire.city ?? ""} />
+                    <ListItemText
+                      primary={
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          useFlexGap
+                          flexWrap="wrap"
+                        >
+                          <Typography variant="body1" fontWeight={600}>
+                            {partenaire.nom}
+                          </Typography>
+                          {partenaire.type_display ? (
+                            <Chip size="small" label={partenaire.type_display} variant="outlined" />
+                          ) : null}
+                          {!partenaire.is_active ? (
+                            <Chip size="small" color="warning" label="Archivé" />
+                          ) : null}
+                        </Stack>
+                      }
+                      secondary={
+                        <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+                          {getPartenaireLocation(partenaire) ? (
+                            <Typography component="span" variant="body2">
+                              {getPartenaireLocation(partenaire)}
+                            </Typography>
+                          ) : null}
+                          {getPartenaireSummary(partenaire) ? (
+                            <Typography component="span" variant="body2" color="text.secondary">
+                              {getPartenaireSummary(partenaire)}
+                            </Typography>
+                          ) : (
+                            <Typography component="span" variant="body2" color="text.secondary">
+                              Aucun complément renseigné.
+                            </Typography>
+                          )}
+                        </Box>
+                      }
+                    />
                   </ListItemButton>
                 </ListItem>
               ))}
@@ -260,7 +331,7 @@ export default function PartenaireSelectModal({
               <Grid item xs={6}>
                 <TextField
                   fullWidth
-                  label="Code postal"
+                  label="Code postal / département"
                   value={zip}
                   onChange={(e) => setZip(e.target.value)}
                 />

@@ -91,7 +91,7 @@ export function useLogChoices() {
     setError(null);
     try {
       const response = await api.get<LogChoices>("/logs/choices/");
-      setData(response.data);
+      setData((response.data as { data?: LogChoices })?.data ?? response.data);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       setError(axiosError.response?.data?.message || axiosError.message || "Erreur de chargement des choix de logs.");

@@ -9,6 +9,11 @@ const ParametresPage = () => {
 
   const cards = [
     {
+      title: "Utilisateurs",
+      text: "Gérer les comptes, les rôles et l'activation des utilisateurs.",
+      link: "/users",
+    },
+    {
       title: "Centres",
       text: "Gérer les centres de formation.",
       link: "/centres",

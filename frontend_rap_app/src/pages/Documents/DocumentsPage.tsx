@@ -2,7 +2,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, MenuItem, Select, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
 import usePagination from "../../hooks/usePagination";
@@ -13,6 +26,9 @@ import type { FiltresValues } from "../../types/Filtres";
 import DocumentsFiltresPanel from "../../components/filters/DocumentsFiltresPanel";
 import DocumentsTable from "./DocumentsTable";
 import DocumentPreview from "./DocumentPreview"; // ✅ import ajouté
+import { useDocumentsApi } from "../../hooks/useDocuments";
+import { useAuth } from "../../hooks/useAuth";
+import { isAdminLikeRole } from "../../utils/roleGroups";
 
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
@@ -20,11 +36,16 @@ export default function DocumentsPage() {
   const [searchParams] = useSearchParams();
 
   const [previewDoc] = useState<Document | null>(null); // ✅ nouveau
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const { user } = useAuth();
+  const canHardDelete = isAdminLikeRole(user?.role);
 
   const [filters, setFilters] = useState<FiltresValues>({
     centre_id: undefined,
     statut_id: undefined,
     type_offre_id: undefined,
+    avec_archivees: undefined,
+    archives_seules: undefined,
   });
 
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -57,6 +78,7 @@ export default function DocumentsPage() {
     usePagination();
 
   const { filtres, loading: filtresLoading, error: filtresError } = useFiltresDocuments();
+  const { deleteDocument, restoreDocument, hardDeleteDocument } = useDocumentsApi();
 
   const safeFiltres = useMemo(
     () =>
@@ -111,13 +133,46 @@ export default function DocumentsPage() {
   const handleDelete = async () => {
     if (!selectedId) return;
     try {
-      const api = await import("../../api/axios");
-      await api.default.delete(`/documents/${selectedId}/`);
-      toast.success("🗑️ Document supprimé");
+      await deleteDocument(selectedId);
+      toast.success("📦 Document archivé");
       setSelectedId(null);
       fetchData();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleDeleteById = async (id: number) => {
+    setSelectedId(id);
+    try {
+      await deleteDocument(id);
+      toast.success("📦 Document archivé");
+      setSelectedId(null);
+      fetchData();
+    } catch {
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restoreDocument(id);
+      toast.success("♻️ Document restauré");
+      fetchData();
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDeleteDocument(hardDeleteId);
+      toast.success("🗑️ Document supprimé définitivement");
+      setHardDeleteId(null);
+      fetchData();
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -141,6 +196,36 @@ export default function DocumentsPage() {
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
+
+          <Button
+            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                avec_archivees: !prev.avec_archivees && !prev.archives_seules ? true : undefined,
+                archives_seules: undefined,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+
+          {(filters.avec_archivees || filters.archives_seules) && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  avec_archivees: undefined,
+                  archives_seules: prev.archives_seules ? undefined : true,
+                }));
+                setPage(1);
+              }}
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
 
           <input
             type="text"
@@ -199,7 +284,14 @@ export default function DocumentsPage() {
       ) : error ? (
         <Typography color="error">⚠️ Erreur lors du chargement des documents.</Typography>
       ) : documentsUniques.length ? (
-        <DocumentsTable documents={documentsUniques} showActions onDelete={handleDelete} />
+        <DocumentsTable
+          documents={documentsUniques}
+          showActions
+          onDelete={handleDeleteById}
+          onRestore={handleRestore}
+          onHardDelete={(id) => setHardDeleteId(id)}
+          canHardDelete={canHardDelete}
+        />
       ) : (
         <Typography color="text.secondary" align="center" sx={{ mt: 4 }}>
           📭 Aucun document trouvé.
@@ -232,6 +324,21 @@ export default function DocumentsPage() {
           nom={previewDoc.nom_fichier}
         />
       )}
+
+      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Le document archivé sera supprimé définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PageTemplate>
   );
 }

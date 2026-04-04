@@ -25,6 +25,9 @@ type Props = {
   onSelectionChange: (ids: number[]) => void;
   onRowClick: (id: number) => void;
   onDeleteClick?: (id: number) => void;
+  onRestoreClick?: (id: number) => void;
+  onHardDeleteClick?: (id: number) => void;
+  canHardDelete?: boolean;
   onHistoryClick?: (id: number) => void;
   formationChoices?: FormationChoice[];
   maxHeight?: string;
@@ -65,6 +68,9 @@ export default function AppairageTable({
   onSelectionChange,
   onRowClick,
   onDeleteClick,
+  onRestoreClick,
+  onHardDeleteClick,
+  canHardDelete = false,
   formationChoices,
   maxHeight,
 }: Props) {
@@ -440,9 +446,26 @@ export default function AppairageTable({
                       Commentaires
                     </Link>
                     {onDeleteClick && (
-                      <Link component="button" color="error" onClick={() => onDeleteClick(r.id)}>
-                        Supprimer
-                      </Link>
+                      <>
+                        <Link
+                          component="button"
+                          color={r.activite === "archive" ? "success" : "error"}
+                          onClick={() =>
+                            r.activite === "archive" ? onRestoreClick?.(r.id) : onDeleteClick(r.id)
+                          }
+                        >
+                          {r.activite === "archive" ? "Restaurer" : "Archiver"}
+                        </Link>
+                        {r.activite === "archive" && canHardDelete && onHardDeleteClick && (
+                          <Link
+                            component="button"
+                            color="error"
+                            onClick={() => onHardDeleteClick(r.id)}
+                          >
+                            Supprimer définitivement
+                          </Link>
+                        )}
+                      </>
                     )}
                   </Stack>
                 </TableCell>

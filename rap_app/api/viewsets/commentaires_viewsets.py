@@ -9,6 +9,8 @@ from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils.html import strip_tags
 from django.utils import timezone as dj_timezone
+from django.utils.dateparse import parse_date
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -25,13 +27,21 @@ from ...api.permissions import IsStaffOrAbove
 from ...api.serializers.commentaires_serializers import (
     CommentaireMetaSerializer,
     CommentaireSerializer,
+    _commentaire_current_taux_saturation,
+    _commentaire_current_taux_transformation,
 )
 from ...models.commentaires import Commentaire
 from ...models.logs import LogUtilisateur
-from ..roles import is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..mixins import HardDeleteArchivedMixin
+from ..roles import (
+    can_write_commentaires_formation,
+    is_admin_like,
+    is_centre_scoped_staff,
+    staff_centre_ids,
+)
 
 
-class CommentaireViewSet(viewsets.ModelViewSet):
+class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet des commentaires liés aux formations.
 
@@ -59,6 +69,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
     serializer_class = CommentaireSerializer
     pagination_class = RapAppPagination
     permission_classes = [IsStaffOrAbove]
+    hard_delete_enabled = True
 
     def _assert_staff_can_use_formation(self, formation):
         """Lève PermissionDenied si formation.centre_id hors staff_centre_ids(user)."""
@@ -70,13 +81,18 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         if is_admin_like(user):
             return
 
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed_centre_ids = staff_centre_ids(user)
             if formation.centre_id not in allowed_centre_ids:
                 raise PermissionDenied("Vous n'avez pas accès à cette formation.")
             return
 
         raise PermissionDenied("Accès interdit à cette formation.")
+
+    def _assert_can_write_commentaires(self):
+        """Refuse l'écriture aux rôles ayant seulement la lecture sur ce module."""
+        if not can_write_commentaires_formation(self.request.user):
+            raise PermissionDenied("Vous avez un accès en lecture seule sur les commentaires de formation.")
 
     @extend_schema(summary="Récupérer les options de filtres pour les commentaires")
     @action(detail=False, methods=["get"], url_path="filter-options")
@@ -99,7 +115,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
 
         if is_admin_like(user):
             centres = Centre.objects.filter(formations__commentaires__in=qs).distinct().order_by("nom", "id")
-        elif is_staff_or_staffread(user):
+        elif is_centre_scoped_staff(user):
             centres = (
                 Centre.objects.filter(id__in=staff_centre_ids(user), formations__commentaires__in=qs)
                 .distinct()
@@ -152,6 +168,16 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         user = self.request.user
         params = self.request.query_params
 
+        search = (params.get("search") or "").strip()
+        if search:
+            qs = qs.filter(
+                Q(contenu__icontains=search)
+                | Q(created_by__username__icontains=search)
+                | Q(created_by__first_name__icontains=search)
+                | Q(created_by__last_name__icontains=search)
+                | Q(formation__nom__icontains=search)
+            )
+
         statut_scope = (params.get("statut_id") or params.get("statut") or "").lower().strip()
         if self.action in {"retrieve", "update", "archiver", "desarchiver"}:
             statut_scope = "all"
@@ -180,8 +206,20 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         if formation_id and str(formation_id).isdigit():
             qs = qs.filter(formation_id=int(formation_id))
 
+        date_from = parse_date(str(params.get("date_from"))) if params.get("date_from") else None
+        date_to = parse_date(str(params.get("date_to"))) if params.get("date_to") else None
+        date_exact = parse_date(str(params.get("date"))) if params.get("date") else None
+
+        if date_exact:
+            qs = qs.filter(created_at__date=date_exact)
+        else:
+            if date_from:
+                qs = qs.filter(created_at__date__gte=date_from)
+            if date_to:
+                qs = qs.filter(created_at__date__lte=date_to)
+
         if not is_admin_like(user):
-            if is_staff_or_staffread(user):
+            if is_centre_scoped_staff(user):
                 centre_ids = staff_centre_ids(user)
                 if not centre_ids:
                     return qs.none()
@@ -209,7 +247,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         """
         Liste les commentaires avec `limit` optionnel et renvoie soit une
-        pagination DRF, soit une enveloppe JSON standard.
+        pagination DRF enveloppée, soit une enveloppe JSON standard.
         """
         limit = request.query_params.get("limit")
         queryset = self.filter_queryset(self.get_queryset())
@@ -220,7 +258,17 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            paginated = self.get_paginated_response(serializer.data).data
+            if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys()):
+                paginated["message"] = "Commentaires récupérés"
+                return Response(paginated)
+            return Response(
+                {
+                    "success": True,
+                    "message": "Commentaires récupérés",
+                    "data": paginated,
+                }
+            )
 
         serializer = self.get_serializer(queryset, many=True)
         return Response({"success": True, "message": "Commentaires récupérés", "data": serializer.data})
@@ -244,14 +292,15 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         Crée un commentaire après contrôle explicite du périmètre formation et
         journalisation de l'action utilisateur.
         """
+        self._assert_can_write_commentaires()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         formation = serializer.validated_data.get("formation")
         self._assert_staff_can_use_formation(formation)
 
-        if formation and hasattr(formation, "saturation"):
-            serializer.validated_data["saturation_formation"] = formation.saturation
+        if formation:
+            serializer.validated_data["saturation_formation"] = _commentaire_current_taux_saturation(formation)
 
         commentaire = serializer.save(created_by=request.user)
 
@@ -274,6 +323,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
         Met à jour un commentaire après contrôle explicite du périmètre
         formation et journalisation de la modification.
         """
+        self._assert_can_write_commentaires()
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
 
@@ -298,23 +348,45 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @extend_schema(summary="Supprimer un commentaire")
+    @extend_schema(summary="Archiver un commentaire via DELETE")
     def destroy(self, request, *args, **kwargs):
-        """Supprime, _assert_staff_can_use_formation, LogUtilisateur.log_action DELETE, 204."""
+        """
+        Conserve la compatibilité avec `DELETE /commentaires/<id>/` mais
+        remplace la suppression destructive par un archivage logique.
+        """
+        self._assert_can_write_commentaires()
         instance = self.get_object()
         self._assert_staff_can_use_formation(getattr(instance, "formation", None))
-        instance.delete()
+
+        if instance.est_archive:
+            serializer = self.get_serializer(instance)
+            return Response(
+                {
+                    "success": True,
+                    "message": f"Commentaire #{instance.pk} déjà archivé.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        instance.archiver(user=request.user, save=True)
 
         LogUtilisateur.log_action(
             instance=instance,
-            action=LogUtilisateur.ACTION_DELETE,
+            action=LogUtilisateur.ACTION_UPDATE,
             user=request.user,
-            details=f"Suppression du commentaire #{instance.pk}",
+            details=f"Archivage logique du commentaire #{instance.pk} via DELETE",
         )
 
+        serializer = self.get_serializer(instance)
+
         return Response(
-            {"success": True, "message": "Commentaire supprimé avec succès.", "data": None},
-            status=status.HTTP_204_NO_CONTENT,
+            {
+                "success": True,
+                "message": f"Commentaire #{instance.pk} archivé avec succès.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
@@ -351,6 +423,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """POST : instance.archiver(save=True), log ACTION_UPDATE, 200."""
+        self._assert_can_write_commentaires()
         instance = self.get_object()
         instance.archiver(save=True)
         LogUtilisateur.log_action(
@@ -372,6 +445,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """POST : instance.desarchiver(save=True), log ACTION_UPDATE, 200."""
+        self._assert_can_write_commentaires()
         instance = self.get_object()
         instance.desarchiver(save=True)
         LogUtilisateur.log_action(
@@ -452,7 +526,8 @@ class CommentaireViewSet(viewsets.ModelViewSet):
                     "activite": getattr(c, "activite", "") or "",
                     "created_at": c.created_at.strftime("%d/%m/%Y %H:%M") if c.created_at else "",
                     "saturation_formation": c.saturation_formation or c.saturation,
-                    "taux_saturation": getattr(f, "taux_saturation", ""),
+                    "taux_saturation": _commentaire_current_taux_saturation(f),
+                    "taux_transformation": _commentaire_current_taux_transformation(f),
                     "formation": {
                         "nom": getattr(f, "nom", "") if f else "",
                         "num_offre": getattr(f, "num_offre", "") if f else "",
@@ -528,6 +603,7 @@ class CommentaireViewSet(viewsets.ModelViewSet):
             "Statut",
             "Saturation au moment du commentaire (%)",
             "Saturation actuelle (%)",
+            "Transformation actuelle (%)",
             "Moy. des commentaires (%)",
         ]
         ws.append(headers)
@@ -559,7 +635,8 @@ class CommentaireViewSet(viewsets.ModelViewSet):
                     getattr(f.type_offre, "nom", "") if f and f.type_offre else "",
                     getattr(f.statut, "nom", "") if f and f.statut else "",
                     c.saturation_formation or c.saturation,
-                    getattr(f, "taux_saturation", ""),
+                    _commentaire_current_taux_saturation(f),
+                    _commentaire_current_taux_transformation(f),
                     f.get_saturation_moyenne_commentaires() if f else "",
                 ]
             )

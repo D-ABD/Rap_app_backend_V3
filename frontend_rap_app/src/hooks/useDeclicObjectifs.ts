@@ -132,7 +132,7 @@ export function useUpdateObjectifDeclic() {
 }
 
 // -----------------------------------------------------------------------------
-// ❌ 4️⃣ Suppression
+// 📦 4️⃣ Archivage via DELETE legacy
 // -----------------------------------------------------------------------------
 export function useDeleteObjectifDeclic() {
   const queryClient = useQueryClient();
@@ -142,14 +142,14 @@ export function useDeleteObjectifDeclic() {
       await api.delete(`${OBJECTIFS_DECLIC_ENDPOINT}/${id}/`);
     },
     onSuccess: () => {
-      toast.success("Objectif Déclic supprimé 🗑️");
+      toast.success("Objectif Déclic archivé ✅");
       queryClient.invalidateQueries({ queryKey: OBJECTIFS_DECLIC_KEY });
     },
     onError: (error) => {
       const message =
         error.response?.data?.message ??
         error.response?.data?.detail ??
-        "Erreur lors de la suppression de l’objectif Déclic";
+        "Erreur lors de l'archivage de l’objectif Déclic";
       toast.error(message);
     },
   });

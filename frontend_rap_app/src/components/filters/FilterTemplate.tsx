@@ -128,6 +128,7 @@ export default function FilterTemplate<T extends object>({
                     label={f.label}
                     placeholder={f.placeholder}
                     disabled={disabled}
+                    autoComplete="off"
                     value={f.format ? f.format(val as T[keyof T]) : toInputValue(val)}
                     onChange={(e) =>
                       onChange({
@@ -146,6 +147,7 @@ export default function FilterTemplate<T extends object>({
                     label={f.label}
                     placeholder={f.placeholder}
                     disabled={disabled}
+                    autoComplete="off"
                     value={toInputValue(val)}
                     onChange={(e) =>
                       onChange({
@@ -166,6 +168,8 @@ export default function FilterTemplate<T extends object>({
                     label={f.label}
                     InputLabelProps={{ shrink: true }}
                     disabled={disabled}
+                    autoComplete="new-password"
+                    inputProps={{ "data-lpignore": "true" }}
                     value={toInputValue(val)}
                     onChange={(e) =>
                       onChange({

@@ -253,6 +253,8 @@ type Props = {
   selectedIds: number[];
   onSelectionChange: (ids: number[]) => void;
   onDelete?: (id: number) => void;
+  onRestore?: (id: number) => void;
+  onHardDelete?: (id: number) => void;
   onRowClick?: (id: number) => void | Promise<void>; // ✅ nouvelle prop optionnelle
   maxHeight?: string;
 };
@@ -262,6 +264,8 @@ export default function CandidatsTable({
   selectedIds,
   onSelectionChange,
   onDelete,
+  onRestore,
+  onHardDelete,
   onRowClick, // ✅ ajoute ceci
   maxHeight = "65vh",
 }: Props) {
@@ -633,12 +637,31 @@ export default function CandidatsTable({
                       </IconButton>
                     </Tooltip>
                   )}
-                  {onDelete && (
-                    <Tooltip title="Supprimer">
-                      <IconButton size="small" color="error" onClick={() => onDelete(c.id)}>
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                  {c.is_active !== false ? (
+                    onDelete && (
+                      <Tooltip title="Archiver">
+                        <IconButton size="small" color="error" onClick={() => onDelete(c.id)}>
+                          <DeleteIcon fontSize="inherit" />
+                        </IconButton>
+                      </Tooltip>
+                    )
+                  ) : (
+                    <>
+                      {onRestore && (
+                        <Tooltip title="Restaurer">
+                          <IconButton size="small" color="success" onClick={() => onRestore(c.id)}>
+                            <VisibilityIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {onHardDelete && (
+                        <Tooltip title="Supprimer définitivement">
+                          <IconButton size="small" color="error" onClick={() => onHardDelete(c.id)}>
+                            <DeleteIcon fontSize="inherit" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </>
                   )}
                 </TableCell>
               </TableRow>

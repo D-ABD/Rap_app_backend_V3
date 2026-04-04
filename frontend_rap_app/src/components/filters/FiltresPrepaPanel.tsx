@@ -16,6 +16,7 @@ type Props = {
   onChange: (next: PrepaFiltresValues) => void;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +50,7 @@ export default function FiltresPrepaPanel({
   onChange,
   onRefresh,
   onReset,
+  hideSearch = false,
 }: Props) {
   const typeChoices = map(options?.type_prepa);
   const centreChoices = map(options?.centres);
@@ -103,32 +105,33 @@ export default function FiltresPrepaPanel({
         </Box>
       ) : (
         <>
-          {/* 🔎 Recherche */}
-          <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
-            <label htmlFor="prepa-search-input" style={visuallyHidden as React.CSSProperties}>
-              Rechercher des activités Prépa
-            </label>
+          {!hideSearch && (
+            <Stack direction="row" spacing={1} alignItems="center" mb={1.5} flexWrap="wrap">
+              <label htmlFor="prepa-search-input" style={visuallyHidden as React.CSSProperties}>
+                Rechercher des activités Prépa
+              </label>
 
-            <TextField
-              id="prepa-search-input"
-              type="search"
-              size="small"
-              fullWidth
-              value={values.search ?? ""}
-              onChange={onLocalSearchChange}
-              onKeyDown={onSearchKeyDown}
-              placeholder="🔎 Recherche (type, centre, département…)"
-            />
+              <TextField
+                id="prepa-search-input"
+                type="search"
+                size="small"
+                fullWidth
+                value={values.search ?? ""}
+                onChange={onLocalSearchChange}
+                onKeyDown={onSearchKeyDown}
+                placeholder="🔎 Recherche (type, centre, département…)"
+              />
 
-            {values.search && (
-              <Button
-                variant="outlined"
-                onClick={() => onChange({ ...values, search: "", page: 1 })}
-              >
-                ✕
-              </Button>
-            )}
-          </Stack>
+              {values.search && (
+                <Button
+                  variant="outlined"
+                  onClick={() => onChange({ ...values, search: "", page: 1 })}
+                >
+                  ✕
+                </Button>
+              )}
+            </Stack>
+          )}
 
           {/* 📆 Année / Type / Département / Centre */}
           <Stack direction="row" spacing={2} mb={1.5} flexWrap="wrap">

@@ -72,11 +72,13 @@ class ParticipantDeclicSerializer(serializers.ModelSerializer):
     type_declic = serializers.CharField(source="declic_origine.type_declic", read_only=True)
     type_declic_display = serializers.CharField(source="declic_origine.get_type_declic_display", read_only=True)
     date_declic = serializers.DateField(source="declic_origine.date_declic", read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = ParticipantDeclic
         fields = [
             "id",
+            "is_active",
             "declic_origine_id",
             "declic_origine_label",
             "type_declic",
@@ -143,6 +145,7 @@ class DeclicSerializer(serializers.ModelSerializer):
     type_declic_display = serializers.CharField(source="get_type_declic_display", read_only=True)
 
     date_display = serializers.SerializerMethodField()
+    is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Declic
@@ -152,6 +155,7 @@ class DeclicSerializer(serializers.ModelSerializer):
             "type_declic_display",
             "date_declic",
             "date_display",
+            "is_active",
             "centre",
             "centre_id",
             "centre_nom",

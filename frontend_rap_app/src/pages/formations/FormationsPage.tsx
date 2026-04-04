@@ -30,16 +30,18 @@ import useFiltresFormations from "../../hooks/useFiltresFormations";
 import type { Formation, FiltresFormationsValues, PaginatedResponse } from "../../types/formation";
 import PageTemplate from "../../components/PageTemplate";
 import FormationExportButton from "../../components/export_buttons/ExportButtonFormation";
+import { useHardDeleteFormation } from "../../hooks/useFormations";
 
 export default function FormationsPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // ── sélection / suppression
+  // ── sélection / archivage
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
 
   // ── filtres
   const [filters, setFilters] = useState<FiltresFormationsValues>({
@@ -148,15 +150,47 @@ export default function FormationsPage() {
     try {
       const api = await import("../../api/axios");
       await Promise.all(idsToDelete.map((id) => api.default.delete(`/formations/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} formation(s) supprimée(s)`);
+      toast.success(`📦 ${idsToDelete.length} formation(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       fetchData();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
+
+  const hardDeleteFormation = useHardDeleteFormation(hardDeleteId ?? 0);
+
+  const handleToggleArchive = useCallback(
+    async (row: Formation) => {
+      try {
+        const api = await import("../../api/axios");
+        if (row.activite === "archivee") {
+          await api.default.post(`/formations/${row.id}/desarchiver/`);
+          toast.success("Formation restaurée");
+        } else {
+          await api.default.post(`/formations/${row.id}/archiver/`);
+          toast.success("Formation archivée");
+        }
+        fetchData();
+      } catch {
+        toast.error("Erreur lors du changement d'archivage");
+      }
+    },
+    [fetchData]
+  );
+
+  const handleConfirmHardDelete = useCallback(async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDeleteFormation.hardDelete();
+      setHardDeleteId(null);
+      fetchData();
+    } catch {
+      // toast géré dans le hook
+    }
+  }, [fetchData, hardDeleteFormation, hardDeleteId]);
 
   const handleRowClick = (id: number) => navigate(`/formations/${id}/edit`);
 
@@ -180,6 +214,40 @@ export default function FormationsPage() {
           </Button>
 
           <FormationExportButton selectedIds={selectedIds} />
+
+          <Button
+            variant={filters.avec_archivees || filters.activite === "archivee" ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) =>
+                prev.avec_archivees || prev.activite === "archivee"
+                  ? { ...prev, avec_archivees: undefined, activite: undefined }
+                  : { ...prev, avec_archivees: true, activite: undefined }
+              );
+              setPage(1);
+            }}
+            fullWidth={isMobile}
+          >
+            {filters.avec_archivees || filters.activite === "archivee"
+              ? "Masquer archivées"
+              : "Inclure archivées"}
+          </Button>
+
+          {(filters.avec_archivees || filters.activite === "archivee") && (
+            <Button
+              variant={filters.activite === "archivee" ? "contained" : "outlined"}
+              onClick={() => {
+                setFilters((prev) =>
+                  prev.activite === "archivee"
+                    ? { ...prev, activite: undefined, avec_archivees: undefined }
+                    : { ...prev, activite: "archivee", avec_archivees: true }
+                );
+                setPage(1);
+              }}
+              fullWidth={isMobile}
+            >
+              {filters.activite === "archivee" ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
 
           <Select
             size="small"
@@ -207,7 +275,7 @@ export default function FormationsPage() {
           {selectedIds.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap">
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
@@ -298,10 +366,12 @@ export default function FormationsPage() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onRowClick={handleRowClick}
+          onToggleArchive={handleToggleArchive}
+          onHardDelete={(row) => setHardDeleteId(row.id)}
         />
       )}
 
-      {/* Confirmation suppression */}
+      {/* Confirmation archivage */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -310,14 +380,29 @@ export default function FormationsPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer cette formation ?"
-              : `Supprimer les ${selectedIds.length} formations sélectionnées ?`}
+              ? "Archiver cette formation ?"
+              : `Archiver les ${selectedIds.length} formations sélectionnées ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Supprimer définitivement la formation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. La formation archivée sera supprimée physiquement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleConfirmHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

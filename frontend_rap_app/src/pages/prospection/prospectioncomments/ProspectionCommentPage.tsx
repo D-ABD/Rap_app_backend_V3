@@ -45,11 +45,12 @@ type NormalizedRole = "superadmin" | "admin" | "staff" | "stagiaire" | "candidat
 
 function normalizeRole(u: User | null): NormalizedRole {
   if (!u) return "autre";
-  if (u.is_superuser) return "superadmin";
   const r = (u.role || "").toLowerCase() as CustomUserRole | string;
   if (r === "superadmin") return "superadmin";
   if (r === "admin") return "admin";
-  if (u.is_staff || r === "staff") return "staff";
+  if (["staff", "staff_read", "commercial", "charge_recrutement", "prepa_staff", "declic_staff"].includes(r)) {
+    return "staff";
+  }
   if (r === "stagiaire") return "stagiaire";
   if (r === "candidat" || r === "candidatuser") return "candidat";
   return "autre";
@@ -62,6 +63,7 @@ export default function ProspectionCommentPage() {
 
   const { user: me } = useMe();
   const role: NormalizedRole = useMemo(() => normalizeRole(me), [me]);
+  const canHardDelete = ["superadmin", "admin"].includes(role);
 
   const canUseFilters = ["superadmin", "admin", "staff"].includes(role);
   const panelMode: "default" | "candidate" = canUseFilters ? "default" : "candidate";
@@ -188,19 +190,42 @@ export default function ProspectionCommentPage() {
 
   const [selectedRow, setSelectedRow] = useState<ProspectionCommentDTO | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteRow, setHardDeleteRow] = useState<ProspectionCommentDTO | null>(null);
 
   const handleDelete = useCallback(async () => {
     if (!selectedRow) return;
     try {
       await api.delete(`/prospection-commentaires/${selectedRow.id}/`);
-      toast.success(`🗑️ Commentaire #${selectedRow.id} supprimé`);
+      toast.success(`📦 Commentaire #${selectedRow.id} archivé`);
       setShowConfirm(false);
       setSelectedRow(null);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   }, [selectedRow]);
+
+  const handleRestore = useCallback(async (row: ProspectionCommentDTO) => {
+    try {
+      await api.post(`/prospection-commentaires/${row.id}/desarchiver/`);
+      toast.success(`♻️ Commentaire #${row.id} restauré`);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  }, []);
+
+  const handleHardDelete = useCallback(async () => {
+    if (!hardDeleteRow) return;
+    try {
+      await api.post(`/prospection-commentaires/${hardDeleteRow.id}/hard-delete/`);
+      toast.success(`🗑️ Commentaire #${hardDeleteRow.id} supprimé définitivement`);
+      setHardDeleteRow(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
+    }
+  }, [hardDeleteRow]);
 
   return (
     <PageTemplate
@@ -215,6 +240,32 @@ export default function ProspectionCommentPage() {
               {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             </Button>
           )}
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setParams((prev) => ({
+                ...prev,
+                est_archive: prev.est_archive === "both" ? undefined : "both",
+              }));
+              setPage(1);
+            }}
+          >
+            {params.est_archive === "both" ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setParams((prev) => ({
+                ...prev,
+                est_archive: prev.est_archive === true ? undefined : true,
+              }));
+              setPage(1);
+            }}
+          >
+            {params.est_archive === true ? "📂 Voir tout" : "🗄️ Archives seules"}
+          </Button>
 
           <Chip label={`Rôle : ${role}`} size="small" color="primary" variant="outlined" />
           <ExportButtonProspectionComment data={exportRows} selectedIds={[]} />
@@ -335,6 +386,9 @@ export default function ProspectionCommentPage() {
             setSelectedRow(r);
             setShowConfirm(true);
           }}
+          onRestore={handleRestore}
+          onHardDelete={(r) => setHardDeleteRow(r)}
+          canHardDelete={canHardDelete}
           onEdit={(r) => navigate(`/prospection-commentaires/${r.id}/edit`)}
           linkToProspection={(id) => `/prospections/${id}`}
         />
@@ -352,8 +406,8 @@ export default function ProspectionCommentPage() {
         <DialogContent>
           <Typography>
             {selectedRow
-              ? `Supprimer le commentaire #${selectedRow.id} ?`
-              : "Supprimer ce commentaire ?"}
+              ? `Archiver le commentaire #${selectedRow.id} ?`
+              : "Archiver ce commentaire ?"}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -366,7 +420,24 @@ export default function ProspectionCommentPage() {
             Annuler
           </Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteRow !== null} onClose={() => setHardDeleteRow(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {hardDeleteRow
+              ? `Supprimer définitivement le commentaire #${hardDeleteRow.id} ?`
+              : "Supprimer définitivement ce commentaire ?"}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteRow(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

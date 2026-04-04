@@ -238,7 +238,7 @@ export function useFormations(filters: UseFormationsOptions = {}) {
       const response = await api.get<PaginatedResponse<Formation>>("/formations/", {
         params,
       });
-      setData(response.data);
+      setData((response.data as { data?: PaginatedResponse<Formation> })?.data ?? response.data);
       setError(null);
     } catch (err) {
       setError(err as AxiosError);
@@ -525,8 +525,7 @@ export function useHistoriqueFormation(formationId?: number) {
     api
       .get<{ data: HistoriqueFormation[] }>(url)
       .then((res) => {
-        // ✅ suppression du forEach inutile
-        setData(res.data.data);
+        setData(res.data?.data ?? res.data);
       })
       .catch((err) => setError(err))
       .finally(() => setLoading(false));
@@ -650,4 +649,27 @@ export function useDesarchiverFormation(id: number) {
   };
 
   return { desarchiver, loading, error };
+}
+
+// ✅ Suppression définitive d'une formation archivée
+export function useHardDeleteFormation(id: number) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<AxiosError | null>(null);
+
+  const hardDelete = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post<{ success: boolean; message: string }>(`/formations/${id}/hard-delete/`);
+      toast.success(res.data?.message || "Formation supprimée définitivement");
+      return res.data;
+    } catch (err) {
+      setError(err as AxiosError);
+      toast.error("Erreur lors de la suppression définitive");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { hardDelete, loading, error };
 }

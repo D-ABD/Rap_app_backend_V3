@@ -3,6 +3,7 @@ import { useNavigate, Link as RouterLink } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../../hooks/useAuth";
 import { Box, Paper, Typography, TextField, Button, Alert, Link } from "@mui/material";
+import { isCandidateLikeRole, isCoreStaffRole, normalizeRole } from "../../utils/roleGroups";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -23,16 +24,16 @@ export default function LoginPage() {
       const result = await login(email, password);
 
       // ✅ Détermination du rôle
-      const role = (result?.role ?? "").toLowerCase();
+      const role = normalizeRole(result?.role);
 
       // ✅ Redirection en fonction du rôle
       if (["declic_staff"].includes(role)) {
         navigate("/dashboard/declic", { replace: true });
       } else if (["prepa_staff"].includes(role)) {
         navigate("/dashboard/prepa", { replace: true });
-      } else if (["staff", "staff_read", "admin", "superadmin"].includes(role)) {
+      } else if (isCoreStaffRole(role)) {
         navigate("/dashboard", { replace: true });
-      } else if (["candidat", "candidate"].includes(role)) {
+      } else if (isCandidateLikeRole(role)) {
         navigate("/dashboard/candidat", { replace: true });
       } else {
         navigate("/dashboard", { replace: true }); // fallback

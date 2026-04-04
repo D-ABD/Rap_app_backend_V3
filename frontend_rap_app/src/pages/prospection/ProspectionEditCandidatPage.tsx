@@ -136,10 +136,10 @@ export default function ProspectionEditCandidatPage() {
     if (!prospectionId) return;
     try {
       await remove();
-      toast.success("🗑️ Prospection supprimée");
+      toast.success("📦 Prospection archivée");
       navigate("/prospections");
     } catch {
-      toast.error("❌ Échec de la suppression");
+      toast.error("❌ Échec de l'archivage");
     }
   };
 
@@ -235,7 +235,7 @@ export default function ProspectionEditCandidatPage() {
           onClick={() => setOpenDelete(true)}
           disabled={removing}
         >
-          {removing ? "Suppression…" : "Supprimer"}
+          {removing ? "Archivage…" : "Archiver"}
         </Button>
       }
     >
@@ -302,18 +302,18 @@ export default function ProspectionEditCandidatPage() {
         loading={saving}
       />
 
-      {/* Modal suppression */}
+      {/* Modal archivage */}
       <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
-        <DialogTitle>Supprimer la prospection</DialogTitle>
+        <DialogTitle>Archiver la prospection</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Confirmer la suppression de la prospection #{prospectionId} ?
+            Confirmer l'archivage de la prospection #{prospectionId} ?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDelete(false)}>Annuler</Button>
           <Button onClick={handleDelete} color="error" variant="contained" autoFocus>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

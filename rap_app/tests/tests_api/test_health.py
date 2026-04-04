@@ -2,7 +2,7 @@
 Tests de l'endpoint de santé GET /api/health/.
 
 Vérifie que l'endpoint renvoie 200 OK sans authentification et que la réponse
-contient les champs attendus (status, database, timestamp).
+contient désormais l'enveloppe API standard.
 """
 
 import pytest
@@ -28,13 +28,16 @@ def test_health_get_returns_200_without_auth():
 @pytest.mark.django_db
 def test_health_response_structure():
     """
-    La réponse JSON contient status, database et timestamp.
+    La réponse JSON contient success/message/data puis status/database/timestamp.
     """
     client = APIClient()
     url = reverse("health-list")
     response = client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data.get("status") == "healthy"
-    assert data.get("database") == "ok"
-    assert "timestamp" in data
+    assert data.get("success") is True
+    assert data.get("message") == "API en bonne santé."
+    payload = data.get("data", {})
+    assert payload.get("status") == "healthy"
+    assert payload.get("database") == "ok"
+    assert "timestamp" in payload

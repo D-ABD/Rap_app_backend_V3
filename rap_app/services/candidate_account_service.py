@@ -171,6 +171,10 @@ class CandidateAccountService:
         Cette méthode est la bonne source de vérité pour les usages "créer ou
         lier un compte candidat" côté staff : le candidat conserve ce rôle tant
         qu'il n'est pas effectivement entré en formation.
+
+        `candidatuser` reste ici un rôle transitoire métier/technique utile au
+        cycle de vie. Il n'est pas destiné à devenir un rôle principal de la
+        matrice de droits long terme.
         """
         user = candidate.compte_utilisateur or cls.provision_candidate_account(candidate, actor=actor)
 
@@ -196,6 +200,8 @@ class CandidateAccountService:
 
         Utilisé quand une sortie de formation ou un abandon retire l'état
         `stagiaire` sans casser le lien entre le compte et le candidat.
+        Le rôle reste transitoire et ne doit pas être traité comme un vrai
+        rôle staff ou admin dans les règles de scope.
         """
         user = candidate.compte_utilisateur
         if not user:

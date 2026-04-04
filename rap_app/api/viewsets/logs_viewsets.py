@@ -179,7 +179,7 @@ class LogUtilisateurViewSet(viewsets.ReadOnlyModelViewSet):
     description="Retourne la liste des actions possibles enregistrées dans les logs utilisateur.",
 )
 class LogChoicesView(APIView):
-    """GET : liste des actions possibles pour les logs (value/label) ; IsAuthenticated."""
+    """GET : liste des actions possibles pour les logs dans l'enveloppe API standard."""
 
     permission_classes = [IsAuthenticated]
 
@@ -208,4 +208,11 @@ class LogChoicesView(APIView):
                 key=lambda item: item["label"],
             ),
         }
-        return Response(data)
+        return Response(
+            {
+                "success": True,
+                "message": "Choix des logs récupérés avec succès.",
+                "data": data,
+            },
+            status=status.HTTP_200_OK,
+        )

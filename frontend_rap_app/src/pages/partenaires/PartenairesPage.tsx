@@ -17,12 +17,16 @@ import {
   DialogActions,
   useMediaQuery,
   useTheme,
+  TextField,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import api from "../../api/axios";
 
 import {
   useListPartenaires,
   useDeletePartenaire,
+  useDesarchiverPartenaire,
+  useHardDeletePartenaire,
   usePartenaireChoices,
   usePartenaireFilters,
 } from "../../hooks/usePartenaires";
@@ -38,6 +42,7 @@ import SearchInput from "../../components/SearchInput";
 import ExportButtonPartenaires from "../../components/export_buttons/ExportButtonPartenaires";
 import PartenairesTable from "./PartenaireTable";
 import PartenaireDetailModal from "./PartenaireDetailModal";
+import { isCoreStaffRole } from "../../utils/roleGroups";
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -89,10 +94,12 @@ export default function PartenairesPage() {
 
   const { user, loading: userLoading, error: userError } = useMe();
   const { remove } = useDeletePartenaire();
+  const { restore } = useDesarchiverPartenaire();
+  const { hardDelete } = useHardDeletePartenaire();
   const { data: partenaireChoices } = usePartenaireChoices();
   const { data: filterOptions, loading: filtersLoading } = usePartenaireFilters();
 
-  const isStaff = Boolean(user?.is_staff) || Boolean(user?.is_superuser) || user?.role === "admin";
+  const isStaff = isCoreStaffRole(user?.role);
 
   const [filters, setFilters] = useState<PartenaireFilters>(defaultFilters);
 
@@ -117,13 +124,19 @@ export default function PartenairesPage() {
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showBulkTypeDialog, setShowBulkTypeDialog] = useState(false);
+  const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
+  const [bulkType, setBulkType] = useState("");
+  const [bulkAction, setBulkAction] = useState("");
+  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
 
   const queryParams = useMemo(() => {
-    const base: Record<string, string | number> = {
+    const base: Record<string, string | number | boolean> = {
       search: filters.search ?? "",
       page,
       page_size: pageSize,
@@ -135,6 +148,8 @@ export default function PartenairesPage() {
     if (filters.type) base.type = filters.type;
     if (filters.has_appairages) base.has_appairages = filters.has_appairages;
     if (filters.has_prospections) base.has_prospections = filters.has_prospections;
+    if (filters.avec_archivees) base.avec_archivees = true;
+    if (filters.archives_seules) base.archives_seules = true;
     return base;
   }, [filters, page, pageSize, reloadKey, isStaff]);
 
@@ -160,19 +175,103 @@ export default function PartenairesPage() {
     if (!idsToDelete.length) return;
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
-      toast.success(`🗑️ ${idsToDelete.length} partenaire(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} partenaire(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Partenaire restauré");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Partenaire supprimé définitivement");
+      setHardDeleteId(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);
     setPage(1);
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const selectAll = () => setSelectedIds(partenaires.map((p) => p.id));
+
+  const runBulkPartenaireUpdate = async (
+    payload: Partial<Pick<Partenaire, "type" | "actions">>,
+    successMessage: string
+  ) => {
+    if (!selectedIds.length) return;
+    setBulkUpdateLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => api.patch(`/partenaires/${id}/`, payload))
+      );
+      const successCount = results.filter((r) => r.status === "fulfilled").length;
+      const failureCount = results.length - successCount;
+
+      if (successCount > 0) {
+        toast.success(
+          failureCount
+            ? `${successMessage} pour ${successCount} partenaire(s). ${failureCount} échec(s) restent à vérifier.`
+            : `${successMessage} pour ${successCount} partenaire(s).`
+        );
+      } else {
+        toast.error("Aucun partenaire n'a pu être mis à jour.");
+      }
+
+      setShowBulkTypeDialog(false);
+      setShowBulkActionDialog(false);
+      setBulkType("");
+      setBulkAction("");
+      clearSelection();
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la mise à jour en lot des partenaires.");
+    } finally {
+      setBulkUpdateLoading(false);
+    }
+  };
+
+  const handleBulkTypeChange = async () => {
+    if (!bulkType) {
+      toast.info("Choisis un type à appliquer.");
+      return;
+    }
+    await runBulkPartenaireUpdate(
+      { type: bulkType as Partenaire["type"] },
+      "Type mis à jour"
+    );
+  };
+
+  const handleBulkActionChange = async () => {
+    if (!bulkAction) {
+      toast.info("Choisis une action à appliquer.");
+      return;
+    }
+    await runBulkPartenaireUpdate(
+      { actions: bulkAction as Partenaire["actions"] },
+      "Action principale mise à jour"
+    );
   };
 
   const userOptions = useMemo(() => dedupeById(filterOptions?.users ?? []), [filterOptions]);
@@ -232,6 +331,36 @@ export default function PartenairesPage() {
             Réinitialiser
           </Button>
 
+          <Button
+            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) =>
+                prev.avec_archivees || prev.archives_seules
+                  ? { ...prev, avec_archivees: undefined, archives_seules: undefined }
+                  : { ...prev, avec_archivees: true, archives_seules: undefined }
+              );
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+
+          {(filters.avec_archivees || filters.archives_seules) && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() => {
+                setFilters((prev) =>
+                  prev.archives_seules
+                    ? { ...prev, archives_seules: undefined, avec_archivees: undefined }
+                    : { ...prev, archives_seules: true, avec_archivees: true }
+                );
+                setPage(1);
+              }}
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
           <ExportButtonPartenaires
             data={
               selectedIds.length > 0
@@ -265,16 +394,19 @@ export default function PartenairesPage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button color="error" onClick={() => setShowConfirm(true)}>
-                Supprimer ({selectedIds.length})
+              <Button variant="contained" onClick={() => setShowBulkTypeDialog(true)}>
+                Changer le type ({selectedIds.length})
               </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setSelectedIds(partenaires.map((p) => p.id))}
-              >
+              <Button variant="outlined" onClick={() => setShowBulkActionDialog(true)}>
+                Changer l'action ({selectedIds.length})
+              </Button>
+              <Button color="error" onClick={() => setShowConfirm(true)}>
+                Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={selectAll}>
                 Tout sélectionner
               </Button>
-              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+              <Button variant="outlined" onClick={clearSelection}>
                 Annuler
               </Button>
             </>
@@ -350,6 +482,8 @@ export default function PartenairesPage() {
               setSelectedId(id);
               setShowConfirm(true);
             }}
+            onRestoreClick={(id) => handleRestore(id)}
+            onHardDeleteClick={(id) => setHardDeleteId(id)}
           />
         </Box>
       )}
@@ -369,14 +503,98 @@ export default function PartenairesPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer ce partenaire ?"
-              : `Supprimer les ${selectedIds.length} partenaires sélectionnés ?`}
+              ? "Archiver ce partenaire ?"
+              : `Archiver les ${selectedIds.length} partenaires sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="warning" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Supprimer définitivement ce partenaire archivé ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showBulkTypeDialog}
+        onClose={() => setShowBulkTypeDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Changer le type des partenaires sélectionnés</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Le nouveau type sera appliqué aux {selectedIds.length} partenaire(s) sélectionné(s).
+          </DialogContentText>
+          <TextField
+            select
+            fullWidth
+            label="Nouveau type"
+            value={bulkType}
+            onChange={(e) => setBulkType(e.target.value)}
+          >
+            {(partenaireChoices?.types ?? []).map((choice) => (
+              <MenuItem key={choice.value} value={choice.value}>
+                {choice.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkTypeDialog(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleBulkTypeChange} disabled={bulkUpdateLoading || !bulkType}>
+            {bulkUpdateLoading ? "Mise à jour..." : "Appliquer"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showBulkActionDialog}
+        onClose={() => setShowBulkActionDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Changer l'action principale des partenaires sélectionnés</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            L'action principale sera appliquée aux {selectedIds.length} partenaire(s) sélectionné(s).
+          </DialogContentText>
+          <TextField
+            select
+            fullWidth
+            label="Nouvelle action"
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value)}
+          >
+            {(partenaireChoices?.actions ?? []).map((choice) => (
+              <MenuItem key={choice.value} value={choice.value}>
+                {choice.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkActionDialog(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleBulkActionChange} disabled={bulkUpdateLoading || !bulkAction}>
+            {bulkUpdateLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>
       </Dialog>

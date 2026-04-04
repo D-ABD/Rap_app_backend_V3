@@ -55,7 +55,20 @@ export function useDocumentsApi() {
   }, []);
 
   const deleteDocument = useCallback(async (id: number) => {
-    await api.delete(`/documents/${id}/`);
+    const res = await api.delete<ApiResponse<Document>>(`/documents/${id}/`);
+    return res.data.data;
+  }, []);
+
+  const restoreDocument = useCallback(async (id: number) => {
+    const res = await api.post<ApiResponse<Document>>(`/documents/${id}/desarchiver/`);
+    return res.data.data;
+  }, []);
+
+  const hardDeleteDocument = useCallback(async (id: number) => {
+    const res = await api.post<ApiResponse<{ id: number; hard_deleted: boolean; resource: string }>>(
+      `/documents/${id}/hard-delete/`
+    );
+    return res.data.data;
   }, []);
 
   const fetchTypeDocuments = useCallback(async () => {
@@ -86,6 +99,8 @@ export function useDocumentsApi() {
     createDocument,
     updateDocument,
     deleteDocument,
+    restoreDocument,
+    hardDeleteDocument,
     fetchTypeDocuments,
     downloadDocument,
   };

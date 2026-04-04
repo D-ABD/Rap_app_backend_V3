@@ -25,8 +25,8 @@ from ...models.commentaires_appairage import CommentaireAppairage
 from ...services.placement_services import AppairagePlacementService, defer_appairage_snapshot_sync
 from ...utils.filters import AppairageFilterSet
 from ..paginations import RapAppPagination
-from ..permissions import IsStaffOrAbove, is_staff_or_staffread
-from ..roles import is_admin_like
+from ..permissions import IsStaffOrAbove
+from ..roles import is_admin_like, is_centre_scoped_staff
 from ..serializers.appairage_serializers import (
     AppairageCreateUpdateSerializer,
     AppairageListSerializer,
@@ -140,13 +140,13 @@ class AppairageViewSet(ScopedModelViewSet):
     ]
 
     def _assert_staff_can_use_formation(self, formation):
-        # Refuse l’utilisation d’une formation d’un centre non autorisé lors d'une écriture
+        # Refuse l’utilisation d’une formation hors périmètre pour les rôles coeur centre-scopés.
         if not formation:
             return
         user = self.request.user
         if is_admin_like(user):
             return
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
@@ -419,17 +419,26 @@ class AppairageViewSet(ScopedModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime un appairage puis resynchronise le snapshot de placement du
-        candidat concerné à partir du dernier appairage actif restant.
+        Conserve la compatibilité avec `DELETE /appairages/<id>/` mais
+        remplace la suppression destructive par un archivage logique.
         """
         appairage = self._get_object_including_archived_scoped(kwargs.get("pk"))
         candidat = appairage.candidat
 
-        with defer_appairage_snapshot_sync():
-            appairage.delete(user=request.user)
+        if appairage.activite == AppairageActivite.ARCHIVE:
+            return self.success_response(
+                data={"status": "archived"},
+                message="Appairage déjà archivé.",
+            )
+
+        if hasattr(appairage, "archiver"):
+            appairage.archiver(user=request.user)
+        else:
+            appairage.activite = AppairageActivite.ARCHIVE
+            appairage.save(user=request.user, update_fields=["activite"])
 
         AppairagePlacementService.sync_candidate_snapshot(candidat, actor=request.user)
-        return self.success_response(data=None, message="Appairage supprimé avec succès.")
+        return self.success_response(data={"status": "archived"}, message="Appairage archivé avec succès.")
 
     def _get_object_including_archived_scoped(self, pk):
         """
@@ -766,3 +775,4 @@ class AppairageViewSet(ScopedModelViewSet):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response["Content-Length"] = len(binary)
         return response
+    hard_delete_enabled = True

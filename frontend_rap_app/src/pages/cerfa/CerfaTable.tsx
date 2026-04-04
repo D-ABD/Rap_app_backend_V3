@@ -188,9 +188,9 @@ export default function CerfaTable({
             </Tooltip>
           )}
 
-          {/* 🗑️ Supprimer */}
+          {/* 📦 Archiver */}
           {canWrite && (
-            <Tooltip title="Supprimer le contrat">
+            <Tooltip title="Archiver le contrat">
               <IconButton
                 color="error"
                 onClick={(e) => {

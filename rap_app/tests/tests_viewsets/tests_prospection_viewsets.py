@@ -107,7 +107,7 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
         data = response.data.get("data", response.data)
         self.assertEqual(data.get("statut"), ProspectionChoices.STATUT_A_RELANCER)
 
-    def test_delete_prospection_definitive(self):
+    def test_delete_prospection_archive_logiquement(self):
         prospection = Prospection.objects.create(
             partenaire=self.partenaire,
             formation=self.formation,
@@ -122,7 +122,65 @@ class ProspectionViewSetTestCase(AuthenticatedTestCase):
         url = reverse("prospection-detail", args=[prospection.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(Prospection.objects.filter(pk=prospection.id).exists())
+        prospection.refresh_from_db()
+        self.assertEqual(prospection.activite, Prospection.ACTIVITE_ARCHIVEE)
+
+    def test_delete_prospection_archive_and_hides_from_default_list(self):
+        url = reverse("prospection-detail", args=[self.prospection.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        list_response = self.client.get(self.list_url)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        data = list_response.data.get("data", {}).get("results", [])
+        ids = [p.get("id") for p in data if isinstance(p, dict)]
+        self.assertNotIn(self.prospection.id, ids)
+
+    def test_list_prospections_can_include_archived_items(self):
+        self.prospection.archiver(user=self.user)
+
+        response = self.client.get(self.list_url, {"avec_archivees": "true"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data.get("data", {}).get("results", [])
+        ids = [p.get("id") for p in data if isinstance(p, dict)]
+        self.assertIn(self.prospection.id, ids)
+
+    def test_list_prospections_can_show_archived_only(self):
+        self.prospection.archiver(user=self.user)
+
+        active = Prospection.objects.create(
+            partenaire=self.partenaire,
+            formation=self.formation,
+            date_prospection=timezone.now(),
+            type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+            motif=ProspectionChoices.MOTIF_PARTENARIAT,
+            statut=ProspectionChoices.STATUT_EN_COURS,
+            objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
+            commentaire="Active item",
+            created_by=self.user,
+        )
+
+        response = self.client.get(self.list_url, {"activite": Prospection.ACTIVITE_ARCHIVEE})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data.get("data", {}).get("results", [])
+        ids = [p.get("id") for p in data if isinstance(p, dict)]
+        self.assertIn(self.prospection.id, ids)
+        self.assertNotIn(active.id, ids)
+
+    def test_archiver_puis_desarchiver_prospection(self):
+        archive_response = self.client.post(reverse("prospection-archiver", args=[self.prospection.id]))
+        self.assertEqual(archive_response.status_code, status.HTTP_200_OK)
+
+        self.prospection.refresh_from_db()
+        self.assertEqual(self.prospection.activite, Prospection.ACTIVITE_ARCHIVEE)
+
+        restore_response = self.client.post(reverse("prospection-desarchiver", args=[self.prospection.id]))
+        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
+
+        self.prospection.refresh_from_db()
+        self.assertEqual(self.prospection.activite, Prospection.ACTIVITE_ACTIVE)
 
     def test_serializer_accepts_null_formation(self):
         data = self.valid_data.copy()
@@ -344,6 +402,109 @@ def test_staff_create_prospection_with_candidate_owner_uses_owner_formation():
     assert prospection.owner_id == candidate_user.id
     assert prospection.formation_id == formation_owner.id
     assert prospection.centre_id == centre_a.id
+
+
+@pytest.mark.django_db
+def test_commercial_can_list_and_create_prospection_in_scope():
+    client = APIClient()
+
+    centre = Centre.objects.create(nom="Centre Commercial", code_postal="92000")
+    statut = Statut.objects.create(nom="non_defini", couleur="#000000")
+    type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
+    formation = Formation.objects.create(
+        nom="Formation Commerciale",
+        centre=centre,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=5),
+    )
+    commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+    commercial.centres.add(centre)
+    partenaire = Partenaire.objects.create(
+        nom="Partenaire Commercial",
+        type="entreprise",
+        default_centre=centre,
+        created_by=commercial,
+    )
+    Prospection.objects.create(
+        partenaire=partenaire,
+        formation=formation,
+        date_prospection=timezone.now(),
+        type_prospection=ProspectionChoices.TYPE_PREMIER_CONTACT,
+        motif=ProspectionChoices.MOTIF_PARTENARIAT,
+        statut=ProspectionChoices.STATUT_EN_COURS,
+        objectif=ProspectionChoices.OBJECTIF_PRESENTATION,
+        commentaire="Visible",
+        created_by=commercial,
+        owner=commercial,
+        centre_id=centre.id,
+    )
+
+    client.force_authenticate(user=commercial)
+
+    list_response = client.get(reverse("prospection-list"))
+    assert list_response.status_code == 200
+    assert list_response.data["data"]["count"] == 1
+
+    create_response = client.post(
+        reverse("prospection-list"),
+        data={
+            "partenaire": partenaire.id,
+            "formation": formation.id,
+            "date_prospection": timezone.now().isoformat(),
+            "type_prospection": ProspectionChoices.TYPE_PREMIER_CONTACT,
+            "motif": ProspectionChoices.MOTIF_PARTENARIAT,
+            "statut": ProspectionChoices.STATUT_A_FAIRE,
+            "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
+            "commentaire": "Création commercial",
+        },
+        format="json",
+    )
+    assert create_response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_charge_recrutement_cannot_create_prospection_outside_centre_scope():
+    client = APIClient()
+
+    centre_a = Centre.objects.create(nom="Centre A", code_postal="92100")
+    centre_b = Centre.objects.create(nom="Centre B", code_postal="92200")
+    statut = Statut.objects.create(nom="non_defini", couleur="#000000")
+    type_offre = TypeOffre.objects.create(nom="poec", couleur="#FF0000")
+    formation_b = Formation.objects.create(
+        nom="Formation Hors Scope",
+        centre=centre_b,
+        statut=statut,
+        type_offre=type_offre,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=5),
+    )
+    partenaire = Partenaire.objects.create(
+        nom="Partenaire Hors Scope Prospection",
+        type="entreprise",
+        default_centre=centre_b,
+    )
+    user = UserFactory(role=CustomUser.ROLE_CHARGE_RECRUTEMENT)
+    user.centres.add(centre_a)
+
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        reverse("prospection-list"),
+        data={
+            "partenaire": partenaire.id,
+            "formation": formation_b.id,
+            "date_prospection": timezone.now().isoformat(),
+            "type_prospection": ProspectionChoices.TYPE_PREMIER_CONTACT,
+            "motif": ProspectionChoices.MOTIF_PARTENARIAT,
+            "statut": ProspectionChoices.STATUT_A_FAIRE,
+            "objectif": ProspectionChoices.OBJECTIF_PRESENTATION,
+            "commentaire": "Création hors scope",
+        },
+        format="json",
+    )
+    assert response.status_code == 403
 
 # HistoriqueProspection n'est plus exposé comme endpoint API list/detail.
 # Les anciens tests API associés ont été retirés de la suite active pour éviter

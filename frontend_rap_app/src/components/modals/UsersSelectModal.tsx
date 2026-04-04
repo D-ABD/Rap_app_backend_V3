@@ -61,7 +61,7 @@ interface Props {
   show: boolean;
   onClose: () => void;
   onSelect: (u: UserPick) => void;
-  /** Restreindre aux rôles donnés (par défaut staff/admin/superadmin) */
+  /** Restreindre aux rôles donnés (par défaut staff/admin/commercial/charge_recrutement/superadmin) */
   allowedRoles?: RoleCode[];
   /** Ne garder que les comptes actifs */
   onlyActive?: boolean;
@@ -101,7 +101,7 @@ export default function UsersSelectModal({
   show,
   onClose,
   onSelect,
-  allowedRoles = ["staff", "admin", "superadmin"],
+  allowedRoles = ["staff", "admin", "superadmin", "commercial", "charge_recrutement"],
   onlyActive = true,
 }: Props) {
   const [search, setSearch] = useState<string>("");
@@ -177,7 +177,7 @@ export default function UsersSelectModal({
 
   return (
     <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Sélectionner un utilisateur (staff / admin)</DialogTitle>
+      <DialogTitle>Sélectionner un utilisateur métier</DialogTitle>
       <DialogContent dividers>
         <TextField
           fullWidth

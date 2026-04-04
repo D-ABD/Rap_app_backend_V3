@@ -1,11 +1,13 @@
 # rap_app/api/viewsets/declic_viewset.py
 
+import logging
 from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
 from django.db.models import Q, Sum
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone as dj_timezone
 from django.utils.timezone import localdate
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
@@ -19,16 +21,21 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from ...api.roles import (
+    build_department_scope_q,
+    get_staff_department_codes_cached,
     is_admin_like,
     is_candidate,
     is_declic_staff,
     is_staff_or_staffread,
+    use_department_stats_scope,
 )
 from ...models.centres import Centre
 from ...models.declic import Declic, ObjectifDeclic
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..permissions import IsDeclicStaffOrAbove
 from ..serializers.declic_serializers import DeclicSerializer
+
+logger = logging.getLogger(__name__)
 
 # =====================================================================================
 # 🔧 HELPERS SCOPE — (MANQUAIENT DANS TON FICHIER) → POUR L'AUTORISATION PAR CENTRES
@@ -110,9 +117,14 @@ class ScopeMixin:
             OpenApiParameter(name="search", type=str),
         ],
         responses={200: DeclicSerializer},
-    )
+    ),
+    destroy=extend_schema(
+        summary="Archiver une séance Déclic",
+        description="Archive logiquement une séance Déclic en la désactivant (`is_active = False`).",
+        responses={200: DeclicSerializer},
+    ),
 )
-class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
+class DeclicViewSet(HardDeleteArchivedMixin, ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD du module Déclic.
 
@@ -127,6 +139,7 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
 
     serializer_class = DeclicSerializer
     permission_classes = [IsDeclicStaffOrAbove]
+    hard_delete_enabled = True
     queryset = Declic.objects.select_related("centre").prefetch_related("participants_declic").all()
 
     # -------------------------------------------------------------------------
@@ -192,7 +205,8 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
     # -------------------------------------------------------------------------
     def get_queryset(self):
         """
-        Génère le queryset principal pour toutes les actions standard et d'export Excel/statistiques.
+        Génère le queryset principal des séances Déclic visibles pour
+        toutes les actions standard et d'export Excel/statistiques.
 
         Filtrage combiné :
         - Restriction par centres autorisés via ScopeMixin._scope_qs_to_user_centres, selon le rôle utilisateur
@@ -220,6 +234,13 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
         date_max = p.get("date_max")
         search = p.get("search")
         ordering = p.get("ordering")
+        avec_archivees = str(p.get("avec_archivees", "")).lower() in {"1", "true", "yes", "on"}
+        archives_seules = str(p.get("archives_seules", "")).lower() in {"1", "true", "yes", "on"}
+
+        if archives_seules:
+            qs = qs.filter(is_active=False)
+        elif not avec_archivees:
+            qs = qs.filter(is_active=True)
 
         if annee:
             qs = qs.filter(date_declic__year=annee)
@@ -243,6 +264,112 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
             qs = qs.filter(Q(centre__nom__icontains=search) | Q(commentaire__icontains=search))
 
         return qs.order_by(ordering or "-date_declic", "-id")
+
+    def get_archived_aware_object(self):
+        """
+        Retourne une séance Déclic y compris archivée, en réappliquant le scope
+        utilisateur courant.
+        """
+        lookup_field = getattr(self, "lookup_field", "pk")
+        lookup_url_kwarg = getattr(self, "lookup_url_kwarg", None) or lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        queryset = Declic.objects.select_related("centre").prefetch_related("participants_declic")
+        queryset = self._scope_qs_to_user_centres(queryset)
+        return get_object_or_404(queryset, **{lookup_field: lookup_value})
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais remplace la
+        suppression physique par un archivage logique.
+        """
+        instance = self.get_object()
+        if not instance.is_active:
+            return self.success_response(
+                data=self.get_serializer(instance).data,
+                message="Séance Déclic déjà archivée.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Séance Déclic archivée avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(summary="Restaurer une séance Déclic archivée")
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, pk=None):
+        """
+        Restaure une séance Déclic archivée et renvoie l'enveloppe API standard.
+        """
+        instance = self.get_archived_aware_object()
+        if instance.is_active:
+            return self.error_response(message="Séance Déclic déjà active.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Séance Déclic désarchivée avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crée une séance Déclic et renvoie l'enveloppe API standard afin
+        d'aligner le contrat CRUD avec les autres modules métier.
+        """
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning("Validation Déclic échouée à la création: %s", serializer.errors)
+            return self.error_response(
+                message="Erreur de validation.",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "success": True,
+                "message": "Séance Déclic créée avec succès.",
+                "data": self.get_serializer(serializer.instance).data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'une séance Déclic dans l'enveloppe API standard.
+        """
+        instance = self.get_object()
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Séance Déclic récupérée avec succès.",
+        )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Met à jour une séance Déclic et renvoie l'enveloppe API standard.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            logger.warning("Validation Déclic échouée à la mise à jour #%s: %s", instance.pk, serializer.errors)
+            return self.error_response(
+                message="Erreur de validation.",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_update(serializer)
+        return self.success_response(
+            data=self.get_serializer(serializer.instance).data,
+            message="Séance Déclic mise à jour avec succès.",
+        )
 
     # -------------------------------------------------------------------------
     # 💾 CREATE / UPDATE
@@ -294,8 +421,18 @@ class DeclicViewSet(ApiResponseMixin, ScopeMixin, viewsets.ModelViewSet):
         Aucun format JSON garanti visible ici.
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        centres_qs = self._scope_qs_to_user_centres(Centre.objects.all()).order_by("nom")
+        department_scope = use_department_stats_scope(request)
+        centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
         sessions_qs = self._scope_qs_to_user_centres(Declic.objects.filter(date_declic__year=annee))
+        if department_scope and not is_admin_like(request.user):
+            departements = get_staff_department_codes_cached(request) or []
+            if departements:
+                dep_q = build_department_scope_q("code_postal", departements)
+                centres_qs = Centre.objects.filter(dep_q)
+                sessions_qs = Declic.objects.filter(date_declic__year=annee).filter(
+                    build_department_scope_q("centre__code_postal", departements)
+                )
+        centres_qs = centres_qs.order_by("nom")
         totals_by_centre = {
             row["centre_id"]: row["total"] or 0
             for row in sessions_qs.values("centre_id").annotate(total=Sum("nb_presents_declic"))

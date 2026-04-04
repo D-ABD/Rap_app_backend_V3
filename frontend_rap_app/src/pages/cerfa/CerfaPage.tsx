@@ -147,11 +147,13 @@ export default function CerfaPage() {
   const { mutateAsync: remove } = useCerfaDelete();
   const { mutateAsync: downloadPdf } = useCerfaDownloadPdf();
   const role = (user?.role ?? "").toLowerCase();
-  const canWriteCerfa = ["staff", "admin", "superadmin"].includes(role);
+  const canWriteCerfa = ["staff", "admin", "superadmin", "commercial", "charge_recrutement"].includes(role);
 
   const contrats: CerfaContrat[] = useMemo(() => data?.results ?? [], [data]);
   const count = data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
+  const clearSelection = () => setSelectedIds([]);
+  const selectAll = () => setSelectedIds(contrats.map((contrat) => contrat.id));
   const activeFiltersCount = useMemo(
     () =>
       Object.entries(filters).filter(([key, value]) => {
@@ -261,13 +263,13 @@ export default function CerfaPage() {
 
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
-      toast.success(`🗑️ ${idsToDelete.length} contrat(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} contrat(s) archive(s)`);
       setShowConfirm(false);
       setSelectedIds([]);
       setSelectedId(null);
       setReloadKey((k) => k + 1);
     } catch (_err) {
-      toast.error("Erreur lors de la suppression.");
+      toast.error("Erreur lors de l'archivage.");
     }
   };
 
@@ -354,9 +356,17 @@ export default function CerfaPage() {
             Nouveau CERFA
           </Button>
           {canWriteCerfa && selectedIds.length > 0 && (
-            <Button color="error" onClick={() => setShowConfirm(true)}>
-              Supprimer ({selectedIds.length})
-            </Button>
+            <>
+              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+                Archiver ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={selectAll}>
+                Tout sélectionner
+              </Button>
+              <Button variant="outlined" onClick={clearSelection}>
+                Annuler
+              </Button>
+            </>
           )}
         </Stack>
       }
@@ -569,7 +579,7 @@ export default function CerfaPage() {
         canWrite={canWriteCerfa}
       />
 
-      {/* ✅ Confirmation suppression */}
+      {/* ✅ Confirmation archivage */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>
           <WarningAmberIcon color="warning" sx={{ mr: 1 }} />
@@ -578,14 +588,14 @@ export default function CerfaPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer ce contrat CERFA ?"
-              : `Supprimer ${selectedIds.length} contrat(s) sélectionné(s) ?`}
+              ? "Archiver ce contrat CERFA ?"
+              : `Archiver ${selectedIds.length} contrat(s) sélectionné(s) ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete} disabled={!canWriteCerfa}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

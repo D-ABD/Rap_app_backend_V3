@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ReactNode, useEffect } from "react";
 
 import MainLayout from "../layout/MainLayout";
@@ -102,7 +102,6 @@ import ParametresPage from "../pages/parametres/ParametresPage";
 import ForbiddenPage from "../pages/ForbiddenPage";
 import { useAuth } from "../hooks/useAuth";
 import DashboardDeclicStaffPage from "src/pages/DashboardDeclicPage";
-import { useLocation } from "react-router-dom";
 import PrepaCreatePage from "src/pages/prepa/PrepaCreatePage";
 import PrepaEditPage from "src/pages/prepa/PrepaEditPage";
 import ObjectifPrepaPage from "src/pages/prepa/ObjectifPrepaPage";
@@ -124,6 +123,15 @@ import CVThequePage from "src/pages/cvtheque/cvthequePage";
 import CVThequeCandidatPage from "src/pages/cvtheque/cvthequeCandidatPage";
 import CVThequeCandidatEditPage from "src/pages/cvtheque/cvthequeCandidatEditPage";
 import CVThequeCandidatCreatePage from "src/pages/cvtheque/cvthequeCandidatCreate";
+import {
+  canAccessDeclicRole,
+  canAccessPrepaRole,
+  isAdminLikeRole,
+  isCandidateLikeRole,
+  isCoreStaffRole,
+  isCoreWriteRole,
+  normalizeRole,
+} from "../utils/roleGroups";
 
 /* ------------------------------------------------------- */
 /* ✅ ROUTES PRINCIPALES AVEC REDIRECTION AUTOMATIQUE ROLE */
@@ -141,13 +149,13 @@ export default function AppRoute() {
     // ❗ Ne redirige PAS si on refresh une page qui n’est pas /login
     if (location.pathname !== "/login") return;
 
-    const role = (user.role ?? "").toLowerCase();
+    const role = normalizeRole(user.role);
 
     if (role === "declic_staff") navigate("/dashboard/declic", { replace: true });
     else if (role === "prepa_staff") navigate("/dashboard/prepa", { replace: true });
-    else if (["staff", "staff_read", "admin", "superadmin"].includes(role))
+    else if (isCoreStaffRole(role))
       navigate("/dashboard", { replace: true });
-    else if (["candidat", "candidate"].includes(role))
+    else if (isCandidateLikeRole(role))
       navigate("/dashboard/candidat", { replace: true });
   }, [user, navigate, location.pathname]);
 
@@ -159,10 +167,7 @@ export default function AppRoute() {
 
   function AdminOnlyRoute({ children }: AdminOnlyRouteProps) {
     const { user } = useAuth();
-    const isAdminOnly =
-      !!user &&
-      (user.is_superuser === true ||
-        ["admin", "superadmin"].includes((user.role ?? "").toLowerCase()));
+    const isAdminOnly = !!user && (user.is_superuser === true || isAdminLikeRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!isAdminOnly) return <ForbiddenPage />;
     return <>{children}</>;
@@ -170,22 +175,39 @@ export default function AppRoute() {
 
   function AdminRoute({ children }: AdminRouteProps) {
     const { user } = useAuth();
-    const isAdmin =
-      !!user &&
-      (user.is_superuser === true ||
-        user.is_staff === true ||
-        ["admin", "superadmin", "staff"].includes((user.role ?? "").toLowerCase()));
+    const isAdmin = !!user && (user.is_superuser === true || isAdminLikeRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!isAdmin) return <ForbiddenPage />;
     return <>{children}</>;
   }
 
+  function CoreStaffRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = isCoreStaffRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function CoreWriteRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = isCoreWriteRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
   function DeclicRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
-    const allowed =
-      !!user &&
-      (user.is_superuser === true ||
-        ["admin", "superadmin", "staff", "declic_staff"].includes((user.role ?? "").toLowerCase()));
+    const allowed = !!user && (user.is_superuser === true || canAccessDeclicRole(user.role));
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function DeclicWriteRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = !!user && (user.is_superuser === true || canAccessDeclicRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -197,10 +219,17 @@ export default function AppRoute() {
     return <>{children}</>;
   }
 
+  function CandidateLikeRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = isCandidateLikeRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
   function CerfaRoute({ children }: CerfaRouteProps) {
     const { user } = useAuth();
-    const role = (user?.role ?? "").toLowerCase();
-    const allowed = ["staff", "staff_read", "admin", "superadmin"].includes(role);
+    const allowed = isCoreStaffRole(user?.role);
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -211,9 +240,10 @@ export default function AppRoute() {
 
   /* ---------- Helper : choisir le layout selon le rôle ---------- */
   const getLayoutForUser = (user?: any) => {
-    const role = (user?.role ?? "").toLowerCase();
+    const role = normalizeRole(user?.role);
 
-    if (["staff", "staff_read", "admin", "superadmin"].includes(role)) return <MainLayout />;
+    if (isCoreStaffRole(role))
+      return <MainLayout />;
     if (role === "declic_staff") return <MainLayoutDeclic />;
     if (role === "prepa_staff") return <MainLayoutPrepa />;
     return <MainLayoutCandidat />;
@@ -221,10 +251,15 @@ export default function AppRoute() {
 
   function PrepaRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
-    const allowed =
-      !!user &&
-      (user.is_superuser === true ||
-        ["admin", "superadmin", "staff", "prepa_staff"].includes((user.role ?? "").toLowerCase()));
+    const allowed = !!user && (user.is_superuser === true || canAccessPrepaRole(user.role));
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function PrepaWriteRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = !!user && (user.is_superuser === true || canAccessPrepaRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -246,9 +281,7 @@ export default function AppRoute() {
         <Route
           path="/dashboard"
           element={secure(
-            ["staff", "staff_read", "admin", "superadmin"].includes(
-              (user?.role ?? "").toLowerCase()
-            ) ? (
+            isCoreStaffRole(user?.role) ? (
               <DashboardPage />
             ) : (
               <DashboardCandidatPage />
@@ -256,7 +289,7 @@ export default function AppRoute() {
           )}
         />
         {/* Dashboard candidat explicite */}
-        <Route path="/dashboard/candidat" element={secure(<DashboardCandidatPage />)} />
+        <Route path="/dashboard/candidat" element={<CandidateLikeRoute><DashboardCandidatPage /></CandidateLikeRoute>} />
 
         {/* Profil */}
         <Route path="/mon-profil" element={secure(<MonProfil />)} />
@@ -350,111 +383,132 @@ export default function AppRoute() {
         />
 
         {/* Appairages */}
-        <Route path="/appairages" element={secure(<AppairagesPage />)} />
-        <Route path="/appairages/create" element={secure(<AppairagesCreatePage />)} />
-        <Route path="/appairages/:id/edit" element={secure(<AppairagesEditPage />)} />
-        <Route path="/appairages/:id" element={secure(<AppairageDetailPage />)} />
-        <Route path="/appairage-commentaires" element={secure(<AppairageCommentPage />)} />
+        <Route path="/appairages" element={<CoreStaffRoute><AppairagesPage /></CoreStaffRoute>} />
+        <Route path="/appairages/create" element={<CoreWriteRoute><AppairagesCreatePage /></CoreWriteRoute>} />
+        <Route path="/appairages/:id/edit" element={<CoreWriteRoute><AppairagesEditPage /></CoreWriteRoute>} />
+        <Route path="/appairages/:id" element={<CoreStaffRoute><AppairageDetailPage /></CoreStaffRoute>} />
+        <Route path="/appairage-commentaires" element={<CoreStaffRoute><AppairageCommentPage /></CoreStaffRoute>} />
         <Route
           path="/appairage-commentaires/create"
-          element={secure(<AppairageCommentCreatePage />)}
+          element={<CoreWriteRoute><AppairageCommentCreatePage /></CoreWriteRoute>}
         />
         <Route
           path="/appairage-commentaires/:id/edit"
-          element={secure(<AppairageCommentEditPage />)}
+          element={<CoreWriteRoute><AppairageCommentEditPage /></CoreWriteRoute>}
         />
         <Route
           path="/appairage-commentaires/create/:appairageId"
-          element={secure(<AppairageCommentCreatePage />)}
+          element={<CoreWriteRoute><AppairageCommentCreatePage /></CoreWriteRoute>}
         />
 
         {/* Ateliers TRE */}
-        <Route path="/ateliers-tre" element={secure(<AteliersTrePage />)} />
-        <Route path="/ateliers-tre/create" element={secure(<AteliersTRECreatePage />)} />
-        <Route path="/ateliers-tre/:id/edit" element={secure(<AtelierTREEditPage />)} />
+        <Route path="/ateliers-tre" element={<CoreStaffRoute><AteliersTrePage /></CoreStaffRoute>} />
+        <Route path="/ateliers-tre/create" element={<CoreWriteRoute><AteliersTRECreatePage /></CoreWriteRoute>} />
+        <Route path="/ateliers-tre/:id/edit" element={<CoreWriteRoute><AtelierTREEditPage /></CoreWriteRoute>} />
 
         {/* Candidats */}
-        <Route path="/candidats" element={secure(<CandidatsPage />)} />
-        <Route path="/candidats/create" element={secure(<CandidatCreatePage />)} />
-        <Route path="/candidats/:id/edit" element={secure(<CandidatEditPage />)} />
+        <Route path="/candidats" element={<CoreStaffRoute><CandidatsPage /></CoreStaffRoute>} />
+        <Route path="/candidats/create" element={<CoreWriteRoute><CandidatCreatePage /></CoreWriteRoute>} />
+        <Route path="/candidats/:id/edit" element={<CoreWriteRoute><CandidatEditPage /></CoreWriteRoute>} />
 
         {/* Partenaires */}
-        <Route path="/partenaires" element={secure(<PartenairesPage />)} />
-        <Route path="/partenaires/create" element={secure(<PartenairesCreatePage />)} />
-        <Route path="/partenaires/:id/edit" element={secure(<PartenairesEditPage />)} />
-        <Route path="/partenaires/candidat" element={secure(<PartenairesCandidatPage />)} />
+        <Route path="/partenaires" element={<CoreStaffRoute><PartenairesPage /></CoreStaffRoute>} />
+        <Route path="/partenaires/create" element={<CoreWriteRoute><PartenairesCreatePage /></CoreWriteRoute>} />
+        <Route path="/partenaires/:id/edit" element={<CoreWriteRoute><PartenairesEditPage /></CoreWriteRoute>} />
+        <Route path="/partenaires/candidat" element={<CandidateLikeRoute><PartenairesCandidatPage /></CandidateLikeRoute>} />
         <Route
           path="/partenaires/create/candidat"
-          element={secure(<PartenairesCandidatCreatePage />)}
+          element={<CandidateLikeRoute><PartenairesCandidatCreatePage /></CandidateLikeRoute>}
         />
         <Route
           path="/partenaires/:id/edit/candidat"
-          element={secure(<PartenairesCandidatEditPage />)}
+          element={<CandidateLikeRoute><PartenairesCandidatEditPage /></CandidateLikeRoute>}
         />
 
         {/* Prospection */}
-        <Route path="/prospections" element={secure(<ProspectionPage />)} />
-        <Route path="/prospections/create" element={secure(<ProspectionCreatePage />)} />
-        <Route path="/prospections/:id/edit" element={secure(<ProspectionEditPage />)} />
-        <Route path="/prospections/candidat" element={secure(<ProspectionPageCandidat />)} />
-        <Route path="/prospections/create/candidat" element={<ProspectionCreatePageCandidat />} />
-        <Route path="/prospections/:id/edit/candidat" element={<ProspectionEditCandidatPage />} />
-        <Route path="/prospection-commentaires" element={secure(<ProspectionCommentPage />)} />
+        <Route path="/prospections" element={<CoreStaffRoute><ProspectionPage /></CoreStaffRoute>} />
+        <Route path="/prospections/create" element={<CoreWriteRoute><ProspectionCreatePage /></CoreWriteRoute>} />
+        <Route path="/prospections/:id/edit" element={<CoreWriteRoute><ProspectionEditPage /></CoreWriteRoute>} />
+        <Route path="/prospections/candidat" element={<CandidateLikeRoute><ProspectionPageCandidat /></CandidateLikeRoute>} />
+        <Route path="/prospections/create/candidat" element={<CandidateLikeRoute><ProspectionCreatePageCandidat /></CandidateLikeRoute>} />
+        <Route path="/prospections/:id/edit/candidat" element={<CandidateLikeRoute><ProspectionEditCandidatPage /></CandidateLikeRoute>} />
+        <Route path="/prospection-commentaires" element={<CoreStaffRoute><ProspectionCommentPage /></CoreStaffRoute>} />
         <Route
           path="/prospection-commentaires/create"
-          element={secure(<ProspectionCommentCreatePage />)}
+          element={<CoreWriteRoute><ProspectionCommentCreatePage /></CoreWriteRoute>}
         />
         <Route
           path="/prospection-commentaires/:id/edit"
-          element={secure(<ProspectionCommentEditPage />)}
+          element={<CoreWriteRoute><ProspectionCommentEditPage /></CoreWriteRoute>}
         />
         <Route
           path="/prospection-commentaires/create/:prospectionId"
-          element={secure(<ProspectionCommentCreatePage />)}
+          element={<CoreWriteRoute><ProspectionCommentCreatePage /></CoreWriteRoute>}
         />
 
         {/* Commentaires */}
-        <Route path="/commentaires" element={secure(<CommentairesPage />)} />
-        <Route path="/commentaires/create" element={secure(<CommentairesCreatePage />)} />
+        <Route path="/commentaires" element={<CoreStaffRoute><CommentairesPage /></CoreStaffRoute>} />
+        <Route path="/commentaires/create" element={<CoreWriteRoute><CommentairesCreatePage /></CoreWriteRoute>} />
         <Route
           path="/commentaires/create/:formationId"
-          element={secure(<CommentairesCreateFromFormationPage />)}
+          element={<CoreWriteRoute><CommentairesCreateFromFormationPage /></CoreWriteRoute>}
         />
-        <Route path="/commentaires/:id/edit" element={secure(<CommentairesEditPage />)} />
+        <Route path="/commentaires/:id/edit" element={<CoreWriteRoute><CommentairesEditPage /></CoreWriteRoute>} />
 
         {/* CERFA */}
         <Route path="/cerfa" element={cerfaSecure(<CerfaPage />)} />
         <Route
           path="/cerfa/:id/edit"
           element={
-            <AdminRoute>
+            <CoreWriteRoute>
               <CerfaEditPage />
-            </AdminRoute>
+            </CoreWriteRoute>
           }
         />
 
         {/* Formations */}
-        <Route path="/formations" element={secure(<FormationsPage />)} />
-        <Route path="/formations/create" element={secure(<FormationsCreatePage />)} />
-        <Route path="/formations/:id/edit" element={secure(<FormationsEditPage />)} />
-        <Route path="/formations/:id" element={secure(<FormationDetailPage />)} />
-        <Route path="/evenements" element={secure(<EvenementsPage />)} />
-        <Route path="/evenements/create" element={secure(<EvenementsCreatePage />)} />
-        <Route path="/evenements/:id/edit" element={secure(<EvenementsEditPage />)} />
+        <Route path="/formations" element={<CoreStaffRoute><FormationsPage /></CoreStaffRoute>} />
+        <Route path="/formations/create" element={<CoreWriteRoute><FormationsCreatePage /></CoreWriteRoute>} />
+        <Route path="/formations/:id/edit" element={<CoreWriteRoute><FormationsEditPage /></CoreWriteRoute>} />
+        <Route path="/formations/:id" element={<CoreStaffRoute><FormationDetailPage /></CoreStaffRoute>} />
+        <Route path="/evenements" element={<CoreStaffRoute><EvenementsPage /></CoreStaffRoute>} />
+        <Route path="/evenements/create" element={<CoreWriteRoute><EvenementsCreatePage /></CoreWriteRoute>} />
+        <Route path="/evenements/:id/edit" element={<CoreWriteRoute><EvenementsEditPage /></CoreWriteRoute>} />
         <Route
           path="/formations/:formationId/commentaires"
-          element={secure(<FormationsCommentairesPage />)}
+          element={<CoreStaffRoute><FormationsCommentairesPage /></CoreStaffRoute>}
         />
 
         {/* Documents */}
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/documents/create" element={<DocumentsCreatePage />} />
-        <Route path="/documents/edit/:id" element={<DocumentsEditPage />} />
+        <Route path="/documents" element={<CoreStaffRoute><DocumentsPage /></CoreStaffRoute>} />
+        <Route path="/documents/create" element={<CoreWriteRoute><DocumentsCreatePage /></CoreWriteRoute>} />
+        <Route path="/documents/edit/:id" element={<CoreWriteRoute><DocumentsEditPage /></CoreWriteRoute>} />
 
         {/* Rapports */}
-        <Route path="/rapports" element={secure(<RapportsPage />)} />
-        <Route path="/rapports/create" element={secure(<RapportsCreatePage />)} />
-        <Route path="/rapports/:id/edit" element={secure(<RapportsEditPage />)} />
+        <Route
+          path="/rapports"
+          element={
+            <AdminRoute>
+              <RapportsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/rapports/create"
+          element={
+            <AdminRoute>
+              <RapportsCreatePage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/rapports/:id/edit"
+          element={
+            <AdminRoute>
+              <RapportsEditPage />
+            </AdminRoute>
+          }
+        />
 
         {/* Logs */}
         <Route
@@ -467,9 +521,9 @@ export default function AppRoute() {
         />
 
         {/* Utilisateurs */}
-        <Route path="/users" element={secure(<UsersPage />)} />
-        <Route path="/users/create" element={secure(<UsersCreatePage />)} />
-        <Route path="/users/:id/edit" element={secure(<UsersEditPage />)} />
+        <Route path="/users" element={<AdminOnlyRoute><UsersPage /></AdminOnlyRoute>} />
+        <Route path="/users/create" element={<AdminOnlyRoute><UsersCreatePage /></AdminOnlyRoute>} />
+        <Route path="/users/:id/edit" element={<AdminOnlyRoute><UsersEditPage /></AdminOnlyRoute>} />
 
         {/* Déclic */}
         <Route
@@ -483,17 +537,17 @@ export default function AppRoute() {
         <Route
           path="/declic/create"
           element={
-            <DeclicRoute>
+            <DeclicWriteRoute>
               <DeclicCreatePage />
-            </DeclicRoute>
+            </DeclicWriteRoute>
           }
         />
         <Route
           path="/declic/:id/edit"
           element={
-            <DeclicRoute>
+            <DeclicWriteRoute>
               <DeclicEditPage />
-            </DeclicRoute>
+            </DeclicWriteRoute>
           }
         />
         <Route
@@ -507,17 +561,17 @@ export default function AppRoute() {
         <Route
           path="/participants-declic/create"
           element={
-            <DeclicRoute>
+            <DeclicWriteRoute>
               <ParticipantsDeclicCreatePage />
-            </DeclicRoute>
+            </DeclicWriteRoute>
           }
         />
         <Route
           path="/participants-declic/:id/edit"
           element={
-            <DeclicRoute>
+            <DeclicWriteRoute>
               <ParticipantsDeclicEditPage />
-            </DeclicRoute>
+            </DeclicWriteRoute>
           }
         />
         <Route
@@ -531,9 +585,9 @@ export default function AppRoute() {
         <Route
           path="/declic/objectifs/:id/edit"
           element={
-            <DeclicRoute>
+            <DeclicWriteRoute>
               <ObjectifDeclicEditPage />
-            </DeclicRoute>
+            </DeclicWriteRoute>
           }
         />
 
@@ -583,67 +637,67 @@ export default function AppRoute() {
         <Route
           path="/prepa/stagiaires/create"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <StagiairesPrepaCreatePage />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
         <Route
           path="/prepa/stagiaires/:id/edit"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <StagiairesPrepaEditPage />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
 
         <Route
           path="/prepa/create"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaCreatePage />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
         <Route
           path="/prepa/create/ic"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaCreatePageIC />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
         <Route
           path="/prepa/create/ateliers"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaCreatePageAteliers />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
 
         <Route
           path="/prepa/:id/edit"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaEditPage />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
         <Route
           path="/prepa/:id/edit/IC"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaEditPageIC />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
         <Route
           path="/prepa/:id/edit/Ateliers"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <PrepaEditPageAteliers />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
 
@@ -659,9 +713,9 @@ export default function AppRoute() {
         <Route
           path="/prepa/objectifs/:id/edit"
           element={
-            <PrepaRoute>
+            <PrepaWriteRoute>
               <ObjectifPrepaEditPage />
-            </PrepaRoute>
+            </PrepaWriteRoute>
           }
         />
 
@@ -678,32 +732,32 @@ export default function AppRoute() {
 {/* CVTHEQUE */}
 <Route
   path="/cvtheque"
-  element={secure(<CVThequePage />)}
+  element={<CoreStaffRoute><CVThequePage /></CoreStaffRoute>}
 /> 
 
 <Route
   path="/cvtheque/candidat"
-  element={secure(<CVThequeCandidatPage />)}
+  element={<CandidateLikeRoute><CVThequeCandidatPage /></CandidateLikeRoute>}
 /> 
 
 <Route
   path="/cvtheque/create"
-  element={secure(<CVThequeCreatePage />)}
+  element={<CoreWriteRoute><CVThequeCreatePage /></CoreWriteRoute>}
 /> 
 
 <Route
   path="/cvtheque/create/candidat"
-  element={secure(<CVThequeCandidatCreatePage />)}
+  element={<CandidateLikeRoute><CVThequeCandidatCreatePage /></CandidateLikeRoute>}
 /> 
 
 <Route
   path="/cvtheque/:id/edit"
-  element={secure(<CVThequeEditPage />)}
+  element={<CoreWriteRoute><CVThequeEditPage /></CoreWriteRoute>}
 />
 
 <Route
   path="/cvtheque/:id/edit/candidat"
-  element={secure(<CVThequeCandidatEditPage />)}
+  element={<CandidateLikeRoute><CVThequeCandidatEditPage /></CandidateLikeRoute>}
 />
 
 

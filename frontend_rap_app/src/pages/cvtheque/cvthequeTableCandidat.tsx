@@ -30,6 +30,7 @@ type Props = {
   onPreview: (item: CVThequeItem) => void;
   onEdit: (id: number) => void;
   onDelete?: (id: number) => void;
+  onRestore?: (id: number) => void;
 };
 
 export default function CVThequeTableCandidat({
@@ -39,6 +40,7 @@ export default function CVThequeTableCandidat({
   onPreview,
   onEdit,
   onDelete,
+  onRestore,
 }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -186,15 +188,28 @@ export default function CVThequeTableCandidat({
                         </Button>
                       </Tooltip>
 
-                      {onDelete && (
-                        <Tooltip title="Supprimer">
+                      {doc.is_active && onDelete && (
+                        <Tooltip title="Archiver">
                           <Button
                             size="small"
                             variant="outlined"
                             color="error"
                             onClick={() => onDelete(doc.id)}
                           >
-                            🗑️
+                            Archiver
+                          </Button>
+                        </Tooltip>
+                      )}
+
+                      {!doc.is_active && onRestore && (
+                        <Tooltip title="Restaurer">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="success"
+                            onClick={() => onRestore(doc.id)}
+                          >
+                            Restaurer
                           </Button>
                         </Tooltip>
                       )}
@@ -257,7 +272,7 @@ export default function CVThequeTableCandidat({
                     ✏️
                   </Button>
 
-                  {onDelete && (
+                  {doc.is_active && onDelete && (
                     <Button
                       size="small"
                       variant="outlined"
@@ -267,7 +282,21 @@ export default function CVThequeTableCandidat({
                         onDelete(doc.id);
                       }}
                     >
-                      🗑️
+                      Archiver
+                    </Button>
+                  )}
+
+                  {!doc.is_active && onRestore && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="success"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRestore(doc.id);
+                      }}
+                    >
+                      Restaurer
                     </Button>
                   )}
                 </Stack>

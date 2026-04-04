@@ -66,12 +66,25 @@ class StatutViewSetTestCase(AuthenticatedTestCase):
         resp_data = response.data.get("data", response.data)
         self.assertEqual(resp_data["couleur"], "#123ABC")
 
-    def test_delete_statut_removes_instance(self):
+    def test_delete_statut_archives_instance(self):
         statut = Statut.objects.create(nom=Statut.NON_DEFINI, couleur="#999999")
         url = reverse("statut-detail", args=[statut.id])
         response = self.client.delete(url)
-        self.assertIn(response.status_code, (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT))
-        self.assertFalse(Statut.objects.filter(pk=statut.id).exists())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        statut.refresh_from_db()
+        self.assertFalse(statut.is_active)
+
+    def test_list_excludes_archived_statuts(self):
+        archived = Statut.objects.create(nom=Statut.NON_DEFINI, couleur="#999999", is_active=False)
+        visible = Statut.objects.create(nom=Statut.PLEINE, couleur="#111111")
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("results") or response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(archived.id, returned_ids)
 
     def test_badge_html_display(self):
         statut = Statut.objects.create(nom=Statut.PLEINE, couleur="#000000")

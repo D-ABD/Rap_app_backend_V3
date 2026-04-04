@@ -55,13 +55,13 @@ export default function ParticipantsDeclicEditPage() {
   };
 
   const handleDelete = async () => {
-    if (Number.isNaN(id) || !window.confirm("Supprimer ce participant Déclic ?")) return;
+    if (Number.isNaN(id) || !window.confirm("Archiver ce participant Déclic ?")) return;
     try {
       await remove(id);
-      toast.success("Participant Déclic supprimé");
+      toast.success("Participant Déclic archivé");
       navigate("/participants-declic");
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -96,7 +96,7 @@ export default function ParticipantsDeclicEditPage() {
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

@@ -16,14 +16,20 @@ from ...api.serializers.evenements_serializers import (
 )
 from ...models.evenements import Evenement
 from ...services.evenements_export import csv_export_evenements
-from ..mixins import ApiResponseMixin
-from ..roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
+from ..roles import (
+    can_write_evenements,
+    get_staff_centre_ids_cached,
+    is_admin_like,
+    is_centre_scoped_staff,
+    is_staff_or_staffread,
+)
 
 logger = logging.getLogger("application.api")
 
 
 @extend_schema(tags=["Événements"])
-class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class EvenementViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """
     CRUD des événements rattachés aux formations.
 
@@ -48,15 +54,16 @@ class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     serializer_class = EvenementSerializer
     permission_classes = [IsOwnerOrStaffOrAbove]
     pagination_class = RapAppPagination
+    hard_delete_enabled = True
 
     def get_queryset(self):
         """
-        Retourne le queryset visible pour l'utilisateur courant.
+        Retourne les événements actifs visibles pour l'utilisateur courant.
 
         La visibilité est calculée ici à partir du rôle et, pour le staff,
         des centres accessibles via `get_staff_centre_ids_cached`.
         """
-        base = Evenement.objects.all().select_related("formation")
+        base = Evenement.objects.filter(is_active=True).select_related("formation")
         user = getattr(self.request, "user", None)
         if not user or not getattr(user, "is_authenticated", False):
             return base.none()
@@ -70,6 +77,34 @@ class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         if is_staff_or_staffread(user):
             return base.none()
         return base.filter(user=user)
+
+    @extend_schema(
+        summary="Archiver un événement",
+        description="Archive logiquement un événement en le désactivant (`is_active = False`).",
+        tags=["Événements"],
+        responses={200: OpenApiResponse(response=EvenementSerializer)},
+    )
+    def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais remplace la
+        suppression physique par un archivage logique.
+        """
+        self._assert_can_write_evenements()
+        instance = self.get_object()
+        if not instance.is_active:
+            return self.success_response(
+                data=self.get_serializer(instance).data,
+                message="Événement déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Événement archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         summary="📚 Lister les événements",
@@ -118,10 +153,15 @@ class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         user = self.request.user
         if is_admin_like(user):
             return
-        if is_staff_or_staffread(user):
+        if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if getattr(formation, "centre_id", None) not in allowed:
                 raise PermissionDenied("Formation hors de votre périmètre (centre).")
+
+    def _assert_can_write_evenements(self):
+        """Refuse l'écriture aux profils ayant seulement la lecture sur les événements."""
+        if not can_write_evenements(self.request.user):
+            raise PermissionDenied("Vous avez un accès en lecture seule sur les événements.")
 
     def _requested_formation(self, serializer):
         formation = serializer.validated_data.get("formation")
@@ -137,12 +177,57 @@ class EvenementViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         """
         Associe systématiquement l'événement créé à l'utilisateur courant.
         """
+        self._assert_can_write_evenements()
         self._assert_staff_can_use_formation(self._requested_formation(serializer))
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
 
     def perform_update(self, serializer):
+        self._assert_can_write_evenements()
         self._assert_staff_can_use_formation(serializer.validated_data.get("formation", serializer.instance.formation))
         serializer.save(updated_by=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Crée un événement et renvoie l'enveloppe API standard afin
+        d'aligner le contrat CRUD avec les autres modules métier.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                "success": True,
+                "message": "Événement créé avec succès.",
+                "data": self.get_serializer(serializer.instance).data,
+            },
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retourne le détail d'un événement dans l'enveloppe API standard.
+        """
+        instance = self.get_object()
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Événement récupéré avec succès.",
+        )
+
+    def update(self, request, *args, **kwargs):
+        """
+        Met à jour un événement et renvoie l'enveloppe API standard.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return self.success_response(
+            data=self.get_serializer(serializer.instance).data,
+            message="Événement mis à jour avec succès.",
+        )
 
     @extend_schema(
         summary="🧾 Exporter les événements au format CSV",

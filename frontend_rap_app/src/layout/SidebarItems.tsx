@@ -1,5 +1,13 @@
 import { ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
+import {
+  canAccessDeclicRole,
+  canAccessPrepaRole,
+  isAdminLikeRole,
+  isCandidateLikeRole,
+  isCoreStaffRole,
+  normalizeRole,
+} from "../utils/roleGroups";
 
 import HomeIcon from "@mui/icons-material/Home";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -202,29 +210,68 @@ export const sidebarItems: SidebarItem[] = [
 
 export function useSidebarItems(): SidebarItem[] {
   const { user } = useAuth();
-  const isStaff = user?.is_staff || user?.is_superuser || user?.role === "admin";
+  const role = normalizeRole(user?.role);
+  const isCandidateLike = isCandidateLikeRole(role);
+  const isCoreStaff = isCoreStaffRole(role);
+  const canAccessPrepa = canAccessPrepaRole(role);
+  const canAccessDeclic = canAccessDeclicRole(role);
+  const canAccessParametres = isAdminLikeRole(role);
 
   const redirectMap: Record<string, [string, string]> = {
     Prospections: ["/prospections", "/prospections/candidat"],
     Partenaires: ["/partenaires", "/partenaires/candidat"],
+    "Liste des CV": ["/cvtheque", "/cvtheque/candidat"],
+    "Ajouter un CV": ["/cvtheque/create", "/cvtheque/create/candidat"],
   };
 
   return sidebarItems
     .map((item: SidebarItem) => {
+      if (item.label === "Déclic" && !canAccessDeclic) return null;
+      if (item.label === "Prépa Comp" && !canAccessPrepa) return null;
+      if (item.label === "Paramètres" && !canAccessParametres) return null;
+
       if (item.label === "CRM" && item.children) {
+        const filteredChildren = item.children.filter((child: SidebarItem) => {
+          if (isCandidateLike) {
+            return ["Prospections", "Partenaires"].includes(child.label);
+          }
+          return isCoreStaff;
+        });
+        if (item.label === "CRM" && item.children) {
+          return {
+            ...item,
+            children: filteredChildren.map((child: SidebarItem) => {
+              const redirect = redirectMap[child.label];
+              if (redirect) {
+                const [staffPath, candidatPath] = redirect;
+                return { ...child, path: isCandidateLike ? candidatPath : staffPath };
+              }
+              return child;
+            }),
+          };
+        }
+      }
+
+      if (item.label === "CVThèque" && item.children) {
+        if (!(isCoreStaff || isCandidateLike)) return null;
         return {
           ...item,
           children: item.children.map((child: SidebarItem) => {
             const redirect = redirectMap[child.label];
             if (redirect) {
               const [staffPath, candidatPath] = redirect;
-              return { ...child, path: isStaff ? staffPath : candidatPath };
+              return { ...child, path: isCandidateLike ? candidatPath : staffPath };
             }
             return child;
           }),
         };
       }
+
+      if (item.label === "Revue d’offres") {
+        if (!isCoreStaff) return null;
+      }
       return item;
     })
+    .filter((item): item is SidebarItem => item !== null)
     .filter((item) => !item.children || item.children.length > 0);
 }

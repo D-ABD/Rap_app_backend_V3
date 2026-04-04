@@ -51,6 +51,8 @@ export type CandidatPick = {
   nom_complet: string;
   nom_naissance?: string | null;
   email: string | null;
+  ville?: string | null;
+  code_postal?: string | null;
   formation: FormationLite | null;
   formation_nom?: string | null;
   formation_num_offre?: string | null;
@@ -100,6 +102,8 @@ type CandidatApi = {
   nom_complet?: string | null;
   nom_naissance?: string | null;
   email?: string | null;
+  ville?: string | null;
+  code_postal?: string | null;
   formation?: FormationField;
   formation_id?: number | null;
   formation_nom?: string | null;
@@ -214,6 +218,13 @@ function formatTypeContratLabel(typeContrat?: string | null, typeContratCode?: s
   };
   return labels[value] ?? value;
 }
+function deriveDepartementLabel(codePostal?: string | null): string | null {
+  const value = _nn(codePostal).replace(/\s+/g, "");
+  if (!value) return null;
+  if (/^(97|98)\d/.test(value)) return value.slice(0, 3);
+  if (value.length >= 2) return value.slice(0, 2);
+  return null;
+}
 function normalizeCandidat(x: CandidatApi): CandidatPick {
   const prenom = _nn(x.prenom);
   const nom = _nn(x.nom);
@@ -229,6 +240,8 @@ function normalizeCandidat(x: CandidatApi): CandidatPick {
     nom_complet: nomComplet,
     nom_naissance: x.nom_naissance ?? null,
     email: x.email ?? null,
+    ville: x.ville ?? null,
+    code_postal: x.code_postal ?? null,
     formation,
     formation_nom: x.formation_nom ?? null,
     formation_num_offre: x.formation_num_offre ?? null,
@@ -421,6 +434,8 @@ export default function CandidatsSelectModal({
         prenom: created.prenom,
         nom_complet: `${created.prenom} ${created.nom}`.trim(),
         email: created.email ?? null,
+        ville: null,
+        code_postal: null,
         formation: created.formation ? { id: created.formation, nom: null } : null,
         type_contrat: null,
         type_contrat_code: null,
@@ -491,6 +506,8 @@ export default function CandidatsSelectModal({
                       prenom: "",
                       nom_complet: "— Aucun candidat —",
                       email: null,
+                      ville: null,
+                      code_postal: null,
                       formation: null,
                     });
                     onClose();
@@ -539,14 +556,21 @@ export default function CandidatsSelectModal({
                       </>
                     }
                     secondary={
-                      <>
-                        {c.formation_nom && `🎓 ${c.formation_nom}`}
-                        {c.formation_num_offre && ` • Offre ${c.formation_num_offre}`}
-                        {c.formation_type_offre && ` • ${c.formation_type_offre}`}
-                        {formatTypeContratLabel(c.type_contrat, c.type_contrat_code) &&
-                          ` • Contrat: ${formatTypeContratLabel(c.type_contrat, c.type_contrat_code)}`}
-                        {c.centre_nom && ` • Centre: ${c.centre_nom}`}
-                      </>
+                      <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.25 }}>
+                        <Box component="span">
+                          {c.formation_nom && `🎓 ${c.formation_nom}`}
+                          {c.formation_num_offre && ` • Offre ${c.formation_num_offre}`}
+                          {c.formation_type_offre && ` • ${c.formation_type_offre}`}
+                          {c.centre_nom && ` • Centre: ${c.centre_nom}`}
+                        </Box>
+                        <Box component="span">
+                          {formatTypeContratLabel(c.type_contrat, c.type_contrat_code) &&
+                            `📝 Contrat: ${formatTypeContratLabel(c.type_contrat, c.type_contrat_code)}`}
+                          {c.ville && ` • Ville: ${c.ville}`}
+                          {deriveDepartementLabel(c.code_postal) &&
+                            ` • Département: ${deriveDepartementLabel(c.code_postal)}`}
+                        </Box>
+                      </Box>
                     }
                   />
                 </ListItemButton>

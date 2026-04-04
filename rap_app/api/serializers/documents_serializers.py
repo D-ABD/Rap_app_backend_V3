@@ -47,6 +47,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     download_url = serializers.CharField(read_only=True)
     created_by = serializers.CharField(source="created_by.username", read_only=True)
     is_viewable_in_browser = serializers.BooleanField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
 
     formation_nom = serializers.CharField(source="formation.nom", read_only=True)
     formation_num_offre = serializers.CharField(source="formation.num_offre", read_only=True)
@@ -90,6 +91,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             "created_by",
             "updated_at",
             "is_viewable_in_browser",
+            "is_active",
             "formation_nom",
             "formation_num_offre",
             "formation_start_date",
@@ -110,6 +112,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by",
             "is_viewable_in_browser",
+            "is_active",
             "formation_nom",
             "formation_num_offre",
             "formation_start_date",

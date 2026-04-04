@@ -21,11 +21,12 @@ from ...api.roles import (
     is_admin_like,
     is_candidate,
     is_prepa_staff,
-    is_staff_or_staffread,
+    is_staff_read,
+    is_staff_standard,
 )
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
-from ..mixins import ApiResponseMixin
+from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
 
@@ -45,19 +46,28 @@ from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
         ],
         responses={200: ObjectifPrepaSerializer(many=True)},
     ),
+    destroy=extend_schema(
+        summary="Archiver un objectif Prépa",
+        description="Archive logiquement un objectif Prépa en le désactivant (`is_active = False`).",
+        responses={200: ObjectifPrepaSerializer},
+    ),
 )
-class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
+class ObjectifPrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des objectifs annuels Prépa.
 
-    Le périmètre est restreint par centre selon les rôles Prépa/admin/staff
-    avec des helpers locaux. Le fichier expose aussi des actions de filtres,
-    synthèse et export Excel.
+    Le périmètre est restreint par centre selon les rôles Prépa/admin/staff :
+    `prepa_staff` reste le rôle métier principal, `staff` et `staff_read`
+    gardent un accès transverse, tandis que `commercial` et
+    `charge_recrutement` restent exclus de ce bloc spécialisé.
+
+    Le fichier expose aussi des actions de filtres, synthèse et export Excel.
     """
 
     serializer_class = ObjectifPrepaSerializer
     permission_classes = [IsAuthenticated, IsPrepaStaffOrAbove]
     queryset = ObjectifPrepa.objects.select_related("centre").all()
+    hard_delete_enabled = True
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["centre__nom", "centre__code_postal", "annee"]
     ordering_fields = ["annee", "centre__nom"]
@@ -74,7 +84,7 @@ class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         if is_prepa_staff(user):
             centres = getattr(user, "centres_acces", None) or getattr(user, "centres", None)
             return list(centres.values_list("id", flat=True)) if centres else []
-        if is_staff_or_staffread(user):
+        if is_staff_standard(user) or is_staff_read(user):
             try:
                 return list(user.centres.values_list("id", flat=True))
             except Exception:
@@ -111,11 +121,11 @@ class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
     # 🔹 Queryset principal
     # -----------------------------------------------------------
     def get_queryset(self):
-        # Retourne les ObjectifPrepa visibles pour l'utilisateur, filtrés
-        # par centre, année, identifiant de centre et département, puis
-        # triés par année décroissante et nom de centre.
+        # Retourne les ObjectifPrepa actifs visibles pour l'utilisateur,
+        # filtrés par centre, année, identifiant de centre et
+        # département, puis triés par année décroissante et nom de centre.
         user = self.request.user
-        qs = ObjectifPrepa.objects.select_related("centre")
+        qs = ObjectifPrepa.objects.select_related("centre").filter(is_active=True)
         qs = self._scope_qs_to_user_centres(qs)
 
         params = self.request.query_params
@@ -182,9 +192,26 @@ class ObjectifPrepaViewSet(ApiResponseMixin, viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
+        """
+        Conserve `DELETE` pour compatibilité mais remplace la
+        suppression physique par un archivage logique.
+        """
         instance = self.get_object()
-        self.perform_destroy(instance)
-        return self.success_response(data=None, message="Objectif Prépa supprimé avec succès.")
+        if not instance.is_active:
+            serializer = self.get_serializer(instance)
+            return self.success_response(
+                data=serializer.data,
+                message="Objectif Prépa déjà archivé.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        return self.success_response(
+            data=self.get_serializer(instance).data,
+            message="Objectif Prépa archivé avec succès.",
+            status_code=status.HTTP_200_OK,
+        )
 
     # -----------------------------------------------------------
     # 🔹 create / update sécurisés

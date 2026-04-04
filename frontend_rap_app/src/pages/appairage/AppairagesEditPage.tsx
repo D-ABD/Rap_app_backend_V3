@@ -64,13 +64,13 @@ export default function AppairagesEditPage() {
 
   const handleDelete = async () => {
     if (!appairageId) return;
-    if (!window.confirm(`Supprimer définitivement l’appairage #${appairageId} ?`)) return;
+    if (!window.confirm(`Archiver l’appairage #${appairageId} ?`)) return;
     try {
       await remove();
-      toast.success("🗑️ Appairage supprimé");
+      toast.success("📦 Appairage archivé");
       navigate("/appairages");
     } catch {
-      toast.error("❌ Échec de la suppression");
+      toast.error("❌ Échec de l'archivage");
     }
   };
 
@@ -196,7 +196,7 @@ export default function AppairagesEditPage() {
           </Button>
 
           <Button variant="outlined" color="error" onClick={handleDelete} disabled={removing}>
-            {removing ? "Suppression…" : "Supprimer"}
+            {removing ? "Archivage…" : "Archiver"}
           </Button>
         </Box>
       }

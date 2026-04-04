@@ -138,7 +138,7 @@ export function useUpdateCommentaire(id: number) {
 }
 
 /* ------------------------------
-   🔹 Suppression d’un commentaire
+   🔹 Archivage via endpoint DELETE legacy
 -------------------------------- */
 export function useDeleteCommentaire() {
   const [loading, setLoading] = useState(false);
@@ -154,7 +154,7 @@ export function useDeleteCommentaire() {
       setError(err as AxiosError);
       if (import.meta.env.MODE !== "production") {
         // eslint-disable-next-line no-console
-        console.error("Erreur API suppression commentaire :", err);
+        console.error("Erreur API archivage commentaire via DELETE :", err);
       }
       return false;
     } finally {

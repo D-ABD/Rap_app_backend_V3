@@ -24,6 +24,7 @@ import { useCandidateAccountActions, useCandidateLifecycleActions } from "../../
 import { toast } from "react-toastify";
 import { useAuth } from "../../hooks/useAuth";
 import { getCandidatBusinessStatusLabel } from "../../shared/utils/candidatStatus";
+import { isCoreStaffRole, isCoreWriteRole } from "../../utils/roleGroups";
 
 /* ---------- Helpers ---------- */
 type CandidatWithFormation = Candidat & {
@@ -402,8 +403,8 @@ export default function CandidatDetailModal({
 
   const la = candidat?.last_appairage ?? null;
   const linkedAccountId = getLinkedAccountId(candidat);
-  const isStaffLike = !!user && ["admin", "superadmin", "staff", "staff_read"].includes(user.role);
-  const canWriteCerfa = !!user && ["admin", "superadmin", "staff"].includes(user.role);
+  const isStaffLike = !!user && isCoreStaffRole(user.role);
+  const canWriteCerfa = !!user && isCoreWriteRole(user.role);
   const hasLinkedAccount = !!candidat?.compte_utilisateur;
   const requestStatus = candidat?.demande_compte_statut ?? null;
   const canReverseFormation = candidat?.parcours_phase === "stagiaire_en_formation";

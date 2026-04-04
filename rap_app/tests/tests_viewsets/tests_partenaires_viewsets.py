@@ -38,9 +38,11 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
     def test_create_partenaire(self):
         response = self.client.post(self.list_url, self.valid_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["nom"].lower(), self.valid_data["nom"].lower())
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Partenaire créé avec succès.")
+        self.assertEqual(response.data["data"]["nom"].lower(), self.valid_data["nom"].lower())
 
-        partenaire_id = response.data["id"]
+        partenaire_id = response.data["data"]["id"]
         log = LogUtilisateur.objects.filter(
             content_type=ContentType.objects.get_for_model(Partenaire),
             object_id=partenaire_id,
@@ -61,7 +63,9 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         url = reverse("partenaire-detail", args=[partenaire.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], partenaire.id)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Partenaire récupéré avec succès.")
+        self.assertEqual(response.data["data"]["id"], partenaire.id)
 
     def test_update_partenaire(self):
         partenaire = Partenaire.objects.create(**self.valid_data, created_by=self.user)
@@ -69,7 +73,9 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         patch = {"city": "Lyon"}
         response = self.client.patch(url, patch)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["city"], "Lyon")
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Partenaire mis à jour avec succès.")
+        self.assertEqual(response.data["data"]["city"], "Lyon")
 
         log = LogUtilisateur.objects.filter(
             content_type=ContentType.objects.get_for_model(Partenaire),
@@ -83,7 +89,9 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         partenaire = Partenaire.objects.create(**self.valid_data, created_by=self.user)
         url = reverse("partenaire-detail", args=[partenaire.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Partenaire archivé avec succès.")
 
         partenaire.refresh_from_db()
         self.assertFalse(partenaire.is_active)
@@ -95,6 +103,33 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
             created_by=self.user,
         )
         self.assertTrue(log.exists(), "Log de suppression manquant.")
+
+    def test_list_can_include_archived_partenaire(self):
+        archived = Partenaire.objects.create(
+            nom="ACME Archive",
+            type="entreprise",
+            default_centre=self.centre,
+            is_active=False,
+            created_by=self.user,
+        )
+
+        response = self.client.get(self.list_url, {"avec_archivees": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_ids = [item["id"] for item in response.data["data"]["results"]]
+        self.assertIn(archived.id, returned_ids)
+
+    def test_desarchiver_partenaire(self):
+        partenaire = Partenaire.objects.create(**self.valid_data, is_active=False, created_by=self.user)
+
+        response = self.client.post(reverse("partenaire-desarchiver", args=[partenaire.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Partenaire désarchivé avec succès.")
+
+        partenaire.refresh_from_db()
+        self.assertTrue(partenaire.is_active)
 
     def test_non_owner_non_staff_cannot_update_partenaire(self):
         """
@@ -128,7 +163,8 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
         url = reverse("partenaire-detail", args=[partenaire.id])
         response = self.client.patch(url, {"city": "Lyon"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["city"], "Lyon")
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["data"]["city"], "Lyon")
 
     def test_stagiaire_cannot_create_partenaire(self):
         self.client.force_authenticate(user=UserFactory(role=CustomUser.ROLE_STAGIAIRE))
@@ -159,3 +195,35 @@ class PartenaireViewSetTestCase(AuthenticatedTestCase):
 
         response_patch = self.client.patch(detail_url, {"city": "Lyon"})
         self.assertEqual(response_patch.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_commercial_can_create_partenaire_in_centre_scope(self):
+        commercial = UserFactory(role=CustomUser.ROLE_COMMERCIAL)
+        commercial.centres.add(self.centre)
+        self.client.force_authenticate(user=commercial)
+
+        response = self.client.post(self.list_url, self.valid_data)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["data"]["default_centre"]["id"], self.centre.id)
+
+    def test_charge_recrutement_can_see_in_scope_but_not_outside_scope(self):
+        partenaire_visible = Partenaire.objects.create(**self.valid_data, created_by=self.user)
+
+        autre_centre = Centre.objects.create(nom="Autre Centre", code_postal="78000")
+        partenaire_cache = Partenaire.objects.create(
+            nom="Partenaire Hors Scope",
+            type="entreprise",
+            default_centre=autre_centre,
+            created_by=self.user,
+        )
+
+        charge = UserFactory(role=CustomUser.ROLE_CHARGE_RECRUTEMENT)
+        charge.centres.add(self.centre)
+        self.client.force_authenticate(user=charge)
+
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        returned_ids = [item["id"] for item in response.data["data"]["results"]]
+        self.assertIn(partenaire_visible.id, returned_ids)
+        self.assertNotIn(partenaire_cache.id, returned_ids)

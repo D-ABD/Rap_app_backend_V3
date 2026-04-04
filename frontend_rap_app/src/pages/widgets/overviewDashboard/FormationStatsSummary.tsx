@@ -29,6 +29,13 @@ function omit<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): 
   return clone;
 }
 
+function formatPercent(value?: number | null) {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (value > 0 && value < 1) return `${value.toFixed(2)}%`;
+  if (value < 10) return `${value.toFixed(1).replace(/\.0$/, "")}%`;
+  return `${Math.round(value)}%`;
+}
+
 /* ──────────────────────────────────────────────────────────── */
 /* Composant principal                                         */
 /* ──────────────────────────────────────────────────────────── */
@@ -111,6 +118,18 @@ export default function FormationStatsSummary({
     { label: "Actives", value: k.nb_actives ?? 0, color: theme.palette.primary.main },
     { label: "À venir", value: k.nb_a_venir ?? 0, color: theme.palette.info.main },
     { label: "Terminées", value: k.nb_terminees ?? 0, color: theme.palette.success.main },
+    {
+      label: "Taux transformation",
+      value: formatPercent(k.taux_transformation),
+      color: theme.palette.info.main,
+      helper: "Inscrits GESPERS / candidats lies",
+    },
+    {
+      label: "Taux saturation",
+      value: formatPercent(k.taux_saturation),
+      color: theme.palette.primary.dark,
+      helper: "Inscrits GESPERS / places prevues",
+    },
     {
       label: "Inscrits saisis",
       value: k.total_inscrits_saisis ?? 0,
@@ -291,6 +310,14 @@ export default function FormationStatsSummary({
               >
                 {s.label}
               </Typography>
+              {"helper" in s && s.helper ? (
+                <Typography
+                  variant="caption"
+                  sx={{ color: theme.palette.text.secondary, display: "block", mt: 0.75 }}
+                >
+                  {s.helper}
+                </Typography>
+              ) : null}
             </Box>
           </Grid>
         ))}

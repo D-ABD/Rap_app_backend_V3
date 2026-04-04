@@ -1,6 +1,8 @@
 // src/pages/partenaires/PartenairesTable.tsx
 import { Checkbox, IconButton, Link, Typography } from "@mui/material";
+import BlockIcon from "@mui/icons-material/Block";
 import DeleteIcon from "@mui/icons-material/Delete";
+import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import type { Partenaire } from "../../types/partenaire";
 import ResponsiveTableTemplate, {
   type TableColumn,
@@ -50,6 +52,8 @@ interface Props {
   onToggleSelect: (id: number) => void;
   onRowClick: (id: number) => void;
   onDeleteClick: (id: number) => void;
+  onRestoreClick?: (id: number) => void;
+  onHardDeleteClick?: (id: number) => void;
 
   // URLs ou callbacks (rendent les compteurs cliquables)
   buildProspectionsUrl?: (partenaireId: number) => string;
@@ -69,6 +73,8 @@ export default function PartenairesTable({
   onToggleSelect,
   onRowClick,
   onDeleteClick,
+  onRestoreClick,
+  onHardDeleteClick,
   buildProspectionsUrl,
   buildAppairagesUrl,
   buildFormationsUrl,
@@ -296,16 +302,44 @@ export default function PartenairesTable({
       getRowId={(p) => p.id}
       cardTitle={(p) => p.nom}
       actions={(p) => (
-        <IconButton
-          color="error"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteClick(p.id);
-          }}
-          aria-label={`Supprimer ${p.nom}`}
-        >
-          <DeleteIcon />
-        </IconButton>
+        <>
+          {p.is_active ? (
+            <IconButton
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteClick(p.id);
+              }}
+              aria-label={`Archiver ${p.nom}`}
+            >
+              <DeleteIcon />
+            </IconButton>
+          ) : null}
+          {!p.is_active && onRestoreClick ? (
+            <IconButton
+              color="success"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRestoreClick(p.id);
+              }}
+              aria-label={`Restaurer ${p.nom}`}
+            >
+              <RestoreFromTrashIcon />
+            </IconButton>
+          ) : null}
+          {!p.is_active && onHardDeleteClick ? (
+            <IconButton
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                onHardDeleteClick(p.id);
+              }}
+              aria-label={`Supprimer définitivement ${p.nom}`}
+            >
+              <BlockIcon />
+            </IconButton>
+          ) : null}
+        </>
       )}
       onRowClick={(p) => onRowClick(p.id)} // ✅ clic ligne → callback
     />

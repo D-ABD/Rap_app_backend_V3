@@ -74,13 +74,13 @@ export default function AtelierTREEditPage() {
 
   const handleDelete = async () => {
     if (Number.isNaN(id)) return;
-    if (!window.confirm("Supprimer cet atelier ?")) return;
+    if (!window.confirm("Archiver cet atelier ?")) return;
     try {
       await remove(id);
-      toast.success("🗑️ Atelier supprimé");
+      toast.success("📦 Atelier archivé");
       navigate("/ateliers-tre");
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
     }
   };
 
@@ -140,7 +140,7 @@ export default function AtelierTREEditPage() {
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

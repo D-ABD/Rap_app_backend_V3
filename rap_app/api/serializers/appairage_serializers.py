@@ -9,6 +9,7 @@ from ...models.commentaires_appairage import CommentaireAppairage
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.partenaires import Partenaire
+from ..roles import is_admin_like, is_centre_scoped_staff
 
 
 def _get_last_commentaire_body(obj) -> str | None:
@@ -122,7 +123,7 @@ class AppairageBaseSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             return False
-        return getattr(user, "role", None) in ["admin", "superadmin", "staff"]
+        return is_admin_like(user) or is_centre_scoped_staff(user)
 
     @extend_schema_field(str)
     def _get_formation(self, obj):
@@ -372,8 +373,7 @@ class AppairageCreateUpdateSerializer(serializers.ModelSerializer):
     @extend_schema_field(str)
     def validate_statut(self, value):
         user = self.context.get("request").user
-        allowed_roles = {"admin", "superadmin", "staff"}
-        if not user or getattr(user, "role", None) not in allowed_roles:
+        if not user or not (is_admin_like(user) or is_centre_scoped_staff(user)):
             if self.instance is None and value != AppairageStatut.TRANSMIS:
                 raise serializers.ValidationError("Seul le statut 'Transmis' est autorisé à la création.")
             if self.instance is not None:

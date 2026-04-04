@@ -127,10 +127,10 @@ export default function ProspectionEditPage() {
     if (!prospectionId) return;
     try {
       await remove();
-      toast.success("Prospection supprimée avec succès.");
+      toast.success("Prospection archivée avec succès.");
       navigate(buildReturnUrl());
     } catch (err) {
-      toast.error(toApiError(err).message || "La prospection n'a pas pu être supprimée.");
+      toast.error(toApiError(err).message || "La prospection n'a pas pu être archivée.");
     }
   };
 
@@ -244,7 +244,7 @@ export default function ProspectionEditPage() {
             onClick={() => setOpenDeleteDialog(true)}
             disabled={removing}
           >
-            {removing ? "Suppression…" : "Supprimer"}
+            {removing ? "Archivage…" : "Archiver"}
           </Button>
         </Box>
       }
@@ -321,22 +321,22 @@ export default function ProspectionEditPage() {
         />
       </Box>
 
-      {/* Dialog suppression */}
+      {/* Dialog archivage */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         aria-labelledby="delete-dialog-title"
       >
-        <DialogTitle id="delete-dialog-title">Supprimer la prospection</DialogTitle>
+        <DialogTitle id="delete-dialog-title">Archiver la prospection</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Voulez-vous vraiment supprimer la prospection #{prospectionId} ?
+            Voulez-vous vraiment archiver la prospection #{prospectionId} ?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDeleteDialog(false)}>Annuler</Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={removing}>
-            {removing ? "Suppression…" : "Confirmer"}
+            {removing ? "Archivage…" : "Confirmer"}
           </Button>
         </DialogActions>
       </Dialog>

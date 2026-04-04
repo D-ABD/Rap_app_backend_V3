@@ -9,6 +9,7 @@ import { useMe } from "../../hooks/useUsers";
 import type { Candidat, CandidatFormData } from "../../types/candidat";
 import PageTemplate from "../../components/PageTemplate";
 import CandidatForm from "./CandidatForm";
+import { isAdminLikeRole, isCoreWriteRole } from "../../utils/roleGroups";
 
 function areFieldValuesEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -100,7 +101,7 @@ export default function CandidatEditPage() {
   const { data, loading: loadingItem } = useCandidat(candidatId);
   const { update, loading: saving } = useUpdateCandidat(candidatId);
 
-  const canEditFormation = !!me && ["admin", "superadmin", "staff"].includes(me.role);
+  const canEditFormation = !!me && isCoreWriteRole(me.role);
   const candidatDisplayName =
     [data?.prenom, data?.nom].filter(Boolean).join(" ").trim() ||
     data?.nom_complet ||
@@ -115,12 +116,12 @@ export default function CandidatEditPage() {
     try {
       const editableFields = new Set<keyof CandidatFormData>(BASE_EDITABLE_FIELDS);
 
-      if (me?.role && ["admin", "superadmin", "staff"].includes(me.role)) {
+      if (me?.role && isCoreWriteRole(me.role)) {
         STAFF_ONLY_FIELDS.forEach((field) => editableFields.add(field));
         editableFields.add("formation");
       }
 
-      if (me?.role && ["admin", "superadmin"].includes(me.role)) {
+      if (me?.role && isAdminLikeRole(me.role)) {
         ADMIN_ONLY_FIELDS.forEach((field) => editableFields.add(field));
       }
 
@@ -128,7 +129,7 @@ export default function CandidatEditPage() {
         Object.entries(values).filter(([key, value]) => {
           if (!editableFields.has(key as keyof CandidatFormData)) return false;
           if (value === undefined) return false;
-          if (areFieldValuesEqual(value, data[key as keyof Candidat])) return false;
+          if (data && areFieldValuesEqual(value, data[key as keyof Candidat])) return false;
           return value !== undefined;
         })
       ) as CandidatFormData;

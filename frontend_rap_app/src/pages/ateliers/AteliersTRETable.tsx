@@ -237,7 +237,7 @@ export default function AteliersTreTable({
                     </IconButton>
                     {onDelete && (
                       <IconButton
-                        aria-label="Supprimer"
+                        aria-label="Archiver"
                         size="small"
                         color="error"
                         onClick={() => onDelete(a.id)}

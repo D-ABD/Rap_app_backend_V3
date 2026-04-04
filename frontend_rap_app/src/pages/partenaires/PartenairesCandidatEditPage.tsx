@@ -192,7 +192,7 @@ export default function PartenaireCandidatEditPage() {
             onSubmit={handleSubmit}
             loading={loading}
             choices={choices}
-            readOnlyCentre={user?.role === "candidat"}
+            readOnlyCentre={["candidat", "stagiaire", "candidatuser"].includes((user?.role ?? "").toLowerCase())}
           />
           {error && (
             <Typography color="error" mt={2}>

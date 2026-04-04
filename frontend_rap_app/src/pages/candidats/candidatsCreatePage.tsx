@@ -11,6 +11,7 @@ import type { CandidatFormData } from "../../types/candidat";
 import CandidatForm from "./CandidatForm";
 import PageTemplate from "../../components/PageTemplate";
 import PostCreateChoiceModal from "../../components/modals/PostCreateChoiceModal";
+import { isCoreWriteRole } from "../../utils/roleGroups";
 
 type CreatedCandidatLite = {
   id: number;
@@ -27,7 +28,7 @@ export default function CandidatCreatePage() {
   const { user: me } = useMe();
   const { create, loading } = useCreateCandidat();
 
-  const canEditFormation = !!me && ["admin", "superadmin", "staff"].includes(me.role);
+  const canEditFormation = !!me && isCoreWriteRole(me.role);
   const presetFormation = useMemo(() => {
     const raw = searchParams.get("formation");
     if (!raw) return undefined;

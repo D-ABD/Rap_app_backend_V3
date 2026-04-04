@@ -12,6 +12,7 @@ type Props = {
   onChange: (next: CandidatFiltresValues) => void;
   onRefresh?: () => void;
   onReset?: () => void;
+  hideSearch?: boolean;
 };
 
 const map = <T,>(arr?: T[]) => arr ?? [];
@@ -54,6 +55,7 @@ export default function FiltresCandidatsPanel({
   onChange,
   onRefresh,
   onReset,
+  hideSearch = false,
 }: Props) {
   const onLocalSearchChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
     (e) => {
@@ -261,41 +263,42 @@ export default function FiltresCandidatsPanel({
     </Box>
   ) : (
     <>
-      {/* 🔎 Champ de recherche */}
-      <Stack
-        direction="row"
-        spacing={1}
-        alignItems="center"
-        mb={1.5}
-        flexWrap={{ xs: "wrap", md: "nowrap" }}
-      >
-        <label htmlFor="candidats-search-input" style={visuallyHidden as React.CSSProperties}>
-          Rechercher des candidats
-        </label>
-        <Typography component="span" id="candidats-search-help" sx={visuallyHidden}>
-          Tapez votre recherche. Appuyez sur Échap pour effacer.
-        </Typography>
+      {!hideSearch && (
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          mb={1.5}
+          flexWrap={{ xs: "wrap", md: "nowrap" }}
+        >
+          <label htmlFor="candidats-search-input" style={visuallyHidden as React.CSSProperties}>
+            Rechercher des candidats
+          </label>
+          <Typography component="span" id="candidats-search-help" sx={visuallyHidden}>
+            Tapez votre recherche. Appuyez sur Échap pour effacer.
+          </Typography>
 
-        <TextField
-          id="candidats-search-input"
-          type="search"
-          size="small"
-          fullWidth
-          value={values.search ?? ""}
-          onChange={onLocalSearchChange}
-          onKeyDown={onSearchKeyDown}
-          placeholder="🔎 Recherche (nom, email, ville, OSIA…)"
-          inputProps={{
-            "aria-describedby": "candidats-search-help",
-          }}
-        />
+          <TextField
+            id="candidats-search-input"
+            type="search"
+            size="small"
+            fullWidth
+            value={values.search ?? ""}
+            onChange={onLocalSearchChange}
+            onKeyDown={onSearchKeyDown}
+            placeholder="🔎 Recherche (nom, email, ville, OSIA…)"
+            inputProps={{
+              "aria-describedby": "candidats-search-help",
+            }}
+          />
 
-        {values.search && (
-          <Button variant="outlined" onClick={() => onChange({ ...values, search: "", page: 1 })}>
-            ✕
-          </Button>
-        )}
-      </Stack>
+          {values.search && (
+            <Button variant="outlined" onClick={() => onChange({ ...values, search: "", page: 1 })}>
+              ✕
+            </Button>
+          )}
+        </Stack>
+      )}
 
       {/* 📋 Filtres dynamiques */}
       <FilterTemplate<CandidatFiltresValues>

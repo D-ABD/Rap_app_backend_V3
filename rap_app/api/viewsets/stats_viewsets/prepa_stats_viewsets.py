@@ -26,6 +26,13 @@ from rest_framework.response import Response
 from ....models.prepa import Prepa
 from ...paginations import RapAppPagination
 from ...permissions import IsPrepaStaffOrAbove
+from ...roles import (
+    build_department_scope_q,
+    get_staff_centre_ids_cached,
+    get_staff_department_codes_cached,
+    is_admin_like,
+    use_department_stats_scope,
+)
 from ...serializers.base_serializers import EmptySerializer
 
 
@@ -155,12 +162,11 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         qs = self.queryset
         user = request.user
 
-        from ...roles import is_admin_like  # Le détail de cette fonction n’est pas ici
-
         # 🔹 Paramètres communs
         annee = int(request.query_params.get("annee", localdate().year))
         centre_param = request.query_params.get("centre")
         type_prepa = request.query_params.get("type_prepa")
+        department_scope = use_department_stats_scope(request)
 
         # ------------------------------------------------------
         # 🔹 1️⃣ ADMIN / SUPERADMIN → accès complet
@@ -172,21 +178,8 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # 🔹 2️⃣ STAFF / STAFF_READ / PREPA_STAFF → scope restreint
         # ------------------------------------------------------
         else:
-            # --- 1) Centres autorisés (via attribut custom du user : staff_centre_ids)
-            centre_ids = set(getattr(user, "staff_centre_ids", []) or [])
-
-            # Ajout des centres M2M si existants (user.centre m2m)
-            if hasattr(user, "centres") and user.centres.exists():
-                for c in user.centres.all():
-                    centre_ids.add(c.id)
-
-            # --- 2) Si aucun centre explicite → fallback départements associés
-            departements = set()
-            if not centre_ids and hasattr(user, "centres") and user.centres.exists():
-                for c in user.centres.all():
-                    cp = getattr(c, "code_postal", "") or ""
-                    if len(cp) >= 2:
-                        departements.add(cp[:2])
+            centre_ids = set(get_staff_centre_ids_cached(request) or [])
+            departements = set(get_staff_department_codes_cached(request) or [])
 
             # --- 3) Filtre “centre” explicite (query param) → prioritaire
             if centre_param:
@@ -197,14 +190,18 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                     qs = qs.filter(centre__nom__iexact=str(centre_param).strip())
 
             # --- 4) Accès centres autorisés du staff
+            elif department_scope and departements:
+                qs = qs.filter(build_department_scope_q("centre__code_postal", departements))
+
+            # --- 5) Accès centres autorisés du staff
             elif centre_ids:
                 qs = qs.filter(centre_id__in=centre_ids)
 
-            # --- 5) Accès fallback : département
+            # --- 6) Accès fallback : département
             elif departements:
-                qs = qs.filter(centre__code_postal__startswith=tuple(departements))
+                qs = qs.filter(build_department_scope_q("centre__code_postal", departements))
 
-            # --- 6) Aucun centre autorisé : accès vide
+            # --- 7) Aucun centre autorisé : accès vide
             else:
                 qs = qs.none()
 
@@ -488,12 +485,12 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         from django.utils.timezone import localdate
 
         from ....models.prepa import ObjectifPrepa, Prepa
-        from ...roles import is_admin_like
 
         user = request.user
         annee = int(request.query_params.get("annee", localdate().year))
         centre_param = request.query_params.get("centre")
         departement_param = request.query_params.get("departement")
+        department_scope = use_department_stats_scope(request)
 
         # ------------------------------------------------------
         # 🔍 1) Scope complet via _filtered_qs
@@ -516,25 +513,16 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         if is_admin_like(user):
             objectifs_qs = ObjectifPrepa.objects.filter(annee=annee)
         else:
-            centre_ids = list(getattr(user, "staff_centre_ids", []) or [])
-
-            # Ajout centres M2M
-            if hasattr(user, "centres") and user.centres.exists():
-                for c in user.centres.all():
-                    centre_ids.append(c.id)
-
-            departements = set()
-            if hasattr(user, "centres") and user.centres.exists():
-                for c in user.centres.all():
-                    cp = getattr(c, "code_postal", "") or ""
-                    if len(cp) >= 2:
-                        departements.add(cp[:2])
+            centre_ids = list(get_staff_centre_ids_cached(request) or [])
+            departements = set(get_staff_department_codes_cached(request) or [])
 
             objectifs_qs = ObjectifPrepa.objects.filter(annee=annee)
-            if centre_ids:
+            if department_scope and departements:
+                objectifs_qs = objectifs_qs.filter(build_department_scope_q("centre__code_postal", departements))
+            elif centre_ids:
                 objectifs_qs = objectifs_qs.filter(centre_id__in=centre_ids)
             elif departements:
-                objectifs_qs = objectifs_qs.filter(centre__code_postal__startswith=tuple(departements))
+                objectifs_qs = objectifs_qs.filter(build_department_scope_q("centre__code_postal", departements))
             else:
                 objectifs_qs = ObjectifPrepa.objects.none()
 

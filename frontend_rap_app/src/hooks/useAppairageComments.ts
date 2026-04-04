@@ -79,6 +79,7 @@ function buildListQuery(p: AppairageCommentListParams): QueryDict {
 
   // ✅ Nouveaux filtres d’état / archivage (alignés Prospection)
   if (typeof p.est_archive === "boolean") q.est_archive = p.est_archive;
+  if (p.est_archive === "both") q.est_archive = "both";
   if (p.activite) q.activite = p.activite;
   if (p.statut_commentaire) q.statut_commentaire = p.statut_commentaire;
 

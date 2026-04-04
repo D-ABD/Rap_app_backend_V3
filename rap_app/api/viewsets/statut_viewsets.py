@@ -3,10 +3,12 @@ import logging
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from ...api.permissions import IsStaffOrAbove
 from ...models.statut import Statut, calculer_couleur_texte, get_default_color
+from ..mixins import HardDeleteArchivedMixin
 from ..serializers.statut_serializers import StatutChoiceSerializer, StatutSerializer
 
 logger = logging.getLogger("application.statut")
@@ -40,13 +42,13 @@ logger = logging.getLogger("application.statut")
         responses={200: OpenApiResponse(response=StatutSerializer)},
     ),
     destroy=extend_schema(
-        summary="Supprimer un statut",
-        description="Supprime logiquement un statut en le désactivant (is_active = False).",
+        summary="Archiver un statut",
+        description="Archive un statut en le désactivant (`is_active = False`).",
         tags=["Statuts"],
-        responses={204: OpenApiResponse(description="Suppression réussie")},
+        responses={200: OpenApiResponse(description="Archivage réussi.")},
     ),
 )
-class StatutViewSet(viewsets.ModelViewSet):
+class StatutViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des statuts de formation.
 
@@ -60,9 +62,40 @@ class StatutViewSet(viewsets.ModelViewSet):
     actuel qui fait foi.
     """
 
-    queryset = Statut.objects.all()
     serializer_class = StatutSerializer
     permission_classes = [IsStaffOrAbove]
+    hard_delete_enabled = True
+
+    def get_queryset(self):
+        """
+        Exclut par défaut les statuts archivés pour aligner l'API avec la
+        suppression logique basée sur `is_active`.
+        """
+        qs = Statut.objects.all()
+        include_archived = str(self.request.query_params.get("avec_archivees", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        archives_seules = str(self.request.query_params.get("archives_seules", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        if archives_seules:
+            return qs.filter(is_active=False)
+        if include_archived:
+            return qs
+        return qs.filter(is_active=True)
+
+    def get_archived_aware_object(self):
+        instance = Statut.objects.filter(pk=self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)).first()
+        if instance is None:
+            raise NotFound("Statut introuvable.")
+        return instance
 
     def create(self, request, *args, **kwargs):
         """
@@ -95,15 +128,22 @@ class StatutViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Supprime un statut en base via delete() et renvoie une réponse
-        JSON de confirmation.
+        Conserve le verbe HTTP `DELETE` mais remplace la suppression
+        destructive par un archivage logique.
         """
         instance = self.get_object()
-        instance.delete()
-        logger.warning(f"🗑️ Statut supprimé définitivement : {instance}")
+        if not instance.is_active:
+            return Response(
+                {"success": True, "message": "Statut déjà archivé.", "data": instance.to_serializable_dict()},
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = False
+        instance.save(user=request.user, update_fields=["is_active"])
+        logger.warning(f"📦 Statut archivé logiquement : {instance}")
         return Response(
-            {"success": True, "message": "Statut supprimé avec succès.", "data": None},
-            status=status.HTTP_204_NO_CONTENT,
+            {"success": True, "message": "Statut archivé avec succès.", "data": instance.to_serializable_dict()},
+            status=status.HTTP_200_OK,
         )
 
     def retrieve(self, request, *args, **kwargs):
@@ -122,22 +162,54 @@ class StatutViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        Retourne la liste des statuts au format pagination simple
-        `{count, next, previous, results}`.
+        Retourne la liste paginée des statuts dans l'enveloppe API standard.
         """
         queryset = self.filter_queryset(self.get_queryset())
         page = self.paginate_queryset(queryset)
 
         if page is not None:
             serializer = self.get_serializer(page, many=True)
+            paginated = self.get_paginated_response(serializer.data).data
+            if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys()):
+                paginated["message"] = "Liste des statuts récupérée avec succès."
             return Response(
-                {
-                    "count": self.paginator.page.paginator.count,
-                    "next": self.paginator.get_next_link(),
-                    "previous": self.paginator.get_previous_link(),
-                    "results": serializer.data,
+                paginated
+                if isinstance(paginated, dict) and {"success", "message", "data"}.issubset(paginated.keys())
+                else {
+                    "success": True,
+                    "message": "Liste des statuts récupérée avec succès.",
+                    "data": paginated,
                 }
             )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(
+            {
+                "success": True,
+                "message": "Liste des statuts récupérée avec succès.",
+                "data": serializer.data,
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="desarchiver")
+    def desarchiver(self, request, *args, **kwargs):
+        """
+        Restaure un statut archivé et renvoie l'enveloppe API standard.
+        """
+        instance = self.get_archived_aware_object()
+        if instance.is_active:
+            return Response(
+                {"success": True, "message": "Statut déjà actif.", "data": instance.to_serializable_dict()},
+                status=status.HTTP_200_OK,
+            )
+
+        instance.is_active = True
+        instance.save(user=request.user, update_fields=["is_active"])
+        logger.info(f"♻️ Statut désarchivé : {instance}")
+        return Response(
+            {"success": True, "message": "Statut désarchivé avec succès.", "data": instance.to_serializable_dict()},
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         summary="Liste des choix possibles de statuts",
@@ -150,8 +222,8 @@ class StatutViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="choices", url_name="choices")
     def get_choices(self, request):
         """
-        Retourne les choix possibles pour `nom` au même format
-        `{count, next, previous, results}` que `list()`.
+        Retourne les choix possibles pour `nom` dans l'enveloppe API
+        standard, avec un payload paginé compatible.
         """
         results = [
             {
@@ -162,4 +234,10 @@ class StatutViewSet(viewsets.ModelViewSet):
             }
             for key, label in Statut.STATUT_CHOICES
         ]
-        return Response({"count": len(results), "next": None, "previous": None, "results": results})
+        return Response(
+            {
+                "success": True,
+                "message": "Choix des statuts récupérés avec succès.",
+                "data": {"count": len(results), "next": None, "previous": None, "results": results},
+            }
+        )

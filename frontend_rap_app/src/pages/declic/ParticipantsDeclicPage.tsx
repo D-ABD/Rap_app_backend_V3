@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
-import { useDeleteParticipantDeclic, useExportParticipantsDeclic, useParticipantDeclicDetail, useParticipantsDeclicList, useParticipantsDeclicMeta } from "src/hooks/useParticipantsDeclic";
+import { useDeleteParticipantDeclic, useDesarchiverParticipantDeclic, useExportParticipantsDeclic, useHardDeleteParticipantDeclic, useParticipantDeclicDetail, useParticipantsDeclicList, useParticipantsDeclicMeta } from "src/hooks/useParticipantsDeclic";
 import type { ParticipantDeclicFiltersValues } from "src/types/declic";
 import ParticipantsDeclicTable from "./ParticipantsDeclicTable";
 import ParticipantsDeclicDetailModal from "./ParticipantsDeclicDetailModal";
@@ -23,6 +23,8 @@ export default function ParticipantsDeclicPage() {
   const effectiveFilters = useMemo(() => ({ ...filters, page, page_size: pageSize }), [filters, page, pageSize]);
   const { data, loading, error } = useParticipantsDeclicList(effectiveFilters);
   const { remove } = useDeleteParticipantDeclic();
+  const { restore } = useDesarchiverParticipantDeclic();
+  const { hardDelete } = useHardDeleteParticipantDeclic();
   const { exportList, exportPresence, exportEmargement } = useExportParticipantsDeclic();
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function ParticipantsDeclicPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const { data: detailData } = useParticipantDeclicDetail(detailId);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
 
   const refresh = () => setFilters((prev) => ({ ...prev }));
 
@@ -43,11 +46,33 @@ export default function ParticipantsDeclicPage() {
     if (!deleteId) return;
     try {
       await remove(deleteId);
-      toast.success("Participant Déclic supprimé");
+      toast.success("Participant Déclic archivé");
       setDeleteId(null);
       refresh();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const onRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Participant Déclic restauré");
+      refresh();
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const onHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Participant Déclic supprimé définitivement");
+      setHardDeleteId(null);
+      refresh();
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -72,6 +97,32 @@ export default function ParticipantsDeclicPage() {
           </Button>
           <Button variant="outlined" onClick={() => exportEmargement()}>
             📝 Feuille d'émargement
+          </Button>
+          <Button
+            variant={filters.avec_archivees ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                avec_archivees: !prev.avec_archivees,
+                archives_seules: prev.archives_seules ? false : prev.archives_seules,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+          <Button
+            variant={filters.archives_seules ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                archives_seules: !prev.archives_seules,
+                avec_archivees: !prev.archives_seules ? true : prev.avec_archivees,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.archives_seules ? "Voir tout" : "Archives seules"}
           </Button>
           <TextField
             select
@@ -197,6 +248,8 @@ export default function ParticipantsDeclicPage() {
             items={items}
             onEdit={(id) => navigate(`/participants-declic/${id}/edit`)}
             onDelete={(id) => setDeleteId(id)}
+            onRestore={(id) => onRestore(id)}
+            onHardDelete={(id) => setHardDeleteId(id)}
             onRowClick={(id) => setDetailId(id)}
           />
         )}
@@ -212,12 +265,27 @@ export default function ParticipantsDeclicPage() {
       <Dialog open={Boolean(deleteId)} onClose={() => setDeleteId(null)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer ce participant Déclic ?</DialogContentText>
+          <DialogContentText>Archiver ce participant Déclic ?</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteId(null)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={onDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Supprimer définitivement ce participant Déclic archivé ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={onHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

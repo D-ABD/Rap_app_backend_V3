@@ -207,8 +207,17 @@ class CandidatSerializerTest(TestCase):
         self.assertEqual(candidat.code_postal, "75008")
 
     def test_create_update_serializer_syncs_formation_inscrits_when_gespers_changes(self):
+        candidat = Candidat.objects.create(
+            nom="Counter",
+            prenom="Tracked",
+            email="counter.tracked@example.com",
+            formation=self.formation,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+
         serializer = CandidatCreateUpdateSerializer(
-            instance=self.candidat,
+            instance=candidat,
             data={"inscrit_gespers": True},
             partial=True,
             context={"request": self._request()},
@@ -221,7 +230,7 @@ class CandidatSerializerTest(TestCase):
         self.assertEqual(self.formation.inscrits_crif, 1)
 
         serializer = CandidatCreateUpdateSerializer(
-            instance=self.candidat,
+            instance=candidat,
             data={"inscrit_gespers": False},
             partial=True,
             context={"request": self._request()},
@@ -232,3 +241,39 @@ class CandidatSerializerTest(TestCase):
 
         self.formation.refresh_from_db()
         self.assertEqual(self.formation.inscrits_crif, 0)
+
+    def test_commercial_can_assign_candidate_to_in_scope_formation(self):
+        commercial = CustomUser.objects.create_user_with_role(
+            email="commercial.candidat.serializer@example.com",
+            username="commercial_candidat_serializer",
+            password="Password123!",
+            role=CustomUser.ROLE_COMMERCIAL,
+        )
+        commercial.centres.add(self.centre)
+
+        request = self.factory.patch("/api/candidats/")
+        request.user = commercial
+
+        serializer = CandidatCreateUpdateSerializer(
+            instance=self.candidat,
+            data={"formation": self.formation.id},
+            partial=True,
+            context={"request": request},
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_charge_recrutement_can_see_peut_modifier_on_candidate(self):
+        charge = CustomUser.objects.create_user_with_role(
+            email="charge.candidat.serializer@example.com",
+            username="charge_candidat_serializer",
+            password="Password123!",
+            role=CustomUser.ROLE_CHARGE_RECRUTEMENT,
+        )
+        charge.centres.add(self.centre)
+
+        request = self.factory.get("/api/candidats/")
+        request.user = charge
+
+        serializer = CandidatListSerializer(instance=self.candidat, context={"request": request})
+        self.assertTrue(serializer.data["peut_modifier"])

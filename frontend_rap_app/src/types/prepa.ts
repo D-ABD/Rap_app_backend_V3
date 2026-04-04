@@ -20,6 +20,7 @@ export type StagiairePrepaStatut =
 
 export interface StagiairePrepa {
   id?: number;
+  is_active?: boolean;
   nom: string;
   prenom: string;
   telephone?: string | null;
@@ -97,6 +98,7 @@ export interface ObjectifPrepa {
 // 📊 Séance Prépa (Information collective ou atelier)
 export interface Prepa {
   id: number;
+  is_active?: boolean;
   type_prepa: string;
   type_prepa_display?: string;
   date_prepa: string;
@@ -213,6 +215,8 @@ export interface PrepaFiltresValues {
   date_max?: string;
   ordering?: string;
   page?: number;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -233,6 +237,8 @@ export interface StagiairePrepaFiltersValues {
   prepa_origine?: number;
   ordering?: string;
   page?: number;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 // -----------------------------------------------------------------------------

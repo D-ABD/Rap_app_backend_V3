@@ -15,6 +15,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -29,13 +32,15 @@ import SearchInput from "../../components/SearchInput";
 import PageTemplate from "../../components/PageTemplate";
 import ExportButtonProspection from "../../components/export_buttons/ExportButtonProspection";
 import ProspectionDetailModal from "./ProspectionDetailModal";
+import { isAdminLikeRole, isCandidateLikeRole } from "../../utils/roleGroups";
 
 export default function ProspectionPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectToCreate = useRedirectToCreateProspection();
   const { user } = useAuth();
-  const isCandidat = ["candidat", "stagiaire"].includes(user?.role ?? "");
+  const isCandidat = isCandidateLikeRole(user?.role);
+  const canHardDelete = isAdminLikeRole(user?.role);
 
   const toNum = (value: string | null): number | undefined => {
     if (!value) return undefined;
@@ -138,9 +143,13 @@ export default function ProspectionPage() {
   const clearSelection = () => setSelectedIds([]);
   const selectAll = () => setSelectedIds(prospections.map((p) => p.id));
 
-  // ── suppression
+  // ── archivage logique via endpoint DELETE legacy
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -148,7 +157,7 @@ export default function ProspectionPage() {
     try {
       const api = (await import("../../api/axios")).default;
       await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} prospection(s) supprimée(s)`);
+      toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
@@ -156,8 +165,8 @@ export default function ProspectionPage() {
     } catch (err) {
       const message =
         err && typeof err === "object" && "response" in err
-          ? "Impossible de supprimer une ou plusieurs prospections."
-          : "Une erreur inattendue est survenue pendant la suppression.";
+          ? "Impossible d'archiver une ou plusieurs prospections."
+          : "Une erreur inattendue est survenue pendant l'archivage.";
       toast.error(message);
     }
   };
@@ -176,6 +185,65 @@ export default function ProspectionPage() {
     setShowConfirm(true);
   };
 
+  const handleRestoreClick = async (id: number) => {
+    try {
+      const api = (await import("../../api/axios")).default;
+      await api.post(`/prospections/${id}/desarchiver/`);
+      toast.success("♻️ Prospection restaurée");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de restaurer cette prospection.");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      const api = (await import("../../api/axios")).default;
+      await api.post(`/prospections/${hardDeleteId}/hard-delete/`);
+      toast.success("🗑️ Prospection supprimée définitivement");
+      setHardDeleteId(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de supprimer définitivement cette prospection.");
+    }
+  };
+
+  const handleBulkChangeStatus = async () => {
+    if (!selectedIds.length || !bulkStatus) {
+      toast.error("Choisis d'abord un statut à appliquer.");
+      return;
+    }
+
+    setBulkStatusLoading(true);
+    try {
+      const api = (await import("../../api/axios")).default;
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => api.post(`/prospections/${id}/changer-statut/`, { statut: bulkStatus }))
+      );
+
+      const succeeded = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - succeeded;
+
+      if (failed === 0) {
+        toast.success(`Statut mis à jour pour ${succeeded} prospection(s).`);
+      } else if (succeeded === 0) {
+        toast.error("Aucune prospection n'a pu être mise à jour.");
+      } else {
+        toast.warning(`Statut mis à jour pour ${succeeded} prospection(s). ${failed} échec(s).`);
+      }
+
+      setShowBulkStatusDialog(false);
+      setBulkStatus("");
+      setSelectedIds([]);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de changer le statut des prospections sélectionnées.");
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  };
+
   return (
     <PageTemplate
       title="📈 Prospections"
@@ -191,6 +259,37 @@ export default function ProspectionPage() {
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const next = !prev.avec_archivees;
+                if (!next && prev.activite === "archivee") {
+                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                }
+                return { ...prev, avec_archivees: next ? true : undefined };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setFilters((prev) => {
+                const archivesOnly = prev.activite === "archivee";
+                return archivesOnly
+                  ? { ...prev, activite: undefined, avec_archivees: undefined }
+                  : { ...prev, activite: "archivee", avec_archivees: true };
+              });
+              setPage(1);
+            }}
+          >
+            {filters.activite === "archivee" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
           <SearchInput
@@ -225,8 +324,11 @@ export default function ProspectionPage() {
 
           {selectedIds.length > 0 && (
             <>
+              <Button variant="contained" onClick={() => setShowBulkStatusDialog(true)}>
+                Changer le statut ({selectedIds.length})
+              </Button>
               <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
@@ -298,11 +400,14 @@ export default function ProspectionPage() {
             onToggleSelect={toggleSelect}
             onRowClick={handleRowClick}
             onDeleteClick={handleDeleteClick}
+            onRestoreClick={handleRestoreClick}
+            onHardDeleteClick={(id) => setHardDeleteId(id)}
+            canHardDelete={canHardDelete}
           />
         </Box>
       )}
 
-      {/* ───────────── Confirmation suppression ───────────── */}
+      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -311,14 +416,62 @@ export default function ProspectionPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer cette prospection ?"
-              : `Supprimer les ${selectedIds.length} prospections sélectionnées ?`}
+              ? "Archiver cette prospection ?"
+              : `Archiver les ${selectedIds.length} prospections sélectionnées ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="error" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. La prospection archivée sera supprimée définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showBulkStatusDialog} onClose={() => setShowBulkStatusDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Changer le statut des prospections sélectionnées</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Choisis le nouveau statut à appliquer aux {selectedIds.length} prospection(s) sélectionnée(s).
+          </DialogContentText>
+          <FormControl fullWidth>
+            <InputLabel id="bulk-prospection-status-label">Nouveau statut</InputLabel>
+            <Select
+              labelId="bulk-prospection-status-label"
+              value={bulkStatus}
+              label="Nouveau statut"
+              onChange={(event: SelectChangeEvent) => setBulkStatus(event.target.value)}
+            >
+              {(filtres?.statut ?? []).map((choice) => (
+                <MenuItem key={choice.value} value={choice.value}>
+                  {choice.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowBulkStatusDialog(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleBulkChangeStatus} disabled={bulkStatusLoading || !bulkStatus}>
+            {bulkStatusLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>
       </Dialog>

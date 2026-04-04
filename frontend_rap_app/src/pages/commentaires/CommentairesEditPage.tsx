@@ -210,7 +210,10 @@ export default function CommentairesEditPage() {
                 <strong>{meta?.saturation_formation ?? "—"}%</strong>
               </Typography>
               <Typography variant="body2">
-                📈 Saturation actuelle : <strong>{meta?.taux_saturation ?? "—"}%</strong>
+                📈 Saturation actuelle (GESPERS) : <strong>{meta?.taux_saturation ?? "—"}%</strong>
+              </Typography>
+              <Typography variant="body2">
+                🔁 Transformation actuelle (GESPERS) : <strong>{meta?.taux_transformation ?? "—"}%</strong>
               </Typography>
             </Box>
 

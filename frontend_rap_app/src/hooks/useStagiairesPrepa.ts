@@ -50,6 +50,8 @@ export interface StagiairePrepaFilters {
   page?: number;
   page_size?: number;
   ordering?: string;
+  avec_archivees?: boolean;
+  archives_seules?: boolean;
 }
 
 export function useStagiairesPrepaList(filters: Partial<StagiairePrepaFilters> = {}) {
@@ -92,7 +94,7 @@ export function useStagiairePrepaDetail(id: number | null) {
     (async () => {
       try {
         const res = await api.get(`/stagiaires-prepa/${id}/`, { signal: ctrl.signal });
-        setData(res.data);
+        setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -116,7 +118,7 @@ export function useStagiairesPrepaMeta() {
     (async () => {
       try {
         const res = await api.get("/stagiaires-prepa/meta/", { signal: ctrl.signal });
-        setData(res.data);
+        setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -151,6 +153,24 @@ export function useDeleteStagiairePrepa() {
   return {
     remove: async (id: number) => {
       await api.delete(`/stagiaires-prepa/${id}/`);
+    },
+  };
+}
+
+export function useDesarchiverStagiairePrepa() {
+  return {
+    restore: async (id: number) => {
+      const res = await api.post(`/stagiaires-prepa/${id}/desarchiver/`);
+      return res.data;
+    },
+  };
+}
+
+export function useHardDeleteStagiairePrepa() {
+  return {
+    hardDelete: async (id: number) => {
+      const res = await api.post(`/stagiaires-prepa/${id}/hard-delete/`);
+      return res.data;
     },
   };
 }

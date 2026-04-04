@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
-import { useDeleteStagiairePrepa, useExportStagiairesPrepa, useStagiairePrepaDetail, useStagiairesPrepaList, useStagiairesPrepaMeta } from "src/hooks/useStagiairesPrepa";
+import { useDeleteStagiairePrepa, useDesarchiverStagiairePrepa, useExportStagiairesPrepa, useHardDeleteStagiairePrepa, useStagiairePrepaDetail, useStagiairesPrepaList, useStagiairesPrepaMeta } from "src/hooks/useStagiairesPrepa";
 import type { StagiairePrepaFiltersValues } from "src/types/prepa";
 import StagiairesPrepaTable from "./StagiairesPrepaTable";
 import StagiairesPrepaDetailModal from "./StagiairesPrepaDetailModal";
@@ -26,6 +26,8 @@ export default function StagiairesPrepaPage() {
   );
   const { data, loading, error } = useStagiairesPrepaList(effectiveFilters);
   const { remove } = useDeleteStagiairePrepa();
+  const { restore } = useDesarchiverStagiairePrepa();
+  const { hardDelete } = useHardDeleteStagiairePrepa();
   const { exportList, exportPresence, exportEmargement } = useExportStagiairesPrepa();
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function StagiairesPrepaPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const { data: detailData } = useStagiairePrepaDetail(detailId);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
 
   const refresh = () => setFilters((prev) => ({ ...prev }));
 
@@ -47,11 +50,33 @@ export default function StagiairesPrepaPage() {
     if (!deleteId) return;
     try {
       await remove(deleteId);
-      toast.success("Stagiaire Prépa supprimé");
+      toast.success("Stagiaire Prépa archivé");
       setDeleteId(null);
       refresh();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const onRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Stagiaire Prépa restauré");
+      refresh();
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const onHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Stagiaire Prépa supprimé définitivement");
+      setHardDeleteId(null);
+      refresh();
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -76,6 +101,32 @@ export default function StagiairesPrepaPage() {
           </Button>
           <Button variant="outlined" onClick={() => exportEmargement()}>
             📝 Feuille d'émargement
+          </Button>
+          <Button
+            variant={filters.avec_archivees ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                avec_archivees: !prev.avec_archivees,
+                archives_seules: prev.archives_seules ? false : prev.archives_seules,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.avec_archivees ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+          <Button
+            variant={filters.archives_seules ? "contained" : "outlined"}
+            onClick={() => {
+              setFilters((prev) => ({
+                ...prev,
+                archives_seules: !prev.archives_seules,
+                avec_archivees: !prev.archives_seules ? true : prev.avec_archivees,
+              }));
+              setPage(1);
+            }}
+          >
+            {filters.archives_seules ? "Voir tout" : "Archives seules"}
           </Button>
           <TextField
             select
@@ -216,6 +267,8 @@ export default function StagiairesPrepaPage() {
             items={items}
             onEdit={(id) => navigate(`/prepa/stagiaires/${id}/edit`)}
             onDelete={(id) => setDeleteId(id)}
+            onRestore={(id) => onRestore(id)}
+            onHardDelete={(id) => setHardDeleteId(id)}
             onRowClick={(id) => setDetailId(id)}
           />
         )}
@@ -231,12 +284,27 @@ export default function StagiairesPrepaPage() {
       <Dialog open={Boolean(deleteId)} onClose={() => setDeleteId(null)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer ce stagiaire Prépa ?</DialogContentText>
+          <DialogContentText>Archiver ce stagiaire Prépa ?</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteId(null)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={onDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Supprimer définitivement ce stagiaire Prépa archivé ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={onHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

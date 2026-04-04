@@ -182,6 +182,44 @@ export const useDeleteCV = () => {
   return { remove, loading };
 };
 
+export const useRestoreCV = () => {
+  const [loading, setLoading] = useState(false);
+
+  const restore = async (id: number) => {
+    setLoading(true);
+
+    try {
+      const res = await api.post(`${BASE_URL}${id}/desarchiver/`);
+      return { success: true, data: res.data };
+    } catch (err: any) {
+      return { success: false, error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { restore, loading };
+};
+
+export const useHardDeleteCV = () => {
+  const [loading, setLoading] = useState(false);
+
+  const hardDelete = async (id: number) => {
+    setLoading(true);
+
+    try {
+      const res = await api.post(`${BASE_URL}${id}/hard-delete/`);
+      return { success: true, data: res.data };
+    } catch (err: any) {
+      return { success: false, error: err };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { hardDelete, loading };
+};
+
 
 // =======================================================
 // 📌 MES DOCUMENTS (pour candidats)

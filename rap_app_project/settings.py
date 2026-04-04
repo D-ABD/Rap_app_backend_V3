@@ -7,11 +7,13 @@ Lit les variables d'environnement nécessaires à la configuration.
 
 from pathlib import Path
 from datetime import timedelta
+import mimetypes
 import os
 import sys
 import warnings
 from decouple import Config, RepositoryEnv
 from django.core.exceptions import ImproperlyConfigured
+from openpyxl.packaging import manifest as openpyxl_manifest
 
 # Répertoire de base du projet
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,6 +21,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Chargement du fichier d'environnement (.env.local prioritaire)
 env_path = BASE_DIR / ".env.local" if os.path.exists(BASE_DIR / ".env.local") else BASE_DIR / ".env"
 config = Config(RepositoryEnv(str(env_path)))
+
+# openpyxl consulte directement le registre strict `mimetypes.types_map[True]`.
+# Sur certains environnements macOS, `.webp` n'y est pas présent par défaut.
+for strict in (True, False):
+    mimetypes.add_type("image/webp", ".webp", strict=strict)
+    try:
+        mimetypes.types_map[strict][".webp"] = "image/webp"
+    except Exception:
+        pass
+
+# OpenPyXL embarque sa propre table de mimetypes sous forme de tuple
+# `(common_types, types_map)` et consulte `types_map[True][ext]`.
+try:
+    common_types, strict_types = openpyxl_manifest.mimetypes.types_map
+    common_types[".webp"] = "image/webp"
+    strict_types[".webp"] = "image/webp"
+except Exception:
+    pass
 
 # Désactive certains avertissements en production
 if not config("DEBUG", default="False").lower() == "true":

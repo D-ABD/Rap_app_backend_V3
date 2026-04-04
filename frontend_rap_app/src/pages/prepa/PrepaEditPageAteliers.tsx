@@ -76,17 +76,17 @@ export default function PrepaEditPageAteliers() {
   };
 
   /* ─────────────────────────────── */
-  /* 🗑️ Suppression */
+  /* 📦 Archivage */
   /* ─────────────────────────────── */
   const handleDelete = async () => {
     if (Number.isNaN(id)) return;
-    if (!window.confirm("Supprimer cette séance Prépa ?")) return;
+    if (!window.confirm("Archiver cette séance Prépa ?")) return;
     try {
       await remove(id);
-      toast.success("Séance Prepa supprimée avec succès.");
+      toast.success("Séance Prepa archivée avec succès.");
       navigate("/prepa");
     } catch {
-      toast.error("La séance Prepa n'a pas pu être supprimée.");
+      toast.error("La séance Prepa n'a pas pu être archivée.");
     }
   };
 
@@ -156,7 +156,7 @@ export default function PrepaEditPageAteliers() {
       onBack={() => navigate(-1)}
       actions={
         <Button color="error" variant="outlined" onClick={handleDelete}>
-          Supprimer
+          Archiver
         </Button>
       }
     >

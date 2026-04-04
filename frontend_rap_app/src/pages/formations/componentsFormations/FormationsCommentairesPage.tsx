@@ -20,6 +20,7 @@ import { useCommentaires } from "../../../hooks/useCommentaires";
 import api from "../../../api/axios";
 import type { Formation } from "../../../types/formation";
 import CommentaireContent from "../../commentaires/CommentaireContent";
+import ExportButtonCommentaires from "../../../components/export_buttons/ExportButtonCommentaires";
 
 export default function FormationsCommentairesPage() {
   const { formationId } = useParams();
@@ -121,7 +122,13 @@ export default function FormationsCommentairesPage() {
                 ✍ {commentaire.auteur} — 📅 {commentaire.date}
                 {commentaire.heure && ` à ${commentaire.heure}`}
                 {commentaire.saturation_formation !== undefined &&
-                  ` — 🌡️ ${commentaire.saturation_formation}%`}
+                  ` — 🧪 Sat. commentaire ${commentaire.saturation_formation}%`}
+                {commentaire.taux_saturation !== undefined &&
+                  commentaire.taux_saturation !== null &&
+                  ` — 📈 Sat. actuelle (GESPERS) ${commentaire.taux_saturation}%`}
+                {commentaire.taux_transformation !== undefined &&
+                  commentaire.taux_transformation !== null &&
+                  ` — 🔁 Transfo actuelle (GESPERS) ${commentaire.taux_transformation}%`}
                 {commentaire.is_edited && " — ✏️ modifié"}
               </Typography>
 
@@ -137,6 +144,16 @@ export default function FormationsCommentairesPage() {
         ))}
 
         <Stack direction="row" justifyContent="center" spacing={2} sx={{ mt: 3, flexWrap: "wrap" }}>
+          <ExportButtonCommentaires
+            data={commentaires.map((c) => ({
+              ...c,
+              created_at: c.created_at ?? "",
+            }))}
+            requestParams={{ formation: id }}
+            totalCount={commentaires.length}
+            label="Exporter"
+          />
+
           {displayLimit < commentaires.length ? (
             <MuiButton variant="outlined" onClick={handleVoirPlus}>
               🔽 Voir plus de commentaires

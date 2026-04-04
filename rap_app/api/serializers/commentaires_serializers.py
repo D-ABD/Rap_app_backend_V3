@@ -11,6 +11,34 @@ from rest_framework import serializers
 
 from ...models.commentaires import Commentaire
 
+
+def _commentaire_candidate_counts(formation):
+    if not formation:
+        return 0, 0
+    candidats = formation.candidats.all()
+    nb_candidats = candidats.count()
+    nb_inscrits_gespers = candidats.filter(inscrit_gespers=True).count()
+    return nb_candidats, nb_inscrits_gespers
+
+
+def _commentaire_current_taux_saturation(formation):
+    if not formation:
+        return None
+    total_places = getattr(formation, "total_places", 0) or 0
+    if total_places <= 0:
+        return 0.0
+    _, nb_inscrits_gespers = _commentaire_candidate_counts(formation)
+    return round((nb_inscrits_gespers / total_places) * 100, 2)
+
+
+def _commentaire_current_taux_transformation(formation):
+    if not formation:
+        return None
+    nb_candidats, nb_inscrits_gespers = _commentaire_candidate_counts(formation)
+    if nb_candidats <= 0:
+        return 0.0
+    return round((nb_inscrits_gespers / nb_candidats) * 100, 2)
+
 ALLOWED_TAGS = ["b", "i", "strike", "span", "p", "br"]
 ALLOWED_ATTRIBUTES = {"span": ["style"]}
 css_sanitizer = CSSSanitizer(
@@ -48,6 +76,7 @@ css_sanitizer = CSSSanitizer(
                     "contenu": "<p><strong>Très bon module</strong>, mais un peu trop dense.</p>",
                     "saturation_formation": 72,
                     "taux_saturation": 78,
+                    "taux_transformation": 52,
                     "saturation_commentaires": 74,
                     "auteur": "Jean Dupont",
                     "created_at": "2025-05-12T14:30:00Z",
@@ -96,6 +125,7 @@ class CommentaireSerializer(serializers.ModelSerializer):
 
     saturation_formation = serializers.FloatField(read_only=True)
     taux_saturation = serializers.SerializerMethodField()
+    taux_transformation = serializers.SerializerMethodField()
     saturation_commentaires = serializers.SerializerMethodField()
 
     class Meta:
@@ -115,6 +145,7 @@ class CommentaireSerializer(serializers.ModelSerializer):
             "saturation",
             "saturation_formation",
             "taux_saturation",
+            "taux_transformation",
             "saturation_commentaires",
             "auteur",
             "created_at",
@@ -167,9 +198,15 @@ class CommentaireSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(str)
     def get_taux_saturation(self, obj):
-        """Taux de saturation de la formation liée."""
+        """Taux de saturation actuel basé sur les inscrits GESPERS et les places prévues."""
         formation = getattr(obj, "formation", None)
-        return getattr(formation, "taux_saturation", None) if formation else None
+        return _commentaire_current_taux_saturation(formation)
+
+    @extend_schema_field(str)
+    def get_taux_transformation(self, obj):
+        """Taux de transformation actuel basé sur les inscrits GESPERS et les candidats liés."""
+        formation = getattr(obj, "formation", None)
+        return _commentaire_current_taux_transformation(formation)
 
     @extend_schema_field(str)
     def get_saturation_commentaires(self, obj):
@@ -194,12 +231,12 @@ class CommentaireSerializer(serializers.ModelSerializer):
         return cleaned
 
     def create(self, validated_data):
-        """Crée le commentaire, affecte saturation_formation si la formation a l'attribut, et created_by si utilisateur authentifié."""
+        """Crée le commentaire en figeant la saturation métier actuelle de la formation."""
         request = self.context.get("request")
         formation = validated_data.get("formation")
 
-        if formation and hasattr(formation, "saturation"):
-            validated_data["saturation_formation"] = formation.saturation
+        if formation:
+            validated_data["saturation_formation"] = _commentaire_current_taux_saturation(formation)
 
         commentaire = Commentaire(**validated_data)
         if request and request.user.is_authenticated:

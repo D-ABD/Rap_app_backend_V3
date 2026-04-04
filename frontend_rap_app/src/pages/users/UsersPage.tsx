@@ -78,13 +78,13 @@ export default function UsersPage() {
     try {
       const api = await import("../../api/axios");
       await Promise.all(idsToDelete.map((id) => api.default.delete(`/users/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} utilisateur(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} utilisateur(s) désactivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       fetchData();
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de la désactivation");
     }
   };
 
@@ -162,7 +162,7 @@ export default function UsersPage() {
           {selectedIds.length > 0 && (
             <>
               <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Désactiver ({selectedIds.length})
               </Button>
               <Button color="success" variant="contained" onClick={handleActivate}>
                 ✅ Activer
@@ -253,14 +253,14 @@ export default function UsersPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer cet utilisateur ?"
-              : `Supprimer les ${selectedIds.length} utilisateurs sélectionnés ?`}
+              ? "Désactiver cet utilisateur ?"
+              : `Désactiver les ${selectedIds.length} utilisateurs sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Désactiver
           </Button>
         </DialogActions>
       </Dialog>

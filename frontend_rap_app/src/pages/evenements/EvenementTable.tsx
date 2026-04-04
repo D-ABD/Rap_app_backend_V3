@@ -65,7 +65,7 @@ export default function EvenementTable({ evenements, onRowClick, onEdit, onDelet
             Modifier
           </Button>
           <Button size="small" color="error" variant="outlined" onClick={(e) => { e.stopPropagation(); onDelete(row.id); }}>
-            Supprimer
+            Archiver
           </Button>
         </Stack>
       )}

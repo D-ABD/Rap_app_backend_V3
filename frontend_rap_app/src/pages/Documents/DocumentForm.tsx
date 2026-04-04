@@ -73,7 +73,7 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
     import("../../api/axios").then((api) => {
       api.default
         .get(`/formations/${id}/`)
-        .then((res) => setFormationNom(res.data.nom))
+        .then((res) => setFormationNom(res.data?.data?.nom ?? res.data?.nom))
         .catch(() => toast.error("Formation introuvable"))
         .finally(() => setLoading(false));
     });

@@ -129,7 +129,7 @@ export function useRapportChoices() {
     setError(null);
     try {
       const response = await api.get<RapportChoices>("/rapports/choices/");
-      setData(response.data);
+      setData((response.data as { data?: RapportChoices })?.data ?? response.data);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       setError(axiosError.response?.data?.message || axiosError.message || "Erreur de chargement des choix.");

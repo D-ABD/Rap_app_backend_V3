@@ -44,11 +44,11 @@ export default function RapportsPage() {
     if (!deleteTarget) return;
     try {
       await deleteRapport(deleteTarget.id);
-      toast.success("Rapport supprimé avec succès.");
+      toast.success("Rapport archivé avec succès.");
       setDeleteTarget(null);
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de la suppression du rapport.");
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'archivage du rapport.");
     }
   };
 
@@ -177,12 +177,12 @@ export default function RapportsPage() {
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Supprimer ce rapport ?</DialogContentText>
+          <DialogContentText>Archiver ce rapport ?</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>Annuler</Button>
           <Button color="error" onClick={() => void handleDelete()}>
-            Supprimer
+            Archiver
           </Button>
         </DialogActions>
       </Dialog>

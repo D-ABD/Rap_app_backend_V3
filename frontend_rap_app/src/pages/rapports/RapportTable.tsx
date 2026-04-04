@@ -71,7 +71,7 @@ export default function RapportTable({ rapports, onOpen, onEdit, onDelete, onExp
                     Modifier
                   </Button>
                   <Button size="small" color="error" onClick={() => onDelete(rapport)}>
-                    Supprimer
+                    Archiver
                   </Button>
                 </TableCell>
               </TableRow>

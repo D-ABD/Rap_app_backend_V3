@@ -10,6 +10,7 @@ import type { ProspectionCommentCreateInput } from "../../../types/prospectionCo
 import { useCreateProspectionComment } from "../../../hooks/useProspectionComments";
 import { useAuth } from "../../../hooks/useAuth";
 import PostCreateChoiceModal from "../../../components/modals/PostCreateChoiceModal";
+import { isCoreStaffRole } from "../../../utils/roleGroups";
 
 type CreatedCommentLite = {
   id: number;
@@ -23,7 +24,7 @@ export default function ProspectionCommentCreatePage() {
   const { create } = useCreateProspectionComment();
   const { user } = useAuth();
 
-  const isStaff = ["staff", "admin", "superadmin"].includes(user?.role ?? "");
+  const isStaff = isCoreStaffRole(user?.role);
 
   const prefilledProspectionId =
     prospectionId && Number.isFinite(Number(prospectionId)) ? Number(prospectionId) : undefined;

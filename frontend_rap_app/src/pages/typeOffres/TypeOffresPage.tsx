@@ -34,6 +34,7 @@ type TypeOffre = {
   autre: string;
   couleur: string;
   is_personnalise: boolean;
+  is_active: boolean;
 };
 
 type TypeOffreChoice = {
@@ -48,6 +49,9 @@ export default function TypeOffresPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [choicesMap, setChoicesMap] = useState<Record<string, TypeOffreChoice>>({});
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
@@ -59,7 +63,13 @@ export default function TypeOffresPage() {
   const { data, loading, error, fetchData } = useFetch<{
     results: TypeOffre[];
     count: number;
-  }>("/typeoffres/", { search: search.trim(), page, page_size: pageSize });
+  }>("/typeoffres/", {
+    search: search.trim(),
+    page,
+    page_size: pageSize,
+    ...(includeArchived ? { avec_archivees: true } : {}),
+    ...(archivesOnly ? { archives_seules: true } : {}),
+  });
 
   const typeoffres = data?.results || [];
 
@@ -109,13 +119,39 @@ export default function TypeOffresPage() {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
       await Promise.all(idsToDelete.map((id) => api.delete(`/typeoffres/${id}/`)));
-      toast.success(`🗑️ ${idsToDelete.length} type(s) supprimé(s)`);
+      toast.success(`📦 ${idsToDelete.length} type(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/typeoffres/${id}/desarchiver/`);
+      toast.success("Type d’offre restauré");
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      const mod = await import("../../api/axios");
+      const api = mod.default as import("axios").AxiosInstance;
+      await api.post(`/typeoffres/${hardDeleteId}/hard-delete/`);
+      toast.success("Type d’offre supprimé définitivement");
+      setHardDeleteId(null);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Erreur lors de la suppression définitive");
     }
   };
 
@@ -151,10 +187,43 @@ export default function TypeOffresPage() {
             ➕ Ajouter un type
           </Button>
 
+          <Button
+            variant={includeArchived || archivesOnly ? "contained" : "outlined"}
+            onClick={() => {
+              if (includeArchived || archivesOnly) {
+                setIncludeArchived(false);
+                setArchivesOnly(false);
+              } else {
+                setIncludeArchived(true);
+              }
+              setPage(1);
+            }}
+          >
+            {includeArchived || archivesOnly ? "Masquer archivés" : "Inclure archivés"}
+          </Button>
+
+          {(includeArchived || archivesOnly) && (
+            <Button
+              variant={archivesOnly ? "contained" : "outlined"}
+              onClick={() => {
+                if (archivesOnly) {
+                  setArchivesOnly(false);
+                  setIncludeArchived(false);
+                } else {
+                  setArchivesOnly(true);
+                  setIncludeArchived(true);
+                }
+                setPage(1);
+              }}
+            >
+              {archivesOnly ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
           {selectedIds.length > 0 && (
             <>
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
-                🗑️ Supprimer ({selectedIds.length})
+                📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
@@ -256,17 +325,44 @@ export default function TypeOffresPage() {
                   </Box>
                 </Stack>
 
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedId(type.id);
-                    setShowConfirm(true);
-                  }}
-                >
-                  🗑️ Supprimer
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  {type.is_active ? (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(type.id);
+                        setShowConfirm(true);
+                      }}
+                    >
+                      📦 Archiver
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleRestore(type.id);
+                        }}
+                      >
+                        Restaurer
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHardDeleteId(type.id);
+                        }}
+                      >
+                        Supprimer définitivement
+                      </Button>
+                    </>
+                  )}
+                </Stack>
               </Paper>
             );
           })}
@@ -282,14 +378,32 @@ export default function TypeOffresPage() {
         <DialogContent>
           <DialogContentText>
             {selectedId
-              ? "Supprimer ce type d’offre ?"
-              : `Supprimer les ${selectedIds.length} types sélectionnés ?`}
+              ? "Archiver ce type d’offre ?"
+              : `Archiver les ${selectedIds.length} types sélectionnés ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
-            Supprimer
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="warning" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette action est irréversible. Supprimer définitivement ce type d’offre archivé ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

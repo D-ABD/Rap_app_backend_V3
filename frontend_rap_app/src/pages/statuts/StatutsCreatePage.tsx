@@ -25,7 +25,8 @@ export default function StatutsCreatePage() {
 
   useEffect(() => {
     api.get("/statuts/choices/").then((res) => {
-      setChoices(res.data.results);
+      const rawChoices = res.data?.data?.results;
+      setChoices(Array.isArray(rawChoices) ? rawChoices : []);
     });
   }, []);
 

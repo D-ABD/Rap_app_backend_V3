@@ -93,7 +93,9 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
     def test_roles_endpoint(self):
         response = self.client.get(self.roles_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("stagiaire", response.data["data"])
+        self.assertEqual(response.data["message"], "Liste des rôles récupérée avec succès.")
+        values = [item["value"] for item in response.data["data"]]
+        self.assertIn("stagiaire", values)
         self.assertTrue(response.data["success"])
 
     def test_admin_can_reactivate_inactive_user(self):
@@ -102,6 +104,9 @@ class CustomUserViewSetTestCase(AuthenticatedTestCase):
         response = self.client.post(reverse("user-reactivate", args=[inactive_user.id]))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Utilisateur réactivé avec succès.")
+        self.assertIsNone(response.data["data"])
         inactive_user.refresh_from_db()
         self.assertTrue(inactive_user.is_active)
 

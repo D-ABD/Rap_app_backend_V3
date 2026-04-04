@@ -174,7 +174,8 @@ class CerfaContrat(models.Model):
     Ce modèle stocke à plat les données administratives du contrat afin de :
     - figer les informations au moment de la génération,
     - permettre un pré-remplissage depuis les modèles métier,
-    - conserver un historique stable même si les données sources évoluent ensuite.
+    - conserver un historique stable même si les données sources évoluent ensuite,
+    - permettre désormais un archivage logique via `is_active`.
     """
 
     pdf_fichier = models.FileField(
@@ -1203,9 +1204,14 @@ class CerfaContrat(models.Model):
         related_name="updated_cerfacontrat_set",
         help_text="Utilisateur ayant modifie le CERFA en dernier.",
     )
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Indique si le contrat CERFA est actif ou archive logiquement.",
+    )
 
     class Meta:
-        """Options de métadonnées : libellés admin et ordre par défaut (created_at décroissant)."""
+        """Options de métadonnées : libellés admin, tri et index de statut actif."""
 
         verbose_name = "CERFA Contrat complet"
         verbose_name_plural = "CERFAs Contrat complets"

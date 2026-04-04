@@ -12,6 +12,8 @@ interface Props {
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onRowClick?: (id: number) => void;
+  onToggleArchive?: (row: Formation) => void;
+  onHardDelete?: (row: Formation) => void;
 }
 
 const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString("fr-FR") : "—");
@@ -39,7 +41,13 @@ const getAppairagesCount = (row: Formation) =>
       ? row.appairages.length
       : null;
 
-export default function FormationTable({ formations, selectedIds, onToggleSelect }: Props) {
+export default function FormationTable({
+  formations,
+  selectedIds,
+  onToggleSelect,
+  onToggleArchive,
+  onHardDelete,
+}: Props) {
   const navigate = useNavigate();
   const [sortField, _setSortField] = useState<string | null>(null); // ✅ renommé
   const [sortAsc, _setSortAsc] = useState(true); // ✅ renommé
@@ -464,6 +472,32 @@ export default function FormationTable({ formations, selectedIds, onToggleSelect
             >
               Éditer
             </Button>
+            {onToggleArchive && (
+              <Button
+                size="small"
+                variant="outlined"
+                color={row.activite === "archivee" ? "success" : "inherit"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleArchive(row);
+                }}
+              >
+                {row.activite === "archivee" ? "Restaurer" : "Archiver"}
+              </Button>
+            )}
+            {onHardDelete && row.activite === "archivee" && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onHardDelete(row);
+                }}
+              >
+                Supprimer définitivement
+              </Button>
+            )}
           </Stack>
         )}
         onRowClick={(row) => handleOpenDetail(row.id)}

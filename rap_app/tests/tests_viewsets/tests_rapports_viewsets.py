@@ -107,7 +107,9 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
     def test_delete_rapport(self):
         url = reverse("rapport-detail", args=[self.rapport.id])
         response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Rapport archivé avec succès.")
 
         self.rapport.refresh_from_db()
         self.assertFalse(self.rapport.is_active)
@@ -143,8 +145,15 @@ class RapportViewSetTestCase(AuthenticatedTestCase):
     def test_choices_expose_phase_reporting_contract(self):
         response = self.client.get(reverse("rapport-choices"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("parcours_phase", response.data)
-        self.assertIn("reporting_contract", response.data)
-        self.assertEqual(response.data["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase")
-        self.assertTrue(response.data["reporting_contract"]["legacy_status_deprecated"])
-        self.assertEqual(response.data["reporting_contract"]["legacy_status_removal_stage"], "post_front_migration")
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Choix des rapports récupérés avec succès.")
+        self.assertIn("parcours_phase", response.data["data"])
+        self.assertIn("reporting_contract", response.data["data"])
+        self.assertEqual(
+            response.data["data"]["reporting_contract"]["recommended_candidate_phase_field"], "parcours_phase"
+        )
+        self.assertTrue(response.data["data"]["reporting_contract"]["legacy_status_deprecated"])
+        self.assertEqual(
+            response.data["data"]["reporting_contract"]["legacy_status_removal_stage"],
+            "post_front_migration",
+        )

@@ -25,6 +25,7 @@ from ...models.candidat import Candidat
 from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
 from ...services.report_builders import RapportDataBuilderService
+from ..mixins import HardDeleteArchivedMixin
 from ..roles import get_staff_centre_ids_cached, is_admin_like
 
 
@@ -54,13 +55,13 @@ from ..roles import get_staff_centre_ids_cached, is_admin_like
         responses={200: OpenApiResponse(description="Rapport mis à jour avec succès.")},
     ),
     destroy=extend_schema(
-        summary="🗑️ Supprimer un rapport",
-        description="Supprime logiquement un rapport (désactivation).",
+        summary="📦 Archiver un rapport",
+        description="Archive logiquement un rapport en le désactivant.",
         tags=["Rapports"],
-        responses={204: OpenApiResponse(description="Rapport désactivé avec succès ; le code renvoie actuellement un body JSON malgré le statut 204.")},
+        responses={200: OpenApiResponse(description="Rapport archivé avec succès.")},
     ),
 )
-class RapportViewSet(viewsets.ModelViewSet):
+class RapportViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD des rapports actifs.
 
@@ -79,6 +80,7 @@ class RapportViewSet(viewsets.ModelViewSet):
     serializer_class = RapportSerializer
     permission_classes = [IsStaffOrAbove]
     pagination_class = RapAppPagination
+    hard_delete_enabled = True
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["nom", "type_rapport", "periode"]
     ordering_fields = ["created_at", "date_debut", "date_fin"]
@@ -269,11 +271,8 @@ class RapportViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Effectue une suppression logique du rapport (`is_active = False`),
-        journalise l'action puis renvoie une réponse JSON de succès.
-
-        Le code renvoie actuellement un statut HTTP `204` tout en construisant
-        un body `{success, message, data}` ; cette combinaison reste la source
-        de vérité actuelle, même si elle est atypique pour un `DELETE`.
+        journalise l'action puis renvoie une réponse JSON de succès
+        cohérente avec un statut HTTP `200`.
         """
         instance = self.get_object()
         instance.is_active = False
@@ -282,11 +281,11 @@ class RapportViewSet(viewsets.ModelViewSet):
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
             user=request.user,
-            details="Suppression logique du rapport",
+            details="Archivage logique du rapport",
         )
         return Response(
-            {"success": True, "message": "Rapport supprimé avec succès.", "data": None},
-            status=status.HTTP_204_NO_CONTENT,
+            {"success": True, "message": "Rapport archivé avec succès.", "data": None},
+            status=status.HTTP_200_OK,
         )
 
     def create(self, request, *args, **kwargs):
@@ -449,7 +448,7 @@ class RapportChoicesView(APIView):
     def get(self, request):
         """
         Retourne les choix disponibles pour la création ou le filtrage des
-        rapports.
+        rapports, dans l'enveloppe API standard.
         """
 
         def serialize_choices(choices):
@@ -466,22 +465,27 @@ class RapportChoicesView(APIView):
 
         return Response(
             {
-                "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
-                "periode": serialize_choices(Rapport.PERIODE_CHOICES),
-                "format": serialize_choices(Rapport.FORMAT_CHOICES),
-                "parcours_phase": serialize_choices(Candidat.ParcoursPhase.choices),
-                "centres": [{"value": c.id, "label": c.nom} for c in centres_qs],
-                "type_offres": [{"value": t.id, "label": t.nom} for t in type_offres_qs],
-                "statuts": [{"value": s.id, "label": s.nom} for s in statuts_qs],
-                "formations": [{"value": f.id, "label": f.nom} for f in formations_qs],
-                "reporting_contract": {
-                    "legacy_candidate_status_field": "statut",
-                    "recommended_candidate_phase_field": "parcours_phase",
-                    "derived_candidate_phase_field": "parcours_phase_calculee",
-                    "legacy_status_supported": True,
-                    "legacy_status_deprecated": True,
-                    "legacy_status_removal_stage": "post_front_migration",
-                    "phase_compatible_report_types": sorted(Rapport.PHASE_COMPATIBLE_REPORT_TYPES),
+                "success": True,
+                "message": "Choix des rapports récupérés avec succès.",
+                "data": {
+                    "type_rapport": serialize_choices(Rapport.TYPE_CHOICES),
+                    "periode": serialize_choices(Rapport.PERIODE_CHOICES),
+                    "format": serialize_choices(Rapport.FORMAT_CHOICES),
+                    "parcours_phase": serialize_choices(Candidat.ParcoursPhase.choices),
+                    "centres": [{"value": c.id, "label": c.nom} for c in centres_qs],
+                    "type_offres": [{"value": t.id, "label": t.nom} for t in type_offres_qs],
+                    "statuts": [{"value": s.id, "label": s.nom} for s in statuts_qs],
+                    "formations": [{"value": f.id, "label": f.nom} for f in formations_qs],
+                    "reporting_contract": {
+                        "legacy_candidate_status_field": "statut",
+                        "recommended_candidate_phase_field": "parcours_phase",
+                        "derived_candidate_phase_field": "parcours_phase_calculee",
+                        "legacy_status_supported": True,
+                        "legacy_status_deprecated": True,
+                        "legacy_status_removal_stage": "post_front_migration",
+                        "phase_compatible_report_types": sorted(Rapport.PHASE_COMPATIBLE_REPORT_TYPES),
+                    },
                 },
-            }
+            },
+            status=status.HTTP_200_OK,
         )

@@ -18,7 +18,11 @@ import {
   Tooltip,
   IconButton,
 } from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
+import {
+  DeleteForever as DeleteForeverIcon,
+  Edit as EditIcon,
+  RestoreFromTrash as RestoreFromTrashIcon,
+} from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import type { Commentaire } from "../../types/commentaire";
@@ -133,6 +137,9 @@ interface Props {
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onClickRow?: (id: number) => void;
+  onRestore?: (id: number) => void;
+  onHardDelete?: (id: number) => void;
+  canHardDelete?: boolean;
 }
 
 /* ---------- Composant principal ---------- */
@@ -141,6 +148,9 @@ export default function CommentairesTable({
   selectedIds,
   onToggleSelect,
   onClickRow,
+  onRestore,
+  onHardDelete,
+  canHardDelete = false,
 }: Props) {
   const navigate = useNavigate();
 
@@ -220,7 +230,7 @@ export default function CommentairesTable({
                 {typeof c.saturation_formation === "number" && (
                   <Box mt={1}>
                     <Typography variant="caption" color="text.secondary">
-                      🧪 Saturation : <strong>{c.saturation_formation}%</strong>
+                      🧪 Saturation au moment du commentaire : <strong>{c.saturation_formation}%</strong>
                     </Typography>
                     <LinearProgress
                       variant="determinate"
@@ -282,6 +292,20 @@ export default function CommentairesTable({
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                {isArchived && onRestore && (
+                  <Tooltip title="Restaurer le commentaire">
+                    <IconButton size="small" color="success" onClick={() => onRestore(c.id)}>
+                      <RestoreFromTrashIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {isArchived && canHardDelete && onHardDelete && (
+                  <Tooltip title="Supprimer définitivement">
+                    <IconButton size="small" color="error" onClick={() => onHardDelete(c.id)}>
+                      <DeleteForeverIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </TableCell>
             </TableRow>
           );

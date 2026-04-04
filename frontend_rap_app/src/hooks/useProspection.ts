@@ -297,7 +297,7 @@ export function useUpdateProspection(id: number | string) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   🔹 useDeleteProspection — suppression
+   🔹 useDeleteProspection — archivage via endpoint DELETE legacy
    ──────────────────────────────────────────────────────────────────────────── */
 export function useDeleteProspection(id: number | string) {
   const [loading, setLoading] = useState(false);

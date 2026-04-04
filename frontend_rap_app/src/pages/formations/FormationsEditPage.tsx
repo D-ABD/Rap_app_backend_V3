@@ -71,14 +71,14 @@ export default function FormationsEditPage() {
   // ------------------------------------------------------------------
   const deleteCurrent = async () => {
     if (!formationId) return;
-    if (!window.confirm(`Supprimer définitivement la formation #${formationId} ?`)) return;
+    if (!window.confirm(`Archiver la formation #${formationId} ?`)) return;
 
     try {
       await deleteFormation();
-      toast.success("Formation supprimée avec succès.");
+      toast.success("Formation archivée avec succès.");
       navigate("/formations");
     } catch (err) {
-      toast.error(toApiError(err).message || "La formation n'a pas pu être supprimée.");
+      toast.error(toApiError(err).message || "La formation n'a pas pu être archivée.");
     }
   };
 
@@ -153,7 +153,7 @@ export default function FormationsEditPage() {
           </Button>
 
           <Button variant="outlined" color="error" onClick={deleteCurrent} disabled={removing}>
-            {removing ? "Suppression…" : "Supprimer"}
+            {removing ? "Archivage…" : "Archiver"}
           </Button>
         </Box>
       }

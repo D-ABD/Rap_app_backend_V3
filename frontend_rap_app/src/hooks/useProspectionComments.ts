@@ -289,10 +289,10 @@ export function useProspectionCommentFilterOptions(reloadKey = 0) {
     setError(null);
 
     api
-      .get<ProspectionCommentFilterOptions>(`${BASE}filter-options/`, {
+      .get<ApiObjectShape<ProspectionCommentFilterOptions>>(`${BASE}filter-options/`, {
         cancelToken: source.token,
       })
-      .then((res) => setData(res.data))
+      .then((res) => setData(extractObject<ProspectionCommentFilterOptions>(res.data)))
       .catch((err) => {
         if (!axios.isCancel(err)) {
           if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
