@@ -1,5 +1,5 @@
 // src/components/PageWrapper.tsx
-import { Container } from "@mui/material";
+import { Container, type SxProps, type Theme } from "@mui/material";
 import { ReactNode } from "react";
 
 type PageWrapperProps = {
@@ -10,6 +10,7 @@ type PageWrapperProps = {
   disableGutters?: boolean;
   /** si true -> prend toute la largeur */
   fullWidth?: boolean;
+  sx?: SxProps<Theme>;
 };
 
 export default function PageWrapper({
@@ -17,12 +18,16 @@ export default function PageWrapper({
   maxWidth = "lg",
   disableGutters = false,
   fullWidth = false,
+  sx,
 }: PageWrapperProps) {
   return (
     <Container
       maxWidth={fullWidth ? false : maxWidth}
       disableGutters={disableGutters}
-      sx={{ py: { xs: 2, sm: 3 } }}
+      sx={{
+        py: { xs: 2, sm: 3 },
+        ...sx,
+      }}
     >
       {children}
     </Container>

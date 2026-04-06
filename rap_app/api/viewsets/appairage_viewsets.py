@@ -17,7 +17,7 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
-from rest_framework import filters, status
+from rest_framework import filters, serializers, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -26,6 +26,11 @@ from ...models.appairage import Appairage, AppairageActivite, AppairageStatut
 from ...models.commentaires_appairage import CommentaireAppairage
 from ...services.placement_services import AppairagePlacementService, defer_appairage_snapshot_sync
 from ...utils.filters import AppairageFilterSet
+from ..openapi_docs import (
+    api_action_data_serializer,
+    api_object_envelope_serializer,
+    binary_file_response,
+)
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove
 from ..roles import is_admin_like, is_centre_scoped_staff
@@ -257,6 +262,11 @@ class AppairageViewSet(ScopedModelViewSet):
 
         AppairagePlacementService.sync_after_save(instance, actor=user, previous_candidat=previous_candidat)
 
+    @extend_schema(
+        summary="Consulter les métadonnées d'appairage",
+        description="Retourne les valeurs de référence nécessaires à l'initialisation des formulaires d'appairage sur le périmètre de l'utilisateur courant.",
+        responses={200: api_object_envelope_serializer("AppairageMetaResponse")},
+    )
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
         """
@@ -266,6 +276,18 @@ class AppairageViewSet(ScopedModelViewSet):
         serializer = AppairageMetaSerializer(instance={}, context={"request": request})
         return self.success_response(data=serializer.data, message="Métadonnées appairage récupérées avec succès.")
 
+    @extend_schema(
+        summary="Lister ou créer les commentaires d'un appairage",
+        description=(
+            "GET retourne l'historique des commentaires liés à l'appairage ciblé. "
+            "POST ajoute un nouveau commentaire sur cet appairage dans le même périmètre de droits."
+        ),
+        responses={
+            200: api_object_envelope_serializer("AppairageCommentairesListResponse"),
+            201: api_object_envelope_serializer("AppairageCommentairesCreateResponse"),
+            400: api_object_envelope_serializer("AppairageCommentairesErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["get", "post"], url_path="commentaires")
     def commentaires(self, request, pk=None):
         """Lit ou crée les commentaires attachés à un appairage donné."""
@@ -342,6 +364,11 @@ class AppairageViewSet(ScopedModelViewSet):
 
         return self.scope_queryset(qs)
 
+    @extend_schema(
+        summary="Consulter un appairage",
+        description="Retourne un appairage visible dans le périmètre de l'utilisateur, y compris lorsqu'il est déjà archivé.",
+        responses={200: api_object_envelope_serializer("AppairageDetailResponse")},
+    )
     def retrieve(self, request, *args, **kwargs):
         """
         [GET] /appairages/<id>/
@@ -351,6 +378,11 @@ class AppairageViewSet(ScopedModelViewSet):
         serializer = self.get_serializer(obj)
         return self.success_response(data=serializer.data, message="Appairage récupéré avec succès.")
 
+    @extend_schema(
+        summary="Créer un appairage",
+        description="Crée un appairage après validation métier, contrôle d'unicité et synchronisation explicite du placement candidat.",
+        responses={201: api_object_envelope_serializer("AppairageCreateResponse")},
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -366,6 +398,17 @@ class AppairageViewSet(ScopedModelViewSet):
             message="Appairage créé avec succès.",
         )
 
+    @extend_schema(
+        summary="Archiver un appairage",
+        description="Archive logiquement l'appairage ciblé sans suppression physique et renvoie un statut métier explicite.",
+        responses={
+            200: api_action_data_serializer(
+                "AppairageArchiveResponse",
+                {"status": serializers.CharField()},
+            ),
+            400: api_object_envelope_serializer("AppairageArchiveErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """
@@ -393,6 +436,17 @@ class AppairageViewSet(ScopedModelViewSet):
 
         return self.success_response(data={"status": "archived"}, message="Appairage archivé avec succès.")
 
+    @extend_schema(
+        summary="Désarchiver un appairage",
+        description="Restaure un appairage archivé et resynchronise le snapshot candidat associé.",
+        responses={
+            200: api_action_data_serializer(
+                "AppairageUnarchiveResponse",
+                {"status": serializers.CharField()},
+            ),
+            400: api_object_envelope_serializer("AppairageUnarchiveErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """
@@ -420,6 +474,11 @@ class AppairageViewSet(ScopedModelViewSet):
 
         return self.success_response(data={"status": "unarchived"}, message="Appairage désarchivé avec succès.")
 
+    @extend_schema(
+        summary="Archiver un appairage via DELETE",
+        description="Conserve l'URL historique de suppression tout en réalisant un archivage logique compatible front.",
+        responses={200: api_action_data_serializer("AppairageDeleteResponse", {"status": serializers.CharField()})},
+    )
     def destroy(self, request, *args, **kwargs):
         """
         Conserve la compatibilité avec `DELETE /appairages/<id>/` mais
@@ -499,13 +558,11 @@ class AppairageViewSet(ScopedModelViewSet):
         )
 
     @extend_schema(
-        summary="Exporter les appairages (Excel)",
-        description="Exporte les appairages filtrés au format Excel (.xlsx).",
+        summary="Exporter les appairages au format XLSX",
+        description="Exporte les appairages filtrés au format Excel en appliquant le même scope, les mêmes filtres et les mêmes règles d'archivage que la liste.",
         responses={
-            200: OpenApiResponse(
-                description="Fichier Excel généré avec succès.",
-                response=OpenApiTypes.BINARY,
-                examples=None,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): binary_file_response(
+                "Fichier Excel généré à partir des appairages exportés."
             )
         },
     )

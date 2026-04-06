@@ -144,6 +144,9 @@ export interface Appairage {
 
 export interface AppairageListItem {
   id: number;
+  /** Présents sur le détail / certaines listes API ; optionnels sur les lignes minimalistes */
+  candidat?: number;
+  partenaire?: number;
   candidat_nom: string;
   partenaire_nom: string;
   partenaire_contact_nom?: string | null;

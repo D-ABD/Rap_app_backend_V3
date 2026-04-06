@@ -109,15 +109,15 @@ export function useLogChoices() {
 
 export function useLogExports() {
   const exportXlsx = useCallback(async (params: LogFilters = {}) => {
-    await downloadBlob("/logs/export-xlsx/", "logs_utilisateurs.xlsx", params);
+    await downloadBlob("/logs/export-xlsx/", "logs_utilisateurs.xlsx", params as Record<string, unknown>);
   }, []);
 
   const exportCsv = useCallback(async (params: LogFilters = {}) => {
-    await downloadBlob("/logs/export-csv/", "logs_utilisateurs.csv", params);
+    await downloadBlob("/logs/export-csv/", "logs_utilisateurs.csv", params as Record<string, unknown>);
   }, []);
 
   const exportPdf = useCallback(async (params: LogFilters = {}) => {
-    await downloadBlob("/logs/export-pdf/", "logs_utilisateurs.pdf", params);
+    await downloadBlob("/logs/export-pdf/", "logs_utilisateurs.pdf", params as Record<string, unknown>);
   }, []);
 
   return { exportXlsx, exportCsv, exportPdf };

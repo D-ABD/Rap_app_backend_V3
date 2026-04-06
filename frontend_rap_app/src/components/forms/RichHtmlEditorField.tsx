@@ -47,7 +47,9 @@ export default function RichHtmlEditorField({
       onChange(text ? quill.root.innerHTML : "");
     };
     quill.on("text-change", sync);
-    return () => quill.off("text-change", sync);
+    return () => {
+      quill.off("text-change", sync);
+    };
   }, [onChange, quill]);
 
   return (

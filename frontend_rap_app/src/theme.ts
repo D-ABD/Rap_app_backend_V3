@@ -40,8 +40,24 @@ declare module "@mui/material/Chip" {
 
 export const getTheme = (mode: "light" | "dark") => {
   const isLight = mode === "light";
+  const softCardShadow = isLight
+    ? "0 10px 30px rgba(15,23,42,0.06), 0 2px 10px rgba(15,23,42,0.03)"
+    : "0 14px 34px rgba(0,0,0,0.34), 0 2px 12px rgba(0,0,0,0.18)";
+  const softCardHoverShadow = isLight
+    ? "0 18px 42px rgba(15,23,42,0.10), 0 6px 18px rgba(15,23,42,0.05)"
+    : "0 18px 42px rgba(0,0,0,0.42), 0 6px 18px rgba(0,0,0,0.24)";
 
   let theme = createTheme({
+    breakpoints: {
+      values: {
+        xs: 0,
+        sm: 640,
+        md: 960,
+        lg: 1280,
+        xl: 1536,
+      },
+    },
+
     palette: {
       mode,
 
@@ -82,8 +98,8 @@ export const getTheme = (mode: "light" | "dark") => {
       ...(isLight
         ? {
             background: {
-              default: "#F5F7FB",
-              paper: "#FFFFFF",
+              default: "#F2F5F9",
+              paper: "#FBFCFE",
             },
             text: {
               primary: "#0F172A",
@@ -92,7 +108,7 @@ export const getTheme = (mode: "light" | "dark") => {
           }
         : {
             background: {
-              default: "#0B1220",
+              default: "#0A1020",
               paper: "#111827",
             },
             text: {
@@ -350,26 +366,22 @@ export const getTheme = (mode: "light" | "dark") => {
           root: {
             position: "relative",
             overflow: "hidden",
-            borderRadius: 22,
+            borderRadius: 28,
             border: `1px solid ${
               isLight
                 ? "rgba(255,255,255,0.75)"
                 : "rgba(148,163,184,0.10)"
             }`,
             background: isLight
-              ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.90) 100%)"
+              ? "linear-gradient(180deg, rgba(251,252,254,0.98) 0%, rgba(255,255,255,0.94) 100%)"
               : "linear-gradient(180deg, rgba(17,24,39,0.92) 0%, rgba(15,23,42,0.92) 100%)",
             backdropFilter: "blur(10px)",
-            boxShadow: isLight
-              ? "0 10px 30px rgba(15,23,42,0.06)"
-              : "0 12px 32px rgba(0,0,0,0.38)",
+            boxShadow: softCardShadow,
             transition:
               "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
             "&:hover": {
               transform: "translateY(-2px)",
-              boxShadow: isLight
-                ? "0 18px 40px rgba(15,23,42,0.10)"
-                : "0 18px 40px rgba(0,0,0,0.48)",
+              boxShadow: softCardHoverShadow,
             },
           },
         },
@@ -536,13 +548,14 @@ export const getTheme = (mode: "light" | "dark") => {
       MuiTextField: {
         defaultProps: {
           variant: "outlined",
+          fullWidth: true,
         },
       },
 
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            borderRadius: 14,
+            borderRadius: 18,
             backgroundColor: isLight
               ? "rgba(255,255,255,0.82)"
               : "rgba(15,23,42,0.78)",
@@ -576,6 +589,12 @@ export const getTheme = (mode: "light" | "dark") => {
           root: {
             color: isLight ? "#64748B" : "#94A3B8",
           },
+        },
+      },
+
+      MuiFormControl: {
+        defaultProps: {
+          fullWidth: true,
         },
       },
 

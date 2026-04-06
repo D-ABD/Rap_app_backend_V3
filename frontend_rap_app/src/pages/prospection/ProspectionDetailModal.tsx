@@ -386,7 +386,6 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
     </Dialog>
   );
 }
-
 /* ---------- Sous-composants ---------- */
 const Section = React.memo(function Section({
   title,
@@ -446,3 +445,4 @@ const Field = React.memo(function Field({
     </Grid>
   );
 });
+

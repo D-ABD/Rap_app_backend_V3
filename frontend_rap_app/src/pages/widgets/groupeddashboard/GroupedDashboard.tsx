@@ -7,8 +7,8 @@ import AppairageGroupedTableWidget from "./AppairageGroupedTableWidget";
 import CandidatGroupedTableWidget from "./CandidatGroupedTableWidget";
 import AteliersTREGroupedWidget from "./AteliersTREGroupedWidget";
 import EvenementGroupedWidget from "./EvenementGroupedWidget";
-import PrepaGroupedWidget from "../../prepa/PrepaGroupedWidget";
-import DeclicGroupedWidget from "../../declic/DeclicGroupedWidget";
+import PrepaGroupedWidget from "./PrepaGroupedWidget";
+import DeclicGroupedWidget from "./DeclicGroupedWidget";
 
 export default function GroupedDashboard() {
   return (

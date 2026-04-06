@@ -261,7 +261,6 @@ export default function DeclicDetailModal({
     </Dialog>
   );
 }
-
 /* ─────────── Sous-composants ─────────── */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -305,3 +304,4 @@ function Field({ label, value }: { label: string; value?: string | number | null
     </Grid>
   );
 }
+

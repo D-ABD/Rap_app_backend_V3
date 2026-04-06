@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import {
   canAccessDeclicRole,
@@ -224,8 +224,9 @@ export function useSidebarItems(): SidebarItem[] {
     "Ajouter un CV": ["/cvtheque/create", "/cvtheque/create/candidat"],
   };
 
-  return sidebarItems
-    .map((item: SidebarItem) => {
+  return useMemo(() => {
+    return sidebarItems
+      .map((item: SidebarItem) => {
       if (item.label === "Déclic" && !canAccessDeclic) return null;
       if (item.label === "Prépa Comp" && !canAccessPrepa) return null;
       if (item.label === "Paramètres" && !canAccessParametres) return null;
@@ -272,6 +273,14 @@ export function useSidebarItems(): SidebarItem[] {
       }
       return item;
     })
-    .filter((item): item is SidebarItem => item !== null)
-    .filter((item) => !item.children || item.children.length > 0);
+      .filter((item): item is SidebarItem => item !== null)
+      .filter((item) => !item.children || item.children.length > 0);
+  }, [
+    role,
+    isCandidateLike,
+    isCoreStaff,
+    canAccessPrepa,
+    canAccessDeclic,
+    canAccessParametres,
+  ]);
 }

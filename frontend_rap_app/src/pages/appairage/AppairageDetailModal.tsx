@@ -327,7 +327,6 @@ export default function AppairageDetailModal({
     </Dialog>
   );
 }
-
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -349,3 +348,4 @@ function Item({ label, value }: { label: string; value?: React.ReactNode }) {
     </Typography>
   );
 }
+

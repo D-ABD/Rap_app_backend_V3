@@ -18,13 +18,19 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from weasyprint import CSS, HTML
 
 from ...models.commentaires_appairage import CommentaireAppairage
 from ...models.logs import LogUtilisateur
+from ..openapi_docs import (
+    api_action_data_serializer,
+    api_object_envelope_serializer,
+    api_paginated_envelope_serializer,
+    binary_file_response,
+)
 from ..mixins import HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
 from ..permissions import IsStaffOrAbove
@@ -171,6 +177,15 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
             return CommentaireAppairageWriteSerializer
         return CommentaireAppairageSerializer
 
+    @extend_schema(
+        summary="Lister les commentaires d'appairage",
+        description=(
+            "Retourne les commentaires d'appairage visibles pour l'utilisateur courant, "
+            "avec filtrage par archivage, partenaire, candidat, formation, recherche texte "
+            "et pagination standard."
+        ),
+        responses={200: api_paginated_envelope_serializer("AppairageCommentListResponse", CommentaireAppairageSerializer(many=True))},
+    )
     def list(self, request, *args, **kwargs):
         """
         Retourne la liste paginée des commentaires d'appairage dans
@@ -194,6 +209,11 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
             }
         return self._json_message_response(True, "Commentaires d'appairage récupérés avec succès.", data=payload)
 
+    @extend_schema(
+        summary="Consulter un commentaire d'appairage",
+        description="Retourne le détail d'un commentaire d'appairage visible, y compris s'il est archivé.",
+        responses={200: api_object_envelope_serializer("AppairageCommentDetailResponse")},
+    )
     def retrieve(self, request, *args, **kwargs):
         """
         Retourne le détail d'un commentaire d'appairage dans l'enveloppe
@@ -239,7 +259,14 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
             details=f"Archivage logique du commentaire d'appairage #{pk} via DELETE",
         )
 
-    @extend_schema(summary="Archiver un commentaire d'appairage via DELETE")
+    @extend_schema(
+        summary="Archiver un commentaire d'appairage via DELETE",
+        description=(
+            "Conserve l'URL historique de suppression tout en réalisant un archivage logique. "
+            "La réponse reste en JSON métier et ne supprime pas physiquement l'enregistrement."
+        ),
+        responses={200: api_object_envelope_serializer("AppairageCommentDeleteResponse")},
+    )
     def destroy(self, request, *args, **kwargs):
         """
         Conserve `DELETE /appairage-commentaires/<id>/` pour compatibilité
@@ -252,6 +279,13 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
         message = "Commentaire déjà archivé." if already_archived else "Commentaire archivé."
         return self._json_message_response(True, message, status_code=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Archiver un commentaire d'appairage",
+        description="Archive logiquement le commentaire ciblé. Si le commentaire est déjà archivé, la réponse le signale sans erreur HTTP.",
+        responses={
+            200: api_object_envelope_serializer("AppairageCommentArchiveResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """POST : archive le commentaire (statut_commentaire=archive). Retourne détail déjà archivé ou archivé."""
@@ -268,6 +302,13 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
         logger.info("CommentaireAppairage #%s archivé par %s", comment.pk, request.user)
         return self._json_message_response(True, "Commentaire archivé.", status_code=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Désarchiver un commentaire d'appairage",
+        description="Restaure un commentaire archivé pour le rendre de nouveau actif dans les listes métier.",
+        responses={
+            200: api_object_envelope_serializer("AppairageCommentUnarchiveResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """POST : désarchive le commentaire (statut_commentaire=actif). Retourne détail déjà actif ou désarchivé."""
@@ -284,7 +325,11 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
         logger.info("CommentaireAppairage #%s désarchivé par %s", comment.pk, request.user)
         return self._json_message_response(True, "Commentaire désarchivé.", status_code=status.HTTP_200_OK)
 
-    @extend_schema(summary="Exporter les commentaires d'appairage au format XLSX")
+    @extend_schema(
+        summary="Exporter les commentaires d'appairage au format XLSX",
+        description="Génère un fichier Excel à partir du même périmètre, des mêmes filtres et des mêmes droits que l'endpoint de liste.",
+        responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): binary_file_response("Fichier Excel contenant les commentaires d'appairage exportés.")},
+    )
     @action(detail=False, methods=["get"], url_path="export-xlsx")
     def export_xlsx(self, request):
         """GET : export de la liste filtrée en XLSX (attachment). Même queryset et droits que list()."""
@@ -375,7 +420,11 @@ class CommentaireAppairageViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet
         response["Content-Length"] = len(binary)
         return response
 
-    @extend_schema(summary="Exporter les commentaires d'appairage au format PDF")
+    @extend_schema(
+        summary="Exporter les commentaires d'appairage au format PDF",
+        description="Génère un PDF prêt à partager à partir des commentaires visibles après application des filtres courants.",
+        responses={(200, "application/pdf"): binary_file_response("Document PDF contenant les commentaires d'appairage exportés.")},
+    )
     @action(detail=False, methods=["get"], url_path="export-pdf")
     def export_pdf(self, request):
         """GET : export de la liste filtrée en PDF (attachment). Template exports/appairage_commentaires_pdf.html."""

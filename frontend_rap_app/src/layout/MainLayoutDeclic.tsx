@@ -12,9 +12,6 @@ import {
   CssBaseline,
   Box,
   Divider,
-  Paper,
-  Breadcrumbs,
-  Link as MuiLink,
   Button,
   Menu,
   MenuItem,
@@ -22,7 +19,6 @@ import {
 
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
-import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -32,9 +28,10 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { ThemeContext } from "../contexts/ThemeContext";
 import { useAuth } from "../hooks/useAuth";
-import { breadcrumbLabels } from "src/utils/breadcrumbLabels";
 import logo from "../assets/logo.png";
 import Footer from "./footer";
+import AppBreadcrumbs from "../components/layout/AppBreadcrumbs";
+import { getDrawerItemSx, getTopNavButtonSx } from "./navigationStyles";
 
 const drawerWidth = 240;
 
@@ -52,7 +49,6 @@ export default function MainLayoutDeclic() {
   const { mode, toggleTheme } = themeContext;
 
   const toggleDrawer = () => setOpen(!open);
-  const pathnames = location.pathname.split("/").filter((x) => x);
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -109,7 +105,7 @@ export default function MainLayoutDeclic() {
                 fontSize: { xs: "1rem", sm: "1.1rem" },
               }}
             >
-              Prépa – RAP_APP
+              Déclic – RAP_APP
             </Typography>
 
             {/* 🔹 Menu horizontal (desktop) */}
@@ -120,12 +116,7 @@ export default function MainLayoutDeclic() {
                   component={Link}
                   to={item.path}
                   color="inherit"
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: isActive(item.path) ? 700 : 500,
-                    borderBottom: isActive(item.path) ? "2px solid white" : "2px solid transparent",
-                    "&:hover": { borderBottom: "2px solid white" },
-                  }}
+                  sx={getTopNavButtonSx(isActive(item.path))}
                 >
                   {item.label}
                 </Button>
@@ -195,6 +186,7 @@ export default function MainLayoutDeclic() {
               to={item.path}
               selected={isActive(item.path)}
               onClick={toggleDrawer}
+              sx={getDrawerItemSx()}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.label} />
@@ -214,30 +206,7 @@ export default function MainLayoutDeclic() {
           transition: "background-color 0.3s ease",
         }}
       >
-        {/* Fil d’Ariane */}
-        <Paper sx={{ mb: 2, p: 1 }}>
-          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-            <MuiLink component={Link} to="/" underline="hover" color="inherit">
-              <HomeIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: "middle" }} />
-              Accueil
-            </MuiLink>
-            {pathnames.map((value, index) => {
-              const to = `/${pathnames.slice(0, index + 1).join("/")}`;
-              const isLast = index === pathnames.length - 1;
-              const label =
-                breadcrumbLabels[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
-              return isLast ? (
-                <Typography key={to} color="text.primary">
-                  {label}
-                </Typography>
-              ) : (
-                <MuiLink key={to} component={Link} underline="hover" color="inherit" to={to}>
-                  {label}
-                </MuiLink>
-              );
-            })}
-          </Breadcrumbs>
-        </Paper>
+        <AppBreadcrumbs pathname={location.pathname} />
 
         <Outlet />
       </Box>

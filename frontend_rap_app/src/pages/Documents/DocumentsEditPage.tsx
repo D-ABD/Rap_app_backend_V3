@@ -5,7 +5,6 @@ import {
   Box,
   Card,
   CardContent,
-  CircularProgress,
   Divider,
   Stack,
   Typography,
@@ -15,6 +14,8 @@ import PageTemplate from "../../components/PageTemplate";
 import DocumentForm from "./DocumentForm";
 import api from "../../api/axios";
 import type { DocumentFormInitialValues } from "../../types/document";
+import ErrorState from "../../components/ui/ErrorState";
+import LoadingState from "../../components/ui/LoadingState";
 
 export default function DocumentsEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,13 +70,15 @@ export default function DocumentsEditPage() {
   if (loading) {
     return (
       <PageTemplate
-        title="✏️ Modifier un document"
+        title="Modifier un document"
+        subtitle="Recuperation du document et des informations liees a la formation."
+        eyebrow="Documents"
+        hero
+        maxWidth="md"
         backButton
         onBack={() => navigate(returnToListUrl)}
       >
-        <Box display="flex" justifyContent="center" alignItems="center" py={6}>
-          <CircularProgress />
-        </Box>
+        <LoadingState label="Chargement du document..." />
       </PageTemplate>
     );
   }
@@ -83,13 +86,20 @@ export default function DocumentsEditPage() {
   if (!initialValues) {
     return (
       <PageTemplate
-        title="✏️ Modifier un document"
+        title="Modifier un document"
+        subtitle="Le contenu demande n'a pas pu etre prepare pour l'edition."
+        eyebrow="Documents"
+        hero
+        maxWidth="md"
         backButton
         onBack={() => navigate(returnToListUrl)}
       >
-        <Typography color="error" align="center" mt={4}>
-          ⚠️ Impossible de charger le document.
-        </Typography>
+        <ErrorState
+          title="Document introuvable"
+          message="Impossible de charger le document."
+          onRetry={() => navigate(returnToListUrl)}
+          retryLabel="Retour a la liste"
+        />
       </PageTemplate>
     );
   }
@@ -98,7 +108,11 @@ export default function DocumentsEditPage() {
 
   return (
     <PageTemplate
-      title="✏️ Modifier un document"
+      title="Modifier un document"
+      subtitle="Mettez a jour le document tout en conservant le contexte de la formation associee."
+      eyebrow="Documents"
+      hero
+      maxWidth="md"
       backButton
       onBack={() => navigate(returnToListUrl)}
     >
@@ -125,7 +139,6 @@ export default function DocumentsEditPage() {
             >
               {/* Bloc 1 — Détails formation */}
               <Stack spacing={0.5}>
-                <Typography variant="subtitle2" color="text.secondary"></Typography>
                 <Typography fontWeight={600}>{f.formation_nom ?? "—"}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Type d’offre :{" "}
@@ -165,7 +178,6 @@ export default function DocumentsEditPage() {
 
               {/* Bloc 3 — Dates */}
               <Stack spacing={0.5}>
-                <Typography variant="subtitle2" color="text.secondary"></Typography>
                 <Typography variant="body2">
                   Date de début :{" "}
                   <strong>

@@ -38,6 +38,8 @@ import { useAuth } from "../hooks/useAuth";
 import { ThemeContext } from "../contexts/ThemeContext";
 import logo from "../assets/logo.png";
 import Footer from "./footer";
+import AppBreadcrumbs from "../components/layout/AppBreadcrumbs";
+import { getDrawerItemSx, getTopNavButtonSx } from "./navigationStyles";
 
 const drawerWidth = 240;
 
@@ -110,28 +112,58 @@ export default function MainLayoutCandidat() {
           {/* DESKTOP NAV */}
           {!isMobile && (
             <Stack direction="row" spacing={1} alignItems="center">
-              <Button color="inherit" component={Link} to="/dashboard">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/dashboard"
+                sx={getTopNavButtonSx(isActive("/dashboard"))}
+              >
                 Dashboard
               </Button>
 
-              <Button color="inherit" component={Link} to="/prospections/candidat">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/prospections/candidat"
+                sx={getTopNavButtonSx(isActive("/prospections/candidat"))}
+              >
                 Prospections
               </Button>
 
-              <Button color="inherit" component={Link} to="/prospection-commentaires">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/prospection-commentaires"
+                sx={getTopNavButtonSx(isActive("/prospection-commentaires"))}
+              >
                 Commentaires prospections
               </Button>
 
-              <Button color="inherit" component={Link} to="/partenaires/candidat">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/partenaires/candidat"
+                sx={getTopNavButtonSx(isActive("/partenaires/candidat"))}
+              >
                 Partenaires
               </Button>
 
               {/* 🔹 AJOUT CVTHEQUE */}
-              <Button color="inherit" component={Link} to="/cvtheque/candidat">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/cvtheque/candidat"
+                sx={getTopNavButtonSx(isActive("/cvtheque/candidat"))}
+              >
                 CVThèque
               </Button>
 
-              <Button color="inherit" component={Link} to="/about">
+              <Button
+                color="inherit"
+                component={Link}
+                to="/about"
+                sx={getTopNavButtonSx(isActive("/about"))}
+              >
                 À propos
               </Button>
             </Stack>
@@ -197,6 +229,7 @@ export default function MainLayoutCandidat() {
             to="/dashboard"
             onClick={toggleDrawer}
             selected={isActive("/dashboard")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <DashboardIcon color="primary" />
@@ -209,6 +242,7 @@ export default function MainLayoutCandidat() {
             to="/prospections/candidat"
             onClick={toggleDrawer}
             selected={isActive("/prospections/candidat")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <AssignmentIcon color="info" />
@@ -221,6 +255,7 @@ export default function MainLayoutCandidat() {
             to="/prospection-commentaires"
             onClick={toggleDrawer}
             selected={isActive("/prospection-commentaires")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <CommentIcon color="secondary" />
@@ -233,6 +268,7 @@ export default function MainLayoutCandidat() {
             to="/partenaires/candidat"
             onClick={toggleDrawer}
             selected={isActive("/partenaires/candidat")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <GroupIcon color="success" />
@@ -246,6 +282,7 @@ export default function MainLayoutCandidat() {
             to="/cvtheque/candidat"
             onClick={toggleDrawer}
             selected={isActive("/cvtheque/candidat")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <DescriptionIcon color="primary" />
@@ -258,6 +295,7 @@ export default function MainLayoutCandidat() {
             to="/about"
             onClick={toggleDrawer}
             selected={isActive("/about")}
+            sx={getDrawerItemSx()}
           >
             <ListItemIcon>
               <InfoIcon color="action" />
@@ -278,6 +316,8 @@ export default function MainLayoutCandidat() {
             theme.palette.mode === "light" ? "#f9f9f9" : "#121212",
         }}
       >
+        <AppBreadcrumbs pathname={location.pathname} />
+
         <Outlet />
       </Box>
 

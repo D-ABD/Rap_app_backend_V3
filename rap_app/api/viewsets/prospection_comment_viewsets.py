@@ -32,6 +32,11 @@ from weasyprint import HTML
 from ...models.prospection import HistoriqueProspection
 from ...models.prospection_comments import ProspectionComment
 from ..mixins import HardDeleteArchivedMixin
+from ..openapi_docs import (
+    api_object_envelope_serializer,
+    api_paginated_envelope_serializer,
+    binary_file_response,
+)
 from ..paginations import RapAppPagination
 from ..permissions import IsOwnerOrStaffOrAbove
 from ..roles import (
@@ -49,7 +54,12 @@ logger = logging.getLogger("PROSPECTION_COMMENT")
 
 @extend_schema_view(
     list=extend_schema(
-        summary="📋 Liste des commentaires de prospection",
+        summary="Lister les commentaires de prospection",
+        description=(
+            "Retourne les commentaires de prospection visibles pour l'utilisateur courant, "
+            "avec filtres sur la prospection, l'auteur, le caractère interne, le partenaire, "
+            "la formation et le tri."
+        ),
         tags=["ProspectionComments"],
         parameters=[
             OpenApiParameter("prospection", int, description="Filtrer par prospection ID"),
@@ -61,13 +71,38 @@ logger = logging.getLogger("PROSPECTION_COMMENT")
             OpenApiParameter("search", str, description="Recherche (body, auteur, partenaire, formation)"),
             OpenApiParameter("ordering", str, description="created_at, -created_at, id, -id"),
         ],
-        responses={200: OpenApiResponse(response=ProspectionCommentSerializer(many=True))},
+        responses={200: api_paginated_envelope_serializer("ProspectionCommentListResponse", ProspectionCommentSerializer(many=True))},
     ),
-    retrieve=extend_schema(summary="🔍 Détail d’un commentaire", tags=["ProspectionComments"]),
-    create=extend_schema(summary="➕ Créer un commentaire", tags=["ProspectionComments"]),
-    update=extend_schema(summary="✏️ Modifier un commentaire", tags=["ProspectionComments"]),
-    partial_update=extend_schema(summary="✏️ Modifier partiellement un commentaire", tags=["ProspectionComments"]),
-    destroy=extend_schema(summary="📦 Archiver un commentaire", tags=["ProspectionComments"]),
+    retrieve=extend_schema(
+        summary="Consulter un commentaire de prospection",
+        description="Retourne le détail d'un commentaire, enrichi avec les informations de centre et de type d'offre de la formation liée.",
+        tags=["ProspectionComments"],
+        responses={200: api_object_envelope_serializer("ProspectionCommentDetailResponse")},
+    ),
+    create=extend_schema(
+        summary="Créer un commentaire de prospection",
+        description="Crée un commentaire visible selon les règles de rôle du module prospection.",
+        tags=["ProspectionComments"],
+        responses={201: OpenApiResponse(response=ProspectionCommentSerializer)},
+    ),
+    update=extend_schema(
+        summary="Modifier un commentaire de prospection",
+        description="Met à jour un commentaire existant après contrôle du périmètre et des règles candidat/staff.",
+        tags=["ProspectionComments"],
+        responses={200: OpenApiResponse(response=ProspectionCommentSerializer)},
+    ),
+    partial_update=extend_schema(
+        summary="Modifier partiellement un commentaire de prospection",
+        description="Met à jour uniquement les champs fournis tout en conservant les contrôles métier du module.",
+        tags=["ProspectionComments"],
+        responses={200: OpenApiResponse(response=ProspectionCommentSerializer)},
+    ),
+    destroy=extend_schema(
+        summary="Archiver un commentaire de prospection via DELETE",
+        description="Conserve l'URL historique de suppression mais réalise un archivage logique en JSON.",
+        tags=["ProspectionComments"],
+        responses={200: api_object_envelope_serializer("ProspectionCommentDeleteResponse")},
+    ),
 )
 class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
@@ -210,6 +245,11 @@ class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
 
         return qs.order_by("-updated_at", "-created_at", "-id").distinct()
 
+    @extend_schema(
+        summary="Lister les options de filtres des commentaires de prospection",
+        description="Retourne les valeurs distinctes utilisables par le front pour filtrer les commentaires de prospection visibles.",
+        responses={200: api_object_envelope_serializer("ProspectionCommentFilterOptionsResponse")},
+    )
     @action(detail=False, methods=["get"], url_path="filter-options")
     def filter_options(self, request):
         """
@@ -449,6 +489,11 @@ class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     # 🔒 ARCHIVER / DÉSARCHIVER un commentaire
     # ------------------------------------------------------------------
 
+    @extend_schema(
+        summary="Archiver un commentaire de prospection",
+        description="Archive logiquement le commentaire ciblé. La réponse JSON indique aussi le cas déjà archivé.",
+        responses={200: api_object_envelope_serializer("ProspectionCommentArchiveResponse")},
+    )
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """
@@ -462,6 +507,11 @@ class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         logger.info("Commentaire #%s archivé par %s", comment.pk, request.user)
         return self._json_message_response(True, "Commentaire archivé.", status_code=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Désarchiver un commentaire de prospection",
+        description="Réactive un commentaire de prospection précédemment archivé.",
+        responses={200: api_object_envelope_serializer("ProspectionCommentUnarchiveResponse")},
+    )
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """
@@ -478,7 +528,16 @@ class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     # ------------------------------------------------------------------
     # 📊 EXPORT EXCEL — Commentaires de prospection
     # ------------------------------------------------------------------
-    @extend_schema(summary="Exporter les commentaires de prospection au format XLSX")
+    @extend_schema(
+        summary="Exporter les commentaires de prospection au format XLSX",
+        description="Génère un fichier Excel sur le périmètre réellement visible pour l'utilisateur courant.",
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): binary_file_response(
+                "Fichier Excel contenant les commentaires de prospection exportés."
+            ),
+            204: OpenApiResponse(description="Aucun commentaire visible à exporter."),
+        },
+    )
     @action(detail=False, methods=["get"], url_path="export-xlsx")
     def export_xlsx(self, request):
         """
@@ -603,7 +662,14 @@ class ProspectionCommentViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     # ------------------------------------------------------------------
     # 📄 EXPORT PDF — Commentaires de prospection
     # ------------------------------------------------------------------
-    @extend_schema(summary="Exporter les commentaires de prospection au format PDF")
+    @extend_schema(
+        summary="Exporter les commentaires de prospection au format PDF",
+        description="Génère un PDF à partir des commentaires visibles pour l'utilisateur courant.",
+        responses={
+            (200, "application/pdf"): binary_file_response("Document PDF contenant les commentaires de prospection exportés."),
+            204: OpenApiResponse(description="Aucun commentaire visible à exporter."),
+        },
+    )
     @action(detail=False, methods=["get"], url_path="export-pdf")
     def export_pdf(self, request):
         """

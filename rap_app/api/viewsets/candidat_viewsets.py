@@ -19,7 +19,7 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from rest_framework import filters
+from rest_framework import filters, serializers
 from rest_framework.decorators import action
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -46,6 +46,12 @@ from ...services.candidate_account_service import CandidateAccountService
 from ...services.candidate_bulk_service import CandidateBulkService
 from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...utils.filters import CandidatFilter
+from ..openapi_docs import (
+    api_action_data_serializer,
+    api_object_envelope_serializer,
+    api_paginated_envelope_serializer,
+    binary_file_response,
+)
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
 from ..roles import is_admin_like, is_centre_scoped_staff, staff_centre_ids
@@ -471,6 +477,14 @@ class CandidatViewSet(ScopedModelViewSet):
         self.check_object_permissions(self.request, obj)
         return obj
 
+    @extend_schema(
+        summary="Lister les candidats",
+        description=(
+            "Retourne les candidats visibles dans le périmètre centre de l'utilisateur avec les filtres métier exposés "
+            "par `CandidatFilter` et les enrichissements attendus par le front."
+        ),
+        responses={200: api_object_envelope_serializer("CandidatListResponse")},
+    )
     def list(self, request, *args, **kwargs):
         """
         Liste paginée des candidats visibles après validation souple des
@@ -546,6 +560,11 @@ class CandidatViewSet(ScopedModelViewSet):
                 candidat=updated, old_form=old_formation, new_form=new_formation
             )
 
+    @extend_schema(
+        summary="Archiver un candidat via DELETE",
+        description="Conserve l'URL historique de suppression tout en réalisant une désactivation logique du candidat.",
+        responses={200: api_action_data_serializer("CandidatDeleteResponse", {"status": serializers.CharField()})},
+    )
     def destroy(self, request, *args, **kwargs):
         """
         Conserve `DELETE /candidats/<id>/` pour compatibilité mais remplace
@@ -571,6 +590,16 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Candidat archivé avec succès.",
         )
 
+    @extend_schema(
+        summary="Désarchiver un candidat",
+        description="Réactive un candidat précédemment archivé sans modifier son identifiant métier.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatUnarchiveResponse",
+                {"id": serializers.IntegerField(), "is_active": serializers.BooleanField()},
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """POST : restaure un candidat archivé avec enveloppe API standard."""
@@ -594,6 +623,17 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Candidat désarchivé avec succès.",
         )
 
+    @extend_schema(
+        summary="Créer ou lier le compte utilisateur d'un candidat",
+        description="Crée le compte `candidatuser` manquant ou relie le compte existant sans promotion automatique en stagiaire.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatCreerCompteResponse",
+                {"user_id": serializers.IntegerField(), "user_role": serializers.CharField()},
+            ),
+            400: api_object_envelope_serializer("CandidatCreerCompteErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="creer-compte")
     def creer_compte(self, request, pk=None):
         """POST : crée ou lie un compte candidat et renvoie l'enveloppe API standard."""
@@ -617,6 +657,21 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Compte candidat créé ou lié avec succès.",
         )
 
+    @extend_schema(
+        summary="Valider l'inscription d'un candidat",
+        description="Enregistre l'entrée du candidat dans le parcours de recrutement et renvoie la phase métier obtenue.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatValidateInscriptionResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "parcours_phase": serializers.CharField(),
+                    "date_validation_inscription": serializers.DateTimeField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatValidateInscriptionErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="validate-inscription")
     def validate_inscription(self, request, pk=None):
         """POST : valide l'entrée dans le parcours de recrutement avec enveloppe API standard."""
@@ -644,6 +699,16 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Marquer un candidat comme admissible",
+        description="Active le drapeau métier `admissible` sans changer le contrat de lecture du candidat.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatSetAdmissibleResponse",
+                {"candidat_id": serializers.IntegerField(), "admissible": serializers.BooleanField()},
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="set-admissible")
     def set_admissible(self, request, pk=None):
         """POST : active manuellement l'état admissible."""
@@ -654,6 +719,16 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'Candidat admissible' enregistré.",
         )
 
+    @extend_schema(
+        summary="Retirer le statut admissible",
+        description="Désactive le drapeau métier `admissible` sur le candidat ciblé.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatClearAdmissibleResponse",
+                {"candidat_id": serializers.IntegerField(), "admissible": serializers.BooleanField()},
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="clear-admissible")
     def clear_admissible(self, request, pk=None):
         """POST : retire manuellement l'état admissible."""
@@ -664,6 +739,16 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'Candidat admissible' retiré.",
         )
 
+    @extend_schema(
+        summary="Marquer un candidat comme inscrit GESPERS",
+        description="Active le drapeau manuel `inscrit_gespers` sans changer les autres informations du dossier.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatSetGespersResponse",
+                {"candidat_id": serializers.IntegerField(), "inscrit_gespers": serializers.BooleanField()},
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="set-gespers")
     def set_gespers(self, request, pk=None):
         """POST : marque manuellement le candidat comme inscrit GESPERS."""
@@ -674,6 +759,16 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Inscription GESPERS enregistrée.",
         )
 
+    @extend_schema(
+        summary="Annuler l'inscription GESPERS",
+        description="Désactive le drapeau manuel `inscrit_gespers` pour le candidat ciblé.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatClearGespersResponse",
+                {"candidat_id": serializers.IntegerField(), "inscrit_gespers": serializers.BooleanField()},
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="clear-gespers")
     def clear_gespers(self, request, pk=None):
         """POST : annule manuellement l'inscription GESPERS."""
@@ -684,6 +779,20 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Inscription GESPERS annulée.",
         )
 
+    @extend_schema(
+        summary="Placer un candidat en accompagnement TRE",
+        description="Positionne le drapeau manuel `en_accompagnement_tre` et renvoie l'état métier mis à jour.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatSetAccompagnementResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "en_accompagnement_tre": serializers.BooleanField(),
+                    "statut": serializers.CharField(allow_null=True),
+                },
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="set-accompagnement")
     def set_accompagnement(self, request, pk=None):
         """POST : positionne manuellement le candidat en accompagnement TRE."""
@@ -698,6 +807,20 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'En accompagnement TRE' enregistré.",
         )
 
+    @extend_schema(
+        summary="Retirer l'accompagnement TRE",
+        description="Supprime le drapeau manuel `en_accompagnement_tre` sur le candidat ciblé.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatClearAccompagnementResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "en_accompagnement_tre": serializers.BooleanField(),
+                    "statut": serializers.CharField(allow_null=True),
+                },
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="clear-accompagnement")
     def clear_accompagnement(self, request, pk=None):
         """POST : retire le statut manuel d'accompagnement TRE."""
@@ -712,6 +835,20 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'En accompagnement TRE' retiré.",
         )
 
+    @extend_schema(
+        summary="Placer un candidat en appairage",
+        description="Active le drapeau manuel `en_appairage` pour refléter une étape du parcours métier.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatSetAppairageResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "en_appairage": serializers.BooleanField(),
+                    "statut": serializers.CharField(allow_null=True),
+                },
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="set-appairage")
     def set_appairage(self, request, pk=None):
         """POST : positionne manuellement le candidat en appairage."""
@@ -722,6 +859,20 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'En appairage' enregistré.",
         )
 
+    @extend_schema(
+        summary="Retirer le statut en appairage",
+        description="Désactive le drapeau manuel `en_appairage` pour le candidat ciblé.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatClearAppairageResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "en_appairage": serializers.BooleanField(),
+                    "statut": serializers.CharField(allow_null=True),
+                },
+            )
+        },
+    )
     @action(detail=True, methods=["post"], url_path="clear-appairage")
     def clear_appairage(self, request, pk=None):
         """POST : retire le statut manuel d'appairage."""
@@ -732,6 +883,22 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Statut 'En appairage' retiré.",
         )
 
+    @extend_schema(
+        summary="Enregistrer l'entrée effective en formation",
+        description="Positionne la phase candidat sur l'entrée en formation et renvoie la date enregistrée ainsi que le rôle utilisateur associé si disponible.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatStartFormationResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "parcours_phase": serializers.CharField(),
+                    "date_entree_formation_effective": serializers.DateField(allow_null=True),
+                    "user_role": serializers.CharField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatStartFormationErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="start-formation")
     def start_formation(self, request, pk=None):
         """POST : positionne la phase métier sur `stagiaire_en_formation` avec enveloppe API standard."""
@@ -761,6 +928,22 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Annuler une entrée en formation",
+        description="Revient sur une entrée en formation enregistrée par erreur et renvoie les dates recalculées.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatCancelStartFormationResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "parcours_phase": serializers.CharField(),
+                    "date_entree_formation_effective": serializers.DateField(allow_null=True),
+                    "date_sortie_formation": serializers.DateField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatCancelStartFormationErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="cancel-start-formation")
     def cancel_start_formation(self, request, pk=None):
         """POST : annule une entrée en formation enregistrée par erreur avec enveloppe API standard."""
@@ -789,6 +972,21 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Enregistrer une sortie de formation",
+        description="Positionne le candidat en sortie de formation et renvoie la phase métier ainsi que la date de sortie enregistrée.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatCompleteFormationResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "parcours_phase": serializers.CharField(),
+                    "date_sortie_formation": serializers.DateField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatCompleteFormationErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="complete-formation")
     def complete_formation(self, request, pk=None):
         """POST : positionne la phase métier sur `sorti` avec enveloppe API standard."""
@@ -816,6 +1014,22 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Enregistrer un abandon",
+        description="Marque le candidat comme sorti pour abandon et renvoie la phase et le statut métiers associés.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatAbandonResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "parcours_phase": serializers.CharField(),
+                    "statut": serializers.CharField(allow_null=True),
+                    "date_sortie_formation": serializers.DateField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatAbandonErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="abandon")
     def abandon(self, request, pk=None):
         """POST : enregistre un abandon avec enveloppe API standard."""
@@ -844,6 +1058,17 @@ class CandidatViewSet(ScopedModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Valider une demande de compte candidat",
+        description="Approuve la demande de compte et retourne l'identifiant du compte créé ou relié.",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatApproveAccountRequestResponse",
+                {"user_id": serializers.IntegerField(), "user_email": serializers.EmailField()},
+            ),
+            400: api_object_envelope_serializer("CandidatApproveAccountRequestErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="valider-demande-compte")
     def valider_demande_compte(self, request, pk=None):
         """POST : valide une demande de compte et renvoie l'enveloppe API standard."""
@@ -868,6 +1093,14 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Demande de compte validée et compte utilisateur créé ou lié.",
         )
 
+    @extend_schema(
+        summary="Refuser une demande de compte candidat",
+        description="Refuse la demande de compte sans supprimer le dossier candidat.",
+        responses={
+            200: api_object_envelope_serializer("CandidatRejectAccountRequestResponse"),
+            400: api_object_envelope_serializer("CandidatRejectAccountRequestErrorResponse"),
+        },
+    )
     @action(detail=True, methods=["post"], url_path="refuser-demande-compte")
     def refuser_demande_compte(self, request, pk=None):
         """POST : refuse une demande de compte et renvoie l'enveloppe API standard."""
@@ -910,7 +1143,11 @@ class CandidatViewSet(ScopedModelViewSet):
         else:
             qs.update(formation=None)
 
-    @extend_schema(responses=None)
+    @extend_schema(
+        summary="Consulter les métadonnées candidats",
+        description="Retourne les référentiels, alias de filtres, transitions métier et choix accessibles au front pour le périmètre courant.",
+        responses={200: api_object_envelope_serializer("CandidatMetaResponse")},
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -1034,6 +1271,15 @@ class CandidatViewSet(ScopedModelViewSet):
             message="Affectation bulk à l'atelier TRE exécutée.",
         )
 
+    @extend_schema(
+        summary="Exporter les candidats au format XLSX",
+        description="Génère un export Excel à partir du même périmètre, des mêmes filtres et du même tri que la liste des candidats.",
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): binary_file_response(
+                "Fichier Excel contenant les candidats exportés."
+            )
+        },
+    )
     @action(detail=False, methods=["get"], url_path="export-xlsx")
     def export_xlsx(self, request):
         """GET : export de la liste filtrée en XLSX (attachment). Même queryset et filtres que list."""

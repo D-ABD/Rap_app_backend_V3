@@ -66,7 +66,6 @@ export default function EvenementDetailModal({ open, onClose, evenement }: Props
     </Dialog>
   );
 }
-
 function Field({
   label,
   value,
@@ -84,4 +83,5 @@ function Field({
     </Grid>
   );
 }
+
 

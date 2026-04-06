@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Stack, Button, TextField, MenuItem, Paper, CircularProgress } from "@mui/material";
+import { Box, Stack, Button, TextField, MenuItem, Paper } from "@mui/material";
 
 import useForm from "../../hooks/useForm";
 import api from "../../api/axios";
 import PageTemplate from "../../components/PageTemplate";
+import LoadingState from "../../components/ui/LoadingState";
 
 type Choice = {
   value: string;
@@ -95,7 +96,11 @@ export default function TypeOffresCreatePage() {
 
   return (
     <PageTemplate
-      title="Créer un type d'offre"
+      title="Creer un type d'offre"
+      subtitle="Ajoutez un type d'offre et verifiez immediatement sa couleur d'affichage."
+      eyebrow="Types d'offre"
+      hero
+      maxWidth="md"
       backButton
       onBack={() => navigate(-1)}
       refreshButton
@@ -105,9 +110,7 @@ export default function TypeOffresCreatePage() {
       }}
     >
       {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="30vh">
-          <CircularProgress />
-        </Box>
+        <LoadingState label="Chargement des types disponibles..." />
       ) : (
         <Paper sx={{ p: 3 }}>
           <form onSubmit={handleSubmit}>

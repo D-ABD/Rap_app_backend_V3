@@ -34,6 +34,11 @@ from ...api.serializers.commentaires_serializers import (
 from ...models.commentaires import Commentaire
 from ...models.logs import LogUtilisateur
 from ..mixins import HardDeleteArchivedMixin
+from ..openapi_docs import (
+    api_object_envelope_serializer,
+    api_paginated_envelope_serializer,
+    binary_file_response,
+)
 from ..roles import (
     can_write_commentaires_formation,
     is_admin_like,
@@ -95,7 +100,14 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         if not can_write_commentaires_formation(self.request.user):
             raise PermissionDenied("Vous avez un accès en lecture seule sur les commentaires de formation.")
 
-    @extend_schema(summary="Récupérer les options de filtres pour les commentaires")
+    @extend_schema(
+        summary="Lister les options de filtres des commentaires",
+        description=(
+            "Retourne les valeurs réellement disponibles sur le périmètre accessible: centres, "
+            "types d'offre, formations, états de formation, auteurs et statuts de commentaire."
+        ),
+        responses={200: api_object_envelope_serializer("CommentaireFilterOptionsResponse")},
+    )
     @action(detail=False, methods=["get"], url_path="filter-options")
     def filter_options(self, request):
         """GET : options de filtres (centres, type_offres, formations, formation_etats, auteurs, statuts) selon get_queryset()."""
@@ -244,7 +256,14 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         context["include_full_content"] = True
         return context
 
-    @extend_schema(summary="Lister les commentaires actifs ou filtrés")
+    @extend_schema(
+        summary="Lister les commentaires de formation",
+        description=(
+            "Retourne les commentaires visibles sur les formations accessibles, avec filtres métier "
+            "sur la formation, le centre, l'auteur, les dates, l'état de formation et le statut du commentaire."
+        ),
+        responses={200: api_paginated_envelope_serializer("CommentaireListResponse", CommentaireSerializer(many=True))},
+    )
     def list(self, request, *args, **kwargs):
         """
         Liste les commentaires avec `limit` optionnel et renvoie soit une
@@ -274,7 +293,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response({"success": True, "message": "Commentaires récupérés", "data": serializer.data})
 
-    @extend_schema(summary="Récupérer un commentaire")
+    @extend_schema(
+        summary="Consulter un commentaire de formation",
+        description="Retourne le détail complet d'un commentaire de formation dans l'enveloppe JSON standard.",
+        responses={200: api_object_envelope_serializer("CommentaireDetailResponse")},
+    )
     def retrieve(self, request, *args, **kwargs):
         """Retourne un commentaire unique dans l'enveloppe JSON standard."""
         instance = self.get_object()
@@ -287,7 +310,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             }
         )
 
-    @extend_schema(summary="Créer un commentaire")
+    @extend_schema(
+        summary="Créer un commentaire de formation",
+        description="Crée un commentaire sur une formation autorisée, en recalculant les données métier nécessaires au moment de la création.",
+        responses={201: api_object_envelope_serializer("CommentaireCreateResponse")},
+    )
     def create(self, request, *args, **kwargs):
         """
         Crée un commentaire après contrôle explicite du périmètre formation et
@@ -318,7 +345,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @extend_schema(summary="Mettre à jour un commentaire")
+    @extend_schema(
+        summary="Modifier un commentaire de formation",
+        description="Met à jour un commentaire existant après contrôle du périmètre de la formation cible.",
+        responses={200: api_object_envelope_serializer("CommentaireUpdateResponse")},
+    )
     def update(self, request, *args, **kwargs):
         """
         Met à jour un commentaire après contrôle explicite du périmètre
@@ -349,7 +380,14 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @extend_schema(summary="Archiver un commentaire via DELETE")
+    @extend_schema(
+        summary="Archiver un commentaire via DELETE",
+        description=(
+            "Conserve la compatibilité avec l'ancienne suppression tout en réalisant un archivage logique. "
+            "La réponse renvoie le commentaire archivé dans l'enveloppe JSON standard."
+        ),
+        responses={200: api_object_envelope_serializer("CommentaireDeleteResponse")},
+    )
     def destroy(self, request, *args, **kwargs):
         """
         Conserve la compatibilité avec `DELETE /commentaires/<id>/` mais
@@ -391,8 +429,9 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         )
 
     @extend_schema(
-        summary="Récupérer les statistiques de saturation des commentaires",
-        responses={200: OpenApiResponse(description="Données de saturation pour une formation")},
+        summary="Consulter les statistiques de saturation des commentaires",
+        description="Retourne les indicateurs de saturation calculés pour une formation donnée via `formation_id`.",
+        responses={200: api_object_envelope_serializer("CommentaireSaturationStatsResponse")},
     )
     @action(detail=False, methods=["get"], url_path="saturation-stats")
     def saturation_stats(self, request):
@@ -407,7 +446,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             }
         )
 
-    @extend_schema(summary="Récupérer les métadonnées des commentaires")
+    @extend_schema(
+        summary="Consulter les métadonnées des commentaires",
+        description="Expose les valeurs de référence utilisées par le front pour créer ou filtrer les commentaires de formation.",
+        responses={200: api_object_envelope_serializer("CommentaireMetaResponse")},
+    )
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
         """GET : métadonnées via CommentaireMetaSerializer, success/message/data."""
@@ -420,7 +463,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             }
         )
 
-    @extend_schema(summary="Archiver un commentaire")
+    @extend_schema(
+        summary="Archiver un commentaire",
+        description="Archive logiquement un commentaire sans changer son identifiant ni l'historique associé.",
+        responses={200: api_object_envelope_serializer("CommentaireArchiveResponse")},
+    )
     @action(detail=True, methods=["post"], url_path="archiver")
     def archiver(self, request, pk=None):
         """POST : instance.archiver(save=True), log ACTION_UPDATE, 200."""
@@ -442,7 +489,11 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             }
         )
 
-    @extend_schema(summary="Désarchiver un commentaire")
+    @extend_schema(
+        summary="Désarchiver un commentaire",
+        description="Restaure un commentaire archivé pour qu'il réapparaisse dans les vues actives.",
+        responses={200: api_object_envelope_serializer("CommentaireUnarchiveResponse")},
+    )
     @action(detail=True, methods=["post"], url_path="desarchiver")
     def desarchiver(self, request, pk=None):
         """POST : instance.desarchiver(save=True), log ACTION_UPDATE, 200."""
@@ -464,6 +515,18 @@ class CommentaireViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Exporter des commentaires de formation",
+        description=(
+            "Exporte une sélection de commentaires ou l'ensemble filtré. "
+            "Le format réel dépend du champ `format` (`pdf` ou `xlsx`)."
+        ),
+        responses={
+            (200, "application/pdf"): binary_file_response("Export PDF des commentaires de formation."),
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): binary_file_response("Export Excel des commentaires de formation."),
+            400: api_object_envelope_serializer("CommentaireExportErrorResponse"),
+        },
+    )
     @action(detail=False, methods=["get", "post"], url_path="export")
     def export(self, request):
         """GET/POST : format (pdf|xlsx), ids ou all, include_archived ; _export_pdf ou _export_xlsx."""

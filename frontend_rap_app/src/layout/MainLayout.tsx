@@ -19,10 +19,7 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
-  Breadcrumbs,
-  Link as MuiLink,
   Stack,
-  Paper,
 } from "@mui/material";
 import DescriptionIcon from "@mui/icons-material/Description";
 
@@ -36,8 +33,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import FolderIcon from "@mui/icons-material/Folder";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
-import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import HomeIcon from "@mui/icons-material/Home";
 import {
   canAccessDeclicRole,
   canAccessPrepaRole,
@@ -58,8 +53,9 @@ import { useSidebarItems } from "./SidebarItems";
 import { useAuth } from "../hooks/useAuth";
 import { ThemeContext } from "../contexts/ThemeContext";
 import logo from "../assets/logo.png";
-import { breadcrumbLabels } from "../utils/breadcrumbLabels";
 import Footer from "./footer";
+import AppBreadcrumbs from "../components/layout/AppBreadcrumbs";
+import { getDrawerItemSx } from "./navigationStyles";
 
 const drawerWidth = 240;
 
@@ -101,7 +97,7 @@ export default function MainLayout() {
     [location.pathname]
   );
 
-  // Auto-ouverture des sous-menus si actif
+  // Auto-ouverture des sous-menus si actif (sidebarItems doit être stable → useMemo dans useSidebarItems)
   useEffect(() => {
     const newState: Record<string, boolean> = {};
     sidebarItems.forEach((item) => {
@@ -109,8 +105,18 @@ export default function MainLayout() {
         newState[item.label] = true;
       }
     });
-    setSubmenuOpen((prev) => ({ ...prev, ...newState }));
-  }, [location.pathname, isActive]);
+    setSubmenuOpen((prev) => {
+      let changed = false;
+      for (const [k, v] of Object.entries(newState)) {
+        if (prev[k] !== v) {
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) return prev;
+      return { ...prev, ...newState };
+    });
+  }, [location.pathname, isActive, sidebarItems]);
 
   const handleLogout = () => {
     logout();
@@ -122,10 +128,6 @@ export default function MainLayout() {
   const canSeeDeclic = canAccessDeclicRole(role);
   const canSeePrepa = canAccessPrepaRole(role);
   const canSeeParametres = isAdminLikeRole(role);
-
-  // ✅ Fil d’Ariane
-  const pathnames = location.pathname.split("/").filter((x) => x);
-
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <CssBaseline />
@@ -442,22 +444,7 @@ export default function MainLayout() {
                   if (item.children) toggleSubmenu(item.label);
                   if (item.path) toggleDrawer();
                 }}
-                sx={{
-                  borderRadius: 1,
-                  mx: 1,
-                  "&.Mui-selected": {
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "light" ? "#e3f2fd" : "#333",
-                    "& .MuiListItemIcon-root, & .MuiListItemText-primary": {
-                      fontWeight: "bold",
-                      color: (theme) => theme.palette.primary.main,
-                    },
-                  },
-                  "&:hover": {
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "light" ? "#f5f5f5" : "#2a2a2a",
-                  },
-                }}
+                sx={getDrawerItemSx()}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.label} />
@@ -470,7 +457,7 @@ export default function MainLayout() {
                     {item.children.map((child) => (
                       <ListItemButton
                         key={child.label}
-                        sx={{ pl: 4 }}
+                        sx={getDrawerItemSx(true)}
                         component={Link}
                         to={child.path || ""}
                         selected={isActive(child.path)}
@@ -499,40 +486,7 @@ export default function MainLayout() {
           transition: "background-color 0.3s ease",
         }}
       >
-        {/* ✅ Fil d’Ariane */}
-        <Paper
-          elevation={0}
-          sx={{
-            mb: 2,
-            p: 1,
-            borderRadius: 1,
-            bgcolor: (theme) => (theme.palette.mode === "light" ? "#fff" : "#1e1e1e"),
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
-        >
-          <Breadcrumbs aria-label="breadcrumb" separator={<NavigateNextIcon fontSize="small" />}>
-            <MuiLink component={Link} to="/" underline="hover" color="inherit">
-              <HomeIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: "middle" }} />
-              Accueil
-            </MuiLink>
-            {pathnames.map((value, index) => {
-              const to = `/${pathnames.slice(0, index + 1).join("/")}`;
-              const isLast = index === pathnames.length - 1;
-              const label =
-                breadcrumbLabels[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
-
-              return isLast ? (
-                <Typography key={to} color="text.primary">
-                  {label}
-                </Typography>
-              ) : (
-                <MuiLink key={to} component={Link} underline="hover" color="inherit" to={to}>
-                  {label}
-                </MuiLink>
-              );
-            })}
-          </Breadcrumbs>
-        </Paper>
+        <AppBreadcrumbs pathname={location.pathname} />
 
         <Outlet />
       </Box>

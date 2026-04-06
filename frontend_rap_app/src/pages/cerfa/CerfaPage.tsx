@@ -112,7 +112,10 @@ export default function CerfaPage() {
   const queryParams = useMemo(
     () => ({
       search: filters.search,
-      centre: filters.centre || undefined,
+      centre:
+        filters.centre != null && filters.centre !== ""
+          ? Number(filters.centre)
+          : undefined,
       cerfa_type: (filters.cerfa_type || undefined) as
         | "apprentissage"
         | "professionnalisation"
