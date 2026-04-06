@@ -1,6 +1,8 @@
-import { Button, Chip, Stack, Typography } from "@mui/material";
+import { Button, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import ResponsiveTableTemplate, { type TableColumn } from "../../components/ResponsiveTableTemplate";
+import { colCustom, colText } from "../../components/tables/columnFactories";
+import InlineStatusBadge from "../../components/ui/InlineStatusBadge";
 import type { Evenement } from "../../types/evenement";
 
 type Props = {
@@ -21,33 +23,25 @@ function getEvenementTypeLabel(evenement: Evenement) {
 export default function EvenementTable({ evenements, onRowClick, onEdit, onDelete }: Props) {
   const columns = useMemo<TableColumn<Evenement>[]>(
     () => [
-      {
-        key: "type_evenement_display",
-        label: "Événement",
-        sticky: "left",
-        width: 220,
-        render: (row) => (
+      colCustom<Evenement>(
+        "type_evenement_display",
+        "Événement",
+        (row) => (
           <Typography variant="subtitle2" fontWeight={600} color="primary">
             {getEvenementTypeLabel(row)}
           </Typography>
         ),
-      },
-      { key: "formation_nom", label: "Formation" },
-      { key: "event_date_formatted", label: "Date" },
-      { key: "lieu", label: "Lieu", render: (row) => row.lieu || "—" },
-      {
-        key: "status_label",
-        label: "Statut",
-        render: (row) => <Chip size="small" label={row.status_label} variant="outlined" color="primary" />,
-      },
-      {
-        key: "participants",
-        label: "Participation",
-        render: (row) =>
-          row.participants_prevus != null || row.participants_reels != null
-            ? `${row.participants_reels ?? 0} / ${row.participants_prevus ?? 0}`
-            : "—",
-      },
+        { sticky: "left", width: 220 }
+      ),
+      colText<Evenement>("formation_nom", "Formation"),
+      colText<Evenement>("event_date_formatted", "Date"),
+      colCustom<Evenement>("lieu", "Lieu", (row) => row.lieu || "—"),
+      colCustom<Evenement>("status_label", "Statut", (row) => <InlineStatusBadge label={row.status_label} color="primary" />),
+      colCustom<Evenement>("participants", "Participation", (row) =>
+        row.participants_prevus != null || row.participants_reels != null
+          ? `${row.participants_reels ?? 0} / ${row.participants_prevus ?? 0}`
+          : "—"
+      ),
     ],
     []
   );

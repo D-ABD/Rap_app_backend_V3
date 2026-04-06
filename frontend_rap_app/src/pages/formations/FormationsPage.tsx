@@ -6,21 +6,14 @@ import {
   Box,
   Stack,
   Button,
-  CircularProgress,
   Typography,
   TextField,
   Select,
   MenuItem,
   Pagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import FormationTable from "./FormationTable";
 import FiltresFormationsPanel from "../../components/filters/FiltresFormationsPanel";
@@ -29,6 +22,9 @@ import useFetch from "../../hooks/useFetch";
 import useFiltresFormations from "../../hooks/useFiltresFormations";
 import type { Formation, FiltresFormationsValues, PaginatedResponse } from "../../types/formation";
 import PageTemplate from "../../components/PageTemplate";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
 import FormationExportButton from "../../components/export_buttons/ExportButtonFormation";
 import { useHardDeleteFormation } from "../../hooks/useFormations";
 
@@ -42,6 +38,7 @@ export default function FormationsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   // ── filtres
   const [filters, setFilters] = useState<FiltresFormationsValues>({
@@ -147,6 +144,7 @@ export default function FormationsPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
 
+    setArchiveLoading(true);
     try {
       const api = await import("../../api/axios");
       await Promise.all(idsToDelete.map((id) => api.default.delete(`/formations/${id}/`)));
@@ -157,6 +155,8 @@ export default function FormationsPage() {
       fetchData();
     } catch {
       toast.error("Erreur lors de l'archivage");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -290,7 +290,7 @@ export default function FormationsPage() {
       filters={
         showFilters &&
         (filtresLoading ? (
-          <CircularProgress />
+          <LoadingState inline label="Chargement des filtres..." minHeight={120} />
         ) : filtres ? (
           <FiltresFormationsPanel
             filtres={filtres}
@@ -350,16 +350,19 @@ export default function FormationsPage() {
       </Stack>
 
       {loading ? (
-        <CircularProgress />
+        <LoadingState label="Chargement des formations..." />
       ) : error ? (
         <Typography color="error">Erreur lors du chargement des formations.</Typography>
       ) : formations.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
-          <Typography>Aucune formation trouvée.</Typography>
-        </Box>
+        <EmptyState
+          title="Aucune formation trouvée"
+          description="Modifiez la recherche ou créez une formation."
+          action={
+            <Button variant="contained" onClick={() => navigate("/formations/create")}>
+              Ajouter une formation
+            </Button>
+          }
+        />
       ) : (
         <FormationTable
           formations={formations}
@@ -371,41 +374,33 @@ export default function FormationsPage() {
         />
       )}
 
-      {/* Confirmation archivage */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="warning" />
-          Confirmation
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {selectedId
-              ? "Archiver cette formation ?"
-              : `Archiver les ${selectedIds.length} formations sélectionnées ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
-            Archiver
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => !archiveLoading && setShowConfirm(false)}
+        onConfirm={handleDelete}
+        loading={archiveLoading}
+        tone="warning"
+        title="Confirmation"
+        description={
+          selectedId
+            ? "Archiver cette formation ?"
+            : `Archiver les ${selectedIds.length} formations sélectionnées ?`
+        }
+        confirmLabel="Archiver"
+        cancelLabel="Annuler"
+      />
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Supprimer définitivement la formation</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Cette action est irréversible. La formation archivée sera supprimée physiquement.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleConfirmHardDelete}>
-            Supprimer définitivement
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => !hardDeleteFormation.loading && setHardDeleteId(null)}
+        onConfirm={handleConfirmHardDelete}
+        loading={hardDeleteFormation.loading}
+        tone="danger"
+        title="Supprimer définitivement la formation"
+        description="Cette action est irréversible. La formation archivée sera supprimée physiquement."
+        confirmLabel="Supprimer définitivement"
+        cancelLabel="Annuler"
+      />
     </PageTemplate>
   );
 }

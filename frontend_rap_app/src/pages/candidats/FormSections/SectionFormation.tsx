@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from "react";
-import { Card, CardHeader, CardContent, Grid, Box, Button, TextField } from "@mui/material";
+import { Card, CardHeader, CardContent, Grid, Box, Button } from "@mui/material";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 import type { CandidatFormData } from "../../../types/candidat";
 import { formatFormation } from "./utils";
 import { FormationPick } from "../../../components/modals/FormationSelectModal";
@@ -44,7 +45,7 @@ function SectionFormation({
         <Grid container spacing={2}>
           {/* Sélection formation */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Formation sélectionnée"
               value={formationLabel}
@@ -71,7 +72,7 @@ function SectionFormation({
           {formationInfo && (
             <>
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Nom de la formation"
                   value={formationInfo.nom ?? ""}
@@ -80,7 +81,7 @@ function SectionFormation({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Centre"
                   value={formationInfo.centre?.nom ?? ""}
@@ -89,7 +90,7 @@ function SectionFormation({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Type d’offre"
                   value={formationInfo.type_offre?.nom ?? ""}
@@ -98,7 +99,7 @@ function SectionFormation({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="N° d’offre"
                   value={formationInfo.num_offre ?? ""}

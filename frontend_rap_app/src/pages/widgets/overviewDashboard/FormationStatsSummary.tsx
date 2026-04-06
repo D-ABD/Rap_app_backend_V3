@@ -4,7 +4,6 @@ import {
   Typography,
   Box,
   Grid,
-  CircularProgress,
   Alert,
   Chip,
   FormControl,
@@ -12,6 +11,8 @@ import {
   MenuItem,
   useTheme,
 } from "@mui/material";
+import StatCardSkeleton from "../../../components/ui/StatCardSkeleton";
+import StatCard from "../../../components/dashboard/StatCard";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import {
   useFormationOverview,
@@ -81,19 +82,7 @@ export default function FormationStatsSummary({
 
   // 🕒 États de chargement / erreur
   if (isLoading) {
-    return (
-      <Card
-        sx={{
-          p: 4,
-          textAlign: "center",
-          borderRadius: 3,
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-        }}
-      >
-        <CircularProgress size={24} />
-      </Card>
-    );
+    return <StatCardSkeleton count={5} />;
   }
 
   if (error) {
@@ -273,52 +262,19 @@ export default function FormationStatsSummary({
       <Grid container spacing={2.5}>
         {stats.map((s) => (
           <Grid item xs={6} sm={4} md={2.4} key={s.label}>
-            <Box
+            <StatCard
+              label={s.label}
+              value={s.value}
+              helperText={"helper" in s && s.helper ? s.helper : undefined}
+              valueColor={s.color}
               onClick={s.label === "Archivées" ? () => setIncludeArchived((prev) => !prev) : undefined}
+              highlighted={s.label === "Archivées" && includeArchived}
+              highlightColor={theme.palette.secondary.main}
               sx={{
-                p: 2.5,
-                borderRadius: 2.5,
-                textAlign: "center",
                 bgcolor: statBoxBg,
                 boxShadow: statShadow,
-                transition: "all 0.2s ease",
-                cursor: s.label === "Archivées" ? "pointer" : "default",
-                outline:
-                  s.label === "Archivées" && includeArchived
-                    ? `2px solid ${theme.palette.secondary.main}`
-                    : "none",
-                "&:hover": {
-                  boxShadow: isDark ? "0 4px 14px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.08)",
-                  transform: "translateY(-2px)",
-                },
               }}
-            >
-              <Typography
-                variant="h5"
-                sx={{
-                  color: s.color,
-                  fontWeight: 700,
-                  mb: 0.5,
-                  lineHeight: 1.2,
-                }}
-              >
-                {s.value}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}
-              >
-                {s.label}
-              </Typography>
-              {"helper" in s && s.helper ? (
-                <Typography
-                  variant="caption"
-                  sx={{ color: theme.palette.text.secondary, display: "block", mt: 0.75 }}
-                >
-                  {s.helper}
-                </Typography>
-              ) : null}
-            </Box>
+            />
           </Grid>
         ))}
       </Grid>

@@ -4,6 +4,7 @@ import { Typography, Button, Box, Grid } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
 import BackNavButton from "../components/BackNavButton";
+import DashboardGrid from "../components/dashboard/DashboardGrid";
 
 // Widgets
 import ProspectionOverviewWidget from "./widgets/overviewDashboard/ProspectionOverviewWidget";
@@ -33,18 +34,19 @@ const DashboardCandidatPage = () => {
       </Box>
 
       {/* Widgets pour un candidat */}
-      <Grid container spacing={2}>
-        {/* Bloc 1 : synthèse prospections */}
+      <DashboardGrid>
         <Grid item xs={12} sm={6}>
           <ProspectionOverviewWidget title="Mes Prospections" />
         </Grid>
 
-        {/* Bloc 2 : taux et répartition côte à côte */}
         <Grid item xs={12} sm={6}>
           <ProspectionConversionKpi title="Tx transformation Prospections" />
         </Grid>
-        <ProspectionCommentStatsDashboard />
-      </Grid>
+
+        <Grid item xs={12}>
+          <ProspectionCommentStatsDashboard />
+        </Grid>
+      </DashboardGrid>
     </PageWrapper>
   );
 };

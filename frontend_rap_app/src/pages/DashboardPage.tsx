@@ -22,6 +22,7 @@ import { useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
 import BackNavButton from "../components/BackNavButton";
+import DashboardGrid from "../components/dashboard/DashboardGrid";
 
 // ---------- Widgets ----------
 import FormationSaturationWidget from "./widgets/saturationdashboard/FormationSaturationWidget";
@@ -181,7 +182,7 @@ export default function DashboardPage() {
         {/* 🎯 WIDGETS STRATÉGIQUES — VERSION CARRÉE (4 BLOCS) */}
         {/* ===================================================== */}
 
-        <Grid container spacing={2} mb={10}>
+        <DashboardGrid sx={{ mb: 10 }}>
           <Grid item xs={8} md={6} lg={4}>
             <DeclicStatsSummary title="Declic - Synthese" />
           </Grid>
@@ -193,7 +194,7 @@ export default function DashboardPage() {
           <Grid item xs={8} md={6} lg={4}>
             <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
           </Grid>
-        </Grid>
+        </DashboardGrid>
 
         {/* ================================================ */}
         {/* 📦 ACCORDÉONS */}
@@ -201,7 +202,7 @@ export default function DashboardPage() {
 
         {/* INDICATEURS CLÉS */}
         {styledAccordion(
-          <Grid container spacing={2}>
+          <DashboardGrid>
             <Grid item xs={12}>
               <FormationStatsSummary title="Formations - Synthese" />
             </Grid>
@@ -215,7 +216,7 @@ export default function DashboardPage() {
             <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
               <AppairageConversionKpi title="Taux de transformation Appairages" />
             </Grid>
-          </Grid>,
+          </DashboardGrid>,
           "Indicateurs clés",
           "primary",
           true
@@ -223,7 +224,7 @@ export default function DashboardPage() {
 
         {/* STATS FORMATIONS */}
         {styledAccordion(
-          <Grid container spacing={2}>
+          <DashboardGrid>
             <Grid item xs={12} sm={6} md={4}>
               <FormationOverviewWidget title="Répartition formations" />
             </Grid>
@@ -233,28 +234,28 @@ export default function DashboardPage() {
             <Grid item xs={12} sm={6} md={4}>
               <FormationPlacesWidget title="Places disponibles" />
             </Grid>
-          </Grid>,
+          </DashboardGrid>,
           "Stats Formations",
           "success"
         )}
 
         {/* STATS CANDIDATS */}
         {styledAccordion(
-          <Grid container spacing={2}>
+          <DashboardGrid>
             <Grid item xs={12} sm={6}>
               <CandidatOverviewWidget title="Statuts candidats" />
             </Grid>
             <Grid item xs={12} sm={6}>
               <CandidatContratOverviewWidget title="Répartition contrats" />
             </Grid>
-          </Grid>,
+          </DashboardGrid>,
           "Stats Candidats",
           "warning"
         )}
 
         {/* SUIVI PROSPECTION / APPAIRAGE / TRE / ÉVÉNEMENTS */}
         {styledAccordion(
-          <Grid container spacing={2}>
+          <DashboardGrid>
             <Grid item xs={12} sm={6} md={4}>
               <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
             </Grid>
@@ -270,7 +271,7 @@ export default function DashboardPage() {
             <Grid item xs={12}>
               <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
             </Grid>
-          </Grid>,
+          </DashboardGrid>,
           "Suivi Prospection / Appairage / TRE / Evenements",
           "info"
         )}

@@ -3,7 +3,6 @@ import {
   Box,
   Stack,
   Button,
-  CircularProgress,
   Typography,
   Pagination,
   Dialog,
@@ -13,7 +12,6 @@ import {
   DialogActions,
   useTheme,
 } from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import AddIcon from "@mui/icons-material/Add";
 import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
@@ -26,6 +24,10 @@ import {
   useCerfaUpdate, // ✅ anticipé pour mise à jour
 } from "../../hooks/useCerfa";
 import PageTemplate from "../../components/PageTemplate";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import EmptyState from "../../components/ui/EmptyState";
+import ErrorState from "../../components/ui/ErrorState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import SearchInput from "../../components/SearchInput";
 import CerfaTable from "./CerfaTable";
 import { CerfaForm } from "./CerfaForm";
@@ -55,6 +57,7 @@ export default function CerfaPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [showTypeChoice, setShowTypeChoice] = useState(false);
@@ -143,7 +146,7 @@ export default function CerfaPage() {
   );
   const editingId = selectedId ?? selectedContrat?.id ?? null;
 
-  const { data, isLoading, isError } = useCerfaList(queryParams);
+  const { data, isLoading, isError, refetch } = useCerfaList(queryParams);
   const { data: centresData } = useCentres({ page: 1, page_size: 200, ordering: "nom" });
   const { mutateAsync: createCerfa, isPending: isCreating } = useCerfaCreate();
   const { mutateAsync: updateCerfa, isPending: isUpdating } = useCerfaUpdate(editingId ?? -1);
@@ -264,6 +267,7 @@ export default function CerfaPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
 
+    setArchiveLoading(true);
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
       toast.success(`📦 ${idsToDelete.length} contrat(s) archive(s)`);
@@ -273,6 +277,8 @@ export default function CerfaPage() {
       setReloadKey((k) => k + 1);
     } catch (_err) {
       toast.error("Erreur lors de l'archivage.");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -407,13 +413,32 @@ export default function CerfaPage() {
       }
     >
       {isLoading ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
+        <TableSkeleton columns={8} rows={8} showToolbar={false} />
       ) : isError ? (
-        <Typography color="error">Erreur de chargement.</Typography>
+        <ErrorState
+          message="Les contrats CERFA n'ont pas pu être chargés."
+          onRetry={() => void refetch()}
+        />
       ) : contrats.length === 0 ? (
-        <Typography>Aucun contrat trouvé.</Typography>
+        <EmptyState
+          title="Aucun contrat trouvé"
+          description="Ajustez les filtres ou créez un nouveau CERFA."
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              disabled={!canWriteCerfa}
+              onClick={() => {
+                if (!canWriteCerfa) return;
+                setSelectedContrat(null);
+                setSelectedId(null);
+                setShowTypeChoice(true);
+              }}
+            >
+              Nouveau CERFA
+            </Button>
+          }
+        />
       ) : (
         <CerfaTable
           contrats={contrats}
@@ -582,26 +607,21 @@ export default function CerfaPage() {
         canWrite={canWriteCerfa}
       />
 
-      {/* ✅ Confirmation archivage */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
-        <DialogTitle>
-          <WarningAmberIcon color="warning" sx={{ mr: 1 }} />
-          Confirmation
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {selectedId
-              ? "Archiver ce contrat CERFA ?"
-              : `Archiver ${selectedIds.length} contrat(s) sélectionné(s) ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete} disabled={!canWriteCerfa}>
-            Archiver
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => !archiveLoading && setShowConfirm(false)}
+        onConfirm={handleDelete}
+        loading={archiveLoading}
+        tone="warning"
+        title="Confirmation"
+        description={
+          selectedId
+            ? "Archiver ce contrat CERFA ?"
+            : `Archiver ${selectedIds.length} contrat(s) sélectionné(s) ?`
+        }
+        confirmLabel="Archiver"
+        cancelLabel="Annuler"
+      />
     </PageTemplate>
   );
 }

@@ -14,6 +14,7 @@ import "quill/dist/quill.snow.css";
 
 import { colorOptions } from "../../utils/registerQuillFormats";
 import FormationSelectModal from "../../components/modals/FormationSelectModal";
+import EntityPickerField from "../../components/forms/fields/EntityPickerField";
 import useForm from "../../hooks/useForm";
 import api from "../../api/axios";
 
@@ -175,20 +176,24 @@ export default function CommentaireForm({
           {!readonlyFormation && (
             <>
               <Box sx={{ mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowModal(true)}
-                  aria-label={formationNom ? "Changer de formation" : "Rechercher une formation"}
-                >
-                  🔍 {formationNom ? "Changer de formation" : "Rechercher une formation"}
-                </Button>
-
-                {formationNom && (
-                  <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
-                    📚 Formation sélectionnée :{" "}
-                    <strong style={{ color: "#2e7d32" }}>{formationNom}</strong>
-                  </Typography>
-                )}
+                <EntityPickerField
+                  label="Formation"
+                  displayValue={formationNom ?? ""}
+                  placeholder="Cliquez pour rechercher une formation…"
+                  onOpen={() => setShowModal(true)}
+                  helperText={
+                    formationNom ? (
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        📚 Formation sélectionnée :{" "}
+                        <Typography component="strong" variant="body2" sx={{ color: "success.main" }}>
+                          {formationNom}
+                        </Typography>
+                      </Typography>
+                    ) : (
+                      "Choisissez la formation concernée par le commentaire."
+                    )
+                  }
+                />
               </Box>
 
               <FormationSelectModal

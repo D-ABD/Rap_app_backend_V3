@@ -4,7 +4,6 @@ import {
   CardHeader,
   CardContent,
   Grid,
-  TextField,
   FormControl,
   FormLabel,
   Select,
@@ -23,6 +22,7 @@ import dayjs, { Dayjs } from "dayjs";
 import type { CandidatFormData, CandidatMeta } from "../../../types/candidat";
 import { formatFormation } from "./utils";
 import { FormationPick } from "../../../components/modals/FormationSelectModal";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 
 const TYPE_CONTRAT_CERFA_OPTIONS = [
   { value: "11", label: "11 - Premier contrat d'apprentissage" },
@@ -171,7 +171,7 @@ function SectionIdentite({
           {/* -------------------- IDENTITÉ -------------------- */}
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               required
               label="Nom"
@@ -181,7 +181,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               required
               label="Prénom"
@@ -210,7 +210,7 @@ function SectionIdentite({
 
           {/* Email / Téléphone */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               required
               type="email"
@@ -221,7 +221,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Téléphone"
               value={form.telephone ?? ""}
@@ -270,7 +270,7 @@ function SectionIdentite({
 
           {/* Numéro OSIA */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Numéro OSIA"
               value={form.numero_osia ?? ""}
@@ -329,7 +329,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={2}>
-            <TextField
+            <AppTextField
               fullWidth
               label="N°"
               value={form.street_number ?? ""}
@@ -338,7 +338,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Rue"
               value={form.street_name ?? ""}
@@ -347,7 +347,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Complément"
               value={form.street_complement ?? ""}
@@ -356,7 +356,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Code postal"
               value={form.code_postal ?? ""}
@@ -365,7 +365,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={8}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Ville"
               value={form.ville ?? ""}
@@ -380,7 +380,7 @@ function SectionIdentite({
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               required
               label="Formation sélectionnée"
@@ -408,7 +408,7 @@ function SectionIdentite({
           {formationInfo && (
             <>
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Nom de la formation"
                   value={formationInfo.nom ?? ""}
@@ -417,7 +417,7 @@ function SectionIdentite({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Centre"
                   value={formationInfo.centre?.nom ?? ""}
@@ -426,7 +426,7 @@ function SectionIdentite({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="Type d’offre"
                   value={formationInfo.type_offre?.nom ?? ""}
@@ -435,7 +435,7 @@ function SectionIdentite({
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField
+                <AppTextField
                   fullWidth
                   label="N° d’offre"
                   value={formationInfo.num_offre ?? ""}

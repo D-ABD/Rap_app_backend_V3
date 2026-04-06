@@ -1,21 +1,8 @@
 // src/components/modals/CentresSelectModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  CircularProgress,
-  Box,
-  Typography,
-} from "@mui/material";
+import { List, ListItem, ListItemButton, ListItemText } from "@mui/material";
 import api from "../../api/axios";
+import EntityPickerDialog from "../dialogs/EntityPickerDialog";
 
 type CentreLite = { id: number; label: string };
 
@@ -85,14 +72,12 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
       setErr(null);
       try {
         try {
-          // endpoint « liste simple »
           const r = await api.get("/centres/liste-simple/", {
             params: { search: dq || undefined, page_size: 200 },
           });
           const results = extractResults(r.data);
           setItems(results.map(toCentreLite));
         } catch {
-          // fallback DRF standard
           const r = await api.get("/centres/", {
             params: {
               search: dq || undefined,
@@ -119,45 +104,30 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
   }, [items, dq]);
 
   return (
-    <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>🏫 Sélectionner un centre</DialogTitle>
-      <DialogContent dividers>
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress />
-          </Box>
-        ) : err ? (
-          <Typography color="error">{err}</Typography>
-        ) : (
-          <>
-            <TextField
-              fullWidth
-              placeholder="🔍 Rechercher un centre…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              margin="normal"
-            />
-            {filtered.length === 0 ? (
-              <Typography>Aucun centre trouvé.</Typography>
-            ) : (
-              <List>
-                {filtered.map((c) => (
-                  <ListItem key={c.id} disablePadding>
-                    <ListItemButton onClick={() => onSelect(c)}>
-                      <ListItemText primary={c.label} secondary={`#${c.id}`} />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            )}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary">
-          Fermer
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <EntityPickerDialog
+      open={show}
+      onClose={onClose}
+      title="🏫 Sélectionner un centre"
+      search={{
+        value: q,
+        onChange: setQ,
+        placeholder: "🔍 Rechercher un centre…",
+      }}
+      showSearchWhenLoading={false}
+      loading={loading}
+      error={err}
+      empty={!loading && !err && filtered.length === 0}
+      emptyMessage="Aucun centre trouvé."
+    >
+      <List>
+        {filtered.map((c) => (
+          <ListItem key={c.id} disablePadding>
+            <ListItemButton onClick={() => onSelect(c)}>
+              <ListItemText primary={c.label} secondary={`#${c.id}`} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </EntityPickerDialog>
   );
 }

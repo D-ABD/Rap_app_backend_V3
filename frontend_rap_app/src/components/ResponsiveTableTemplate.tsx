@@ -13,8 +13,10 @@ import {
   Typography,
   Stack,
   useMediaQuery,
+  type SxProps,
+  type Theme,
 } from "@mui/material";
-import { ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 
 export type TableColumn<T> = {
   key: keyof T | string;
@@ -34,6 +36,12 @@ interface Props<T> {
   cardTitle?: (row: T) => string;
   onRowClick?: (row: T) => void;
   rowSx?: (row: T) => object; // ✅ style conditionnel par ligne
+  /** Composant du conteneur table (ex. `Paper` pour un fond carte). */
+  tableContainerComponent?: ElementType;
+  /** Styles additionnels sur le `TableContainer`. */
+  containerSx?: SxProps<Theme>;
+  /** Alignement de la colonne Actions (desktop). */
+  actionsAlign?: "left" | "center" | "right";
 }
 
 export default function ResponsiveTableTemplate<T>({
@@ -44,9 +52,18 @@ export default function ResponsiveTableTemplate<T>({
   cardTitle,
   onRowClick,
   rowSx,
+  tableContainerComponent,
+  containerSx,
+  actionsAlign = "center",
 }: Props<T>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const actionCellSx = {
+    position: "sticky" as const,
+    right: 0,
+    backgroundColor: theme.palette.background.paper,
+    zIndex: theme.zIndex.appBar - 1,
+  };
 
   /* 🔹 Vue mobile => affichage en cartes */
   if (isMobile) {
@@ -79,7 +96,11 @@ export default function ResponsiveTableTemplate<T>({
                     </Typography>
                   </Box>
                 ))}
-                {actions && <Box mt={1}>{actions(row)}</Box>}
+                {actions ? (
+                  <Box mt={1} onClick={(e) => e.stopPropagation()}>
+                    {actions(row)}
+                  </Box>
+                ) : null}
               </Stack>
             </CardContent>
           </Card>
@@ -91,11 +112,15 @@ export default function ResponsiveTableTemplate<T>({
   /* 🔹 Vue desktop => affichage en table */
   return (
     <TableContainer
-      sx={{
-        maxHeight: "calc(100vh - 64px)",
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: 2,
-      }}
+      {...(tableContainerComponent ? { component: tableContainerComponent } : {})}
+      sx={[
+        {
+          maxHeight: "calc(100vh - 64px)",
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2,
+        },
+        ...(containerSx ? (Array.isArray(containerSx) ? containerSx : [containerSx]) : []),
+      ]}
     >
       <Table stickyHeader size="small">
         <TableHead>
@@ -118,9 +143,9 @@ export default function ResponsiveTableTemplate<T>({
                 {col.label}
               </TableCell>
             ))}
-            {actions && (
+            {actions ? (
               <TableCell
-                align="center"
+                align={actionsAlign}
                 sx={{
                   position: "sticky",
                   right: 0,
@@ -131,7 +156,7 @@ export default function ResponsiveTableTemplate<T>({
               >
                 Actions
               </TableCell>
-            )}
+            ) : null}
           </TableRow>
         </TableHead>
 
@@ -163,19 +188,15 @@ export default function ResponsiveTableTemplate<T>({
                   {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}
                 </TableCell>
               ))}
-              {actions && (
+              {actions ? (
                 <TableCell
-                  align="center"
-                  sx={{
-                    position: "sticky",
-                    right: 0,
-                    backgroundColor: theme.palette.background.paper,
-                    zIndex: theme.zIndex.appBar - 1,
-                  }}
+                  align={actionsAlign}
+                  onClick={(e) => e.stopPropagation()}
+                  sx={actionCellSx}
                 >
                   {actions(row)}
                 </TableCell>
-              )}
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

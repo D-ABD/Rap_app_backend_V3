@@ -4,7 +4,6 @@ import {
   Paper,
   Grid,
   Typography,
-  TextField,
   Select,
   MenuItem,
   Button,
@@ -15,6 +14,7 @@ import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
+import AppTextField from "src/components/forms/fields/AppTextField";
 
 interface Props {
   initialValues?: Partial<Prepa>;
@@ -162,7 +162,7 @@ export default function PrepaFormAteliers({
             {/* Date */}
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Date *</Typography>
-              <TextField
+              <AppTextField
                 type="date"
                 fullWidth
                 required
@@ -175,7 +175,7 @@ export default function PrepaFormAteliers({
             {/* Centre */}
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Centre *</Typography>
-              <TextField
+              <AppTextField
                 fullWidth
                 placeholder="— Aucun centre sélectionné —"
                 value={centreLabel || (form.centre_id ? `#${form.centre_id}` : "")}
@@ -203,7 +203,7 @@ export default function PrepaFormAteliers({
 
             <Grid item xs={12} md={6}>
               <Typography fontWeight={600}>Formateur / animateur</Typography>
-              <TextField
+              <AppTextField
                 fullWidth
                 placeholder="Nom du formateur qui anime la séance"
                 value={form.formateur_animateur ?? ""}
@@ -224,7 +224,7 @@ export default function PrepaFormAteliers({
                 ["nb_presents_info", "Présents"],
               ].map(([key, label]) => (
                 <Grid item xs={12} md={4} key={key}>
-                  <TextField
+                  <AppTextField
                     type="number"
                     fullWidth
                     label={label}
@@ -238,7 +238,7 @@ export default function PrepaFormAteliers({
 
               {/* Adhésions */}
               <Grid item xs={12} md={4}>
-                <TextField
+                <AppTextField
                   type="number"
                   fullWidth
                   label="Adhésions"
@@ -260,7 +260,7 @@ export default function PrepaFormAteliers({
                 ["nb_presents_prepa", "Présents"],
               ].map(([key, label]) => (
                 <Grid item xs={12} md={4} key={key}>
-                  <TextField
+                  <AppTextField
                     type="number"
                     fullWidth
                     label={label}
@@ -274,7 +274,7 @@ export default function PrepaFormAteliers({
 
               {/* Absents auto */}
               <Grid item xs={12} md={4}>
-                <TextField
+                <AppTextField
                   type="number"
                   fullWidth
                   label="Absents (auto)"

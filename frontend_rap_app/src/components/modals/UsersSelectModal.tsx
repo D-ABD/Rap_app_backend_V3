@@ -1,26 +1,9 @@
 // src/components/modals/UsersSelectModal.tsx
 import { useEffect, useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  CircularProgress,
-  Typography,
-  Chip,
-  Button,
-  Box,
-} from "@mui/material";
+import { List, ListItem, ListItemButton, ListItemText, Typography, Chip } from "@mui/material";
 import api from "../../api/axios";
+import EntityPickerDialog from "../dialogs/EntityPickerDialog";
 
-/* ───────────────────────────────────────────────
- * Types
- * ─────────────────────────────────────────────── */
 export type RoleCode =
   | "candidat"
   | "stagiaire"
@@ -61,15 +44,10 @@ interface Props {
   show: boolean;
   onClose: () => void;
   onSelect: (u: UserPick) => void;
-  /** Restreindre aux rôles donnés (par défaut staff/admin/commercial/charge_recrutement/superadmin) */
   allowedRoles?: RoleCode[];
-  /** Ne garder que les comptes actifs */
   onlyActive?: boolean;
 }
 
-/* ───────────────────────────────────────────────
- * Helpers
- * ─────────────────────────────────────────────── */
 function asPaginated<T>(data: DRFEnvelope<T>): DRFPaginated<T> {
   return "results" in data ? data : data.data;
 }
@@ -94,9 +72,6 @@ function normalizeUser(u: UserApi): UserPick {
   };
 }
 
-/* ───────────────────────────────────────────────
- * Component
- * ─────────────────────────────────────────────── */
 export default function UsersSelectModal({
   show,
   onClose,
@@ -176,68 +151,57 @@ export default function UsersSelectModal({
   }, [allowed, items, onlyActive, search]);
 
   return (
-    <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Sélectionner un utilisateur métier</DialogTitle>
-      <DialogContent dividers>
-        <TextField
-          fullWidth
-          type="search"
-          placeholder="🔍 Rechercher un utilisateur (nom, email)…"
-          value={search}
-          onChange={(ev) => setSearch(ev.currentTarget.value)}
-          margin="normal"
-        />
-
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
-        ) : (
-          <List>
-            {filtered.map((u) => (
-              <ListItem key={u.id} disablePadding divider>
-                <ListItemButton onClick={() => onSelect(u)}>
-                  <ListItemText
-                    primary={
-                      <>
-                        <strong>{u.full_name}</strong>
-                        {u.email && <span style={{ color: "#6b7280" }}> ({u.email})</span>}
-                        {u.role && (
-                          <Chip
-                            size="small"
-                            label={u.role}
-                            sx={{
-                              ml: 1,
-                              fontWeight: 600,
-                              bgcolor: "#eef2ff",
-                              color: "#3730a3",
-                            }}
-                          />
-                        )}
-                      </>
-                    }
-                    secondary={
-                      !u.is_active ? (
-                        <Typography variant="body2" color="text.secondary">
-                          Compte inactif
-                        </Typography>
-                      ) : null
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-            {filtered.length === 0 && <Typography>Aucun utilisateur trouvé.</Typography>}
-          </List>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary">
-          Fermer
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <EntityPickerDialog
+      open={show}
+      onClose={onClose}
+      title="Sélectionner un utilisateur métier"
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: "🔍 Rechercher un utilisateur (nom, email)…",
+        type: "search",
+      }}
+      showSearchWhenLoading
+      loading={loading}
+      error={error}
+      empty={!loading && !error && filtered.length === 0}
+      emptyMessage="Aucun utilisateur trouvé."
+    >
+      <List>
+        {filtered.map((u) => (
+          <ListItem key={u.id} disablePadding divider>
+            <ListItemButton onClick={() => onSelect(u)}>
+              <ListItemText
+                primary={
+                  <>
+                    <strong>{u.full_name}</strong>
+                    {u.email && <span style={{ color: "#6b7280" }}> ({u.email})</span>}
+                    {u.role && (
+                      <Chip
+                        size="small"
+                        label={u.role}
+                        sx={{
+                          ml: 1,
+                          fontWeight: 600,
+                          bgcolor: "#eef2ff",
+                          color: "#3730a3",
+                        }}
+                      />
+                    )}
+                  </>
+                }
+                secondary={
+                  !u.is_active ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Compte inactif
+                    </Typography>
+                  ) : null
+                }
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </EntityPickerDialog>
   );
 }

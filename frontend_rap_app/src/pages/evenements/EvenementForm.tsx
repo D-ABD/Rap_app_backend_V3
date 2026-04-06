@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  FormControl,
-  FormHelperText,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-} from "@mui/material";
+import { Alert, Box, Button, Grid, MenuItem, Stack } from "@mui/material";
 import { toApiError } from "../../api/httpClient";
+import FormActionsBar from "../../components/forms/FormActionsBar";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import AppDateField from "../../components/forms/fields/AppDateField";
+import AppNumberField from "../../components/forms/fields/AppNumberField";
+import AppSelectField from "../../components/forms/fields/AppSelectField";
+import AppTextField from "../../components/forms/fields/AppTextField";
 import type { Evenement, EvenementChoice, EvenementFormData, FormationSimpleOption } from "../../types/evenement";
 
 type Props = {
@@ -123,121 +117,113 @@ export default function EvenementForm({
         </Alert>
       ) : null}
 
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth error={!!errors.formation_id} disabled={!!fixedFormationId}>
-            <InputLabel id="event-formation-label">Formation</InputLabel>
-            <Select
-              labelId="event-formation-label"
-              value={values.formation_id ? String(values.formation_id) : ""}
+      <FormSectionCard title="Détails de l'événement">
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <AppSelectField
               label="Formation"
-              onChange={(e) => handleChange("formation_id", e.target.value ? Number(e.target.value) : null)}
+              labelId="event-formation-label"
+              error={!!errors.formation_id}
+              disabled={!!fixedFormationId}
+              value={values.formation_id ? String(values.formation_id) : ""}
+              onChange={(e) =>
+                handleChange("formation_id", e.target.value ? Number(e.target.value) : null)
+              }
+              helperText={errors.formation_id || "Formation concernée par l'événement."}
             >
               {formations.map((formation) => (
                 <MenuItem key={formation.id} value={String(formation.id)}>
                   {formation.nom}
                 </MenuItem>
               ))}
-            </Select>
-            <FormHelperText>{errors.formation_id || "Formation concernée par l'événement."}</FormHelperText>
-          </FormControl>
-        </Grid>
+            </AppSelectField>
+          </Grid>
 
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth error={!!errors.type_evenement}>
-            <InputLabel id="event-type-label">Type d'événement</InputLabel>
-            <Select
-              labelId="event-type-label"
-              value={values.type_evenement}
+          <Grid item xs={12} md={6}>
+            <AppSelectField
               label="Type d'événement"
-              onChange={(e) => handleChange("type_evenement", e.target.value)}
+              labelId="event-type-label"
+              error={!!errors.type_evenement}
+              value={values.type_evenement}
+              onChange={(e) => handleChange("type_evenement", String(e.target.value))}
+              helperText={errors.type_evenement || "Nature de l'événement."}
             >
               {types.map((type) => (
                 <MenuItem key={type.value} value={type.value}>
                   {type.label}
                 </MenuItem>
               ))}
-            </Select>
-            <FormHelperText>{errors.type_evenement || "Nature de l'événement."}</FormHelperText>
-          </FormControl>
-        </Grid>
+            </AppSelectField>
+          </Grid>
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="date"
-            label="Date de l'événement"
-            value={values.event_date ?? ""}
-            onChange={(e) => handleChange("event_date", e.target.value)}
-            error={!!errors.event_date}
-            helperText={errors.event_date}
-            InputLabelProps={{ shrink: true }}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Lieu"
-            value={values.lieu ?? ""}
-            onChange={(e) => handleChange("lieu", e.target.value)}
-            error={!!errors.lieu}
-            helperText={errors.lieu || "Lieu ou canal principal de l'événement."}
-          />
-        </Grid>
-
-        {values.type_evenement === "autre" ? (
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Description de l'événement"
-              value={values.description_autre ?? ""}
-              onChange={(e) => handleChange("description_autre", e.target.value)}
-              error={!!errors.description_autre}
-              helperText={errors.description_autre || "Précisez le type d'événement."}
+          <Grid item xs={12} md={6}>
+            <AppDateField
+              label="Date de l'événement"
+              value={values.event_date ?? ""}
+              onChange={(e) => handleChange("event_date", e.target.value)}
+              error={!!errors.event_date}
+              helperText={errors.event_date}
             />
           </Grid>
-        ) : null}
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label="Détails"
-            value={values.details ?? ""}
-            onChange={(e) => handleChange("details", e.target.value)}
-            error={!!errors.details}
-            helperText={errors.details || "Informations utiles à l'équipe."}
-          />
+          <Grid item xs={12} md={6}>
+            <AppTextField
+              label="Lieu"
+              value={values.lieu ?? ""}
+              onChange={(e) => handleChange("lieu", e.target.value)}
+              error={!!errors.lieu}
+              helperText={errors.lieu || "Lieu ou canal principal de l'événement."}
+            />
+          </Grid>
+
+          {values.type_evenement === "autre" ? (
+            <Grid item xs={12}>
+              <AppTextField
+                label="Description de l'événement"
+                value={values.description_autre ?? ""}
+                onChange={(e) => handleChange("description_autre", e.target.value)}
+                error={!!errors.description_autre}
+                helperText={errors.description_autre || "Précisez le type d'événement."}
+              />
+            </Grid>
+          ) : null}
+
+          <Grid item xs={12}>
+            <AppTextField
+              fullWidth
+              multiline
+              minRows={3}
+              label="Détails"
+              value={values.details ?? ""}
+              onChange={(e) => handleChange("details", e.target.value)}
+              error={!!errors.details}
+              helperText={errors.details || "Informations utiles à l'équipe."}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <AppNumberField
+              label="Participants prévus"
+              value={values.participants_prevus ?? ""}
+              onChange={(e) =>
+                handleChange("participants_prevus", e.target.value === "" ? null : Number(e.target.value))
+              }
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <AppNumberField
+              label="Participants réels"
+              value={values.participants_reels ?? ""}
+              onChange={(e) =>
+                handleChange("participants_reels", e.target.value === "" ? null : Number(e.target.value))
+              }
+            />
+          </Grid>
         </Grid>
+      </FormSectionCard>
 
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Participants prévus"
-            value={values.participants_prevus ?? ""}
-            onChange={(e) =>
-              handleChange("participants_prevus", e.target.value === "" ? null : Number(e.target.value))
-            }
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Participants réels"
-            value={values.participants_reels ?? ""}
-            onChange={(e) =>
-              handleChange("participants_reels", e.target.value === "" ? null : Number(e.target.value))
-            }
-          />
-        </Grid>
-      </Grid>
-
-      <Stack direction={{ xs: "column-reverse", sm: "row" }} spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+      <FormActionsBar direction={{ xs: "column-reverse", sm: "row" }} spacing={2} sx={{ mt: 3 }}>
         <Button type="submit" variant="contained" disabled={loading} fullWidth>
           {loading ? "Enregistrement..." : submitLabel}
         </Button>
@@ -246,8 +232,7 @@ export default function EvenementForm({
             Annuler
           </Button>
         ) : null}
-      </Stack>
+      </FormActionsBar>
     </Box>
   );
 }
-

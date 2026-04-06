@@ -2,18 +2,8 @@
 // 📊 DeclicStatsSummary — version corrigée avec taux de rétention global
 // -----------------------------------------------------------------------------
 import * as React from "react";
-import {
-  Card,
-  Typography,
-  Box,
-  Grid,
-  CircularProgress,
-  Alert,
-  FormControl,
-  Select,
-  MenuItem,
-  useTheme,
-} from "@mui/material";
+import { Card, Typography, Box, Grid, Alert, FormControl, Select, MenuItem, useTheme } from "@mui/material";
+import StatCardSkeleton from "../../components/ui/StatCardSkeleton";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useAuth } from "src/hooks/useAuth";
 import { isAdminLikeRole } from "src/utils/roleGroups";
@@ -65,11 +55,7 @@ export default function DeclicStatsSummary({
 
   // 🌀 États de chargement / erreur
   if (isLoading) {
-    return (
-      <Card sx={{ p: 4, textAlign: "center", borderRadius: 3 }}>
-        <CircularProgress size={24} />
-      </Card>
-    );
+    return <StatCardSkeleton count={3} />;
   }
 
   if (error) {

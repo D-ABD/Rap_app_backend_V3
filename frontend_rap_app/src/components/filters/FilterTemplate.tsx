@@ -11,6 +11,9 @@ import {
   FormControlLabel,
   Button,
   Box,
+  Typography,
+  type SxProps,
+  type Theme,
 } from "@mui/material";
 
 type Option = { value: string | number; label: string };
@@ -43,6 +46,10 @@ type Props<T extends object> = {
   actions?: Actions;
   cols?: 1 | 2 | 3 | 4 | 5 | 6;
   loading?: boolean;
+  /** Titre optionnel au-dessus du bloc filtres (Lot 6). */
+  title?: React.ReactNode;
+  /** Styles additionnels sur le conteneur du bloc filtres. */
+  sx?: SxProps<Theme>;
 };
 
 function isNumberOption(opts?: Option[]): boolean {
@@ -66,25 +73,33 @@ export default function FilterTemplate<T extends object>({
   actions,
   cols = 4,
   loading,
+  title,
+  sx,
 }: Props<T>) {
   const safeValues =
     values && typeof values === "object"
       ? (values as Record<string, unknown>)
       : ({} as Record<string, unknown>);
 
+  const boxSx: SxProps<Theme> = [
+    {
+      mb: 2,
+      p: 2,
+      border: "1px solid",
+      borderColor: "divider",
+      borderRadius: 2,
+      backgroundColor: "background.default",
+    },
+    ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+  ];
+
   return (
-    <Box
-      sx={{
-        mb: 2,
-        p: 2,
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 2,
-        backgroundColor: "background.default",
-      }}
-      aria-busy={!!loading}
-      aria-live="polite"
-    >
+    <Box sx={boxSx} aria-busy={!!loading} aria-live="polite">
+      {title ? (
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {title}
+        </Typography>
+      ) : null}
       <Grid container spacing={2}>
         {fields
           .filter((f) => f && f.key != null && !f.hidden)

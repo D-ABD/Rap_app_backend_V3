@@ -6,26 +6,22 @@ import {
   Stack,
   Button,
   Checkbox,
-  CircularProgress,
   Typography,
   Select,
   MenuItem,
   Pagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   useTheme,
   useMediaQuery,
   Paper,
   TextField,
 } from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import PageTemplate from "../../components/PageTemplate";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
 
 type Statut = {
   id: number;
@@ -41,6 +37,8 @@ export default function StatutsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [hardDeleteLoading, setHardDeleteLoading] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -85,6 +83,7 @@ export default function StatutsPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
 
+    setArchiveLoading(true);
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -96,6 +95,8 @@ export default function StatutsPage() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Erreur lors de l'archivage");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -113,6 +114,7 @@ export default function StatutsPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+    setHardDeleteLoading(true);
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -122,6 +124,8 @@ export default function StatutsPage() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Erreur lors de la suppression définitive");
+    } finally {
+      setHardDeleteLoading(false);
     }
   };
 
@@ -241,16 +245,19 @@ export default function StatutsPage() {
       }
     >
       {loading ? (
-        <CircularProgress />
+        <LoadingState label="Chargement des statuts..." />
       ) : error ? (
         <Typography color="error">Erreur lors du chargement des statuts.</Typography>
       ) : statuts.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
-          <Typography>Aucun statut trouvé.</Typography>
-        </Box>
+        <EmptyState
+          title="Aucun statut trouvé"
+          description="Modifiez la recherche ou créez un statut."
+          action={
+            <Button variant="contained" onClick={() => navigate("/statuts/create")}>
+              Ajouter un statut
+            </Button>
+          }
+        />
       ) : (
         <Stack spacing={1}>
           {statuts.map((s) => (
@@ -333,44 +340,33 @@ export default function StatutsPage() {
         </Stack>
       )}
 
-      {/* Confirmation dialog */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="warning" />
-          Confirmation
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {selectedId
-              ? "Archiver ce statut ?"
-              : `Archiver les ${selectedIds.length} statuts sélectionnés ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
-            Archiver
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => !archiveLoading && setShowConfirm(false)}
+        onConfirm={handleDelete}
+        loading={archiveLoading}
+        tone="warning"
+        title="Confirmation"
+        description={
+          selectedId
+            ? "Archiver ce statut ?"
+            : `Archiver les ${selectedIds.length} statuts sélectionnés ?`
+        }
+        confirmLabel="Archiver"
+        cancelLabel="Annuler"
+      />
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="warning" />
-          Suppression définitive
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Cette action est irréversible. Supprimer définitivement ce statut archivé ?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleHardDelete}>
-            Supprimer définitivement
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => !hardDeleteLoading && setHardDeleteId(null)}
+        onConfirm={handleHardDelete}
+        loading={hardDeleteLoading}
+        tone="danger"
+        title="Suppression définitive"
+        description="Cette action est irréversible. Supprimer définitivement ce statut archivé ?"
+        confirmLabel="Supprimer définitivement"
+        cancelLabel="Annuler"
+      />
     </PageTemplate>
   );
 }

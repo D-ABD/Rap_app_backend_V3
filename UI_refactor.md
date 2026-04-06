@@ -62,14 +62,23 @@ Document de suivi opérationnel : [`UI_refactor_execution_plan.md`](UI_refactor_
 - **Migration étendue du shell** : la plupart des pages sous `pages/` importent désormais `PageTemplate` et/ou `PageWrapper` (listes, création, édition, dashboards, accueil), au-delà des seuls pilotes Documents et TypeOffres.
 - **Thème** : `theme.ts` enrichi (palette étendue, composants MUI par défaut, ombres, breakpoints) — point central pour une évolution visuelle cohérente.
 - **Stabilité** : `useSidebarItems` mémorisé (`useMemo`) et garde sur la mise à jour de `submenuOpen` dans `MainLayout.tsx` pour supprimer la boucle de rendu infinie liée au menu latéral.
+- **Lot 4** : `DetailField`, `DetailSection`, `DetailViewLayout` livrés ; modales pilotes migrées (`EvenementDetailModal`, `RapportDetailModal`, `AtelierTREDetailModal`).
+- **Lot 5** : `DashboardGrid`, `StatCard`, `ChartCard` livrés ; adoption sur `DashboardPage`, `DashboardCandidatPage`, widgets de synthèse (`FormationStatsSummary`, Declic / Prepa stats), et `DashboardTemplateSaturation` ; chargements KPI avec `StatCardSkeleton` (Lot 1) là où pertinent.
+- **Lot 6** : `EntityToolbar`, `PageSizeSelect`, `ListPaginationBar`, `SelectionToolbar` ; `FilterTemplate` enrichi (`title`, `sx`) ; adoption sur `TypeOffresPage`, `EvenementsPage`, `RapportsPage` (pilotes du plan).
+- **Lot 7** : `InlineStatusBadge`, `columnFactories` (`colText`, `colCustom`) ; évolution de `ResponsiveTableTemplate` (conteneur optionnel, `containerSx`, alignement colonne Actions, isolation des clics sur les actions) ; tables pilotes `EvenementTable`, `RapportTable` (cette dernière alignée sur le template responsive + mobile cartes).
+- **Lot 8** : `AppTextField`, `AppSelectField`, `AppDateField`, `AppCheckboxField`, `AppNumberField`, `AppReadonlyField`, `FormSectionCard`, `FormActionsBar` ; adoption sur `RapportForm`, `EvenementForm`, `CentreForm` (pilotes du plan).
+- **Lot 9** : `EntityPickerDialog`, `EntityPickerField` ; refactor des modales `CentresSelectModal`, `UsersSelectModal`, `FormationSelectModal` ; `EntityPickerField` sur `CommentaireForm` (choix de formation).
+- **Lot 10** : formulaires sensibles — `ProspectionForm` (`FormSectionCard`, `AppDateField`, `AppSelectField`, `EntityPickerField`, `FormActionsBar`) ; `CerfaForm` entièrement passé sur `AppTextField` ; sections `FormSections/*` du candidat ; `PrepaForm`, `PrepaFormIC`, `PrepaFormAteliers` sur `AppTextField` ; `FormSectionCard` avec `title` en `ReactNode` pour titres avec icône. `CandidatForm` reste l’orchestration ; les champs sont dans les sections migrées.
 
-**Pas encore réalisé** (par rapport aux lots 4 à 10 du plan d'exécution) :
+**Suite du plan (lots 11 à 15)** — décrits dans [`UI_refactor_execution_plan.md`](UI_refactor_execution_plan.md) (tableau § 1.b et sections **Lot 11** à **Lot 15**) :
 
-- Pas de briques dédiées `DetailSection` / `DetailField` / `DetailViewLayout` pour les modales détail.
-- Pas de refonte « dashboards » au sens `DashboardGrid` / `StatCard` / `ChartCard` dédiés (hors squelette déjà livré au lot 1).
-- Pas de couche générique filtres / toolbar / pagination / tables / champs formulaire / pickers comme décrit dans les lots 6 à 9 ; formulaires lourds (`ProspectionForm`, `CandidatForm`, `CerfaForm`, etc.) non migrés vers des abstractions nouvelles.
+- **Lot 11** — généralisation des modales détail (`DetailSection` / `DetailField` / `DetailViewLayout`).
+- **Lot 12** — prépa et formulaires résiduels (`PrepaInvitesSection`, `StagiairesPrepaForm`, `ObjectifPrepaForm`, etc.).
+- **Lot 13** — états UI étendus (généralisation du Lot 1 : `LoadingState`, `EmptyState`, etc.).
+- **Lot 14** — shell `PageTemplate` / `PageWrapper` sur les routes restantes, au cas par cas.
+- **Lot 15** — table de données générique (`AppDataTable` ou équivalent) : **optionnel**, seulement si besoin métier clair.
 
-**Adoption des états UI** : les six briques `components/ui/*` existent ; en pratique (vérification code), seuls `LoadingState` et `ErrorState` sont importés par des pages (`DocumentsEditPage`, `TypeOffresCreatePage`). `EmptyState`, `ConfirmDialog`, `TableSkeleton` et `StatCardSkeleton` ne sont pas encore branchés dans l’app — à prévoir pour les lots suivants.
+**Adoption des états UI (Lot 1 clos)** : les six briques `components/ui/*` sont utilisées dans l’app — listes / formulaires (`EvenementsPage`, `TypeOffresPage`, `StatutsPage`, `FormationsPage`, `CerfaPage`, `DocumentsEditPage`, `TypeOffresCreatePage`, etc.) et chargements KPI (`StatCardSkeleton` sur `FormationStatsSummary`, stats Declic / Prepa). La généralisation à tous les écrans reste une amélioration continue.
 
 ---
 
@@ -2565,7 +2574,7 @@ Et avec un bénéfice direct :
 
 ## Ordre d'exécution concret recommandé
 
-**Note (avril 2026)** : la numérotation des « lots » dans cette section est la **vision cible** historique du document ; elle ne correspond pas mot pour mot aux **Lots 0–10** de [`UI_refactor_execution_plan.md`](UI_refactor_execution_plan.md). Pour l’état réel : section **« État d'avancement (avril 2026) »** ci-dessus et **§ 1.b** du plan d’exécution. En résumé : `ConfirmDialog`, `EmptyState` / `LoadingState` / `ErrorState`, squelettes, `PageTemplate` / `PageWrapper` (migration large), `AppBreadcrumbs`, styles de navigation et `theme.ts` sont **en place** ; les composants **non** introduits à ce jour incluent notamment `PageHeader`, `FormPageShell`, `FilterPanelShell`, `EntityToolbar`, `DetailSection` / `DetailField`, `DashboardGrid`, `AppTextField`, `AppDataTable`, `CrudPageLayout`, `AppShell`, etc.
+**Note (avril 2026)** : la numérotation des « lots » dans cette section est la **vision cible** historique du document ; elle ne correspond pas mot pour mot aux **Lots 0–10** de [`UI_refactor_execution_plan.md`](UI_refactor_execution_plan.md). Pour l’état réel : section **« État d'avancement (avril 2026) »** ci-dessus et **§ 1.b** du plan d’exécution. En résumé : `ConfirmDialog`, `EmptyState` / `LoadingState` / `ErrorState`, squelettes, `PageTemplate` / `PageWrapper` (migration large), `AppBreadcrumbs`, styles de navigation, `theme.ts`, les briques détail **`DetailSection` / `DetailField` / `DetailViewLayout`** (pilotes migrés), les briques dashboard **`DashboardGrid` / `StatCard` / `ChartCard`** (Lot 5), les briques liste **`EntityToolbar` / `PageSizeSelect` / `ListPaginationBar` / `SelectionToolbar`** avec `FilterTemplate` évolutif (Lot 6), la couche table **`ResponsiveTableTemplate`** enrichie avec **`InlineStatusBadge`** et **`columnFactories`** (Lot 7), les champs formulaire **`AppTextField` / `AppSelectField` / `AppDateField` / `AppCheckboxField` / `AppNumberField` / `AppReadonlyField`** avec **`FormSectionCard`** et **`FormActionsBar`** (Lot 8), et les pickers **`EntityPickerDialog`** / **`EntityPickerField`** (Lot 9) sont **en place** ; les composants **non** introduits à ce jour incluent notamment `PageHeader`, `FormPageShell`, `FilterPanelShell`, `AppDataTable`, `CrudPageLayout`, `AppShell`, etc.
 
 ### Lot 1
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, MenuItem, Pagination, Paper, Select, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, Paper, Typography } from "@mui/material";
 import { toast } from "react-toastify";
 import PageTemplate from "../../components/PageTemplate";
 import usePagination from "../../hooks/usePagination";
@@ -8,6 +8,21 @@ import RapportDetailModal from "./RapportDetailModal";
 import RapportTable from "./RapportTable";
 import { useDeleteRapport, useRapportExports, useRapports } from "../../hooks/useRapports";
 import type { Rapport } from "../../types/rapport";
+import FilterTemplate, { type FieldConfig } from "../../components/filters/FilterTemplate";
+import EntityToolbar from "../../components/filters/EntityToolbar";
+import PageSizeSelect from "../../components/filters/PageSizeSelect";
+import ListPaginationBar from "../../components/tables/ListPaginationBar";
+
+type RapportListFilters = { search: string };
+
+const RAPPORT_FILTER_FIELDS: FieldConfig<RapportListFilters>[] = [
+  {
+    key: "search",
+    label: "Recherche",
+    type: "text",
+    placeholder: "Rechercher un rapport",
+  },
+];
 
 export default function RapportsPage() {
   const navigate = useNavigate();
@@ -60,56 +75,44 @@ export default function RapportsPage() {
       refreshButton
       onRefresh={() => void refresh()}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
-          <TextField
-            size="small"
-            placeholder="Rechercher un rapport"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+        <EntityToolbar>
+          <PageSizeSelect
+            value={pageSize}
+            disabled={loading}
+            onChange={(size) => {
+              setPageSize(size);
               setPage(1);
             }}
           />
-          <Select
-            size="small"
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-          >
-            {[5, 10, 20].map((size) => (
-              <MenuItem key={size} value={size}>
-                {size} / page
-              </MenuItem>
-            ))}
-          </Select>
-          <Button
-            variant="text"
-            disabled={!search}
-            onClick={() => {
-              setSearch("");
-              setPage(1);
-            }}
-          >
-            Réinitialiser
-          </Button>
           <Button variant="outlined" disabled={loading || rapports.length === 0} onClick={() => void exportListXlsx(params)}>
             Exporter la liste
           </Button>
           <Button variant="contained" onClick={() => navigate("/rapports/create")}>
             Ajouter un rapport
           </Button>
-        </Stack>
+        </EntityToolbar>
+      }
+      filters={
+        <FilterTemplate<RapportListFilters>
+          values={{ search }}
+          onChange={(next) => {
+            setSearch(next.search);
+            setPage(1);
+          }}
+          fields={RAPPORT_FILTER_FIELDS}
+          cols={2}
+          actions={{
+            onReset: () => {
+              setSearch("");
+              setPage(1);
+            },
+            resetLabel: "Réinitialiser",
+          }}
+        />
       }
       footer={
         count > 0 ? (
-          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center">
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
-            </Typography>
-            <Pagination page={page} count={totalPages} onChange={(_, value) => setPage(value)} color="primary" />
-          </Stack>
+          <ListPaginationBar page={page} totalPages={totalPages} count={count} onPageChange={setPage} />
         ) : null
       }
     >

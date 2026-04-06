@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { Card, CardHeader, CardContent, Grid, TextField } from "@mui/material";
+import { Card, CardHeader, CardContent, Grid } from "@mui/material";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 import type { CandidatFormData } from "../../../types/candidat";
 
 interface Props {
@@ -21,7 +22,7 @@ function SectionRepresentant({ form, setForm }: Props) {
       <CardContent>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Lien avec le candidat"
               value={form.representant_lien ?? ""}
@@ -30,7 +31,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Nom de naissance"
               value={form.representant_nom_naissance ?? ""}
@@ -39,7 +40,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Prénom"
               value={form.representant_prenom ?? ""}
@@ -48,7 +49,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               type="email"
               label="Email"
@@ -58,7 +59,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Rue"
               value={form.representant_street_name ?? ""}
@@ -67,7 +68,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Code postal"
               value={form.representant_zip_code ?? ""}
@@ -76,7 +77,7 @@ function SectionRepresentant({ form, setForm }: Props) {
           </Grid>
 
           <Grid item xs={12} md={8}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Ville"
               value={form.representant_city ?? ""}

@@ -1,31 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import {
-  Box,
-  Stack,
-  Button,
-  Checkbox,
-  CircularProgress,
-  Typography,
-  Select,
-  MenuItem,
-  Pagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  useTheme,
-  useMediaQuery,
-  Paper,
-  TextField,
-} from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { Box, Stack, Button, Checkbox, Typography, Paper, useTheme, useMediaQuery } from "@mui/material";
 
 import useFetch from "../../hooks/useFetch";
 import usePagination from "../../hooks/usePagination";
 import PageTemplate from "../../components/PageTemplate";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import FilterTemplate, { type FieldConfig } from "../../components/filters/FilterTemplate";
+import EntityToolbar from "../../components/filters/EntityToolbar";
+import PageSizeSelect from "../../components/filters/PageSizeSelect";
+import ListPaginationBar from "../../components/tables/ListPaginationBar";
+import SelectionToolbar from "../../components/tables/SelectionToolbar";
 
 type TypeOffre = {
   id: number;
@@ -43,6 +31,17 @@ type TypeOffreChoice = {
   default_color: string;
 };
 
+type TypeOffresFilterForm = { search: string };
+
+const TYPE_OFFRES_FILTER_FIELDS: FieldConfig<TypeOffresFilterForm>[] = [
+  {
+    key: "search",
+    label: "Recherche",
+    type: "text",
+    placeholder: "Rechercher un type...",
+  },
+];
+
 export default function TypeOffresPage() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -50,6 +49,8 @@ export default function TypeOffresPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [choicesMap, setChoicesMap] = useState<Record<string, TypeOffreChoice>>({});
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [hardDeleteLoading, setHardDeleteLoading] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -115,6 +116,7 @@ export default function TypeOffresPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
 
+    setArchiveLoading(true);
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -126,6 +128,8 @@ export default function TypeOffresPage() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Erreur lors de l'archivage");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
@@ -143,6 +147,7 @@ export default function TypeOffresPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+    setHardDeleteLoading(true);
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -152,6 +157,8 @@ export default function TypeOffresPage() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Erreur lors de la suppression définitive");
+    } finally {
+      setHardDeleteLoading(false);
     }
   };
 
@@ -163,21 +170,14 @@ export default function TypeOffresPage() {
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          <Select
-            size="small"
+        <EntityToolbar>
+          <PageSizeSelect
             value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
+            onChange={(size) => {
+              setPageSize(size);
               setPage(1);
             }}
-          >
-            {[5, 10, 20].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
-              </MenuItem>
-            ))}
-          </Select>
+          />
 
           <Button
             variant="contained"
@@ -220,66 +220,56 @@ export default function TypeOffresPage() {
             </Button>
           )}
 
-          {selectedIds.length > 0 && (
-            <>
-              <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
-                📦 Archiver ({selectedIds.length})
-              </Button>
-              <Button variant="outlined" onClick={selectAll}>
-                ✅ Tout sélectionner
-              </Button>
-              <Button variant="outlined" onClick={clearSelection}>
-                ❌ Annuler
-              </Button>
-            </>
-          )}
-        </Stack>
+          <SelectionToolbar
+            count={selectedIds.length}
+            onClear={clearSelection}
+            onSelectAll={selectAll}
+            selectAllLabel="✅ Tout sélectionner"
+            clearLabel="❌ Annuler"
+          >
+            <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
+              📦 Archiver ({selectedIds.length})
+            </Button>
+          </SelectionToolbar>
+        </EntityToolbar>
       }
       filters={
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Rechercher un type..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+        <FilterTemplate<TypeOffresFilterForm>
+          values={{ search }}
+          onChange={(next) => {
+            setSearch(next.search);
             setPage(1);
           }}
+          fields={TYPE_OFFRES_FILTER_FIELDS}
+          cols={1}
         />
       }
       footer={
-        count > 0 && (
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-            alignItems="center"
-            spacing={1}
-          >
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
-            </Typography>
-            <Pagination
-              page={page}
-              count={totalPages}
-              onChange={(_, val) => setPage(val)}
-              color="primary"
-              size={isMobile ? "small" : "medium"}
-            />
-          </Stack>
-        )
+        count > 0 ? (
+          <ListPaginationBar
+            page={page}
+            totalPages={totalPages}
+            count={count}
+            onPageChange={setPage}
+            size={isMobile ? "small" : "medium"}
+          />
+        ) : null
       }
     >
       {loading ? (
-        <CircularProgress />
+        <LoadingState label="Chargement des types d'offre..." />
       ) : error ? (
         <Typography color="error">Erreur lors du chargement des types.</Typography>
       ) : typeoffres.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
-          <Typography>Aucun type trouvé.</Typography>
-        </Box>
+        <EmptyState
+          title="Aucun type trouvé"
+          description="Modifiez la recherche ou créez un type d'offre."
+          action={
+            <Button variant="contained" onClick={() => navigate("/typeoffres/create")}>
+              Ajouter un type
+            </Button>
+          }
+        />
       ) : (
         <Stack spacing={1}>
           {typeoffres.map((type) => {
@@ -369,44 +359,33 @@ export default function TypeOffresPage() {
         </Stack>
       )}
 
-      {/* Confirmation dialog */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="warning" />
-          Confirmation
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {selectedId
-              ? "Archiver ce type d’offre ?"
-              : `Archiver les ${selectedIds.length} types sélectionnés ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
-            Archiver
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => !archiveLoading && setShowConfirm(false)}
+        onConfirm={handleDelete}
+        loading={archiveLoading}
+        tone="warning"
+        title="Confirmation"
+        description={
+          selectedId
+            ? "Archiver ce type d’offre ?"
+            : `Archiver les ${selectedIds.length} types sélectionnés ?`
+        }
+        confirmLabel="Archiver"
+        cancelLabel="Annuler"
+      />
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningAmberIcon color="warning" />
-          Suppression définitive
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Cette action est irréversible. Supprimer définitivement ce type d’offre archivé ?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleHardDelete}>
-            Supprimer définitivement
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => !hardDeleteLoading && setHardDeleteId(null)}
+        onConfirm={handleHardDelete}
+        loading={hardDeleteLoading}
+        tone="danger"
+        title="Suppression définitive"
+        description="Cette action est irréversible. Supprimer définitivement ce type d’offre archivé ?"
+        confirmLabel="Supprimer définitivement"
+        cancelLabel="Annuler"
+      />
     </PageTemplate>
   );
 }

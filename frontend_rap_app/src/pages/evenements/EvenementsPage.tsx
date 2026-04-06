@@ -1,30 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Grid,
-  MenuItem,
-  Pagination,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, Stack, Typography } from "@mui/material";
 import { toast } from "react-toastify";
 import usePagination from "../../hooks/usePagination";
 import PageTemplate from "../../components/PageTemplate";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import EvenementDetailModal from "./EvenementDetailModal";
 import EvenementTable from "./EvenementTable";
 import { useDeleteEvenement, useEvenementChoices, useEvenements, useEvenementStats } from "../../hooks/useEvenements";
 import type { Evenement, EvenementFilters } from "../../types/evenement";
+import FilterTemplate, { type FieldConfig } from "../../components/filters/FilterTemplate";
+import EntityToolbar from "../../components/filters/EntityToolbar";
+import PageSizeSelect from "../../components/filters/PageSizeSelect";
+import ListPaginationBar from "../../components/tables/ListPaginationBar";
 
 export default function EvenementsPage() {
   const navigate = useNavigate();
@@ -32,6 +22,26 @@ export default function EvenementsPage() {
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
   const [reloadKey, setReloadKey] = useState(0);
   const { types, formations, loading: loadingChoices } = useEvenementChoices();
+
+  const evenementFilterFields = useMemo<FieldConfig<EvenementFilters>[]>(
+    () => [
+      {
+        key: "formation",
+        label: "Formation",
+        type: "select",
+        options: formations.map((formation) => ({ value: formation.id, label: formation.nom })),
+      },
+      {
+        key: "type_evenement",
+        label: "Type d'événement",
+        type: "select",
+        options: types.map((type) => ({ value: type.value, label: type.label })),
+      },
+      { key: "date_min", label: "Date min", type: "date" },
+      { key: "date_max", label: "Date max", type: "date" },
+    ],
+    [formations, types]
+  );
   const { deleteEvenement } = useDeleteEvenement();
 
   const toNum = (value: string | null) => {
@@ -68,9 +78,11 @@ export default function EvenementsPage() {
   const [detail, setDetail] = useState<Evenement | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Evenement | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    setDeleteLoading(true);
     try {
       await deleteEvenement(deleteTarget.id);
       toast.success("Événement archivé avec succès.");
@@ -78,6 +90,8 @@ export default function EvenementsPage() {
       setReloadKey((k) => k + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Impossible d'archiver l'événement.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -92,114 +106,39 @@ export default function EvenementsPage() {
         setReloadKey((k) => k + 1);
       }}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Select
-            size="small"
+        <EntityToolbar>
+          <PageSizeSelect
             value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
+            disabled={loadingChoices}
+            onChange={(size) => {
+              setPageSize(size);
               setPage(1);
             }}
-          >
-            {[5, 10, 20].map((size) => (
-              <MenuItem key={size} value={size}>
-                {size} / page
-              </MenuItem>
-            ))}
-          </Select>
+          />
           <Button variant="contained" onClick={() => navigate("/evenements/create")}>
             Ajouter un événement
           </Button>
-        </Stack>
+        </EntityToolbar>
       }
       filters={
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
-            <Select
-              fullWidth
-              size="small"
-              value={filters.formation ? String(filters.formation) : ""}
-              displayEmpty
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  formation: e.target.value ? Number(e.target.value) : undefined,
-                }));
-                setPage(1);
-              }}
-            >
-              <MenuItem value="">Toutes les formations</MenuItem>
-              {formations.map((formation) => (
-                <MenuItem key={formation.id} value={String(formation.id)}>
-                  {formation.nom}
-                </MenuItem>
-              ))}
-            </Select>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Select
-              fullWidth
-              size="small"
-              value={filters.type_evenement ?? ""}
-              displayEmpty
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  type_evenement: e.target.value || undefined,
-                }));
-                setPage(1);
-              }}
-            >
-              <MenuItem value="">Tous les types</MenuItem>
-              {types.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              size="small"
-              type="date"
-              label="Date min"
-              value={filters.date_min ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({ ...prev, date_min: e.target.value || undefined }));
-                setPage(1);
-              }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              size="small"
-              type="date"
-              label="Date max"
-              value={filters.date_max ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({ ...prev, date_max: e.target.value || undefined }));
-                setPage(1);
-              }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-        </Grid>
+        <FilterTemplate<EvenementFilters>
+          title="Filtres"
+          values={filters}
+          onChange={(next) => {
+            setFilters(next);
+            setPage(1);
+          }}
+          fields={evenementFilterFields}
+          cols={4}
+          loading={loadingChoices}
+        />
       }
       footer={
         count > 0 ? (
-          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center">
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
-            </Typography>
-            <Pagination page={page} count={totalPages} onChange={(_, value) => setPage(value)} color="primary" />
-          </Stack>
+          <ListPaginationBar page={page} totalPages={totalPages} count={count} onPageChange={setPage} />
         ) : null
       }
     >
-      {loadingChoices || loading ? <CircularProgress /> : null}
       {error ? <Alert severity="error">{error}</Alert> : null}
 
       {!loadingStats && stats ? (
@@ -217,11 +156,24 @@ export default function EvenementsPage() {
         </Box>
       ) : null}
 
-      {!loading && evenements.length === 0 ? (
-        <Typography color="text.secondary">Aucun événement trouvé.</Typography>
+      {loading || loadingChoices ? (
+        <TableSkeleton columns={6} rows={8} showToolbar={false} />
       ) : null}
 
-      {evenements.length > 0 ? (
+      {!loading && !loadingChoices && !error && evenements.length === 0 ? (
+        <EmptyState
+          title="Aucun événement trouvé"
+          description="Modifiez les filtres ou ajoutez un événement."
+          compact
+          action={
+            <Button variant="contained" onClick={() => navigate("/evenements/create")}>
+              Ajouter un événement
+            </Button>
+          }
+        />
+      ) : null}
+
+      {!loading && !loadingChoices && evenements.length > 0 ? (
         <EvenementTable
           evenements={evenements}
           onRowClick={(id) => {
@@ -236,20 +188,17 @@ export default function EvenementsPage() {
 
       <EvenementDetailModal open={showDetail} onClose={() => setShowDetail(false)} evenement={detail} />
 
-      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Confirmation</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Voulez-vous vraiment archiver cet événement ?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDelete}>
-            Archiver
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => !deleteLoading && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        loading={deleteLoading}
+        tone="warning"
+        title="Archiver l'événement ?"
+        description="L'événement sera archivé. Vous pourrez le retrouver selon les règles métier en vigueur."
+        confirmLabel="Archiver"
+        cancelLabel="Annuler"
+      />
     </PageTemplate>
   );
 }

@@ -4,11 +4,11 @@ import {
   CardHeader,
   CardContent,
   Box,
-  TextField,
   Button,
   FormHelperText,
 } from "@mui/material";
 import type { CandidatFormData } from "../../../types/candidat";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 
 interface Props {
   form: CandidatFormData;
@@ -42,7 +42,7 @@ function SectionAssignations({ form, setForm, setShowUsersModal, errors }: Props
     <Card variant="outlined">
       <CardHeader title="Assignations & visibilité" />
       <CardContent>
-        <TextField
+        <AppTextField
           fullWidth
           label="Vu par"
           value={vuParLabel}

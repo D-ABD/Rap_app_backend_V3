@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { Card, CardHeader, CardContent, TextField } from "@mui/material";
+import { Card, CardHeader, CardContent } from "@mui/material";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 import type { CandidatFormData } from "../../../types/candidat";
 
 interface Props {
@@ -24,7 +25,7 @@ function SectionNotes({ form, setForm, errors }: Props) {
         subheader="Ajoutez tout contexte utile (entretien, contraintes, remarques…)"
       />
       <CardContent>
-        <TextField
+        <AppTextField
           fullWidth
           multiline
           minRows={4}

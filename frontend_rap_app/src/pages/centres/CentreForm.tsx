@@ -1,15 +1,9 @@
 import { FormEvent } from "react";
-import {
-  Stack,
-  TextField,
-  Button,
-  Typography,
-  Checkbox,
-  FormControlLabel,
-  Paper,
-  Divider,
-  Alert,
-} from "@mui/material";
+import { Alert, Button, Stack, Typography } from "@mui/material";
+import FormActionsBar from "../../components/forms/FormActionsBar";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import AppCheckboxField from "../../components/forms/fields/AppCheckboxField";
+import AppTextField from "../../components/forms/fields/AppTextField";
 import useForm from "../../hooks/useForm";
 import type { CentreFormData } from "../../types/centre";
 
@@ -38,7 +32,6 @@ export default function CentreForm({
     organisme_declaration_activite: "",
     cfa_entreprise: false,
 
-    // Champs CFA responsable
     cfa_responsable_est_lieu_principal: false,
     cfa_responsable_denomination: "AFPA ENTREPRISE",
     cfa_responsable_uai: "0932751K",
@@ -58,203 +51,173 @@ export default function CentreForm({
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom fontWeight="bold">
+    <Stack spacing={2} sx={{ p: { xs: 0, sm: 1 } }}>
+      <Typography variant="h6" fontWeight="bold">
         {mode === "create" ? "Créer un centre" : "Modifier un centre"}
       </Typography>
 
       <form onSubmit={handleSubmit}>
         <Stack spacing={3}>
-          {/* ───────── Informations générales ───────── */}
-          <Typography variant="subtitle1" fontWeight="bold">
-            Informations générales
-          </Typography>
-          <Divider />
+          <FormSectionCard title="Informations générales">
+            <Stack spacing={2}>
+              <Alert severity="info">
+                Les informations du centre et du CFA responsable servent au pré-remplissage du CERFA.
+              </Alert>
 
-          <Alert severity="info">
-            Les informations du centre et du CFA responsable servent au pré-remplissage du CERFA.
-          </Alert>
+              <AppTextField
+                label="Nom du centre"
+                name="nom"
+                value={values.nom}
+                onChange={handleChange}
+                required
+              />
 
-          <TextField
-            label="Nom du centre"
-            name="nom"
-            value={values.nom}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
+              <AppTextField
+                label="Code postal"
+                name="code_postal"
+                value={values.code_postal || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Code postal"
-            name="code_postal"
-            value={values.code_postal || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Commune"
+                name="commune"
+                value={values.commune || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Commune"
-            name="commune"
-            value={values.commune || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Numéro de voie"
+                name="numero_voie"
+                value={values.numero_voie || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Numéro de voie"
-            name="numero_voie"
-            value={values.numero_voie || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Nom de la voie"
+                name="nom_voie"
+                value={values.nom_voie || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Nom de la voie"
-            name="nom_voie"
-            value={values.nom_voie || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Complément d’adresse"
+                name="complement_adresse"
+                value={values.complement_adresse || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Complément d’adresse"
-            name="complement_adresse"
-            value={values.complement_adresse || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="N° UAI du centre"
+                name="numero_uai_centre"
+                value={values.numero_uai_centre || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="N° UAI du centre"
-            name="numero_uai_centre"
-            value={values.numero_uai_centre || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="N° SIRET du centre"
+                name="siret_centre"
+                value={values.siret_centre || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="N° SIRET du centre"
-            name="siret_centre"
-            value={values.siret_centre || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Declaration d'activite"
+                name="organisme_declaration_activite"
+                value={values.organisme_declaration_activite || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Declaration d'activite"
-            name="organisme_declaration_activite"
-            value={values.organisme_declaration_activite || ""}
-            onChange={handleChange}
-            fullWidth
-          />
-
-          <FormControlLabel
-            control={
-              <Checkbox
+              <AppCheckboxField
                 id="cfa_entreprise"
+                label="CFA d’entreprise"
                 checked={values.cfa_entreprise}
                 onChange={handleCheckbox}
               />
-            }
-            label="CFA d’entreprise"
-          />
+            </Stack>
+          </FormSectionCard>
 
-          {/* ───────── CFA Responsable ───────── */}
-          <Typography variant="subtitle1" fontWeight="bold">
-            CFA Responsable
-          </Typography>
-          <Divider />
+          <FormSectionCard title="CFA Responsable">
+            <Stack spacing={2}>
+              <Alert severity="info">
+                Ce bloc alimente la partie CFA / lieu principal de formation du CERFA.
+              </Alert>
 
-          <Alert severity="info">
-            Ce bloc alimente la partie CFA / lieu principal de formation du CERFA.
-          </Alert>
-
-          <FormControlLabel
-            control={
-              <Checkbox
+              <AppCheckboxField
                 id="cfa_responsable_est_lieu_principal"
+                label="Le CFA responsable est le lieu de formation principal"
                 checked={values.cfa_responsable_est_lieu_principal}
                 onChange={handleCheckbox}
               />
-            }
-            label="Le CFA responsable est le lieu de formation principal"
-          />
 
-          <TextField
-            label="Dénomination du CFA responsable"
-            name="cfa_responsable_denomination"
-            value={values.cfa_responsable_denomination || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Dénomination du CFA responsable"
+                name="cfa_responsable_denomination"
+                value={values.cfa_responsable_denomination || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="N° UAI du CFA"
-            name="cfa_responsable_uai"
-            value={values.cfa_responsable_uai || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="N° UAI du CFA"
+                name="cfa_responsable_uai"
+                value={values.cfa_responsable_uai || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="N° SIRET du CFA"
-            name="cfa_responsable_siret"
-            value={values.cfa_responsable_siret || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="N° SIRET du CFA"
+                name="cfa_responsable_siret"
+                value={values.cfa_responsable_siret || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Numéro de voie"
-            name="cfa_responsable_numero"
-            value={values.cfa_responsable_numero || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Numéro de voie"
+                name="cfa_responsable_numero"
+                value={values.cfa_responsable_numero || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Voie"
-            name="cfa_responsable_voie"
-            value={values.cfa_responsable_voie || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Voie"
+                name="cfa_responsable_voie"
+                value={values.cfa_responsable_voie || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Complément"
-            name="cfa_responsable_complement"
-            value={values.cfa_responsable_complement || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Complément"
+                name="cfa_responsable_complement"
+                value={values.cfa_responsable_complement || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Code postal"
-            name="cfa_responsable_code_postal"
-            value={values.cfa_responsable_code_postal || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Code postal"
+                name="cfa_responsable_code_postal"
+                value={values.cfa_responsable_code_postal || ""}
+                onChange={handleChange}
+              />
 
-          <TextField
-            label="Commune"
-            name="cfa_responsable_commune"
-            value={values.cfa_responsable_commune || ""}
-            onChange={handleChange}
-            fullWidth
-          />
+              <AppTextField
+                label="Commune"
+                name="cfa_responsable_commune"
+                value={values.cfa_responsable_commune || ""}
+                onChange={handleChange}
+              />
+            </Stack>
+          </FormSectionCard>
 
-          {/* ───────── Boutons ───────── */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
+          <FormActionsBar direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
             <Button type="submit" variant="contained" color="success" disabled={submitting}>
               💾 {mode === "create" ? "Créer" : "Enregistrer"}
             </Button>
             <Button type="button" variant="outlined" onClick={resetForm}>
               Réinitialiser
             </Button>
-          </Stack>
+          </FormActionsBar>
         </Stack>
       </form>
-    </Paper>
+    </Stack>
   );
 }

@@ -35,7 +35,7 @@ Resultat vise :
 
 ## 1.b Etat d'avancement
 
-Derniere mise a jour : 2026-04-05 (verification code alignee sur cette date).
+Derniere mise a jour : 2026-04-06 (Lots 0–10 termines ; lots 11–15 ajoutes comme suite du plan).
 
 ### Verification independante (code actuel)
 
@@ -44,13 +44,18 @@ Cette section a ete confrontee au depot : `frontend_rap_app/src`.
 | Affirmation du plan | Verif code |
 |---------------------|------------|
 | 6 fichiers `components/ui/*` (Lot 1) | OK — tous presents |
+| **Les 6 briques Lot 1 importees au moins une fois hors de leur module** | OK — voir tableau « Adoption Lot 1 » ci-dessous |
 | `theme.ts` avec `tertiary` / `neutral` / `gradients` | OK |
 | `AppBreadcrumbs` + `navigationStyles` dans les 4 layouts | OK |
 | `useMemo` dans `useSidebarItems` + garde `setSubmenuOpen` | OK |
-| Pas de `DetailSection` / `DetailField` / `DetailViewLayout` | OK — aucune occurrence dans `src` |
-| Pas de `DashboardGrid` / `EntityToolbar` dedies (Lots 5–6) | OK — fichiers absents |
-| **Adoption Lot 1 sur les pages** | **Partielle au sens strict** : `LoadingState` / `ErrorState` utilises dans **2** pages (`DocumentsEditPage`, `TypeOffresCreatePage`). `EmptyState`, `ConfirmDialog`, `TableSkeleton`, `StatCardSkeleton` **ne sont importes nulle part** hors de leur propre fichier (a brancher ou usage futur) |
-| **Pages avec `PageTemplate` / `PageWrapper`** | **96** fichiers `.tsx` sous `pages/` les importent (sur **225** fichiers `.tsx` dans `pages/`). L’ecart correspond surtout aux **composants** (tables, modales, formulaires, widgets), pas aux ecrans route. **Ecrans route sans** ce shell (hors composants) : `About`, `auth/LoginPage`, `auth/RegisterPage`, `ForbiddenPage`, `NotFoundPage`, `PolitiqueConfidentialite`, `centres/CentreDetailPage`, `cvtheque/cvthequeEditPage`, `cvtheque/cvthequeCandidatEditPage`, `users/MonProfil` — souvent volontaire (auth / pages statiques / profil) ou reste a aligner |
+| Briques Lot 4 (`DetailSection`, `DetailField`, `DetailViewLayout`) | OK — présentes ; modales pilotes migrées (voir § Lot 4) |
+| `DashboardGrid` / `StatCard` / `ChartCard` (Lot 5) | OK — presents (voir § Lot 5) |
+| `EntityToolbar` / `ListPaginationBar` / `SelectionToolbar` / `PageSizeSelect` (Lot 6) | OK — presents (voir § Lot 6) |
+| `InlineStatusBadge` / `columnFactories` + evolution `ResponsiveTableTemplate` (Lot 7) | OK — presents (voir § Lot 7) |
+| Briques `App*` / `FormSectionCard` / `FormActionsBar` (Lot 8) | OK — presents (voir § Lot 8) |
+| `EntityPickerDialog` / `EntityPickerField` (Lot 9) | OK — presents (voir § Lot 9) |
+| Formulaires complexes migres (Lot 10) | OK — `ProspectionForm`, `CerfaForm`, sections candidat, `PrepaForm` / `PrepaFormIC` / `PrepaFormAteliers` ; `FormSectionCard` titre `ReactNode` (voir § Lot 10) |
+| **Pages avec `PageTemplate` / `PageWrapper`** | La majorite des ecrans route liste / CRUD les utilisent. **Ecrans route sans** ce shell (hors composants) : `About`, `auth/LoginPage`, `auth/RegisterPage`, `ForbiddenPage`, `NotFoundPage`, `PolitiqueConfidentialite`, `centres/CentreDetailPage`, `cvtheque/cvthequeEditPage`, `cvtheque/cvthequeCandidatEditPage`, `users/MonProfil` — souvent volontaire (auth / pages statiques / profil) ou reste a aligner |
 
 La formule « la majorite des ecrans sous `pages/` » reste **acceptable** pour les **pages metier liste / formulaire / dashboard** referencees dans les routes principales ; elle ne s’applique pas a l’ensemble des 225 fichiers (beaucoup sont des sous-composants).
 
@@ -59,11 +64,21 @@ La formule « la majorite des ecrans sous `pages/` » reste **acceptable** pour 
 | Lot | Statut |
 |-----|--------|
 | `Lot 0` | Termine |
-| `Lot 1` | Termine |
+| `Lot 1` | **Termine** (composants + adoption minimale sur ecrans pilotes — voir § 1.b) |
 | `Lot 2` | Termine (voir extension ci-dessous) |
 | `Lot 3` | Termine (voir correctif stabilite ci-dessous) |
-| `Lot 4` | Non demarre — pas de `DetailSection` / `DetailField` / `DetailViewLayout` dans `components/` |
-| `Lots 5` a `10` | Non demarres |
+| `Lot 4` | **Termine** — `DetailSection`, `DetailField`, `DetailViewLayout` + migration des modales pilotes |
+| `Lot 5` | **Termine** — `StatCard`, `ChartCard`, `DashboardGrid`, adoption sur dashboards pilotes et widgets (voir § Lot 5) |
+| `Lot 6` | **Termine** — `FilterTemplate` evolue, `EntityToolbar`, `PageSizeSelect`, `ListPaginationBar`, `SelectionToolbar`, pages pilotes (voir § Lot 6) |
+| `Lot 7` | **Termine** — `InlineStatusBadge`, `columnFactories`, `ResponsiveTableTemplate` evolue, tables pilotes (voir § Lot 7) |
+| `Lot 8` | **Termine** — champs formulaire mutualises, `FormSectionCard`, `FormActionsBar`, formulaires pilotes (voir § Lot 8) |
+| `Lot 9` | **Termine** — `EntityPickerDialog`, `EntityPickerField`, modales pilotes refactorisees (voir § Lot 9) |
+| `Lot 10` | **Termine** — formulaires sensibles (voir § Lot 10) |
+| `Lot 11` | Non demarre — modales detail (voir § Lot 11) |
+| `Lot 12` | Non demarre — prepa et formulaires residuels (voir § Lot 12) |
+| `Lot 13` | Non demarre — etats UI etendus (Lot 1 generalise) (voir § Lot 13) |
+| `Lot 14` | Non demarre — shell sur routes restantes (voir § Lot 14) |
+| `Lot 15` | Non demarre — table de donnees generique (optionnel) (voir § Lot 15) |
 
 ### Elements livres dans le `Lot 1`
 
@@ -74,7 +89,22 @@ La formule « la majorite des ecrans sous `pages/` » reste **acceptable** pour 
 - `frontend_rap_app/src/components/ui/TableSkeleton.tsx`
 - `frontend_rap_app/src/components/ui/StatCardSkeleton.tsx`
 
-Verification : lint cible des nouveaux fichiers OK. **Adoption dans l’app** : au 2026-04-05, seuls `LoadingState` et `ErrorState` sont branches sur des pages (voir tableau « Verification independante »). `EmptyState`, `ConfirmDialog`, `TableSkeleton`, `StatCardSkeleton` sont livres mais **non utilises** hors de leur module.
+Verification : lint cible des nouveaux fichiers OK.
+
+**Adoption Lot 1 dans l’app (2026-04-06) — les six briques sont utilisees** :
+
+| Composant | Pages / ecrans concernes |
+|-----------|-------------------------|
+| `LoadingState` | `TypeOffresCreatePage`, `DocumentsEditPage`, `TypeOffresPage`, `StatutsPage`, `FormationsPage` (liste + panneau filtres en `inline`) |
+| `ErrorState` | `DocumentsEditPage`, `CerfaPage` (avec reessai via `refetch`) |
+| `EmptyState` | `EvenementsPage`, `TypeOffresPage`, `StatutsPage`, `FormationsPage`, `CerfaPage` |
+| `TableSkeleton` | `EvenementsPage`, `CerfaPage` |
+| `ConfirmDialog` | `EvenementsPage`, `TypeOffresPage`, `StatutsPage`, `CerfaPage`, `FormationsPage` (archivage + suppression definitive formations) |
+| `StatCardSkeleton` | Widget [`FormationStatsSummary`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/widgets/overviewDashboard/FormationStatsSummary.tsx) (dashboard staff) ; [`DeclicStatsSummary`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/declic/DeclicStatsSummary.tsx), [`PrepaStatsSummary`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaStatsSummary.tsx), [`PrepaStatsOperations`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaStatsOperations.tsx) (chargement KPI) |
+
+**Périmètre** : Lot 1 est **clos** au sens « briques livrées et réellement branchées ». La **généralisation** à toutes les listes / modales reste une **suite d’amélioration continue** (hors critère de clôture du lot).
+
+Aucun changement de route, d’endpoint ni de logique metier : remplacement presentatif des spinners / textes vides / `Dialog` MUI locaux par les briques du Lot 1.
 
 ### Elements livres dans le `Lot 2` (shell de page)
 
@@ -103,9 +133,148 @@ Verification : lint cible des layouts OK.
 
 - [`frontend_rap_app/src/theme.ts`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/theme.ts) : palette MUI etendue (`tertiary`, `neutral`, `gradients`), composants par defaut, ombres, breakpoints — fichier central pour la coherence visuelle actuelle.
 
+### Elements livres dans le `Lot 4` (details simples)
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/ui/DetailField.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/ui/DetailField.tsx) — paire libelle / valeur + helper `formatDetailScalar`
+- [`frontend_rap_app/src/components/ui/DetailSection.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/ui/DetailSection.tsx) — bloc titre + separateur + grille optionnelle
+- [`frontend_rap_app/src/components/layout/DetailViewLayout.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/layout/DetailViewLayout.tsx) — coque `Dialog` (titre, contenu, actions)
+
+Modales migrees (memes informations et actions qu’avant, logique metier inchangee) :
+
+- [`EvenementDetailModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/evenements/EvenementDetailModal.tsx)
+- [`RapportDetailModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/rapports/RapportDetailModal.tsx)
+- [`AtelierTREDetailModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/ateliers/AtelierTREDetailModal.tsx) — chargement via `LoadingState` (Lot 1)
+
+`ConfirmDialog` (Lot 1) deja disponible pour les flux de confirmation ailleurs ; non requis sur ces trois modales (pas de dialogue de confirmation interne).
+
+### Elements livres dans le `Lot 5` (dashboards / cartes analytiques)
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/dashboard/DashboardGrid.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/dashboard/DashboardGrid.tsx) — grille `Grid container` avec espacement par defaut
+- [`frontend_rap_app/src/components/dashboard/StatCard.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/dashboard/StatCard.tsx) — tuile KPI (valeur, libelle, helper, couleur, clic optionnel)
+- [`frontend_rap_app/src/components/dashboard/ChartCard.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/dashboard/ChartCard.tsx) — carte graphique / bloc avec titre, actions, etats chargement / erreur
+
+Refactor presentatif (memes donnees et hooks qu’avant) :
+
+- [`DashboardTemplateSaturation.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/dashboard/DashboardTemplateSaturation.tsx) — s’appuie sur `ChartCard`
+- [`FormationStatsSummary.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/widgets/overviewDashboard/FormationStatsSummary.tsx) — KPI via `StatCard` ; chargement via `StatCardSkeleton` (Lot 1)
+- [`DeclicStatsSummary.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/declic/DeclicStatsSummary.tsx), [`PrepaStatsSummary.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaStatsSummary.tsx), [`PrepaStatsOperations.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaStatsOperations.tsx) — squelettes `StatCardSkeleton` pour le chargement
+- [`DashboardPage.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/DashboardPage.tsx), [`DashboardCandidatPage.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/DashboardCandidatPage.tsx) — mise en page via `DashboardGrid` (le widget candidat `ProspectionCommentStatsDashboard` est dans un `Grid item` `xs={12}` pour corriger la grille)
+
+Aucun deplacement de logique metier dans les composants dashboard ; endpoints et hooks inchanges.
+
+Verification : `npx tsc --noEmit` OK sur le frontend.
+
+### Elements livres dans le `Lot 6` (filtres, toolbar, pagination)
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/filters/EntityToolbar.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/filters/EntityToolbar.tsx) — `Stack` responsive pour la ligne d’actions des listes
+- [`frontend_rap_app/src/components/filters/PageSizeSelect.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/filters/PageSizeSelect.tsx) — select « taille de page » (5 / 10 / 20 par defaut)
+- [`frontend_rap_app/src/components/tables/ListPaginationBar.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/tables/ListPaginationBar.tsx) — texte de synthese + `Pagination` MUI
+- [`frontend_rap_app/src/components/tables/SelectionToolbar.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/tables/SelectionToolbar.tsx) — slot actions + tout selectionner / annuler lorsque `count > 0`
+
+Evolution de [`FilterTemplate.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/filters/FilterTemplate.tsx) : props optionnelles `title` et `sx` sur le conteneur.
+
+Pages pilotes migrees (memes filtres, pagination, selection, endpoints) :
+
+- [`TypeOffresPage.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/typeOffres/TypeOffresPage.tsx) — recherche via `FilterTemplate` ; barre d’actions `EntityToolbar` + `PageSizeSelect` + `SelectionToolbar` pour la selection multiple
+- [`EvenementsPage.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/evenements/EvenementsPage.tsx) — filtres via `FilterTemplate` (`cols={4}`, titre « Filtres ») ; `ListPaginationBar` en pied de page
+- [`RapportsPage.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/rapports/RapportsPage.tsx) — recherche + reinitialiser via `FilterTemplate` ; actions export / creation dans `EntityToolbar`
+
+Verification : `npx tsc --noEmit` OK.
+
+### Elements livres dans le `Lot 7` (tables centralisees)
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/ui/InlineStatusBadge.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/ui/InlineStatusBadge.tsx) — pastille de statut inline (base `Chip` MUI)
+- [`frontend_rap_app/src/components/tables/columnFactories.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/tables/columnFactories.tsx) — helpers `colText` / `colCustom` pour `TableColumn<T>`
+
+Evolution de [`ResponsiveTableTemplate.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/ResponsiveTableTemplate.tsx) :
+
+- `tableContainerComponent` optionnel (ex. `Paper` pour le conteneur MUI)
+- `containerSx` pour styles additionnels sur le `TableContainer`
+- `actionsAlign` pour l’alignement de la colonne Actions (desktop)
+- `stopPropagation` sur la zone actions (desktop + mobile) pour eviter le declenchement du `onRowClick` lors d’un clic sur les boutons
+
+Tables pilotes :
+
+- [`EvenementTable.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/evenements/EvenementTable.tsx) — colonnes via `colText` / `colCustom`, statut avec `InlineStatusBadge`
+- [`RapportTable.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/rapports/RapportTable.tsx) — migration vers `ResponsiveTableTemplate` (memes colonnes, vue mobile cartes, `tableContainerComponent={Paper}`, `actionsAlign="right"`)
+
+Les autres tables (`FormationTable`, `ProspectionTable`, etc.) restent sur `ResponsiveTableTemplate` sans changement obligatoire dans ce lot.
+
+Verification : `npx tsc --noEmit` OK.
+
+### Elements livres dans le `Lot 8` (formulaires simples et moyens)
+
+Fichiers crees dans [`frontend_rap_app/src/components/forms/fields/`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/forms/fields/) :
+
+- `AppTextField.tsx` — `TextField` `outlined` / `small` / `fullWidth` par defaut
+- `AppSelectField.tsx` — `FormControl` + `InputLabel` + `Select` + `FormHelperText` optionnel
+- `AppDateField.tsx` — `type="date"`, libelle retracte
+- `AppCheckboxField.tsx` — `FormControlLabel` + `Checkbox`
+- `AppNumberField.tsx` — `type="number"`
+- `AppReadonlyField.tsx` — `InputProps.readOnly`
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/forms/FormSectionCard.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/forms/FormSectionCard.tsx) — carte `outlined` avec titre (sections de formulaire)
+- [`frontend_rap_app/src/components/forms/FormActionsBar.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/forms/FormActionsBar.tsx) — rangée d’actions responsive
+
+Formulaires pilotes migres (memes champs, validations, payloads ; presentation harmonisee) :
+
+- [`RapportForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/rapports/RapportForm.tsx) — `FormSectionCard`, `AppTextField` / `AppSelectField` / `AppDateField`, `AppReadonlyField` pour le bloc d’information, `FormActionsBar`
+- [`EvenementForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/evenements/EvenementForm.tsx) — `FormSectionCard`, `AppSelectField`, `AppDateField`, `AppTextField`, `AppNumberField`, `FormActionsBar` (ordre des boutons mobile conserve)
+- [`CentreForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/centres/CentreForm.tsx) — deux `FormSectionCard`, `AppTextField`, `AppCheckboxField`, `FormActionsBar` (remplace l’ancien `Paper` unique)
+
+Verification : `npx tsc --noEmit` OK.
+
+### Elements livres dans le `Lot 9` (pickers et adaptateurs metier)
+
+Fichiers crees :
+
+- [`frontend_rap_app/src/components/dialogs/EntityPickerDialog.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/dialogs/EntityPickerDialog.tsx) — coque `Dialog` (titre, recherche optionnelle, chargement / erreur / vide, actions)
+- [`frontend_rap_app/src/components/forms/fields/EntityPickerField.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/forms/fields/EntityPickerField.tsx) — champ lecture seule + bouton pour ouvrir la modale
+
+Modales pilotes refactorisees (logique API et types inchanges, rendu aligne sur `EntityPickerDialog`) :
+
+- [`CentresSelectModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/modals/CentresSelectModal.tsx) — recherche affichee apres chargement (`showSearchWhenLoading={false}`)
+- [`UsersSelectModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/modals/UsersSelectModal.tsx)
+- [`FormationSelectModal.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/modals/FormationSelectModal.tsx)
+
+Adoption `EntityPickerField` : [`CommentaireForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/commentaires/CommentaireForm.tsx) (selection de formation a la place du bouton + texte seuls).
+
+`CandidatsSelectModal` : conserve sa logique ; adoption large reportee au Lot 10 (`ProspectionForm`).
+
+Verification : `npx tsc --noEmit` OK.
+
+### Elements livres dans le `Lot 10` (formulaires complexes et zones sensibles)
+
+Evolution transverse :
+
+- [`FormSectionCard.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/forms/FormSectionCard.tsx) — prop `title` accepte un `ReactNode` (texte ou titre avec icone), compatibilite ascendante avec les titres chaine.
+
+Formulaires migres (memes champs, payloads, modales et logique ; presentation harmonisee avec les briques Lots 8–9) :
+
+- [`ProspectionForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prospection/ProspectionForm.tsx) — `FormSectionCard`, `AppDateField`, `AppSelectField`, `EntityPickerField` (partenaire / formation / candidat), `FormActionsBar`
+- [`CerfaForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/cerfa/CerfaForm.tsx) — remplacement des `TextField` MUI par `AppTextField` (comportement et `DatePicker` inchanges)
+- Sections sous [`FormSections/`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/candidats/FormSections/) — `AppTextField` a la place de `TextField` (`SectionIdentite`, `SectionInfosContrat`, `SectionFormation`, `SectionRepresentant`, `SectionAssignations`, `SectionNotes`)
+- [`PrepaForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaForm.tsx), [`PrepaFormIC.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaFormIC.tsx), [`PrepaFormAteliers.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaFormAteliers.tsx) — `AppTextField`
+
+`CandidatForm.tsx` (orchestration uniquement) : sans changement structurel ; les champs sont dans les sections ci-dessus.
+
+Hors perimetre volontaire dans ce lot : autres ecrans prepa (`StagiairesPrepaForm`, `PrepaInvitesSection`, etc.), generalisation supplementaire sur d’autres formulaires.
+
+Verification : `npx tsc --noEmit` OK.
+
 ### Prochaine etape recommandee
 
-- Demarrer `Lot 4` (details simples, `DetailSection` / `DetailField`, pilote modale evenement) **ou** poursuivre l'adoption de `EmptyState` / `LoadingState` / `ErrorState` sur les listes restantes avant d'introduire les briques detail.
+- Enchainer sur le **`Lot 11`** (modales detail), puis selon priorite **`Lot 12`** a **`Lot 15`** (voir **§ 6** et sections detaillees **§ Lot 11** a **§ Lot 15**).
 
 ---
 
@@ -277,9 +446,9 @@ Fichiers a modifier si necessaire :
 
 ### Statut
 
-- termine le 2026-04-05
-- composants crees sans modifier les providers globaux ni les layouts
-- aucune collision introduite avec `react-toastify` ou les breadcrumbs existants
+- termine le 2026-04-05 — composants crees sans modifier les providers globaux ni les layouts
+- **cloture adoption** le 2026-04-06 : les **6** briques sont branches sur au moins un ecran ou widget (voir **§ 1.b** tableau « Adoption Lot 1 dans l’app »)
+- condition pour enchaîner sur le Lot 2 (déjà réalisé) : OK ; **prochain lot logique** : Lot 4 (details) ou generalisation continue
 
 ---
 
@@ -483,7 +652,9 @@ Pilotes a ne traiter qu'apres validation du premier :
 
 ### Statut
 
-- non demarre au 2026-04-05 — aucun fichier `DetailSection.tsx`, `DetailField.tsx`, `DetailViewLayout.tsx` dans `components/` ; modales detail non migrees sur ces briques
+- termine le 2026-04-06
+- fichiers `DetailField`, `DetailSection`, `DetailViewLayout` livres et branches sur `EvenementDetailModal`, `RapportDetailModal`, `AtelierTREDetailModal`
+- aucune regression fonctionnelle visee : champs, liens, export, edition, JSON technique conserves
 
 ---
 
@@ -546,7 +717,10 @@ Pages pilotes :
 
 ### Statut
 
-- non demarre au sens strict du lot — `StatCardSkeleton` existe (Lot 1) ; pas de `DashboardGrid.tsx` / `StatCard.tsx` / `ChartCard.tsx` dedies comme decrit ; dashboards existants deja branchés sur `PageTemplate` / `PageWrapper` via migration shell
+- termine le 2026-04-06
+- `DashboardGrid`, `StatCard`, `ChartCard` livres et branches sur les pilotes (`DashboardPage`, `DashboardCandidatPage`) et widgets listes ci-dessus (§ 1.b)
+- `StatCardSkeleton` (Lot 1) reutilise de facon coherente sur les chargements KPI Declic / Prepa
+- aucune regression fonctionnelle visee : widgets et hooks inchanges
 
 ---
 
@@ -618,7 +792,10 @@ Pages pilotes :
 
 ### Statut
 
-- non demarre au 2026-04-05 — pas de `EntityToolbar` / `ListPaginationBar` / `SelectionToolbar` generiques comme decrit ; `FilterTemplate` inchangé dans son role central
+- termine le 2026-04-06
+- `EntityToolbar`, `PageSizeSelect`, `ListPaginationBar`, `SelectionToolbar` livres ; `FilterTemplate` enrichi (`title`, `sx`)
+- pages pilotes `TypeOffresPage`, `EvenementsPage`, `RapportsPage` migrees sans changement de comportement fonctionnel (memes parametres API, memes actions)
+- `ResponsiveTableTemplate` non modifie (conforme au perimetre Lot 6)
 
 ---
 
@@ -687,7 +864,9 @@ Table a ne pas prendre au debut :
 
 ### Statut
 
-- non demarre au 2026-04-05 — pas de `InlineStatusBadge` ni `columnFactories` ; `ResponsiveTableTemplate` non remplace
+- termine le 2026-04-06
+- `InlineStatusBadge`, `columnFactories` livres ; `ResponsiveTableTemplate` enrichi (conteneur, `containerSx`, alignement actions, isolation des clics actions)
+- `EvenementTable` et `RapportTable` migrees comme pilotes ; colonnes et actions conservees, responsive et sticky preserves
 
 ---
 
@@ -768,7 +947,9 @@ Puis seulement apres validation :
 
 ### Statut
 
-- non demarre au 2026-04-05 — pas de famille `AppTextField` / `FormSectionCard` dans `components/forms/fields/` comme decrit
+- termine le 2026-04-06
+- famille `AppTextField` / `AppSelectField` / `AppDateField` / `AppCheckboxField` / `AppNumberField` / `AppReadonlyField` livree ; `FormSectionCard` et `FormActionsBar` livres
+- formulaires pilotes `RapportForm`, `EvenementForm`, `CentreForm` migres (voir § 1.b)
 
 ---
 
@@ -820,7 +1001,9 @@ Pilotes :
 
 ### Statut
 
-- non demarre au 2026-04-05 — pas de `EntityPickerDialog` / `EntityPickerField` generiques ; modales existantes dans `components/modals/` inchangées sur ce volet
+- termine le 2026-04-06
+- `EntityPickerDialog` et `EntityPickerField` livres ; trois modales pilotes refactorisees ; `EntityPickerField` utilise sur `CommentaireForm`
+- aucune logique metier deplacee dans les briques generiques (fetch, mapping, filtres restent dans les modales)
 
 ---
 
@@ -875,7 +1058,112 @@ Puis :
 
 ### Statut
 
-- non demarre au 2026-04-05 — `ProspectionForm`, `CandidatForm`, `CerfaForm` et formulaires prepa complexes non migres vers des briques mutualisees dediees
+- termine le 2026-04-06 — `ProspectionForm`, `CerfaForm`, sections `FormSections` du candidat, `PrepaForm` / `PrepaFormIC` / `PrepaFormAteliers` migres ; `FormSectionCard` avec titre `ReactNode` ; verification `npx tsc --noEmit` OK
+
+---
+
+## Lot 11. Modales detail (generalisation)
+
+### Objectif
+
+Etendre l’usage de `DetailSection`, `DetailField`, `DetailViewLayout` aux modales de detail qui ne les utilisent pas encore, sans changer les donnees affichees ni les actions.
+
+### Fichiers typiques a traiter (prioriser selon usage)
+
+- modales detail metier : ex. `FormationDetailModal`, `ProspectionDetailModal`, et autres `*DetailModal` sous `components/` ou `pages/`
+
+### Fichiers a ne pas toucher sans necessite
+
+- hooks de chargement, mapping API, routes
+
+### Criteres d'acceptation
+
+- meme informations et actions qu’avant migration
+- pas de logique metier dans les briques `Detail*`
+
+### Statut
+
+- non demarre — lots **11** a **15** formalisent la suite du plan apres cloture des lots **0** a **10**
+
+---
+
+## Lot 12. Prepa et formulaires residuels
+
+### Objectif
+
+Aligner les ecrans prepa / formulaires encore en `TextField` MUI ou patterns anciens sur `AppTextField` et briques Lots 8–9 la ou c’est pertinent, comme pour le Lot 10.
+
+### Fichiers indicatifs
+
+- [`PrepaInvitesSection.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/PrepaInvitesSection.tsx)
+- [`StagiairesPrepaForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/StagiairesPrepaForm.tsx), [`ObjectifPrepaForm.tsx`](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/prepa/ObjectifPrepaForm.tsx)
+- autres formulaires sous `pages/prepa/` ou modules voisins identifies au fil de l’audit
+
+### Criteres d'acceptation
+
+- memes champs, payloads, endpoints ; `npx tsc --noEmit` OK
+
+### Statut
+
+- non demarre
+
+---
+
+## Lot 13. Etats UI etendus (generalisation du Lot 1)
+
+### Objectif
+
+Ou `LoadingState` / `EmptyState` / `ErrorState` / `TableSkeleton` / `ConfirmDialog` ne sont pas encore utilises, les adopter sur les listes, panneaux et modales restants — sans obligation de couverture a 100 % en une seule PR.
+
+### Perimetre
+
+- ecrans encore avec spinners ou textes vides ad hoc
+- listes sans squelette de chargement coherent
+
+### Criteres d'acceptation
+
+- comportement fonctionnel identique ; pas de regression responsive
+
+### Statut
+
+- non demarre
+
+---
+
+## Lot 14. Shell de page sur routes restantes
+
+### Objectif
+
+Evaluer et, le cas echeant, envelopper `PageTemplate` / `PageWrapper` les routes qui n’en ont pas encore (hors pages volontairement hors shell : auth, statiques, erreurs).
+
+### Fichiers deja identifies (indicatif, § 1.b)
+
+- `About`, `LoginPage`, `RegisterPage`, `ForbiddenPage`, `NotFoundPage`, `PolitiqueConfidentialite`, `CentreDetailPage`, pages CVThèque edition, `MonProfil`, etc.
+
+### Attention
+
+- certaines pages peuvent rester sans shell par choix produit (auth, plein ecran) : le lot consiste a **trancher** et documenter, pas a forcer une uniformite absolue.
+
+### Statut
+
+- non demarre
+
+---
+
+## Lot 15. Table de donnees generique (`AppDataTable` ou equivalent)
+
+### Objectif
+
+Eventuellement introduire une couche de table reutilisable (tri, pagination, colonnes, accessibilite) **si** le besoin produit le justifie — le plan initial ne l’impose pas ; `ResponsiveTableTemplate` reste la base actuelle.
+
+### Criteres d'acceptation
+
+- ne pas dupliquer `ResponsiveTableTemplate` sans strategie de migration
+- composant presentatif ; logique metier hors du composant generique
+
+### Statut
+
+- non demarre — **optionnel** ; peut rester en attente indefinie
 
 ---
 
@@ -892,6 +1180,11 @@ Puis :
 9. `Lot 8` formulaires simples et moyens
 10. `Lot 9` pickers et adaptateurs metier
 11. `Lot 10` formulaires complexes
+12. `Lot 11` modales detail (generalisation)
+13. `Lot 12` prepa et formulaires residuels
+14. `Lot 13` etats UI etendus (Lot 1 generalise)
+15. `Lot 14` shell sur routes restantes (au cas par cas)
+16. `Lot 15` table generique (optionnel)
 
 Pourquoi cet ordre :
 
@@ -899,6 +1192,7 @@ Pourquoi cet ordre :
 - il consolide d'abord les abstractions deja en place
 - il evite la duplication de shells, filtres et tables
 - il garde les zones les plus sensibles pour la fin
+- les lots **11** a **14** poursuivent l’harmonisation sans bloquer la livraison des lots **0** a **10** ; le lot **15** est reserve a un besoin structurel futur
 
 ---
 
@@ -948,6 +1242,6 @@ Le plan peut maintenant etre lance, mais selon cette version recadree.
 Decision operationnelle (mise a jour avril 2026) :
 
 - ne pas lancer le plan initial tel quel
-- cette version corrigee est **en cours** : `Lots 0` a `3` realises, migration shell etendue, `theme.ts` et stabilite menu en place
-- la suite logique est `Lot 4` (details) ou renforcement de l'adoption des etats `EmptyState` / `LoadingState` / `ErrorState` sur les listes
-- pour les prochains lots : continuer a faire evoluer `PageTemplate` / l'existant plutot qu'introduire une deuxieme famille de shells concurrente
+- les lots **0** a **10** sont **realises** dans cette version du plan ; les lots **11** a **15** formalisent la **suite** (modales detail, prepa residuel, etats UI etendus, shell residuel, table generique optionnelle)
+- la priorite conseillee : **`Lot 11`**, puis **`Lot 12`**, selon besoin **`Lot 13`** et **`Lot 14`** ; **`Lot 15`** seulement si un besoin produit clair
+- continuer a faire evoluer `PageTemplate` / l'existant plutot qu'introduire une deuxieme famille de shells concurrente

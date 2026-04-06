@@ -1,6 +1,9 @@
-import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Grid, Paper, Stack, Typography } from "@mui/material";
+import { Button, Chip, Grid, Paper, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import type { Rapport } from "../../types/rapport";
+import DetailViewLayout from "../../components/layout/DetailViewLayout";
+import DetailSection from "../../components/ui/DetailSection";
+import DetailField, { formatDetailScalar } from "../../components/ui/DetailField";
 
 interface Props {
   open: boolean;
@@ -36,93 +39,89 @@ export default function RapportDetailModal({ open, rapport, onClose, onExport }:
   );
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>{rapport.nom}</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2}>
-          {kpis.length > 0 ? (
-            <Grid container spacing={2}>
-              {kpis.map((item) => (
-                <Grid item xs={6} md={2} key={item.label}>
-                  <Paper sx={{ p: 2, textAlign: "center", height: "100%" }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {item.label}
-                    </Typography>
-                    <Typography variant="h5" fontWeight={700}>
-                      {String(item.value)}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          ) : null}
-
+    <DetailViewLayout
+      open={open}
+      onClose={onClose}
+      title={rapport.nom}
+      actions={
+        <>
+          <Button onClick={() => onExport(rapport)}>Exporter</Button>
+          <div>
+            <Button onClick={() => navigate(`/rapports/${rapport.id}/edit`)}>Modifier</Button>
+            <Button onClick={onClose}>Fermer</Button>
+          </div>
+        </>
+      }
+      actionsSx={{ justifyContent: "space-between" }}
+    >
+      <Stack spacing={2}>
+        {kpis.length > 0 ? (
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle2">Type</Typography>
-                <Typography>{rapport.type_rapport_display || rapport.type_rapport}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Période
-                </Typography>
-                <Typography>{rapport.periode_display || rapport.periode}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Dates
-                </Typography>
-                <Typography>
-                  {rapport.date_debut} {"->"} {rapport.date_fin}
-                </Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Format
-                </Typography>
-                <Typography>{rapport.format_display || rapport.format}</Typography>
-                {rapport.temps_generation ? (
-                  <>
-                    <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                      Temps de génération
-                    </Typography>
-                    <Typography>{rapport.temps_generation.toFixed(2)} s</Typography>
-                  </>
-                ) : null}
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle2">Centre</Typography>
-                <Typography>{rapport.centre_nom || "—"}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Type d’offre
-                </Typography>
-                <Typography>{rapport.type_offre_nom || "—"}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Statut
-                </Typography>
-                <Typography>{rapport.statut_nom || "—"}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Formation
-                </Typography>
-                <Typography>{rapport.formation_nom || "—"}</Typography>
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                  Périmètre réel
-                </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-                  <Chip size="small" label={`Centre: ${scopeSummary.centre_id ?? "tous"}`} />
-                  <Chip size="small" label={`Formation: ${scopeSummary.formation_id ?? "toutes"}`} />
-                  <Chip size="small" label={`Type offre: ${scopeSummary.type_offre_id ?? "tous"}`} />
-                  <Chip size="small" label={`Statut: ${scopeSummary.statut_id ?? "tous"}`} />
-                </Stack>
-              </Paper>
-            </Grid>
+            {kpis.map((item) => (
+              <Grid item xs={6} md={2} key={item.label}>
+                <Paper sx={{ p: 2, textAlign: "center", height: "100%" }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.label}
+                  </Typography>
+                  <Typography variant="h5" fontWeight={700}>
+                    {String(item.value)}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
           </Grid>
+        ) : null}
 
-          {phaseCounts.length > 0 || legacyCounts.length > 0 ? (
-            <Grid container spacing={2}>
-              {phaseCounts.length > 0 ? (
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Répartition par phase
-                    </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 2 }}>
+              <DetailSection title="Paramètres du rapport" sx={{ mb: 0 }}>
+                <DetailField label="Type" value={formatDetailScalar(rapport.type_rapport_display || rapport.type_rapport)} />
+                <DetailField label="Période" value={formatDetailScalar(rapport.periode_display || rapport.periode)} />
+                <DetailField
+                  label="Dates"
+                  value={`${rapport.date_debut} → ${rapport.date_fin}`}
+                />
+                <DetailField label="Format" value={formatDetailScalar(rapport.format_display || rapport.format)} />
+                {rapport.temps_generation ? (
+                  <DetailField
+                    label="Temps de génération"
+                    value={`${rapport.temps_generation.toFixed(2)} s`}
+                  />
+                ) : null}
+              </DetailSection>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 2 }}>
+              <DetailSection title="Contexte" sx={{ mb: 0 }}>
+                <DetailField label="Centre" value={formatDetailScalar(rapport.centre_nom)} />
+                <DetailField label="Type d'offre" value={formatDetailScalar(rapport.type_offre_nom)} />
+                <DetailField label="Statut" value={formatDetailScalar(rapport.statut_nom)} />
+                <DetailField label="Formation" value={formatDetailScalar(rapport.formation_nom)} />
+                <DetailField
+                  label="Périmètre réel"
+                  fullWidth
+                  value={
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
+                      <Chip size="small" label={`Centre: ${scopeSummary.centre_id ?? "tous"}`} />
+                      <Chip size="small" label={`Formation: ${scopeSummary.formation_id ?? "toutes"}`} />
+                      <Chip size="small" label={`Type offre: ${scopeSummary.type_offre_id ?? "tous"}`} />
+                      <Chip size="small" label={`Statut: ${scopeSummary.statut_id ?? "tous"}`} />
+                    </Stack>
+                  }
+                />
+              </DetailSection>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {phaseCounts.length > 0 || legacyCounts.length > 0 ? (
+          <Grid container spacing={2}>
+            {phaseCounts.length > 0 ? (
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2 }}>
+                  <DetailSection title="Répartition par phase" withGrid={false} sx={{ mb: 0 }}>
                     <Stack spacing={1}>
                       {phaseCounts.map(([label, value]) => (
                         <Stack key={label} direction="row" justifyContent="space-between">
@@ -131,15 +130,14 @@ export default function RapportDetailModal({ open, rapport, onClose, onExport }:
                         </Stack>
                       ))}
                     </Stack>
-                  </Paper>
-                </Grid>
-              ) : null}
-              {legacyCounts.length > 0 ? (
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Répartition legacy
-                    </Typography>
+                  </DetailSection>
+                </Paper>
+              </Grid>
+            ) : null}
+            {legacyCounts.length > 0 ? (
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 2 }}>
+                  <DetailSection title="Répartition legacy" withGrid={false} sx={{ mb: 0 }}>
                     <Stack spacing={1}>
                       {legacyCounts.map(([label, value]) => (
                         <Stack key={label} direction="row" justifyContent="space-between">
@@ -148,33 +146,26 @@ export default function RapportDetailModal({ open, rapport, onClose, onExport }:
                         </Stack>
                       ))}
                     </Stack>
-                  </Paper>
-                </Grid>
-              ) : null}
-            </Grid>
-          ) : null}
+                  </DetailSection>
+                </Paper>
+              </Grid>
+            ) : null}
+          </Grid>
+        ) : null}
 
-          <Paper sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-              <Typography variant="subtitle2">Données détaillées</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Vue technique complète du JSON
-              </Typography>
-            </Stack>
-            <Divider sx={{ mb: 2 }} />
+        <Paper sx={{ p: 2 }}>
+          <DetailSection
+            title="Données détaillées"
+            subtitle="Vue technique complète du JSON"
+            withGrid={false}
+            sx={{ mb: 0 }}
+          >
             <pre style={{ margin: 0, whiteSpace: "pre-wrap", overflowX: "auto", fontSize: 12 }}>
               {JSON.stringify(rapport.donnees || {}, null, 2)}
             </pre>
-          </Paper>
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ justifyContent: "space-between" }}>
-        <Button onClick={() => onExport(rapport)}>Exporter</Button>
-        <div>
-          <Button onClick={() => navigate(`/rapports/${rapport.id}/edit`)}>Modifier</Button>
-          <Button onClick={onClose}>Fermer</Button>
-        </div>
-      </DialogActions>
-    </Dialog>
+          </DetailSection>
+        </Paper>
+      </Stack>
+    </DetailViewLayout>
   );
 }

@@ -4,12 +4,12 @@ import {
   CardHeader,
   CardContent,
   Grid,
-  TextField,
   MenuItem,
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
 import type { CandidatFormData } from "../../../types/candidat";
+import AppTextField from "../../../components/forms/fields/AppTextField";
 
 const TYPE_CONTRAT_CERFA_OPTIONS = [
   { value: "11", label: "11 - Premier contrat d'apprentissage" },
@@ -146,7 +146,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
         <Grid container spacing={2}>
                     {/* Nom de naissance */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Nom de naissance"
               value={form.nom_naissance ?? ""}
@@ -155,7 +155,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
           </Grid>
 
             <Grid item xs={12} md={4}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         label="Département de naissance"
                         value={form.departement_naissance ?? ""}
@@ -164,7 +164,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                     </Grid>
           
                     <Grid item xs={12} md={4}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         label="Commune de naissance"
                         value={form.commune_naissance ?? ""}
@@ -174,7 +174,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
           
                     {/* Pays / nationalité */}
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         label="Pays de naissance"
                         placeholder="Saisie libre"
@@ -184,7 +184,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                     </Grid>
           
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         select
                         fullWidth
                         label="Nationalité CERFA"
@@ -197,12 +197,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                             {opt.label}
                           </MenuItem>
                         ))}
-                      </TextField>
+                      </AppTextField>
                     </Grid>
 
                     {/* NIR */}
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         label="Numéro de sécurité sociale (NIR)"
                         value={form.nir ?? ""}
@@ -224,7 +224,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         label="Numéro d'inscription France Travail"
                         value={form.numero_inscription_france_travail ?? ""}
@@ -233,7 +233,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         fullWidth
                         type="number"
                         label="Durée d'inscription France Travail (mois)"
@@ -244,7 +244,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <TextField
+                      <AppTextField
                         select
                         fullWidth
                         label="Type de contrat CERFA (code notice)"
@@ -262,12 +262,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                             {opt.label}
                           </MenuItem>
                         ))}
-                      </TextField>
+                      </AppTextField>
                     </Grid>
 
           {/* Situation avant contrat */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               select
               fullWidth
               label="Situation avant contrat CERFA"
@@ -280,12 +280,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                   {opt.label}
                 </MenuItem>
               ))}
-            </TextField>
+            </AppTextField>
           </Grid>
 
           {/* Dernier diplôme préparé */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               select
               fullWidth
               label="Dernier diplôme préparé CERFA"
@@ -298,12 +298,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                   {opt.label}
                 </MenuItem>
               ))}
-            </TextField>
+            </AppTextField>
           </Grid>
 
           {/* Diplôme le plus élevé obtenu */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               select
               fullWidth
               label="Diplôme le plus élevé CERFA"
@@ -316,12 +316,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                   {opt.label}
                 </MenuItem>
               ))}
-            </TextField>
+            </AppTextField>
           </Grid>
 
           {/* Dernière classe */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               select
               fullWidth
               label="Dernière classe CERFA"
@@ -334,12 +334,12 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                   {opt.label}
                 </MenuItem>
               ))}
-            </TextField>
+            </AppTextField>
           </Grid>
 
           {/* Intitulé diplôme préparé */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               fullWidth
               label="Intitulé du diplôme préparé"
               value={form.intitule_diplome_prepare ?? ""}
@@ -351,7 +351,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
 
           {/* Régime social */}
           <Grid item xs={12} md={6}>
-            <TextField
+            <AppTextField
               select
               fullWidth
               label="Régime social CERFA"
@@ -364,7 +364,7 @@ function SectionInfosContrat({ form, setForm, errors }: Props) {
                   {opt.label}
                 </MenuItem>
               ))}
-            </TextField>
+            </AppTextField>
           </Grid>
 
           {/* Checkboxes */}
