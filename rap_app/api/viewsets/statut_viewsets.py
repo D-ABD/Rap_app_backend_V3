@@ -61,7 +61,7 @@ class StatutViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
       `{count, next, previous, results}`
 
     Cette hétérogénéité est volontairement documentée ici car c'est le code
-    actuel qui fait foi.
+    actuel qui fait foi. Import/export Excel Lot 1 : ``/api/import-export/statut/…``.
     """
 
     serializer_class = StatutSerializer

@@ -362,6 +362,10 @@ LOG_SANITIZATION_WARNINGS = True
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 Path(LOG_DIR).mkdir(exist_ok=True)
 
+# Rotation de ``logs/import_export.log`` (handler ``import_export_file``) — §2.15 / REFACTOR_IMPORT_EXPORT_PLAN.
+RAP_IMPORT_LOG_MAX_BYTES = int(config("RAP_IMPORT_LOG_MAX_BYTES", default=str(5 * 1024 * 1024)))
+RAP_IMPORT_LOG_BACKUP_COUNT = int(config("RAP_IMPORT_LOG_BACKUP_COUNT", default="5"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -390,6 +394,14 @@ LOGGING = {
             "filename": os.path.join(LOG_DIR, "audit.log"),
             "formatter": "audit",
         },
+        "import_export_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(LOG_DIR, "import_export.log"),
+            "maxBytes": RAP_IMPORT_LOG_MAX_BYTES,
+            "backupCount": RAP_IMPORT_LOG_BACKUP_COUNT,
+            "formatter": "audit",
+        },
     },
     "loggers": {
         "django": {"handlers": ["file", "console"], "level": "INFO", "propagate": True},
@@ -398,6 +410,12 @@ LOGGING = {
         "rap_app.candidats": {
             "handlers": ["console", "audit_file"],
             "level": "DEBUG",
+            "propagate": False,
+        },
+        # Traces §2.15 : template / export (export_row_count) / import (summary, dry_run) — voir REFACTOR_IMPORT_EXPORT_PLAN.
+        "application.api.import_export": {
+            "handlers": ["console", "import_export_file"],
+            "level": "INFO",
             "propagate": False,
         },
         # "django.db.backends": {"handlers": ["console"], "level": "INFO", "propagate": False},
@@ -411,7 +429,23 @@ LOG_EXCLUDED_MODELS = ["auth.User", "sessions.Session", "contenttypes.ContentTyp
 if "test" in sys.argv:
     DISABLE_MODEL_LOGS = True
     LOGGING["loggers"]["rap_app"]["level"] = "CRITICAL"
+    LOGGING["loggers"]["application.api.import_export"] = {
+        "handlers": ["console"],
+        "level": "CRITICAL",
+        "propagate": False,
+    }
 else:
     DISABLE_MODEL_LOGS = False
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
+
+# Import Excel (Lot 1+) : taille max d'un fichier .xlsx (octets). Aligner reverse-proxy / client si besoin.
+RAP_IMPORT_MAX_UPLOAD_BYTES = int(config("RAP_IMPORT_MAX_UPLOAD_BYTES", default=str(10 * 1024 * 1024)))
+# Plafond lignes de données (feuille « Données », hors en-tête) — garde-fou CPU/mémoire (§2.7).
+RAP_IMPORT_MAX_LOT1_DATA_ROWS = int(config("RAP_IMPORT_MAX_LOT1_DATA_ROWS", default="50000"))
+# Nombre max d'entrées dans le ZIP interne d'un .xlsx — garde-fou §2.7.
+RAP_IMPORT_MAX_ZIP_ENTRIES = int(config("RAP_IMPORT_MAX_ZIP_ENTRIES", default="2000"))
+# Durée max (secondes) pour la lecture itérative après ouverture du classeur (0 = désactivé) — §2.7 / excel_io.
+RAP_IMPORT_MAX_PARSE_SECONDS = float(config("RAP_IMPORT_MAX_PARSE_SECONDS", default="120"))
+# Persistance d’une ligne ``ImportJob`` à chaque POST import-xlsx (§2.14) — False pour tests / perf si besoin.
+RAP_IMPORT_PERSIST_JOBS = config("RAP_IMPORT_PERSIST_JOBS", default="true").lower() in ("1", "true", "yes", "on")

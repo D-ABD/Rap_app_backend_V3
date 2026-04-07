@@ -7,7 +7,7 @@ Déclaration centralisée des routes d'API pour RAP_APP.
 - Déclare les endpoints supplémentaires pour l'authentification et des utilitaires via path().
 """
 
-from django.urls import path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -114,6 +114,7 @@ router.register(
 
 # Endpoints déclarés explicitement hors router (authentification, utilitaires)
 urlpatterns = [
+    path("import-export/", include("rap_app.api.import_export.urls")),
     path("register/", RegisterView.as_view(), name="register"),
     path("token/", EmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

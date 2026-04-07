@@ -37,6 +37,8 @@ import FiltresPartenairesPanel, {
   type PartenaireFilters,
 } from "../../components/filters/FiltresPartenairesPanel";
 import type { Partenaire } from "../../types/partenaire";
+import { buildPartenaireExportQueryParams } from "../../api/lot1ImportExport";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import PageTemplate from "../../components/PageTemplate";
 import SearchInput from "../../components/SearchInput";
 import ExportButtonPartenaires from "../../components/export_buttons/ExportButtonPartenaires";
@@ -134,6 +136,33 @@ export default function PartenairesPage() {
   const [reloadKey, setReloadKey] = useState(0);
 
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+
+  const partenaireIeParams = useMemo(
+    () =>
+      buildPartenaireExportQueryParams({
+        search: filters.search,
+        city: filters.city,
+        secteur_activite: filters.secteur_activite,
+        type: filters.type,
+        created_by: isStaff ? filters.created_by : undefined,
+        has_appairages: filters.has_appairages,
+        has_prospections: filters.has_prospections,
+        avec_archivees: filters.avec_archivees,
+        archives_seules: filters.archives_seules,
+      }),
+    [
+      filters.search,
+      filters.city,
+      filters.secteur_activite,
+      filters.type,
+      filters.created_by,
+      filters.has_appairages,
+      filters.has_prospections,
+      filters.avec_archivees,
+      filters.archives_seules,
+      isStaff,
+    ]
+  );
 
   const queryParams = useMemo(() => {
     const base: Record<string, string | number | boolean> = {
@@ -368,6 +397,8 @@ export default function PartenairesPage() {
                 : partenaires
             }
           />
+
+          <Lot1ExcelActions resource="partenaire" exportParams={partenaireIeParams} isMobile={isMobile} />
 
           <Select
             size="small"

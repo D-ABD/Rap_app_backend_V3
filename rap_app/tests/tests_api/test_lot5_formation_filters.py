@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from rap_app.models.candidat import Candidat
 from rap_app.models.centres import Centre
 from rap_app.models.formations import Formation
 from rap_app.models.statut import Statut
@@ -38,7 +39,18 @@ class Lot5FormationFilterTests(APITestCase):
 
     def test_list_places_disponibles_uses_orm_filter_and_keeps_only_open_formations(self):
         visible = self._create_formation("Formation ouverte", 10, 0, 4, 0)
-        self._create_formation("Formation pleine", 5, 0, 5, 0)
+        pleine = self._create_formation("Formation pleine", 5, 0, 5, 0)
+        # Le filtre `places_disponibles` s'appuie sur `places_disponibles_calc` du ViewSet,
+        # qui utilise le nombre de candidats GESPERS (inscrit_gespers=True), pas les champs
+        # agrégés prevus_crif / inscrits_crif.
+        for i in range(5):
+            Candidat.objects.create(
+                nom="Test",
+                prenom=f"Plein{i}",
+                formation=pleine,
+                created_by=self.user,
+                inscrit_gespers=True,
+            )
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/api/formations/?places_disponibles=true")

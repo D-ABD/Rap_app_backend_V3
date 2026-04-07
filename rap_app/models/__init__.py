@@ -25,6 +25,7 @@ from .custom_user import CustomUser
 from .documents import Document
 from .evenements import Evenement
 from .formations import Formation, FormationManager, HistoriqueFormation
+from .import_job import ImportJob
 from .jury import SuiviJury
 from .logs import LogUtilisateur
 from .models_test import DummyModel

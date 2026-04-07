@@ -40,7 +40,11 @@ class StatutViewSetTestCase(AuthenticatedTestCase):
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.data.get("data", response.data)
-        self.assertTrue(isinstance(data, list) or "results" in response.data)
+        self.assertTrue(
+            isinstance(data, list)
+            or "results" in response.data
+            or (isinstance(data, dict) and "results" in data)
+        )
 
     def test_retrieve_statut(self):
         statut = Statut.objects.create(nom=Statut.QUASI_PLEINE, couleur="#333333")

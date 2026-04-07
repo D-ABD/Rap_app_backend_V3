@@ -20,6 +20,7 @@ from .declic_admin import *
 from .documents_admin import *
 from .evenements_admin import *
 from .formations_admin import *
+from .import_job_admin import *
 from .logs_admin import *
 from .partenaires_admin import *
 from .prepa_admin import *

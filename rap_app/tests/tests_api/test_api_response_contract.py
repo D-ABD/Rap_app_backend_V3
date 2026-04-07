@@ -850,7 +850,8 @@ class ApiResponseContractTests(APITestCase):
         response = self.client.get(reverse("statut-list"), {"avec_archivees": "true"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        returned_ids = [item["id"] for item in response.data["results"]]
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        returned_ids = [item["id"] for item in response.data["data"]["results"]]
         self.assertIn(archived.id, returned_ids)
 
     def test_statut_desarchiver_uses_standard_envelope(self):
@@ -3679,7 +3680,7 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(response.data["message"], "Liste simple des utilisateurs récupérée avec succès.")
         self.assertIsInstance(response.data["data"], list)
         self.assertTrue(any(item["id"] == self.user.id for item in response.data["data"]))
-        self.assertTrue(all("id" in item and "nom" in item for item in response.data["data"]))
+        self.assertTrue(all("id" in item and "nom" in item and "username" in item for item in response.data["data"]))
 
     def test_users_filtres_uses_standard_envelope(self):
         response = self.client.get(reverse("user-get-user-filtres"))

@@ -38,6 +38,8 @@ import CandidatsTable from "./CandidatsTable";
 import FiltresCandidatsPanel from "../../components/filters/FiltresCandidatsPanel";
 import PageTemplate from "../../components/PageTemplate";
 import ExportButtonCandidat from "../../components/export_buttons/ExportButtonCandidat";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
+import { buildCandidatExportQueryParams } from "../../api/lot1ImportExport";
 import CandidatDetailModal from "./CandidatDetailModal";
 import api from "../../api/axios";
 import SearchInput from "../../components/SearchInput";
@@ -128,6 +130,41 @@ export default function CandidatsPage() {
   const effectiveFilters: EffectiveFilters = useMemo(
     () => ({ ...filters, page, page_size: pageSize }),
     [filters, page, pageSize]
+  );
+
+  const candidatIeParams = useMemo(
+    () =>
+      buildCandidatExportQueryParams({
+        search: filters.search,
+        ordering: filters.ordering,
+        centre: filters.centre,
+        formation: filters.formation,
+        owner: filters.owner,
+        parcours_phase: filters.parcours_phase,
+        statut: filters.statut,
+        cv_statut: filters.cv_statut,
+        type_contrat: filters.type_contrat,
+        disponibilite: filters.disponibilite,
+        resultat_placement: filters.resultat_placement,
+        contrat_signe: filters.contrat_signe,
+        responsable_placement: filters.responsable_placement,
+        ville: filters.ville,
+        code_postal: filters.code_postal,
+        rqth: filters.rqth,
+        permis_b: filters.permis_b,
+        admissible: filters.admissible,
+        inscrit_gespers: filters.inscrit_gespers,
+        en_accompagnement_tre: filters.en_accompagnement_tre,
+        en_appairage: filters.en_appairage,
+        has_osia: filters.has_osia,
+        entretien_done: filters.entretien_done,
+        test_is_ok: filters.test_is_ok,
+        date_min: filters.date_min,
+        date_max: filters.date_max,
+        avec_archivees: filters.avec_archivees,
+        archives_seules: filters.archives_seules,
+      }),
+    [filters]
   );
 
   const activeFiltersCount = useMemo(() => {
@@ -468,6 +505,8 @@ export default function CandidatsPage() {
             filenameBase="candidats"
             endpointBase="/candidats"
           />
+
+          <Lot1ExcelActions resource="candidat" exportParams={candidatIeParams} isMobile={isMobile} />
 
           <Select
             size="small"

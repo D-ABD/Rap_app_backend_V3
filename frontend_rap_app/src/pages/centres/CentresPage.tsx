@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -25,6 +25,8 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import useFetch from "../../hooks/useFetch";
 import usePagination from "../../hooks/usePagination";
+import { buildLot1ExportQueryParams } from "../../api/lot1ImportExport";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import PageTemplate from "../../components/PageTemplate";
 
 type Centre = {
@@ -62,6 +64,16 @@ export default function CentresPage() {
   });
 
   const centres = data?.results || [];
+
+  const lot1ExportParams = useMemo(
+    () =>
+      buildLot1ExportQueryParams({
+        search,
+        includeArchived,
+        archivesOnly,
+      }),
+    [search, includeArchived, archivesOnly]
+  );
 
   useEffect(() => {
     fetchData();
@@ -147,6 +159,8 @@ export default function CentresPage() {
               </MenuItem>
             ))}
           </Select>
+
+          <Lot1ExcelActions resource="centre" exportParams={lot1ExportParams} isMobile={isMobile} />
 
           <Button
             variant="contained"

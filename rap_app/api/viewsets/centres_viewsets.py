@@ -29,7 +29,7 @@ from ..serializers.centres_serializers import CentreSerializer
     destroy=extend_schema(summary="Archiver un centre", tags=["Centres"]),
 )
 class CentreViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
-    """ViewSet CRUD pour Centre. Permission ReadWriteAdminReadStaff ; staff limité à user.centres. Filtres, search, ordering. Action liste-simple (GET) pour id/label."""
+    """ViewSet CRUD pour Centre. Permission ReadWriteAdminReadStaff ; staff limité à user.centres. Filtres, search, ordering. Action liste-simple (GET) pour id/label. Import/export Excel Lot 1 : ``/api/import-export/centre/…``."""
 
     serializer_class = CentreSerializer
     pagination_class = RapAppPagination

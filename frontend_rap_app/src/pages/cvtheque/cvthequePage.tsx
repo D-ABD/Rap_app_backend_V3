@@ -10,6 +10,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -29,6 +31,8 @@ import CVThequeTable from "./cvthequeTable";
 import CVThequePreview from "./cvthequePreview";
 import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
+import { buildCvthequeExportQueryParams } from "../../api/lot1ImportExport";
 
 // -------------------------------
 // TYPES FILTRES
@@ -50,6 +54,8 @@ const defaultFilters: CVFilters = {};
 
 export default function CVThequePage() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [searchParams] = useSearchParams();
   const scopedCandidateId = useMemo(() => {
     const raw = searchParams.get("candidat");
@@ -99,6 +105,23 @@ export default function CVThequePage() {
       page_size: pageSize,
     }),
     [filters, page, pageSize]
+  );
+
+  const cvthequeIeParams = useMemo(
+    () =>
+      buildCvthequeExportQueryParams({
+        search: filters.search,
+        candidat: filters.candidat,
+        ville: filters.ville,
+        document_type: filters.document_type,
+        centre_id: filters.centre_id,
+        formation_id: filters.formation_id,
+        type_offre_id: filters.type_offre_id,
+        statut_formation: filters.statut_formation,
+        avec_archivees: filters.avec_archivees,
+        archives_seules: filters.archives_seules,
+      }),
+    [filters]
   );
 
   useEffect(() => {
@@ -266,6 +289,8 @@ export default function CVThequePage() {
               setPage(1);
             }}
           />
+
+          <Lot1ExcelActions resource="cvtheque" exportParams={cvthequeIeParams} isMobile={isMobile} />
 
           {/* Ajout */}
           <Button

@@ -15,6 +15,8 @@ import {
   Select,
   Stack,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
@@ -29,8 +31,12 @@ import DocumentPreview from "./DocumentPreview"; // ✅ import ajouté
 import { useDocumentsApi } from "../../hooks/useDocuments";
 import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
+import { buildDocumentExportQueryParams } from "../../api/lot1ImportExport";
 
 export default function DocumentsPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
@@ -106,6 +112,21 @@ export default function DocumentsPage() {
       ...cleanFilters,
     }),
     [search, page, pageSize, scopedFormationId, cleanFilters]
+  );
+
+  const documentIeParams = useMemo(
+    () =>
+      buildDocumentExportQueryParams({
+        search,
+        formation: scopedFormationId,
+        centre_id: filters.centre_id,
+        statut_id: filters.statut_id,
+        type_offre_id: filters.type_offre_id,
+        avec_archivees: filters.avec_archivees === true,
+        archives_seules: filters.archives_seules === true,
+        ordering: "-created_at",
+      }),
+    [search, scopedFormationId, filters]
   );
 
   const { data, loading, error, fetchData } = useFetch<{
@@ -237,6 +258,8 @@ export default function DocumentsPage() {
             }}
             style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid #ccc" }}
           />
+
+          <Lot1ExcelActions resource="document" exportParams={documentIeParams} isMobile={isMobile} />
 
           <Select
             size="small"

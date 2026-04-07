@@ -52,7 +52,7 @@ from ..permissions import ReadWriteAdminReadStaff
 class TypeOffreViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     """
     ViewSet CRUD pour les types d'offres avec recherche, tri et
-    pagination, soumis aux permissions ReadWriteAdminReadStaff.
+    pagination, soumis aux permissions ReadWriteAdminReadStaff. Import/export Excel Lot 1 : ``/api/import-export/type_offre/…``.
     """
 
     serializer_class = TypeOffreSerializer

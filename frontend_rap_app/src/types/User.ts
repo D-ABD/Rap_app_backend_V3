@@ -118,6 +118,8 @@ export interface UserUpdatePayload extends Partial<Record<string, unknown>> {
 export interface SimpleUser {
   id: number;
   nom: string;
+  /** Login — utile pour filtres API (ex. traces ImportJob). */
+  username: string;
 }
 
 // 🧾 Rôles disponibles pour un <select>

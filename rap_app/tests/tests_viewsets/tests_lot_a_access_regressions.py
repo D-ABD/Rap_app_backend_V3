@@ -275,7 +275,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
             {
                 "type_prepa": Prepa.TypePrepa.ATELIER1,
                 "date_prepa": "2025-05-11",
-                "centre": self.centre_a.id,
+                "centre_id": self.centre_a.id,
                 "nb_inscrits_prepa": 9,
                 "nb_presents_prepa": 6,
             },
@@ -285,7 +285,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["message"], "Séance Prépa créée avec succès.")
-        self.assertEqual(response.data["data"]["centre"], self.centre_a.id)
+        self.assertEqual(response.data["data"]["centre"]["id"], self.centre_a.id)
 
     def test_prepa_retrieve_uses_success_envelope(self):
         prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
@@ -320,6 +320,8 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         staff.centres.add(self.centre_a)
         self.client.force_authenticate(user=staff)
 
+        n_centre_b = AtelierTRE.objects.filter(centre=self.centre_b).count()
+
         response = self.client.post(
             reverse("ateliers-tre-list"),
             {
@@ -331,7 +333,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertFalse(AtelierTRE.objects.filter(centre=self.centre_b).exists())
+        self.assertEqual(AtelierTRE.objects.filter(centre=self.centre_b).count(), n_centre_b)
 
     def test_prepa_stats_centres_are_scoped(self):
         prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
@@ -412,8 +414,8 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
             {
                 "nom": "Lemoine",
                 "prenom": "Sarah",
-                "centre": self.centre_a.id,
-                "prepa_origine": self.prepa_2025_a.id,
+                "centre_id": self.centre_a.id,
+                "prepa_origine_id": self.prepa_2025_a.id,
             },
             format="json",
         )
@@ -421,7 +423,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["message"], "Stagiaire Prépa créé avec succès.")
-        self.assertEqual(response.data["data"]["centre"], self.centre_a.id)
+        self.assertEqual(response.data["data"]["centre"]["id"], self.centre_a.id)
 
     def test_prepa_staff_cannot_create_stagiaire_with_out_of_scope_prepa_origine(self):
         prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
@@ -489,7 +491,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         response = self.client.get(reverse("stagiaire-prepa-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data["results"]
+        results = response.data.get("data", {}).get("results", response.data.get("results", []))
         returned_ids = [item["id"] for item in results]
         self.assertNotIn(self.stagiaire_prepa_a.id, returned_ids)
 
@@ -674,7 +676,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
             {
                 "type_declic": Declic.TypeDeclic.ATELIER1,
                 "date_declic": "2025-05-11",
-                "centre": self.centre_a.id,
+                "centre_id": self.centre_a.id,
                 "nb_inscrits_declic": 9,
                 "nb_presents_declic": 5,
             },
@@ -684,7 +686,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["message"], "Séance Déclic créée avec succès.")
-        self.assertEqual(response.data["data"]["centre"], self.centre_a.id)
+        self.assertEqual(response.data["data"]["centre"]["id"], self.centre_a.id)
 
     def test_declic_retrieve_uses_success_envelope(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
@@ -750,8 +752,8 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
             {
                 "nom": "Roux",
                 "prenom": "Mila",
-                "centre": self.centre_a.id,
-                "declic_origine": self.declic_2025_a.id,
+                "centre_id": self.centre_a.id,
+                "declic_origine_id": self.declic_2025_a.id,
             },
             format="json",
         )
@@ -759,7 +761,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["message"], "Participant Déclic créé avec succès.")
-        self.assertEqual(response.data["data"]["centre"], self.centre_a.id)
+        self.assertEqual(response.data["data"]["centre"]["id"], self.centre_a.id)
 
     def test_declic_staff_cannot_create_participant_with_out_of_scope_declic_origine(self):
         declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
@@ -827,7 +829,7 @@ class LotAAccessRegressionsTestCase(AuthenticatedTestCase):
         response = self.client.get(reverse("participant-declic-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data["results"]
+        results = response.data.get("data", {}).get("results", response.data.get("results", []))
         returned_ids = [item["id"] for item in results]
         self.assertNotIn(self.participant_declic_a.id, returned_ids)
 

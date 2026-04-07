@@ -80,6 +80,7 @@ import DocumentsPage from "src/pages/Documents/DocumentsPage";
 import DocumentsCreatePage from "src/pages/Documents/DocumentsCreatePage";
 import DocumentsEditPage from "src/pages/Documents/DocumentsEditPage";
 import LogsPage from "src/pages/logs/LogsPage";
+import ImportExportJobsPage from "src/pages/importExport/ImportExportJobsPage";
 import EvenementsPage from "../pages/evenements/EvenementsPage";
 import EvenementsCreatePage from "../pages/evenements/EvenementsCreatePage";
 import EvenementsEditPage from "../pages/evenements/EvenementsEditPage";
@@ -517,6 +518,16 @@ export default function AppRoute() {
             <AdminOnlyRoute>
               <LogsPage />
             </AdminOnlyRoute>
+          }
+        />
+
+        {/* Historique imports Excel (ImportJob) — staff+ */}
+        <Route
+          path="/import-export/jobs"
+          element={
+            <CoreStaffRoute>
+              <ImportExportJobsPage />
+            </CoreStaffRoute>
           }
         />
 

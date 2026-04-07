@@ -380,10 +380,11 @@ class CustomUserViewSet(BaseApiViewSet):
     def roles(self, request):
         """
         Retourne les rôles utilisateurs disponibles pour la création et
-        la modification de comptes.
+        la modification de comptes (liste ``{value, label}``, alignée sur ``GET /api/roles/``).
         """
+        data = [{"value": value, "label": label} for value, label in CustomUser.ROLE_CHOICES]
         return self.success_response(
-            data=CustomUser.get_role_choices_display(),
+            data=data,
             message="Liste des rôles récupérée avec succès.",
         )
 
@@ -401,8 +402,8 @@ class CustomUserViewSet(BaseApiViewSet):
 
     @action(detail=False, methods=["get"], url_path="liste-simple")
     @extend_schema(
-        summary="Liste simple des utilisateurs (id + nom complet)",
-        description="Retourne une liste allégée des utilisateurs actifs pour les filtres (id, nom).",
+        summary="Liste simple des utilisateurs (id + nom + username)",
+        description="Retourne une liste allégée des utilisateurs actifs pour les filtres (id, nom, username).",
         tags=["Utilisateurs"],
     )
     def liste_simple(self, request):
@@ -410,8 +411,15 @@ class CustomUserViewSet(BaseApiViewSet):
         Retourne une liste simplifiée des utilisateurs (id et libellé)
         destinée aux filtres ou sélecteurs.
         """
-        users = self.get_queryset().only("id", "first_name", "last_name", "email").order_by("first_name")
-        data = [{"id": u.id, "nom": f"{u.first_name} {u.last_name}".strip() or u.email} for u in users]
+        users = self.get_queryset().only("id", "first_name", "last_name", "email", "username").order_by("first_name")
+        data = [
+            {
+                "id": u.id,
+                "nom": f"{u.first_name} {u.last_name}".strip() or u.email,
+                "username": u.username,
+            }
+            for u in users
+        ]
         return self.success_response(
             data=data,
             message="Liste simple des utilisateurs récupérée avec succès.",

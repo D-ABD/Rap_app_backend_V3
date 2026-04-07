@@ -56,8 +56,8 @@ class PartenaireAccessPermission(BasePermission):
             return True
 
         # Ferme explicitement la création et les écritures globales aux profils
-        # non-staff et au rôle staff_read.
-        if getattr(view, "action", None) == "create":
+        # non-staff et au rôle staff_read (y compris import Excel §2.15).
+        if getattr(view, "action", None) in ("create", "import_xlsx"):
             return is_admin_like(user) or (is_centre_scoped_staff(user) and not is_staff_read(user))
 
         return True

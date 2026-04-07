@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Traces import Excel — Rap_App</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 1.2cm 1cm 1.4cm 1cm;
+      @bottom-center {
+        content: "Rap_App — {{ now|date:'d/m/Y H:i' }}";
+        font-size: 8px;
+        color: #666;
+      }
+    }
+
+    body {
+      font-family: "DejaVu Sans", "Helvetica", sans-serif;
+      font-size: 8px;
+      color: #333;
+      line-height: 1.35;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 15px;
+      color: #0077cc;
+      margin: 0 0 4px 0;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 9px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 3px 5px;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    th {
+      background: #f0f6fc;
+      font-weight: bold;
+      color: #005fa3;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    .status-ok { color: #0a7; }
+    .status-err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Traces d’import Excel</h1>
+  <p class="subtitle">Généré le {{ now|date:"d/m/Y à H:i" }}{% if request_user %} — demandé par {{ request_user.username }}{% endif %}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Ressource</th>
+        <th>Utilisateur</th>
+        <th>Statut</th>
+        <th>Dry run</th>
+        <th>Fichier</th>
+        <th>HTTP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ job.resource }}</td>
+        <td>{{ job.user.username|default:"—" }}</td>
+        <td class="{% if job.status == 'success' %}status-ok{% else %}status-err{% endif %}">{{ job.status }}</td>
+        <td>{% if job.dry_run %}oui{% else %}non{% endif %}</td>
+        <td>{{ job.original_filename|default:"—" }}</td>
+        <td>{{ job.http_status|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8">Aucune trace pour les filtres courants.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

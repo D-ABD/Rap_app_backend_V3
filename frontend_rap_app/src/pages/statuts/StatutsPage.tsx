@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -18,6 +18,8 @@ import {
 
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
+import { buildLot1ExportQueryParams } from "../../api/lot1ImportExport";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
@@ -61,6 +63,16 @@ export default function StatutsPage() {
   });
 
   const statuts = data?.results || [];
+
+  const lot1ExportParams = useMemo(
+    () =>
+      buildLot1ExportQueryParams({
+        search,
+        includeArchived,
+        archivesOnly,
+      }),
+    [search, includeArchived, archivesOnly]
+  );
 
   useEffect(() => {
     fetchData();
@@ -152,6 +164,8 @@ export default function StatutsPage() {
               </MenuItem>
             ))}
           </Select>
+
+          <Lot1ExcelActions resource="statut" exportParams={lot1ExportParams} isMobile={isMobile} />
 
           <Button
             variant="contained"

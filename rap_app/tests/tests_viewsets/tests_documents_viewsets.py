@@ -121,6 +121,38 @@ class DocumentViewSetTestCase(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data.get("data", [])), 1)
 
+    def test_list_documents_filtered_by_formation_query_param(self):
+        formation_b = Formation.objects.create(
+            nom="FormationDocB",
+            centre=self.centre,
+            type_offre=self.type_offre,
+            statut=self.statut,
+            created_by=self.user,
+        )
+        file_b = SimpleUploadedFile("doc_b.pdf", b"content_b", content_type="application/pdf")
+        doc_b = Document.objects.create(
+            formation=formation_b,
+            nom_fichier="doc_b.pdf",
+            fichier=file_b,
+            type_document=Document.PDF,
+            created_by=self.user,
+        )
+        self.addCleanup(doc_b.fichier.close)
+        self.addCleanup(file_b.close)
+
+        url = reverse("document-list")
+        all_resp = self.client.get(url)
+        self.assertEqual(all_resp.status_code, status.HTTP_200_OK)
+        all_ids = [item["id"] for item in all_resp.data.get("data", {}).get("results", [])]
+        self.assertIn(self.document.id, all_ids)
+        self.assertIn(doc_b.id, all_ids)
+
+        filtered = self.client.get(url, {"formation": self.formation.id})
+        self.assertEqual(filtered.status_code, status.HTTP_200_OK)
+        filtered_ids = [item["id"] for item in filtered.data.get("data", {}).get("results", [])]
+        self.assertIn(self.document.id, filtered_ids)
+        self.assertNotIn(doc_b.id, filtered_ids)
+
     def test_export_csv(self):
         url = reverse("document-export-csv")
         response = self.client.get(url)

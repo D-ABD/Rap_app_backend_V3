@@ -26,6 +26,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import EventIcon from "@mui/icons-material/Event";
+import HistoryIcon from "@mui/icons-material/History";
 
 export interface SidebarItem {
   label: string;
@@ -196,6 +197,13 @@ export const sidebarItems: SidebarItem[] = [
     ],
   },
 
+  /* 🔹 Imports Excel — traces (ImportJob) */
+  {
+    label: "Historique imports Excel",
+    path: "/import-export/jobs",
+    icon: <HistoryIcon sx={{ color: "primary.main" }} />,
+  },
+
   /* 🔹 Paramètres */
   {
     label: "Paramètres",
@@ -269,6 +277,9 @@ export function useSidebarItems(): SidebarItem[] {
       }
 
       if (item.label === "Revue d’offres") {
+        if (!isCoreStaff) return null;
+      }
+      if (item.label === "Historique imports Excel") {
         if (!isCoreStaff) return null;
       }
       return item;

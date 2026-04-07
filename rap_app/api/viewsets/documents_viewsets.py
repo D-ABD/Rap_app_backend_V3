@@ -42,6 +42,7 @@ logger = logging.getLogger("application.api")
 class DocumentFilter(django_filters.FilterSet):
     """
     Filtres disponibles pour le listing de documents dans l'API:
+    - formation : filtre sur l'id de la formation rattachée (parité avec le front / export §2.15)
     - centre_id : filtre sur l'id du centre lié à la formation du document
     - statut_id : filtre sur l'id du statut de la formation
     - type_offre_id : filtre sur l'id du type d'offre de la formation
@@ -49,13 +50,14 @@ class DocumentFilter(django_filters.FilterSet):
     À utiliser côté client via query params.
     """
 
+    formation = django_filters.NumberFilter(field_name="formation_id")
     centre_id = django_filters.NumberFilter(field_name="formation__centre_id")
     statut_id = django_filters.NumberFilter(field_name="formation__statut_id")
     type_offre_id = django_filters.NumberFilter(field_name="formation__type_offre_id")
 
     class Meta:
         model = Document
-        fields = ["centre_id", "statut_id", "type_offre_id"]
+        fields = ["formation", "centre_id", "statut_id", "type_offre_id"]
 
 
 @extend_schema_view(

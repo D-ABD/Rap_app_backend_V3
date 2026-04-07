@@ -36,8 +36,9 @@ from .base import BaseApiViewSet
 
 
 class CVThequeFilterSet(django_filters.FilterSet):
-    """Filtres : centre_id, formation_id, type_offre_id, statut_formation, ville (icontains), document_type."""
+    """Filtres : candidat (id), centre_id, formation_id, type_offre_id, statut_formation, ville, document_type."""
 
+    candidat = django_filters.NumberFilter(field_name="candidat_id")
     centre_id = django_filters.NumberFilter(field_name="candidat__formation__centre__id")
     formation_id = django_filters.NumberFilter(field_name="candidat__formation__id")
     type_offre_id = django_filters.NumberFilter(field_name="candidat__formation__type_offre__id")
@@ -48,6 +49,7 @@ class CVThequeFilterSet(django_filters.FilterSet):
     class Meta:
         model = CVTheque
         fields = [
+            "candidat",
             "document_type",
             "centre_id",
             "formation_id",

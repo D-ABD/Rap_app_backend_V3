@@ -26,6 +26,8 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
 import FormationExportButton from "../../components/export_buttons/ExportButtonFormation";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
+import { buildFormationExportQueryParams } from "../../api/lot1ImportExport";
 import { useHardDeleteFormation } from "../../hooks/useFormations";
 
 export default function FormationsPage() {
@@ -82,6 +84,38 @@ export default function FormationsPage() {
       texte: freeText,
     };
   }, [effectiveFilters]);
+
+  const formationIeParams = useMemo(
+    () =>
+      buildFormationExportQueryParams({
+        texte: filters.texte,
+        centre: filters.centre,
+        statut: filters.statut,
+        type_offre: filters.type_offre,
+        date_debut: filters.date_debut,
+        date_fin: filters.date_fin,
+        places_disponibles: filters.places_disponibles,
+        tri: filters.tri,
+        dans: filters.dans,
+        avec_archivees: filters.avec_archivees,
+        activite: filters.activite,
+        annee: filters.annee,
+      }),
+    [
+      filters.texte,
+      filters.centre,
+      filters.statut,
+      filters.type_offre,
+      filters.date_debut,
+      filters.date_fin,
+      filters.places_disponibles,
+      filters.tri,
+      filters.dans,
+      filters.avec_archivees,
+      filters.activite,
+      filters.annee,
+    ]
+  );
 
   const { data, loading, error, fetchData } = useFetch<PaginatedResponse<Formation>>(
     "/formations/",
@@ -214,6 +248,8 @@ export default function FormationsPage() {
           </Button>
 
           <FormationExportButton selectedIds={selectedIds} />
+
+          <Lot1ExcelActions resource="formation" exportParams={formationIeParams} isMobile={isMobile} />
 
           <Button
             variant={filters.avec_archivees || filters.activite === "archivee" ? "contained" : "outlined"}

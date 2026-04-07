@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Box, Stack, Button, Checkbox, Typography, Paper, useTheme, useMediaQuery } from "@mui/material";
 
+import { buildLot1ExportQueryParams } from "../../api/lot1ImportExport";
+import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import useFetch from "../../hooks/useFetch";
 import usePagination from "../../hooks/usePagination";
 import PageTemplate from "../../components/PageTemplate";
@@ -73,6 +75,16 @@ export default function TypeOffresPage() {
   });
 
   const typeoffres = data?.results || [];
+
+  const lot1ExportParams = useMemo(
+    () =>
+      buildLot1ExportQueryParams({
+        search,
+        includeArchived,
+        archivesOnly,
+      }),
+    [search, includeArchived, archivesOnly]
+  );
 
   // 🔄 Fetch initial
   useEffect(() => {
@@ -178,6 +190,8 @@ export default function TypeOffresPage() {
               setPage(1);
             }}
           />
+
+          <Lot1ExcelActions resource="type_offre" exportParams={lot1ExportParams} isMobile={isMobile} />
 
           <Button
             variant="contained"
