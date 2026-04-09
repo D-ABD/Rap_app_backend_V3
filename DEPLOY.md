@@ -63,10 +63,10 @@ Fichiers applicatifs a garder et reconfigurer :
 
 Architecture cible :
 
-- code : `/srv/rap_app/app`
-- venv : `/srv/rap_app/venv`
-- media : `/srv/rap_app/shared/media`
-- logs : `/srv/rap_app/logs`
+- code : `/srv/apps/rap_app/app`
+- venv : `/srv/apps/rap_app/venv`
+- media : `/srv/apps/rap_app/shared/media`
+- logs : `/srv/apps/rap_app/logs`
 - front build : `/var/www/rap_app_front`
 - Gunicorn : `127.0.0.1:8000`
 - Nginx : frontend + `/api/` + `/admin/` + `/static/` + `/media/`
@@ -75,8 +75,8 @@ Pieges critiques a verifier :
 
 - Gunicorn doit binder `127.0.0.1:8000` dans [deploy/gunicorn_rapapp.service](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/deploy/gunicorn_rapapp.service)
 - Nginx doit proxyfier `/api/` et `/admin/` vers `http://127.0.0.1:8000` dans [deploy/nginx_rap_app.conf](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/deploy/nginx_rap_app.conf)
-- Gunicorn doit charger `EnvironmentFile=/srv/rap_app/app/.env`
-- le fichier `.env` doit rester dans `/srv/rap_app/app/.env`
+- Gunicorn doit charger `EnvironmentFile=/srv/apps/rap_app/app/.env`
+- le fichier `.env` doit rester dans `/srv/apps/rap_app/app/.env`
 - `SECURE_SSL_REDIRECT=False` pendant l'installation initiale, puis `True` apres HTTPS valide
 - le DNS `rap.adserv.fr` doit pointer vers `147.93.126.119`
 
@@ -120,25 +120,25 @@ sudo ufw status
 4. Arborescence :
 
 ```bash
-sudo mkdir -p /srv/rap_app/shared/media
-sudo mkdir -p /srv/rap_app/logs
+sudo mkdir -p /srv/apps/rap_app/shared/media
+sudo mkdir -p /srv/apps/rap_app/logs
 sudo mkdir -p /var/www/rap_app_front
-sudo chown -R abd:abd /srv/rap_app
+sudo chown -R abd:abd /srv/apps
 sudo chown -R abd:abd /var/www/rap_app_front
 ```
 
 Permissions de base :
 
 ```bash
-sudo find /srv/rap_app -type d -exec chmod 755 {} \;
+sudo find /srv/apps -type d -exec chmod 755 {} \;
 ```
 
 5. Repo :
 
 ```bash
-cd /srv/rap_app
+cd /srv/apps/rap_app
 git clone -b main https://github.com/D-ABD/Rap_app_backend_V3.git app
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 ```
 
 6. PostgreSQL :
@@ -160,7 +160,7 @@ GRANT ALL PRIVILEGES ON DATABASE rap_app_backend TO abd;
 7. `.env` backend :
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 cp deploy/prod.env.example .env
 nano .env
 chmod 600 .env
@@ -175,7 +175,7 @@ Remplacer dans `.env` :
 8. `.env.production` frontend :
 
 ```bash
-cd /srv/rap_app/app/frontend_rap_app
+cd /srv/apps/rap_app/app/frontend_rap_app
 nano .env.production
 ```
 
@@ -187,29 +187,29 @@ VITE_API_BASE_URL=/api
 9. Backend :
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_backend.sh
 ```
 
 Apres le backend :
 
 ```bash
-sudo chown -R abd:www-data /srv/rap_app
-sudo find /srv/rap_app -type d -exec chmod 755 {} \;
-chmod 600 /srv/rap_app/app/.env
+sudo chown -R abd:www-data /srv/apps/rap_app
+sudo find /srv/apps/rap_app -type d -exec chmod 755 {} \;
+chmod 600 /srv/apps/rap_app/app/.env
 ```
 
 10. Frontend :
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_frontend.sh
 ```
 
 11. Gunicorn :
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
+sudo cp /srv/apps/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
 sudo systemctl daemon-reload
 sudo systemctl enable gunicorn_rapapp
 sudo systemctl start gunicorn_rapapp
@@ -219,7 +219,7 @@ sudo systemctl status gunicorn_rapapp
 12. Nginx, premiere passe HTTP :
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
+sudo cp /srv/apps/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
 sudo ln -s /etc/nginx/sites-available/rap_app.conf /etc/nginx/sites-enabled/rap_app.conf
 ```
 
@@ -342,13 +342,13 @@ sudo ufw enable
 ### 1.2 Creer l'arborescence
 
 ```bash
-sudo mkdir -p /srv/rap_app/shared/media
-sudo mkdir -p /srv/rap_app/logs
+sudo mkdir -p /srv/apps/rap_app/shared/media
+sudo mkdir -p /srv/apps/rap_app/logs
 sudo mkdir -p /var/www/rap_app_front
-sudo chown -R abd:abd /srv/rap_app
+sudo chown -R abd:abd /srv/apps
 sudo chown -R abd:abd /var/www/rap_app_front
 
-cd /srv/rap_app
+cd /srv/apps/rap_app
 git clone -b main https://github.com/D-ABD/Rap_app_backend_V3.git app
 ```
 
@@ -370,7 +370,7 @@ GRANT ALL PRIVILEGES ON DATABASE rap_app_backend TO abd;
 
 ### 1.4 Creer le `.env` prod
 
-Depuis `/srv/rap_app/app` :
+Depuis `/srv/apps/rap_app/app` :
 
 ```bash
 cp deploy/prod.env.example .env
@@ -393,8 +393,8 @@ DB_PASSWORD=change_me
 DB_HOST=127.0.0.1
 DB_PORT=5432
 
-STATIC_ROOT=/srv/rap_app/app/staticfiles
-MEDIA_ROOT=/srv/rap_app/shared/media
+STATIC_ROOT=/srv/apps/rap_app/app/staticfiles
+MEDIA_ROOT=/srv/apps/rap_app/shared/media
 
 SECURE_SSL_REDIRECT=False
 SESSION_COOKIE_SECURE=True
@@ -445,12 +445,12 @@ Verifier dans [rap_app_project/settings.py](/Users/abd/Documents/GIT/RapApp/Rap_
 Obligatoire :
 
 - remplacer les domaines historiques dans `CSRF_TRUSTED_ORIGINS` et `CORS_ALLOWED_ORIGINS`
-- aligner `MEDIA_ROOT` avec `/srv/rap_app/shared/media`
+- aligner `MEDIA_ROOT` avec `/srv/apps/rap_app/shared/media`
 
 ### 1.6 Deployer le backend
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_backend.sh
 ```
 
@@ -474,14 +474,14 @@ VITE_API_BASE_URL=/api
 Puis :
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_frontend.sh
 ```
 
 ### 1.8 Installer Gunicorn
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
+sudo cp /srv/apps/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
 sudo systemctl daemon-reload
 sudo systemctl enable gunicorn_rapapp
 sudo systemctl start gunicorn_rapapp
@@ -499,7 +499,7 @@ journalctl -u gunicorn_rapapp -n 100 --no-pager
 Premiere etape : installer une conf HTTP simple.
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
+sudo cp /srv/apps/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
 sudo ln -s /etc/nginx/sites-available/rap_app.conf /etc/nginx/sites-enabled/rap_app.conf
 ```
 

@@ -51,12 +51,12 @@ sudo ufw status
 ## 4. Arborescence serveur
 
 ```bash
-sudo mkdir -p /srv/rap_app/shared/media
-sudo mkdir -p /srv/rap_app/logs
+sudo mkdir -p /srv/apps/rap_app/shared/media
+sudo mkdir -p /srv/apps/rap_app/logs
 sudo mkdir -p /var/www/rap_app_front
-sudo chown -R abd:abd /srv/rap_app
+sudo chown -R abd:abd /srv/apps
 sudo chown -R abd:abd /var/www/rap_app_front
-sudo find /srv/rap_app -type d -exec chmod 755 {} \;
+sudo find /srv/apps -type d -exec chmod 755 {} \;
 ```
 
 ---
@@ -64,9 +64,9 @@ sudo find /srv/rap_app -type d -exec chmod 755 {} \;
 ## 5. Cloner le repo
 
 ```bash
-cd /srv/rap_app
+cd /srv/apps/rap_app
 git clone -b main https://github.com/D-ABD/Rap_app_backend_V3.git app
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 ```
 
 ---
@@ -92,7 +92,7 @@ GRANT ALL PRIVILEGES ON DATABASE rap_app_backend TO abd;
 ## 7. Creer le `.env`
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 cp deploy/prod.env.example .env
 nano .env
 chmod 600 .env
@@ -109,7 +109,7 @@ Dans `.env`, remplacer au minimum :
 ## 8. Front env production
 
 ```bash
-cd /srv/rap_app/app/frontend_rap_app
+cd /srv/apps/rap_app/app/frontend_rap_app
 nano .env.production
 ```
 
@@ -125,14 +125,14 @@ VITE_API_BASE_URL=/api
 ## 9. Deploy backend
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_backend.sh
 ```
 
 ```bash
-sudo chown -R abd:www-data /srv/rap_app
-sudo find /srv/rap_app -type d -exec chmod 755 {} \;
-chmod 600 /srv/rap_app/app/.env
+sudo chown -R abd:www-data /srv/apps/rap_app
+sudo find /srv/apps/rap_app -type d -exec chmod 755 {} \;
+chmod 600 /srv/apps/rap_app/app/.env
 ```
 
 ---
@@ -140,7 +140,7 @@ chmod 600 /srv/rap_app/app/.env
 ## 10. Deploy frontend
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 bash deploy/deploy_frontend.sh
 ```
 
@@ -149,7 +149,7 @@ bash deploy/deploy_frontend.sh
 ## 11. Installer Gunicorn
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
+sudo cp /srv/apps/rap_app/app/deploy/gunicorn_rapapp.service /etc/systemd/system/gunicorn_rapapp.service
 sudo systemctl daemon-reload
 sudo systemctl enable gunicorn_rapapp
 sudo systemctl start gunicorn_rapapp
@@ -172,7 +172,7 @@ Premiere passe :
 - ne garder actif que le bloc HTTP si le certificat n'existe pas encore
 
 ```bash
-sudo cp /srv/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
+sudo cp /srv/apps/rap_app/app/deploy/nginx_rap_app.conf /etc/nginx/sites-available/rap_app.conf
 sudo ln -s /etc/nginx/sites-available/rap_app.conf /etc/nginx/sites-enabled/rap_app.conf
 sudo nginx -t
 sudo systemctl reload nginx
@@ -218,7 +218,7 @@ sudo tail -n 100 /var/log/nginx/error.log
 ## 15. Redeploiement plus tard
 
 ```bash
-cd /srv/rap_app/app
+cd /srv/apps/rap_app/app
 git pull origin main
 bash deploy/deploy_backend.sh
 bash deploy/deploy_frontend.sh

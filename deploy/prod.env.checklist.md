@@ -18,8 +18,8 @@ DB_PASSWORD=change_me
 DB_HOST=127.0.0.1
 DB_PORT=5432
 
-STATIC_ROOT=/srv/rap_app/app/staticfiles
-MEDIA_ROOT=/srv/rap_app/shared/media
+STATIC_ROOT=/srv/apps/rap_app/app/staticfiles
+MEDIA_ROOT=/srv/apps/rap_app/shared/media
 ```
 
 ## Securite recommandee
