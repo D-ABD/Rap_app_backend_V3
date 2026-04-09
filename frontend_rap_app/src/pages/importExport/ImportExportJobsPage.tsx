@@ -119,6 +119,13 @@ function buildSearchParamsFromFilters(state: {
   return next;
 }
 
+function getChangedSearchParamKeys(prev: URLSearchParams, next: URLSearchParams): string[] {
+  const keys = new Set<string>();
+  prev.forEach((_, key) => keys.add(key));
+  next.forEach((_, key) => keys.add(key));
+  return Array.from(keys).filter((key) => prev.get(key) !== next.get(key));
+}
+
 function formatWhen(iso: string): string {
   try {
     return new Date(iso).toLocaleString("fr-FR", {
@@ -170,6 +177,39 @@ export default function ImportExportJobsPage() {
   const { users: simpleUsers, loading: simpleUsersLoading } = useSimpleUsers();
   const skipNextUrlHydrate = useRef(false);
   const skipInitialUrlHydrate = useRef(true);
+  const nextSearchParams = useMemo(
+    () =>
+      buildSearchParamsFromFilters({
+        resourceFilter,
+        resourcesInFilter,
+        userFilter,
+        dateMinFilter,
+        dateMaxFilter,
+        statusFilter,
+        statusesInFilter,
+        dryRunFilter,
+        ordering,
+        page,
+        pageSize,
+      }),
+    [
+      resourceFilter,
+      resourcesInFilter,
+      userFilter,
+      dateMinFilter,
+      dateMaxFilter,
+      statusFilter,
+      statusesInFilter,
+      dryRunFilter,
+      ordering,
+      page,
+      pageSize,
+    ]
+  );
+  const shouldReplaceSearch = useMemo(() => {
+    const changedKeys = getChangedSearchParamKeys(searchParams, nextSearchParams);
+    return changedKeys.length > 0 && changedKeys.every((key) => key === "resource" || key === "user");
+  }, [searchParams, nextSearchParams]);
 
   useEffect(() => {
     if (skipNextUrlHydrate.current) {
@@ -198,37 +238,20 @@ export default function ImportExportJobsPage() {
     setSearchParams(
       (prev) => {
         const prevParams = new URLSearchParams(typeof prev === "string" ? prev : prev);
-        const built = buildSearchParamsFromFilters({
-          resourceFilter,
-          resourcesInFilter,
-          userFilter,
-          dateMinFilter,
-          dateMaxFilter,
-          statusFilter,
-          statusesInFilter,
-          dryRunFilter,
-          ordering,
-          page,
-          pageSize,
-        });
-        if (built.toString() === prevParams.toString()) return prev;
+        if (nextSearchParams.toString() === prevParams.toString()) return prev;
         skipNextUrlHydrate.current = true;
-        return built;
+        return nextSearchParams;
       },
-      { replace: true }
+      {
+        // Texte libre : on évite de créer une entrée d’historique à chaque frappe.
+        // Filtres discrets, pagination et tri : on garde un vrai "back" navigateur.
+        replace: shouldReplaceSearch,
+      }
     );
   }, [
-    resourceFilter,
-    resourcesInFilter,
-    userFilter,
-    dateMinFilter,
-    dateMaxFilter,
-    statusFilter,
-    statusesInFilter,
-    dryRunFilter,
-    ordering,
-    page,
-    pageSize,
+    searchParams,
+    nextSearchParams,
+    shouldReplaceSearch,
     setSearchParams,
   ]);
 

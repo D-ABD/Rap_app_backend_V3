@@ -66,7 +66,7 @@ def _get_required_secret(name: str) -> str:
 SECRET_KEY = _get_required_secret("SECRET_KEY")
 DEBUG = config("DEBUG", default="False").lower() == "true"
 
-ALLOWED_HOSTS = csv("ALLOWED_HOSTS", default="localhost,rap.adserv.fr")
+ALLOWED_HOSTS = csv("ALLOWED_HOSTS", default="localhost,127.0.0.1")
 
 
 INSTALLED_APPS = [
@@ -278,17 +278,9 @@ SPECTACULAR_SETTINGS = {
     "GENERIC_ADDITIONAL_PROPERTIES": None,
 }
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://rap.adserv.fr",
-    "https://app.adserv.fr",
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "https://rap.adserv.fr",
-    "https://app.adserv.fr",
-]
-
-CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = csv("CSRF_TRUSTED_ORIGINS", default="")
+CORS_ALLOWED_ORIGINS = csv("CORS_ALLOWED_ORIGINS", default="")
+CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", default="True").lower() == "true"
 
 # Ajout des origines locales en développement
 if DEBUG:
@@ -305,6 +297,14 @@ if DEBUG:
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
 )
+EMAIL_HOST = config("EMAIL_HOST", default="localhost")
+EMAIL_PORT = int(config("EMAIL_PORT", default="25"))
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default="False").lower() == "true"
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default="False").lower() == "true"
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="webmaster@localhost")
+SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 
 LANGUAGE_CODE = "fr"
 TIME_ZONE = "Europe/Paris"
@@ -312,7 +312,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = Path(config("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -323,12 +323,13 @@ STORAGES = {
 }
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(BASE_DIR / "media")))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_REDIRECT_URL = "profile"
 LOGOUT_REDIRECT_URL = "login"
 LOGIN_URL = "/login/"
+X_FRAME_OPTIONS = config("X_FRAME_OPTIONS", default="DENY").upper()
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -436,8 +437,6 @@ if "test" in sys.argv:
     }
 else:
     DISABLE_MODEL_LOGS = False
-
-X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # Import Excel (Lot 1+) : taille max d'un fichier .xlsx (octets). Aligner reverse-proxy / client si besoin.
 RAP_IMPORT_MAX_UPLOAD_BYTES = int(config("RAP_IMPORT_MAX_UPLOAD_BYTES", default=str(10 * 1024 * 1024)))

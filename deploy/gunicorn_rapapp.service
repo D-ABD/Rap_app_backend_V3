@@ -1,0 +1,19 @@
+[Unit]
+Description=Gunicorn RAP_APP
+After=network.target
+
+[Service]
+User=abd
+Group=www-data
+WorkingDirectory=/srv/rap_app/app
+EnvironmentFile=/srv/rap_app/app/.env
+ExecStart=/srv/rap_app/venv/bin/gunicorn \
+  --workers 2 \
+  --bind 127.0.0.1:8000 \
+  rap_app_project.wsgi:application
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

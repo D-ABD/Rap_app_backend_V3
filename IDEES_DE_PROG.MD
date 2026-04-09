@@ -13,37 +13,43 @@ Revoir les dates dans les form et certains form sont tres lents. et impossible d
 
 revoir maj d'un candidat
 
-Quand un partenaire est cree le centre lié est le centre du createur . si c'est un candidat ou stagiiare lié au centre et au candidat ou stagiaire 
+
 
 je veux un systeme de modal coherent apres une action. comme lorsque je cree un atelier tre ou un partenaire...
 --------------------------------------------------------------------
-je veux un acces spécifique pour les commerciaux, un acces specifique pour les chargés de recrutement, pour les candidats / stagaires, pour les prépa , ....... je peux leur creer des viewets ou je revois les roles? ou j'utilise les permissions dans admin?
-Je pense que le mieux est que dans admin je determine les modules auxquels ils ont le droit et que je stabilise un role surtout pour stagiaires et candidats, qui auront des acces tres limités à l'app. il auront juste leur prospection, leur cv, leurs partenaires
+je veux une explication de ce que fais chaque module et de ses relations, aussi de ce qui se declenche automatiquement comme les services, signals, ....donc ont lit tous les fichiers pour etre clair
+Créé un dossier DOC_APP et mets y les fichiers, par exemple :  Doc_formations, Doc_appairages....
+
 -----------
 
-Verifier taux de saturation formaton et transformation et explique moi le fonctionnement
+
 
 Possible de recevoir la BDD par email tous les vendredi? pour sauvegarde
 
 Reprendre chaque module un à un et voir qui a le droit de faire quoi(permissions, roles, scope....)
 
+ 
+verifie que toutes les erreurs ont des messages .verifier que j'ai bien des messages clairs pour chaque erreur de validation dans l'app, pour aider l'utilisateur
 
-je souhaite mettre le champs de recherche a l'exterieur des filtres dans les pages. ainsi, la recherche et tout le temps accessible meme quand les fltres sont masqués
+
+
+ 
 
 
 
-est il possible d'ajouter une fonction "importer", afin que certains utilisateurs autorisés pouiss remplir la BDD via un fichier excel et que cela remplisse automatiqueent les models?
+
+
+
+je veux que tu verifie le fonctionnement complet de mon app dans le shell
+
+mettre les boutton d'imort dans un 'afficher options"
 
 
 dans mon app, est il possible de creer un acces obsolete de 3 jours, pour qu'une entreprise puisse remplir une partie du cerfa en ligne depuis un form? et que l'acces se coupe automatiquement apres 3 jours?
 
 
-verifier ce que voit le candidat dans sa fiche "me"
 
 
-verifie que toutes les erreurs ont des messages 
-
-je veux pouvoir faire des selectons multiples, la ou c'est pertinnant de le faire . par exemple, selectionner plusieurs candidats et modifier leurs statuts en meme temps. par exemple un lot de candidats a mettre en admissible ou inscrit gespers ou en formation etc....
 
 Refaire les form et les tables
 Verifier les scops
@@ -52,10 +58,6 @@ Verifier les scops
 
 verifier si je dois modifier les stats 
 -------------------------------------------------------------------------------
-
-je veux aussi la creation d'un partenaire dans la modale artenaire. et profites en pour enrichir la modale partenaire avec le departement et autres informations si pertinentes
-
-Modifier les roles (CRA, CC, Prepa, Déclic, staff, staff read, candidat, )
 
 
 Creer des sous dossiers pour les tests pour facilement les tester module par module. par exemple: test formation, ou je regroupe tous les tests liés à la formation:
@@ -72,62 +74,193 @@ Objectif
 
 
 
+1️⃣ Monitoring toutes les 30 minutes (user)
+1️⃣ Monitoring toutes les 30 minutes (user)
+3️⃣ Monitoring toutes les 10 minutes (root)
 
 
+ je vais creer plusieurs app sur le server donc creer un dossier par app
 
 
+----------------------------------------
+----------------------------------------
+----------------------------------------
 
 
+Tu es un expert Django REST Framework, drf-spectacular et architecture API.
 
+MISSION
+Ajouter une nouvelle fonctionnalité dans mon backend EXISTANT, en respectant STRICTEMENT :
+- l’architecture actuelle
+- les conventions de code
+- la structure de documentation API
+- la cohérence globale du projet
 
+CONTEXTE
+- Projet Django/DRF déjà en production
+- API documentée avec drf-spectacular / OpenAPI
+- Documentation déjà en cours d’uniformisation
+- Front React déjà connecté à cette API
 
+OBJECTIF
+Ajouter une nouvelle fonctionnalité SANS :
+- casser le comportement existant
+- casser la documentation
+- introduire des incohérences
+- dupliquer des patterns existants
 
+CONTRAINTE ABSOLUE
+- Ne pas modifier les endpoints existants sauf nécessité critique
+- Ne pas changer les serializers existants sans raison
+- Ne pas casser les réponses attendues par le front
+- Ne pas casser les permissions existantes
+- Respecter les patterns déjà en place
 
+MÉTHODE OBLIGATOIRE
 
+ÉTAPE 1 — ANALYSE AVANT CODING
+Avant toute modification, tu dois :
+1. identifier les modules concernés
+2. identifier les ViewSets existants liés
+3. identifier les serializers existants
+4. identifier les patterns similaires déjà présents
+5. identifier comment la doc est structurée pour ces modules
 
+Tu dois EXPLIQUER ton plan avant de coder.
 
+---
 
+ÉTAPE 2 — CONCEPTION PROPRE
+Tu dois :
+- réutiliser les patterns existants
+- éviter de créer une nouvelle logique si une existe déjà
+- respecter les conventions du projet :
+  - nommage
+  - structure
+  - permissions
+  - filtrage
+  - pagination
+  - responses
 
+Si une décision d’architecture est nécessaire :
+👉 tu dois la justifier
 
+---
 
+ÉTAPE 3 — AJOUT DE LA FEATURE
 
+Tu dois ajouter :
+- modèles (si nécessaire)
+- serializers
+- viewsets ou actions custom
+- services (si logique métier complexe)
 
+IMPORTANT
+- privilégier actions custom si cohérent avec l’existant
+- ne pas créer de nouveaux endpoints inutiles
 
+---
 
+ÉTAPE 4 — DOCUMENTATION OBLIGATOIRE
 
+Chaque nouvel endpoint DOIT respecter ce standard :
 
+1. SUMMARY
+→ court, clair, action
 
+2. DESCRIPTION
+→ doit expliquer :
+- objectif
+- intention métier
+- comportement
+- règles importantes
 
-CFA d’entreprise : Oui X Non 
-Dénomination du CFA responsable :
-N° UAI du CFA : 
-N° SIRET CFA :
-Adresse du CFA responsable :
-N° : 
-Voie : 
-Complément : 
-Code postal : 
-Commune :
-Si le CFA responsable est le lieu de formation principal cochez la case ci-contre
-Visa du CFA (cachet et signature du directeur) :
-Diplôme ou titre visé par l’apprenti : 
-Intitulé précis :
-Code du diplôme : 
-Code RNCP :
-Organisation de la formation en CFA : 
-Date de début de formation en CFA :
-29 / 04 / 2026
-Date prévue de fin des épreuves ou examens :
-30 / 05 / 2026
-Durée de la formation : heures
-Dont heures de formation à distance
-Lieu principal de réalisation de la formation si différent du CFA responsable :
-Dénomination du lieu de formation principal :
-N° UAI :
-N° SIRET :
-Adresse du lieu de formation principal :
-N° : Voie :
-Complément :
-Code postal :
-Commune :
-      
+3. PARAMÈTRES
+→ description métier (pas technique)
+
+4. RESPONSE
+→ cohérente avec le vrai retour
+→ pas de “No response body” si faux
+
+5. CONTENT TYPE
+→ correct (JSON, PDF, XLSX…)
+
+---
+
+RÈGLE CRITIQUE
+
+👉 NE PAS copier-coller la doc du ViewSet sur chaque endpoint
+
+Tu dois respecter :
+
+- Doc ViewSet = logique globale
+- Doc endpoint = action spécifique
+
+---
+
+ÉTAPE 5 — COHÉRENCE GLOBALE
+
+Après ajout, tu dois vérifier :
+
+- cohérence avec les endpoints existants
+- cohérence des noms
+- cohérence des réponses
+- cohérence des filtres
+- cohérence des permissions
+- cohérence de la documentation
+
+---
+
+ÉTAPE 6 — VÉRIFICATION FINALE
+
+Tu dois vérifier :
+
+- aucun endpoint existant cassé
+- aucune doc incohérente introduite
+- aucun “No response body” incorrect
+- aucun paramètre non documenté
+- aucun content-type incorrect
+
+---
+
+FORMAT DE RÉPONSE ATTENDU
+
+1. ANALYSE
+- modules concernés
+- choix d’implémentation
+
+2. PLAN
+- où tu ajoutes quoi
+
+3. CODE COMPLET
+- fichiers modifiés
+- code prêt à coller
+
+4. DOCUMENTATION
+- docstrings ajoutées propres
+- format homogène
+
+5. RISQUES
+- ce qui pourrait poser problème
+
+6. TEST RAPIDE
+- comment vérifier que tout fonctionne
+
+---
+
+INTERDIT
+
+- ajouter une feature en mode “rapide”
+- ignorer la doc
+- casser la cohérence API
+- créer des endpoints incohérents avec le reste
+- introduire des réponses non documentées
+
+---
+
+OBJECTIF FINAL
+
+Pouvoir ajouter des fonctionnalités sans jamais dégrader :
+- la qualité de l’API
+- la cohérence de la doc
+- la stabilité du front

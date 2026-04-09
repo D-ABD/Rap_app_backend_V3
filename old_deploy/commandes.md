@@ -14,7 +14,7 @@ schéma telechargement
 http://localhost:8000/api/schema/ 
 
 
-python3 manage.py check     
+python3 manage.py check    
 python3 manage.py makemigrations 
 python3 manage.py migrate 
 En local :
@@ -150,20 +150,7 @@ git remote add origin URL_DU_DEPOT.git
 # Pousser les modifications
 git status                           
 git add .                            
-git commit -m "feat(ui): refactor UI mutualisé, lots 0–10 documentés et suite lots 11–15
-Documentation
-- UI_refactor_execution_plan.md : état d’avancement §1.b, lots 0–10 terminés,
-  lots 11–15 ajoutés (modales détail, prépa résiduel, états UI étendus, shell
-  résiduel, table générique optionnelle), ordre §6 et décision §9 alignés.
-- UI_refactor.md : état réalisé (lots 0–10) et suite planifiée (11–15).
-- docs/guide_import_excel_bdd.md : guide import Excel / BDD (hors implémentation).
-Frontend
-- Briques : ui, détail, formulaires App*, FormSectionCard, EntityPicker*,
-  tables/filtres/dashboards, modales sélection.
-- Pages : événements, rapports, formations, cerfa, statuts, type offres,
-  centres, commentaires, prépa, prospection, candidats (sections), etc.
-- Lot 10 : ProspectionForm, CerfaForm, FormSections, Prepa forms ;
-  FormSectionCard titre ReactNode."   
+git commit -m "Ajout des models, serializers et viewsets, pour atelier_tre; Appairage et candidats. versions à vérifier"   
 git push origin main                 
 
 
