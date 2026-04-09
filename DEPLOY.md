@@ -48,10 +48,6 @@ Reference active :
 - [deploy/nginx_rap_app.conf](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/deploy/nginx_rap_app.conf)
 - [deploy/prod.env.checklist.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/deploy/prod.env.checklist.md)
 
-Archives :
-
-- [old_deploy/](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/old_deploy)
-
 Fichiers applicatifs a garder et reconfigurer :
 
 - [rap_app_project/settings.py](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/rap_app_project/settings.py)

@@ -50,7 +50,6 @@ backups/
 !utils/check_alert.sh
 !deploy.sh
 !deploy/*.sh
-!old_deploy/**/*.sh
 
 
 TECHNICAL_AUDIT.md
