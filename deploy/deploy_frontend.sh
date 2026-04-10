@@ -11,6 +11,13 @@ echo "WEB_DIR=$WEB_DIR"
 
 cd "$FRONT_DIR"
 
+if [ ! -f .env.production ]; then
+  cat > .env.production <<'EOF'
+VITE_APP_NAME=Rap App
+VITE_API_BASE_URL=/api
+EOF
+fi
+
 npm ci
 npm run build
 

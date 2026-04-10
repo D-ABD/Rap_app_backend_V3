@@ -187,6 +187,8 @@ cd /srv/apps/rap_app/app
 bash deploy/deploy_backend.sh
 ```
 
+Le script backend installe par defaut [requirements-prod.txt](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/requirements-prod.txt), donc les outils de test comme `pytest` ne sont pas installes en production.
+
 Apres le backend :
 
 ```bash
@@ -391,6 +393,7 @@ DB_PORT=5432
 
 STATIC_ROOT=/srv/apps/rap_app/app/staticfiles
 MEDIA_ROOT=/srv/apps/rap_app/shared/media
+LOG_DIR=/srv/apps/rap_app/logs
 
 SECURE_SSL_REDIRECT=False
 SESSION_COOKIE_SECURE=True
@@ -437,11 +440,13 @@ Verifier dans [rap_app_project/settings.py](/Users/abd/Documents/GIT/RapApp/Rap_
 - `SECURE_PROXY_SSL_HEADER`
 - `STATIC_ROOT`
 - `MEDIA_ROOT`
+- `LOG_DIR`
 
 Obligatoire :
 
 - remplacer les domaines historiques dans `CSRF_TRUSTED_ORIGINS` et `CORS_ALLOWED_ORIGINS`
 - aligner `MEDIA_ROOT` avec `/srv/apps/rap_app/shared/media`
+- aligner `LOG_DIR` avec `/srv/apps/rap_app/logs`
 
 ### 1.6 Deployer le backend
 

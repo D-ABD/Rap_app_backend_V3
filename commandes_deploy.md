@@ -129,6 +129,8 @@ cd /srv/apps/rap_app/app
 bash deploy/deploy_backend.sh
 ```
 
+Note : ce script installe `requirements-prod.txt`, pas les dependances de test.
+
 ```bash
 sudo chown -R abd:www-data /srv/apps/rap_app
 sudo find /srv/apps/rap_app -type d -exec chmod 755 {} \;

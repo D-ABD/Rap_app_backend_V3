@@ -20,9 +20,18 @@ DB_PORT=5432
 
 STATIC_ROOT=/srv/apps/rap_app/app/staticfiles
 MEDIA_ROOT=/srv/apps/rap_app/shared/media
+LOG_DIR=/srv/apps/rap_app/logs
 ```
 
 ## Securite recommandee
+
+Pendant l'installation initiale, avant que le certificat Let’s Encrypt soit actif, garde temporairement :
+
+```env
+SECURE_SSL_REDIRECT=False
+```
+
+Une fois HTTPS valide via Nginx et certbot, repasse a :
 
 ```env
 SECURE_SSL_REDIRECT=True

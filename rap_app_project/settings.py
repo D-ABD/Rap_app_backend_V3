@@ -360,8 +360,8 @@ LOG_SENSITIVE_FIELDS = [
 ]
 LOG_SANITIZATION_WARNINGS = True
 
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-Path(LOG_DIR).mkdir(exist_ok=True)
+LOG_DIR = config("LOG_DIR", default=str(BASE_DIR / "logs"))
+Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
 
 # Rotation de ``logs/import_export.log`` (handler ``import_export_file``) — §2.15 / REFACTOR_IMPORT_EXPORT_PLAN.
 RAP_IMPORT_LOG_MAX_BYTES = int(config("RAP_IMPORT_LOG_MAX_BYTES", default=str(5 * 1024 * 1024)))
