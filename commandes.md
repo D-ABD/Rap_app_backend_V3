@@ -242,30 +242,25 @@ chmod +x .git/hooks/pre-commit
 ➡️ Chaque git commit exécutera automatiquement les vérifications avant validation.
 
 🚀 1️⃣3️⃣ AUTOMATISATION DU DÉPLOIEMENT
-🔹 Fichier scripts/deploy_front.sh
-#!/bin/bash
-set -e
-echo "🚀 Build & déploiement du frontend vers production..."
 
-npm run lint && npm run type-check
-npm run build
+Ancienne procedure frontend separee supprimee.
 
-ssh root@147.93.126.119 "rm -rf /srv/rap_app_front/*"
-scp -r dist/* root@147.93.126.119:/srv/rap_app_front/
-ssh root@147.93.126.119 "sudo systemctl reload nginx"
+Le deploiement production actuel est celui du monorepo front + back :
 
-echo "✅ Déploiement terminé avec succès !"
-
-🔹 Rendre exécutable
-chmod +x scripts/deploy_front.sh
+- guide complet : `DEPLOY.md`
+- commandes pas a pas : `commandes_deploy.md`
+- script backend : `deploy/deploy_backend.sh`
+- script frontend : `deploy/deploy_frontend.sh`
+- racine VPS : `/srv/apps/rap_app/app`
+- build frontend : `/var/www/rap_app_front`
 
 🧠 1️⃣4️⃣ BONNES PRATIQUES DE MAINTENANCE
 
 Toujours lancer npm run precommit avant tout commit important.
 
-Toujours exécuter npm run build && npm run deploy pour publier en prod.
+Toujours exécuter la procédure `DEPLOY.md` / `commandes_deploy.md` pour publier en prod.
 
-Ne jamais modifier manuellement le dossier /srv/rap_app_front côté serveur.
+Ne jamais modifier manuellement le dossier `/var/www/rap_app_front` côté serveur.
 
 Si un build échoue : vérifier le log de build local (vite build) avant de retenter le déploiement.
 
@@ -275,5 +270,4 @@ npm run preview
 
 
 → Cela simule exactement ce que Nginx servira en production.
-
 

@@ -216,6 +216,13 @@ export const sidebarItems: SidebarItem[] = [
 /*       ADAPTATION DYNAMIQUE POUR STAFF      */
 /* ────────────────────────────────────────── */
 
+const sidebarRedirectMap: Record<string, [string, string]> = {
+  Prospections: ["/prospections", "/prospections/candidat"],
+  Partenaires: ["/partenaires", "/partenaires/candidat"],
+  "Liste des CV": ["/cvtheque", "/cvtheque/candidat"],
+  "Ajouter un CV": ["/cvtheque/create", "/cvtheque/create/candidat"],
+};
+
 export function useSidebarItems(): SidebarItem[] {
   const { user } = useAuth();
   const role = normalizeRole(user?.role);
@@ -224,13 +231,6 @@ export function useSidebarItems(): SidebarItem[] {
   const canAccessPrepa = canAccessPrepaRole(role);
   const canAccessDeclic = canAccessDeclicRole(role);
   const canAccessParametres = isAdminLikeRole(role);
-
-  const redirectMap: Record<string, [string, string]> = {
-    Prospections: ["/prospections", "/prospections/candidat"],
-    Partenaires: ["/partenaires", "/partenaires/candidat"],
-    "Liste des CV": ["/cvtheque", "/cvtheque/candidat"],
-    "Ajouter un CV": ["/cvtheque/create", "/cvtheque/create/candidat"],
-  };
 
   return useMemo(() => {
     return sidebarItems
@@ -250,7 +250,7 @@ export function useSidebarItems(): SidebarItem[] {
           return {
             ...item,
             children: filteredChildren.map((child: SidebarItem) => {
-              const redirect = redirectMap[child.label];
+              const redirect = sidebarRedirectMap[child.label];
               if (redirect) {
                 const [staffPath, candidatPath] = redirect;
                 return { ...child, path: isCandidateLike ? candidatPath : staffPath };
@@ -266,7 +266,7 @@ export function useSidebarItems(): SidebarItem[] {
         return {
           ...item,
           children: item.children.map((child: SidebarItem) => {
-            const redirect = redirectMap[child.label];
+            const redirect = sidebarRedirectMap[child.label];
             if (redirect) {
               const [staffPath, candidatPath] = redirect;
               return { ...child, path: isCandidateLike ? candidatPath : staffPath };
@@ -287,7 +287,6 @@ export function useSidebarItems(): SidebarItem[] {
       .filter((item): item is SidebarItem => item !== null)
       .filter((item) => !item.children || item.children.length > 0);
   }, [
-    role,
     isCandidateLike,
     isCoreStaff,
     canAccessPrepa,

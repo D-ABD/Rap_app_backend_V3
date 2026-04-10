@@ -38,7 +38,6 @@ export default function DocumentsPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
 
   const [previewDoc] = useState<Document | null>(null); // ✅ nouveau
@@ -151,24 +150,10 @@ export default function DocumentsPage() {
     if (typeof data?.count === "number") setCount(data.count);
   }, [data, setCount]);
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
-    try {
-      await deleteDocument(selectedId);
-      toast.success("📦 Document archivé");
-      setSelectedId(null);
-      fetchData();
-    } catch {
-      toast.error("Erreur lors de l'archivage");
-    }
-  };
-
   const handleDeleteById = async (id: number) => {
-    setSelectedId(id);
     try {
       await deleteDocument(id);
       toast.success("📦 Document archivé");
-      setSelectedId(null);
       fetchData();
     } catch {
       toast.error("Erreur lors de l'archivage");

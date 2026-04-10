@@ -46,9 +46,6 @@ backups/
 
 # === Scripts shell ===
 *.sh
-!utils/backup_db.sh
-!utils/check_alert.sh
-!deploy.sh
 !deploy/*.sh
 
 

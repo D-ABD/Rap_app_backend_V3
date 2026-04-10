@@ -834,7 +834,7 @@ export function CerfaForm({
       }}
     />
     ),
-    [getDateValue, readOnly, setField]
+    [fieldErrors, getDateValue, readOnly, setField]
   );
 
   const renderMemoSelectField = useCallback(
@@ -862,7 +862,7 @@ export function CerfaForm({
         ))}
       </AppTextField>
     ),
-    [readOnly, setField]
+    [fieldErrors, readOnly, setField]
   );
 
   const renderMemoCheckbox = useCallback(

@@ -131,7 +131,7 @@ export default function CommentairesPage() {
     fetchData();
   }, [fetchData, effectiveParams]);
 
-  const commentaires: Commentaire[] = data?.results ?? [];
+  const commentaires: Commentaire[] = useMemo(() => data?.results ?? [], [data]);
 
   useEffect(() => {
     if (typeof data?.count === "number") setCount(data.count);

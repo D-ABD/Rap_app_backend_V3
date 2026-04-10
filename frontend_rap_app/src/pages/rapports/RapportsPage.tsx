@@ -40,7 +40,7 @@ export default function RapportsPage() {
     setCount(data?.count ?? 0);
   }, [data, setCount]);
 
-  const rapports = data?.results ?? [];
+  const rapports = useMemo(() => data?.results ?? [], [data]);
   const overview = useMemo(() => {
     return rapports.reduce(
       (acc, rapport) => {

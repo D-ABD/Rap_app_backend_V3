@@ -15,6 +15,14 @@ from .centres import Centre
 logger = logging.getLogger("application.vae")
 
 
+def current_year() -> int:
+    return date.today().year
+
+
+def current_month() -> int:
+    return date.today().month
+
+
 class PeriodeMixin(models.Model):
     """
     Mixin abstrait pour gérer les périodes mensuelles par centre.
@@ -39,13 +47,13 @@ class PeriodeMixin(models.Model):
         Centre, on_delete=models.CASCADE, verbose_name=_("Centre"), help_text=_("Centre associé à cet enregistrement")
     )
     annee = models.PositiveIntegerField(
-        default=date.today().year,
+        default=current_year,
         validators=[MinValueValidator(2000)],
         verbose_name=_("Année"),
         help_text=_("Année au format YYYY (ex: 2024)"),
     )
     mois = models.PositiveSmallIntegerField(
-        default=date.today().month, choices=MOIS_CHOICES, verbose_name=_("Mois"), help_text=_("Mois de l'année (1-12)")
+        default=current_month, choices=MOIS_CHOICES, verbose_name=_("Mois"), help_text=_("Mois de l'année (1-12)")
     )
 
     class Meta:
