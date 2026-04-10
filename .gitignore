@@ -34,6 +34,8 @@ __pycache__/
 staticfiles/
 media/
 logs/
+!frontend_rap_app/src/pages/logs/
+!frontend_rap_app/src/pages/logs/*.tsx
 
 # === Fichiers de base Django ===
 db.sqlite3
