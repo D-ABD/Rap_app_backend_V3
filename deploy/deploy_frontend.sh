@@ -51,11 +51,12 @@ VITE_API_BASE_URL=/api
 EOF
 fi
 
+npm ci
+
 if [ "$RUN_LINT" = "true" ]; then
   npm run lint
 fi
 
-npm ci
 npm run build
 
 if [ ! -d dist ]; then

@@ -3,8 +3,8 @@ Description=Gunicorn RAP_APP
 After=network.target
 
 [Service]
-User=abd
-Group=www-data
+User=rapapp
+Group=rapapp
 WorkingDirectory=/srv/apps/rap_app/app
 EnvironmentFile=/srv/apps/rap_app/app/.env
 ExecStart=/srv/apps/rap_app/venv/bin/gunicorn \
