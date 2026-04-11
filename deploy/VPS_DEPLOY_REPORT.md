@@ -599,7 +599,6 @@ curl -Ik https://rap.adserv.fr/health/
 ### Priorisation pratique
 
 - **A ignorer pour l'instant** :
-  - warning `drf_spectacular.W002`
   - doublons `collectstatic` sur `admin/js/cancel.js` et `admin/js/popup_response.js`
   - warning Vite sur `axios.ts` importe a la fois statiquement et dynamiquement
 
@@ -618,12 +617,6 @@ Lecture retenue :
 - ils relevent surtout de la **maintenabilite**, de la **securite dependances** et de la **performance frontend**
 
 ### Warnings connus non bloquants
-
-- **Django / drf-spectacular** :
-  - warning `drf_spectacular.W002`
-  - vue concernee : `rap_app/api/import_export/views.py`
-  - impact : documentation schema partielle pour `Lot1ImportExportViewSet`
-  - statut : non bloquant pour la prod
 
 - **collectstatic** :
   - doublons sur :
@@ -650,6 +643,7 @@ Lecture retenue :
 - build frontend casse a cause de fichiers `logs` non suivis par Git
 - permissions cassees sur `/srv/apps/rap_app`
 - ambiguite SSH resolue via `/etc/ssh/sshd_config.d/99-hardening.conf`
+- warning `drf_spectacular.W002` corrige en declarant un `serializer_class` explicite sur `Lot1ImportExportViewSet`
 
 ### Commandes utiles pour revoir warnings et erreurs
 

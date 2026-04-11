@@ -20,6 +20,7 @@ from rest_framework.viewsets import ViewSet
 
 from rap_app.models.import_job import ImportJob
 from rap_app.services.imports.import_job_recorder import record_excel_import_job
+from rap_app.api.serializers.base_serializers import EmptySerializer
 
 from .scope import RESOURCE_TO_HANDLER_CLASS, get_delegate_viewset, get_lot1_export_queryset, resolve_resource
 
@@ -36,6 +37,7 @@ def _check_lot1_permissions(resource: str, request, *, action_name: str) -> None
 class Lot1ImportExportViewSet(ViewSet):
     """``import-template`` | ``export-xlsx`` | ``import-xlsx`` pour une ressource import Excel (Lots 1–4)."""
 
+    serializer_class = EmptySerializer
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
