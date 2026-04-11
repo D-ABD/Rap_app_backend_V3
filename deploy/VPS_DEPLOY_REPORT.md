@@ -256,6 +256,8 @@ Mesure preventive retenue :
 - `postgresql` : `active`
 - `gunicorn_rapapp` : `active`
 - `nginx` : `active`
+- `fail2ban` : `active`
+- `ssh` : `active`
 
 ### HTTP / HTTPS
 
@@ -280,6 +282,28 @@ Le `401` sur `/api/` est normal : cela prouve que le backend repond derriere Ngi
 └── vite.svg
 ```
 
+### Dossiers et proprietaires
+
+- `/srv/apps/rap_app` : `abd:abd`
+- `/srv/apps/rap_app/app` : `abd:abd`
+- `/srv/apps/rap_app/venv` : `abd:abd`
+- `/srv/apps/rap_app/logs` : `abd:abd`
+- `/srv/apps/rap_app/shared/media` : `abd:abd`
+- `/var/www/rap_app_front` : `www-data:www-data`
+
+### Ports et exposition reseau
+
+Ports exposes via UFW :
+
+- `22/tcp` : SSH
+- `80/tcp` : HTTP
+- `443/tcp` : HTTPS
+
+Ports internes utiles :
+
+- `127.0.0.1:8000` : Gunicorn
+- `5432` : PostgreSQL local
+
 ### Configuration finale
 
 - `SECURE_SSL_REDIRECT=True`
@@ -298,6 +322,8 @@ Le `401` sur `/api/` est normal : cela prouve que le backend repond derriere Ngi
 ```bash
 curl -Ik https://rap.adserv.fr
 curl -Ik https://rap.adserv.fr/api/
+sudo systemctl status fail2ban
+sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
 sudo systemctl status nginx
 ```
@@ -488,6 +514,23 @@ grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service
 systemctl status gunicorn_rapapp nginx --no-pager
 ```
 
+## Points de securite restants
+
+- **Backups** : pas encore formalises dans ce rapport comme automatisation active cote VPS
+- **Monitoring applicatif** : pas encore de supervision externe type Uptime Kuma / Better Uptime / UptimeRobot
+- **Monitoring erreurs** : pas encore de Sentry backend/frontend documente comme actif
+- **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
+- **PostgreSQL** : role `"ABD"` fonctionnel mais non ideal a long terme
+- **Rotation/centralisation logs** : pas encore formalisees ici pour les logs applicatifs Django
+
+## Risques residuels
+
+- **Risque faible a moyen** : absence de backup automatise documente ; en cas d'incident disque ou erreur humaine, la restauration ne serait pas immediate
+- **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
+- **Risque moyen** : absence de monitoring externe peut retarder la detection d'une panne applicative
+- **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
+- **Risque operationnel** : un futur `git pull` suivi d'un redeploiement avec des scripts locaux non pushes peut reintroduire un ecart entre repo et VPS
+
 ## Reste a faire (priorise)
 
 | Priorite | Action |
@@ -498,3 +541,22 @@ systemctl status gunicorn_rapapp nginx --no-pager
 | Moyenne | **Surveillance** : charge disque, RAM, services `gunicorn` / `nginx` (outil type Netdata, Uptime Kuma, ou alertes hebergeur). |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
 | Basse | **UFW** : supprimer les regles en double (80/443 vs *Nginx Full*) avec `sudo ufw status numbered` / `delete` si tu veux un affichage plus propre. |
+
+## Checklist finale
+
+- [x] Domaine `rap.adserv.fr` pointe vers le VPS
+- [x] HTTPS actif sur `rap.adserv.fr`
+- [x] `nginx` actif
+- [x] `gunicorn_rapapp` actif
+- [x] `postgresql` actif
+- [x] `fail2ban` actif
+- [x] SSH durci : root interdit, mot de passe desactive, cle publique active
+- [x] UFW actif avec SSH, HTTP et HTTPS ouverts
+- [x] Frontend servi depuis `/var/www/rap_app_front`
+- [x] Backend accessible derriere Nginx sur `/api/`
+- [x] Static et media routes vers les bons dossiers
+- [x] Repo, venv, logs et media alignes sur l'arborescence `/srv/apps/rap_app`
+- [ ] Backups automatiques formalises
+- [ ] Monitoring externe formalise
+- [ ] Nettoyage optionnel des regles UFW en doublon
+- [ ] Migration optionnelle du role PostgreSQL `"ABD"` vers `abd`
