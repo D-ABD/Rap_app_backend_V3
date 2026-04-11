@@ -48,8 +48,10 @@ export default function ProspectionCommentCreatePage() {
     lastCreated?.prospection != null
       ? isStaff
         ? `/prospections/${lastCreated.prospection}/edit`
-        : `/prospections/${lastCreated.prospection}/edit-candidat`
-      : "/prospection";
+        : `/prospections/${lastCreated.prospection}/edit/candidat`
+      : isStaff
+        ? "/prospections"
+        : "/prospections/candidat";
 
   const commentsListTarget =
     lastCreated?.prospection != null
@@ -57,7 +59,7 @@ export default function ProspectionCommentCreatePage() {
       : prefilledProspectionId != null
         ? `/prospection-commentaires?prospection=${prefilledProspectionId}`
         : "/prospection-commentaires";
-  const dashboardTarget = "/dashboard";
+  const dashboardTarget = isStaff ? "/dashboard" : "/dashboard/candidat";
 
   return (
     <PageTemplate

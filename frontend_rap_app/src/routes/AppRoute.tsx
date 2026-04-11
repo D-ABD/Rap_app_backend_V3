@@ -127,7 +127,9 @@ import CVThequeCandidatCreatePage from "src/pages/cvtheque/cvthequeCandidatCreat
 import {
   canAccessDeclicRole,
   canAccessPrepaRole,
+  canWriteDeclicRole,
   canWriteFormationsRole,
+  canWritePrepaRole,
   isAdminLikeRole,
   isCandidateLikeRole,
   isCoreStaffRole,
@@ -217,7 +219,7 @@ export default function AppRoute() {
 
   function DeclicWriteRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
-    const allowed = !!user && (user.is_superuser === true || canAccessDeclicRole(user.role));
+    const allowed = !!user && (user.is_superuser === true || canWriteDeclicRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -232,6 +234,22 @@ export default function AppRoute() {
   function CandidateLikeRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const allowed = isCandidateLikeRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function ProspectionCommentRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = isCoreStaffRole(user?.role) || isCandidateLikeRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function ProspectionCommentWriteRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = isCoreWriteRole(user?.role) || isCandidateLikeRole(user?.role);
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -269,7 +287,7 @@ export default function AppRoute() {
 
   function PrepaWriteRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
-    const allowed = !!user && (user.is_superuser === true || canAccessPrepaRole(user.role));
+    const allowed = !!user && (user.is_superuser === true || canWritePrepaRole(user.role));
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -442,18 +460,18 @@ export default function AppRoute() {
         <Route path="/prospections/candidat" element={<CandidateLikeRoute><ProspectionPageCandidat /></CandidateLikeRoute>} />
         <Route path="/prospections/create/candidat" element={<CandidateLikeRoute><ProspectionCreatePageCandidat /></CandidateLikeRoute>} />
         <Route path="/prospections/:id/edit/candidat" element={<CandidateLikeRoute><ProspectionEditCandidatPage /></CandidateLikeRoute>} />
-        <Route path="/prospection-commentaires" element={<CoreStaffRoute><ProspectionCommentPage /></CoreStaffRoute>} />
+        <Route path="/prospection-commentaires" element={<ProspectionCommentRoute><ProspectionCommentPage /></ProspectionCommentRoute>} />
         <Route
           path="/prospection-commentaires/create"
-          element={<CoreWriteRoute><ProspectionCommentCreatePage /></CoreWriteRoute>}
+          element={<ProspectionCommentWriteRoute><ProspectionCommentCreatePage /></ProspectionCommentWriteRoute>}
         />
         <Route
           path="/prospection-commentaires/:id/edit"
-          element={<CoreWriteRoute><ProspectionCommentEditPage /></CoreWriteRoute>}
+          element={<ProspectionCommentWriteRoute><ProspectionCommentEditPage /></ProspectionCommentWriteRoute>}
         />
         <Route
           path="/prospection-commentaires/create/:prospectionId"
-          element={<CoreWriteRoute><ProspectionCommentCreatePage /></CoreWriteRoute>}
+          element={<ProspectionCommentWriteRoute><ProspectionCommentCreatePage /></ProspectionCommentWriteRoute>}
         />
 
         {/* Commentaires */}
