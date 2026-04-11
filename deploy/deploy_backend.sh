@@ -11,6 +11,7 @@ MEDIA_DIR="${MEDIA_DIR:-$SHARED_DIR/media}"
 LOG_DIR="${LOG_DIR:-/srv/apps/rap_app/logs}"
 STATIC_DIR="${STATIC_DIR:-$APP_DIR/staticfiles}"
 RUN_DEPLOY_CHECK="${RUN_DEPLOY_CHECK:-true}"
+SEND_DEPLOY_EMAIL="${SEND_DEPLOY_EMAIL:-true}"
 
 require_command() {
   local cmd="$1"
@@ -28,6 +29,7 @@ echo "MEDIA_DIR=$MEDIA_DIR"
 echo "LOG_DIR=$LOG_DIR"
 echo "STATIC_DIR=$STATIC_DIR"
 echo "RUN_DEPLOY_CHECK=$RUN_DEPLOY_CHECK"
+echo "SEND_DEPLOY_EMAIL=$SEND_DEPLOY_EMAIL"
 
 require_command python3
 
@@ -87,5 +89,9 @@ else
 fi
 
 chmod 600 "$APP_DIR/.env"
+
+if [ "$SEND_DEPLOY_EMAIL" = "true" ] && [ -x "$APP_DIR/deploy/send_deploy_notification.sh" ]; then
+  "$APP_DIR/deploy/send_deploy_notification.sh" "backend"
+fi
 
 echo "==> Backend deploy done"

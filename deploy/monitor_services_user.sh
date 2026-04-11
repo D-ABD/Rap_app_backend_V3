@@ -5,6 +5,32 @@ APP_ROOT="${APP_ROOT:-/srv/apps/rap_app}"
 FRONT_DIR="${FRONT_DIR:-/var/www/rap_app_front}"
 BACKUP_ROOT="${BACKUP_ROOT:-/srv/backups/rap_app}"
 MAX_BACKUP_AGE_HOURS="${MAX_BACKUP_AGE_HOURS:-36}"
+APP_DIR="${APP_DIR:-/srv/apps/rap_app/app}"
+TMP_FILE=""
+
+cleanup() {
+  [ -n "$TMP_FILE" ] && rm -f "$TMP_FILE"
+}
+trap cleanup EXIT
+
+send_failure_email() {
+  local message="$1"
+  local helper="$APP_DIR/deploy/send_email_via_django.sh"
+  if [ ! -x "$helper" ]; then
+    return 0
+  fi
+
+  TMP_FILE="$(mktemp)"
+  cat > "$TMP_FILE" <<EOF
+Alerte monitoring services RAP_APP
+
+Serveur : $(hostname)
+Date : $(date '+%Y-%m-%d %H:%M:%S %Z')
+
+$message
+EOF
+  "$helper" "[RAP_APP] Alerte services sur $(hostname)" "$TMP_FILE" || true
+}
 
 require_command() {
   local cmd="$1"
@@ -61,17 +87,47 @@ require_command systemctl
 require_command find
 require_command stat
 
-check_path "$APP_ROOT/app"
-check_path "$APP_ROOT/venv"
-check_path "$FRONT_DIR/index.html"
-check_path "$BACKUP_ROOT/db"
-check_path "$BACKUP_ROOT/media"
+if ! check_path "$APP_ROOT/app"; then
+  send_failure_email "Le dossier applicatif est introuvable: $APP_ROOT/app"
+  exit 1
+fi
+if ! check_path "$APP_ROOT/venv"; then
+  send_failure_email "Le venv est introuvable: $APP_ROOT/venv"
+  exit 1
+fi
+if ! check_path "$FRONT_DIR/index.html"; then
+  send_failure_email "Le build frontend n'est pas trouve: $FRONT_DIR/index.html"
+  exit 1
+fi
+if ! check_path "$BACKUP_ROOT/db"; then
+  send_failure_email "Le dossier de backup DB est introuvable: $BACKUP_ROOT/db"
+  exit 1
+fi
+if ! check_path "$BACKUP_ROOT/media"; then
+  send_failure_email "Le dossier de backup media est introuvable: $BACKUP_ROOT/media"
+  exit 1
+fi
 
-check_service "gunicorn_rapapp"
-check_service "nginx"
-check_service "postgresql"
+if ! check_service "gunicorn_rapapp"; then
+  send_failure_email "Le service gunicorn_rapapp n'est pas actif."
+  exit 1
+fi
+if ! check_service "nginx"; then
+  send_failure_email "Le service nginx n'est pas actif."
+  exit 1
+fi
+if ! check_service "postgresql"; then
+  send_failure_email "Le service postgresql n'est pas actif."
+  exit 1
+fi
 
-check_recent_backup "$BACKUP_ROOT/db" "db"
-check_recent_backup "$BACKUP_ROOT/media" "media"
+if ! check_recent_backup "$BACKUP_ROOT/db" "db"; then
+  send_failure_email "Le backup DB est absent ou trop ancien."
+  exit 1
+fi
+if ! check_recent_backup "$BACKUP_ROOT/media" "media"; then
+  send_failure_email "Le backup media est absent ou trop ancien."
+  exit 1
+fi
 
 echo "Monitoring services/paths OK"

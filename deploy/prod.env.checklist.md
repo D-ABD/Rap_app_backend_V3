@@ -62,6 +62,7 @@ EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=RAP_APP <adserv.fr@gmail.com>
 SERVER_EMAIL=adserv.fr@gmail.com
+EMAIL_REPORT_TO=adserv.fr@gmail.com
 ```
 
 Note :

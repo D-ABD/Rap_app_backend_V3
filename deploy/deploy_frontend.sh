@@ -7,6 +7,7 @@ WEB_DIR="${WEB_DIR:-/var/www/rap_app_front}"
 RUN_LINT="${RUN_LINT:-true}"
 WEB_OWNER="${WEB_OWNER:-www-data}"
 WEB_GROUP="${WEB_GROUP:-www-data}"
+SEND_DEPLOY_EMAIL="${SEND_DEPLOY_EMAIL:-true}"
 
 require_command() {
   local cmd="$1"
@@ -22,6 +23,7 @@ echo "WEB_DIR=$WEB_DIR"
 echo "RUN_LINT=$RUN_LINT"
 echo "WEB_OWNER=$WEB_OWNER"
 echo "WEB_GROUP=$WEB_GROUP"
+echo "SEND_DEPLOY_EMAIL=$SEND_DEPLOY_EMAIL"
 
 require_command node
 require_command npm
@@ -78,5 +80,9 @@ if [ ! -f "$WEB_DIR/index.html" ]; then
 fi
 
 sudo chown -R "$WEB_OWNER:$WEB_GROUP" "$WEB_DIR"
+
+if [ "$SEND_DEPLOY_EMAIL" = "true" ] && [ -x "$APP_DIR/deploy/send_deploy_notification.sh" ]; then
+  "$APP_DIR/deploy/send_deploy_notification.sh" "frontend"
+fi
 
 echo "==> Frontend deploy done"

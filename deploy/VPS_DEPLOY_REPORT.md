@@ -252,6 +252,46 @@ Perimetre :
 - verification de la fraicheur des sauvegardes locales
 - verification systeme root : `ssh`, `fail2ban`, `ufw`, disque et inodes
 
+### 14. Emails automatiques
+
+Scripts installes :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_email_via_django.sh
+/srv/apps/rap_app/app/deploy/send_deploy_notification.sh
+/srv/apps/rap_app/app/deploy/send_daily_report.sh
+```
+
+Tests reels executes avec succes :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_daily_report.sh
+/srv/apps/rap_app/app/deploy/send_deploy_notification.sh manual-test
+```
+
+Resultat :
+
+- un email de rapport quotidien a ete envoye
+- un email de notification de deploiement a ete envoye
+- destinataire de test : `adserv.fr@gmail.com`
+
+Cron ajoute pour l'utilisateur `abd` :
+
+```cron
+0 7 * * * /srv/apps/rap_app/app/deploy/send_daily_report.sh >> /srv/apps/rap_app/logs/daily_report.log 2>&1
+```
+
+Comportement retenu :
+
+- `deploy/deploy_backend.sh` envoie un email de notification en fin de deploiement backend
+- `deploy/deploy_frontend.sh` envoie un email de notification en fin de deploiement frontend
+- les scripts de monitoring locaux peuvent envoyer un email si une verification echoue alors que le VPS est encore joignable
+
+Limite importante :
+
+- si le VPS entier tombe ou devient totalement inaccessible, **aucun script local ne peut envoyer d'email**
+- pour un vrai alerting "serveur down", il faut ajouter une supervision **externe** hors VPS
+
 ## Problemes rencontres et corrections
 
 ### 1. Permissions PostgreSQL insuffisantes
@@ -363,6 +403,7 @@ Le `401` sur `/api/` est normal : cela prouve que le backend repond derriere Ngi
 - `/srv/apps/rap_app/shared/media` : `abd:abd`
 - `/srv/backups/rap_app` : `abd:abd`
 - `/var/www/rap_app_front` : `www-data:www-data`
+- `/usr/local/bin/monitor_system_root.sh` : `root:root`
 
 ### Ports et exposition reseau
 
@@ -400,6 +441,7 @@ ls -lah /srv/backups/rap_app/db
 ls -lah /srv/backups/rap_app/media
 crontab -l
 sudo crontab -l
+/srv/apps/rap_app/app/deploy/send_daily_report.sh
 sudo systemctl status fail2ban
 sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
@@ -595,7 +637,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 ## Points de securite restants
 
 - **Backups hors VPS** : les sauvegardes sont maintenant automatisees localement, mais pas encore externalisees hors du meme disque/VPS
-- **Monitoring applicatif** : pas encore de supervision externe type Uptime Kuma / Better Uptime / UptimeRobot
+- **Monitoring applicatif** : le monitoring local et les emails locaux sont en place, mais pas encore de supervision externe type Uptime Kuma / Better Uptime / UptimeRobot
 - **Monitoring erreurs** : pas encore de Sentry backend/frontend documente comme actif
 - **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
 - **PostgreSQL** : role `"ABD"` fonctionnel mais non ideal a long terme
@@ -605,7 +647,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 
 - **Risque moyen** : les sauvegardes existent, mais restent sur le meme VPS ; en cas de perte du disque ou compromission serveur, elles peuvent etre perdues aussi
 - **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
-- **Risque faible a moyen** : le monitoring local par cron existe, mais l'absence de monitoring externe peut retarder la detection d'une panne reseau ou d'un incident complet VPS
+- **Risque faible a moyen** : le monitoring local par cron et email existe, mais l'absence de monitoring externe peut retarder la detection d'une panne reseau ou d'un incident complet VPS
 - **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
 - **Risque operationnel** : un futur `git pull` suivi d'un redeploiement avec des scripts locaux non pushes peut reintroduire un ecart entre repo et VPS
 
@@ -617,6 +659,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 | Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
 | Moyenne | **Externaliser les sauvegardes** : copier `/srv/backups/rap_app` vers un stockage hors VPS (S3, autre machine, snapshot hebergeur, etc.). |
 | Moyenne | **Monitoring externe** : ajouter une supervision hors VPS (Uptime Kuma, Better Uptime, UptimeRobot) en complement des crons locaux deja en place. |
+| Moyenne | **Choisir l'outil d'alerte externe** : service heberge simple ou Uptime Kuma auto-heberge selon le niveau d'autonomie souhaite. |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
 | Basse | **UFW** : supprimer les regles en double (80/443 vs *Nginx Full*) avec `sudo ufw status numbered` / `delete` si tu veux un affichage plus propre. |
 
@@ -636,6 +679,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - [x] Repo, venv, logs et media alignes sur l'arborescence `/srv/apps/rap_app`
 - [x] Backups automatiques locaux formalises
 - [x] Monitoring cron local formalise
+- [x] Emails automatiques de rapport et de deploiement formalises
 - [ ] Monitoring externe formalise
 - [ ] Sauvegardes externalisees hors VPS
 - [ ] Nettoyage optionnel des regles UFW en doublon
