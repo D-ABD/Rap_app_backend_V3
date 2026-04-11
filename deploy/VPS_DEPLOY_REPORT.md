@@ -292,6 +292,18 @@ Limite importante :
 - si le VPS entier tombe ou devient totalement inaccessible, **aucun script local ne peut envoyer d'email**
 - pour un vrai alerting "serveur down", il faut ajouter une supervision **externe** hors VPS
 
+### 15. Monitoring externe cree
+
+Monitors crees :
+
+- `https://rap.adserv.fr`
+- `https://rap.adserv.fr/health/`
+
+Usage retenu :
+
+- `https://rap.adserv.fr` verifie que le frontend public repond
+- `https://rap.adserv.fr/health/` verifie rapidement la sante applicative avec un `200`
+
 ## Problemes rencontres et corrections
 
 ### 1. Permissions PostgreSQL insuffisantes
@@ -637,7 +649,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 ## Points de securite restants
 
 - **Backups hors VPS** : les sauvegardes sont maintenant automatisees localement, mais pas encore externalisees hors du meme disque/VPS
-- **Monitoring applicatif** : le monitoring local et les emails locaux sont en place, mais pas encore de supervision externe type Uptime Kuma / Better Uptime / UptimeRobot
+- **Monitoring applicatif** : le monitoring local et un monitoring externe de base sont en place ; il reste a verifier la qualite des alertes, les destinataires et l'escalade si besoin
 - **Monitoring erreurs** : pas encore de Sentry backend/frontend documente comme actif
 - **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
 - **PostgreSQL** : role `"ABD"` fonctionnel mais non ideal a long terme
@@ -647,7 +659,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 
 - **Risque moyen** : les sauvegardes existent, mais restent sur le meme VPS ; en cas de perte du disque ou compromission serveur, elles peuvent etre perdues aussi
 - **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
-- **Risque faible a moyen** : le monitoring local par cron et email existe, mais l'absence de monitoring externe peut retarder la detection d'une panne reseau ou d'un incident complet VPS
+- **Risque faible** : le monitoring externe de base existe, mais il faut encore confirmer les alertes email, les seuils et la procedure de reaction
 - **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
 - **Risque operationnel** : un futur `git pull` suivi d'un redeploiement avec des scripts locaux non pushes peut reintroduire un ecart entre repo et VPS
 
@@ -658,8 +670,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 | Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
 | Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
 | Moyenne | **Externaliser les sauvegardes** : copier `/srv/backups/rap_app` vers un stockage hors VPS (S3, autre machine, snapshot hebergeur, etc.). |
-| Moyenne | **Monitoring externe** : ajouter une supervision hors VPS (Uptime Kuma, Better Uptime, UptimeRobot) en complement des crons locaux deja en place. |
-| Moyenne | **Choisir l'outil d'alerte externe** : service heberge simple ou Uptime Kuma auto-heberge selon le niveau d'autonomie souhaite. |
+| Moyenne | **Valider le monitoring externe** : verifier les emails d'alerte, les contacts, la frequence de check et la procedure de reaction. |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
 | Basse | **UFW** : supprimer les regles en double (80/443 vs *Nginx Full*) avec `sudo ufw status numbered` / `delete` si tu veux un affichage plus propre. |
 
@@ -680,7 +691,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - [x] Backups automatiques locaux formalises
 - [x] Monitoring cron local formalise
 - [x] Emails automatiques de rapport et de deploiement formalises
-- [ ] Monitoring externe formalise
+- [x] Monitoring externe de base formalise
 - [ ] Sauvegardes externalisees hors VPS
 - [ ] Nettoyage optionnel des regles UFW en doublon
 - [ ] Migration optionnelle du role PostgreSQL `"ABD"` vers `abd`

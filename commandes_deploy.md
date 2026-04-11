@@ -48,6 +48,45 @@ git log -1 --oneline
 
 ---
 
+## Apres un push local : quoi faire sur le VPS
+
+Cas le plus simple et le plus sur :
+
+```bash
+ssh abd@147.93.126.119
+cd /srv/apps/rap_app/app
+git pull origin main
+bash deploy/deploy_backend.sh
+bash deploy/deploy_frontend.sh
+sudo systemctl restart gunicorn_rapapp
+sudo systemctl reload nginx
+curl -Ik https://rap.adserv.fr
+curl -Ik https://rap.adserv.fr/api/
+systemctl is-active gunicorn_rapapp nginx postgresql
+```
+
+Si tu as change seulement le frontend :
+
+```bash
+cd /srv/apps/rap_app/app
+git pull origin main
+bash deploy/deploy_frontend.sh
+sudo systemctl reload nginx
+curl -Ik https://rap.adserv.fr
+```
+
+Si tu as change seulement le backend :
+
+```bash
+cd /srv/apps/rap_app/app
+git pull origin main
+bash deploy/deploy_backend.sh
+sudo systemctl restart gunicorn_rapapp
+curl -Ik https://rap.adserv.fr/api/
+```
+
+---
+
 ## Redeployer le backend
 
 ```bash
