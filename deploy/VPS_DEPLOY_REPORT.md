@@ -349,23 +349,41 @@ sudo ufw status verbose
 
 ### 2. Fail2ban (recommande si SSH expose sur Internet)
 
-Installation et demarrage :
+Etat constate sur le VPS :
 
-```bash
-sudo apt update
-sudo apt install -y fail2ban
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
-sudo systemctl status fail2ban
-```
+- paquet deja installe
+- service `enabled`
+- service `active`
+- jail `sshd` active
 
 Verification rapide :
 
 ```bash
+sudo systemctl status fail2ban
 sudo fail2ban-client status
+sudo fail2ban-client status sshd
 ```
 
-Option : une jail `sshd` est en general activee par les paquets par defaut sur Ubuntu ; ajuster les fichiers sous `/etc/fail2ban/` si besoin.
+Configuration locale minimale ajoutee le `2026-04-11` :
+
+```bash
+/etc/fail2ban/jail.local
+```
+
+Contenu :
+
+```ini
+[DEFAULT]
+bantime = 1h
+findtime = 10m
+maxretry = 5
+backend = systemd
+
+[sshd]
+enabled = true
+port = ssh
+logpath = %(sshd_log)s
+```
 
 ### 3. Utilisateur PostgreSQL `"ABD"` vs `abd`
 
@@ -386,7 +404,7 @@ Regles entrantes (IPv4 + IPv6) :
 - `80,443/tcp` — profil **Nginx Full** — `ALLOW IN Anywhere`
 - `80/tcp` et `443/tcp` — regles supplementaires explicites (doublon fonctionnel avec *Nginx Full* ; inoffensif, nettoyage optionnel via `sudo ufw status numbered` puis `delete`)
 
-**Fail2ban** — paquet deja present (`1.0.2-3ubuntu0.1`), service **enabled** et **active (running)** (depuis le `2026-04-09`). Aucune mise a niveau paquet lors du `apt install`.
+**Fail2ban** — paquet deja present (`1.0.2-3ubuntu0.1`), service **enabled** et **active (running)**. La jail `sshd` est active. Une configuration explicite minimale a ete posee dans `/etc/fail2ban/jail.local` le `2026-04-11`.
 
 Pour lister les jails actives si besoin :
 
