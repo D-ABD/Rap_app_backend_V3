@@ -274,6 +274,7 @@ Resultat :
 - un email de rapport quotidien a ete envoye
 - un email de notification de deploiement a ete envoye
 - destinataire de test : `adserv.fr@gmail.com`
+- reception validee cote utilisateur (mail visible sur mobile ; affichage navigateur a verifier/securiser cote client si besoin)
 
 Cron ajoute pour l'utilisateur `abd` :
 
@@ -449,6 +450,7 @@ Ports internes utiles :
 ```bash
 curl -Ik https://rap.adserv.fr
 curl -Ik https://rap.adserv.fr/api/
+curl -Ik https://rap.adserv.fr/health/
 ls -lah /srv/backups/rap_app/db
 ls -lah /srv/backups/rap_app/media
 crontab -l
@@ -470,6 +472,49 @@ sudo systemctl status nginx
   - warning `drf_spectacular`
   - taille du bundle frontend
   - `npm audit`
+
+## Warnings et erreurs connues
+
+### Warnings connus non bloquants
+
+- **Django / drf-spectacular** :
+  - warning `drf_spectacular.W002`
+  - vue concernee : `rap_app/api/import_export/views.py`
+  - impact : documentation schema partielle pour `Lot1ImportExportViewSet`
+  - statut : non bloquant pour la prod
+
+- **collectstatic** :
+  - doublons sur :
+    - `admin/js/cancel.js`
+    - `admin/js/popup_response.js`
+  - impact : Django garde le premier fichier rencontre
+  - statut : non bloquant actuellement
+
+- **Frontend build** :
+  - warnings Vite sur `src/api/axios.ts` charge a la fois statiquement et dynamiquement
+  - bundle principal volumineux (`index-*.js` > 500 kB apres minification)
+  - statut : non bloquant, mais optimisation recommandee plus tard
+
+- **npm audit** :
+  - vulnerabilites signalees lors du build frontend
+  - statut : a revoir, mais pas traite dans cette phase de stabilisation VPS
+
+### Erreurs rencontrees et corrigees
+
+- permissions PostgreSQL insuffisantes sur `django_migrations`
+- build frontend casse a cause de fichiers `logs` non suivis par Git
+- permissions cassees sur `/srv/apps/rap_app`
+- ambiguite SSH resolue via `/etc/ssh/sshd_config.d/99-hardening.conf`
+
+### Commandes utiles pour revoir warnings et erreurs
+
+```bash
+journalctl -u gunicorn_rapapp -n 100 --no-pager
+sudo tail -n 100 /var/log/nginx/error.log
+cd /srv/apps/rap_app/app && /srv/apps/rap_app/venv/bin/python manage.py check --deploy
+cd /srv/apps/rap_app/app/frontend_rap_app && npm audit
+cd /srv/apps/rap_app/app/frontend_rap_app && npm run build
+```
 
 ## Securite VPS — UFW, Fail2ban, PostgreSQL (priorite)
 
@@ -654,6 +699,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
 - **PostgreSQL** : role `"ABD"` fonctionnel mais non ideal a long terme
 - **Rotation/centralisation logs** : pas encore formalisees ici pour les logs applicatifs Django
+- **Warnings techniques** : plusieurs warnings non bloquants restent presents (schema DRF, bundle frontend, audit npm)
 
 ## Risques residuels
 
