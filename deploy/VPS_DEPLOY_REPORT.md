@@ -596,6 +596,27 @@ curl -Ik https://rap.adserv.fr/health/
 
 ## Warnings et erreurs connues
 
+### Priorisation pratique
+
+- **A ignorer pour l'instant** :
+  - warning `drf_spectacular.W002`
+  - doublons `collectstatic` sur `admin/js/cancel.js` et `admin/js/popup_response.js`
+  - warning Vite sur `axios.ts` importe a la fois statiquement et dynamiquement
+
+- **A corriger bientot** :
+  - `npm audit` frontend, car il y a des vulnerabilites signalees, dont `1 high` et `1 critical`
+  - bundle frontend principal tres lourd (`index-*.js` > `500 kB`)
+
+- **A corriger plus tard** :
+  - optimisation du decoupage Vite (`manualChunks`, imports dynamiques plus propres)
+  - nettoyage des dependances frontend depreciees si cela impose des mises a jour plus structurelles
+
+Lecture retenue :
+
+- ces warnings **n'ont pas bloque** le deploiement
+- la prod est **fonctionnelle**
+- ils relevent surtout de la **maintenabilite**, de la **securite dependances** et de la **performance frontend**
+
 ### Warnings connus non bloquants
 
 - **Django / drf-spectacular** :
@@ -618,7 +639,8 @@ curl -Ik https://rap.adserv.fr/health/
 
 - **npm audit** :
   - vulnerabilites signalees lors du build frontend
-  - statut : a revoir, mais pas traite dans cette phase de stabilisation VPS
+  - detail vu pendant le deploiement : `5 vulnerabilities (3 low, 1 high, 1 critical)`
+  - statut : a revoir bientot, mais pas traite dans cette phase de stabilisation VPS
 
 ### Erreurs rencontrees et corrigees
 
