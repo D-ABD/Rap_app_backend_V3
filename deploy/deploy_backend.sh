@@ -88,12 +88,4 @@ fi
 
 chmod 600 "$APP_DIR/.env"
 
-if id rapapp >/dev/null 2>&1; then
-  echo "==> Proprietaire applicatif rapapp + lecture groupe (Nginx / static / media)"
-  sudo chown -R rapapp:rapapp "$(dirname "$APP_DIR")"
-  sudo chmod -R o= "$(dirname "$APP_DIR")"
-  sudo chmod -R g+rX "$(dirname "$APP_DIR")"
-  sudo chmod 600 "$APP_DIR/.env"
-fi
-
 echo "==> Backend deploy done"

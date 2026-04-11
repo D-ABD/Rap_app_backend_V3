@@ -8,7 +8,7 @@ Contexte :
 - VPS : `147.93.126.119`
 - OS : `Ubuntu 24.04 LTS`
 - utilisateur VPS (SSH / admin) : `abd`
-- utilisateur applicatif (Gunicorn, fichiers sous `/srv/apps/rap_app`) : `rapapp`
+- utilisateur applicatif (Gunicorn) : `abd`
 - app root : `/srv/apps/rap_app/app`
 - frontend public : `/var/www/rap_app_front` (proprietaire : `www-data`)
 
@@ -121,27 +121,33 @@ Effets :
 - ownership final : `www-data:www-data`
 
 ### 8. Gunicorn et isolation `rapapp`
+Etat retenu apres stabilisation :
 
-L'unite systemd doit executer Gunicorn sous l'utilisateur systeme **`rapapp`** (pas `abd`), avec fichiers applicatifs possedes par **`rapapp`**. Le script `deploy/vps_setup_rapapp_user.sh` installe l'unite, cree l'utilisateur, ajuste les droits et ajoute **`www-data` au groupe `rapapp`** pour que Nginx puisse lire `staticfiles/` et `shared/media/` (groupe en lecture).
+- Gunicorn tourne sous **`abd`**
+- le repo et l'arborescence applicative restent possedes par **`abd:abd`**
+- le frontend public reste en **`www-data:www-data`**
 
-Sur le VPS (session SSH **avec sudo** / mot de passe) :
+Un essai d'isolation via un utilisateur systeme `rapapp` a ete fait, mais il a rendu le depot inaccessible a `abd` (`Permission denied` sur `cd /srv/apps/rap_app/app`, `git pull`, lecture des fichiers). Pour cette machine, la configuration stable retenue est donc **sans bascule automatique vers `rapapp`**.
 
-```bash
-cd /srv/apps/rap_app/app
-sudo bash deploy/vps_setup_rapapp_user.sh deploy/gunicorn_rapapp.service
-```
-
-Sans depot encore clone : copier `deploy/vps_setup_rapapp_user.sh` et `deploy/gunicorn_rapapp.service` sur le serveur, puis :
+Service systemd attendu :
 
 ```bash
-sudo bash vps_setup_rapapp_user.sh /chemin/vers/gunicorn_rapapp.service
+grep -E '^User=|^Group=|^WorkingDirectory=|^EnvironmentFile=' /etc/systemd/system/gunicorn_rapapp.service
 ```
 
-Apres un `deploy_backend.sh` en tant que `abd`, le script backend reapplique `chown rapapp:rapapp` sur `/srv/apps/rap_app` si l'utilisateur `rapapp` existe.
+Attendu :
+
+```text
+User=abd
+Group=www-data
+WorkingDirectory=/srv/apps/rap_app/app
+EnvironmentFile=/srv/apps/rap_app/app/.env
+```
 
 Verification rapide :
 
 ```bash
+ls -ld /srv/apps/rap_app /srv/apps/rap_app/app
 grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service
 systemctl status gunicorn_rapapp --no-pager
 ```
@@ -219,6 +225,32 @@ Correction :
 - execution du deploiement frontend avec `RUN_LINT=false` sur le VPS
 - lint conserve comme verification locale avant push
 
+### 4. Permissions cassees sur `/srv/apps/rap_app`
+
+Symptome :
+
+- `cd /srv/apps/rap_app/app` echoue avec `Permission denied`
+- `git pull` echoue
+- `cat deploy/gunicorn_rapapp.service` echoue
+
+Cause :
+
+- `/srv/apps/rap_app` avait ete repasse en `rapapp:rapapp` avec des droits restrictifs
+- l'utilisateur `abd` ne pouvait plus traverser l'arborescence
+
+Correction appliquee :
+
+```bash
+sudo chown -R abd:abd /srv/apps/rap_app
+sudo find /srv/apps/rap_app -type d -exec chmod 755 {} \;
+sudo systemctl restart gunicorn_rapapp
+```
+
+Mesure preventive retenue :
+
+- suppression de la bascule automatique vers `rapapp` dans `deploy/deploy_backend.sh`
+- alignement de `deploy/gunicorn_rapapp.service` sur l'etat reel stable : `User=abd`, `Group=www-data`
+
 ## Etat final du VPS
 
 ### Services
@@ -256,6 +288,8 @@ Le `401` sur `/api/` est normal : cela prouve que le backend repond derriere Ngi
 - frontend et backend sur le meme domaine
 - frontend servi par Nginx
 - backend servi par Gunicorn sur `127.0.0.1:8000`
+- Gunicorn execute sous `abd` avec `Group=www-data`
+- repo applicatif et venv sous `abd:abd`
 - Nginx proxy `/api/` et `/admin/`
 - static : `/srv/apps/rap_app/app/staticfiles`
 - media : `/srv/apps/rap_app/shared/media`
@@ -363,55 +397,35 @@ sudo fail2ban-client status
 sudo fail2ban-client status sshd
 ```
 
-## Isolation applicative `rapapp` — etat
+## Choix d'exploitation retenu
 
-### Execution sur le VPS (`2026-04-10`) — **terminee**
+Le serveur tourne maintenant de facon stable avec cette convention :
 
-Depot : `https://github.com/D-ABD/Rap_app_backend_V3` (branche `main`, pull incluant `deploy/vps_setup_rapapp_user.sh`).
+- code, venv, logs, media et repo sous **`abd:abd`**
+- Gunicorn execute sous **`abd`**
+- groupe systemd Gunicorn : **`www-data`**
+- frontend public sous **`www-data:www-data`**
 
-Commande executee sur `srv781699` :
+Important :
 
-```bash
-cd /srv/apps/rap_app/app
-sudo bash deploy/vps_setup_rapapp_user.sh deploy/gunicorn_rapapp.service
-```
+- l'essai d'isolation via `rapapp` est considere comme **abandonne pour cette machine**
+- `deploy/deploy_backend.sh` ne doit plus modifier le proprietaire du repo
+- `deploy/gunicorn_rapapp.service` doit rester coherent avec l'etat reel du VPS
 
-Resultat constate :
-
-- groupe et utilisateur systeme **`rapapp`** crees
-- **`www-data`** ajoute au groupe **`rapapp`**
-- proprietaire **`rapapp:rapapp`** sur `/srv/apps/rap_app`, droits ajustes (`o=` puis `g+rX` dans le script)
-- **`/var/www/rap_app_front`** en **`www-data:www-data`**
-- unite systemd installee depuis **`deploy/gunicorn_rapapp.service`**
-- **`gunicorn_rapapp` redemarre** avec succes
-
-Note : un agent distant ne peut toujours pas lancer `sudo` sans mot de passe ; ici l'action a ete faite **en session SSH interactive**.
-
-### Fichiers dans le depot (reference)
-
-| Fichier | Role |
-|--------|------|
-| `deploy/gunicorn_rapapp.service` | `User=rapapp` `Group=rapapp` |
-| `deploy/vps_setup_rapapp_user.sh` | Idempotent : utilisateur/groupe, droits, Nginx via groupe `rapapp`, unite systemd, redemarrage conditionnel |
-| `deploy/deploy_backend.sh` | Si `rapapp` existe : `chown`, `o=` + `g+rX`, `.env` en `600` — **a pousser sur le meme remote que le VPS si ce fichier n’y est pas encore** |
-
-### A relancer apres reinstall serveur / clone neuf
+Verification rapide :
 
 ```bash
-cd /srv/apps/rap_app/app && git pull
-sudo bash deploy/vps_setup_rapapp_user.sh deploy/gunicorn_rapapp.service
+ls -ld /srv/apps/rap_app /srv/apps/rap_app/app /var/www/rap_app_front
+grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service
+systemctl status gunicorn_rapapp nginx --no-pager
 ```
-
-### Rappel securite (nuance)
-
-Passer sous `rapapp` **reduit fortement** l'impact d'un compromis applicatif (fichiers perso de `abd`, clés SSH dans `~/.ssh`, etc.). Cela **ne supprime pas** tout risque sur la machine (le processus reste du code avec acces reseau et a la configuration presente dans `.env`).
 
 ## Reste a faire (priorise)
 
 | Priorite | Action |
 |----------|--------|
-| Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `rapapp`). |
-| Haute | S’assurer que **`deploy/deploy_backend.sh`** (bloc `rapapp` + `chown`) est bien **sur le remote** `Rap_app_backend_V3` ; sinon les prochains deplois backend laisseront peut‑etre des fichiers en `abd` — `git pull` puis un redeploy ou `sudo bash deploy/vps_setup_rapapp_user.sh …` reapplique les droits. |
+| Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
+| Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour eviter qu'un prochain `git pull` reintroduise la logique `rapapp`. |
 | Moyenne | **Sauvegardes PostgreSQL** : `pg_dump` planifie (cron + repertoire dedie, retention). |
 | Moyenne | **Surveillance** : charge disque, RAM, services `gunicorn` / `nginx` (outil type Netdata, Uptime Kuma, ou alertes hebergeur). |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
