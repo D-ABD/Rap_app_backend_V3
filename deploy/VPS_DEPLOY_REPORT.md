@@ -213,6 +213,45 @@ Effets :
 - archive `tar.gz` quotidienne du dossier `media`
 - retention locale de `7` jours
 
+### 13. Monitoring cron installe
+
+Scripts installes :
+
+```bash
+/srv/apps/rap_app/app/deploy/monitor_http_user.sh
+/srv/apps/rap_app/app/deploy/monitor_services_user.sh
+/usr/local/bin/monitor_system_root.sh
+```
+
+Verifications manuelles executees avec succes :
+
+```bash
+/srv/apps/rap_app/app/deploy/monitor_http_user.sh
+/srv/apps/rap_app/app/deploy/monitor_services_user.sh
+sudo /usr/local/bin/monitor_system_root.sh
+```
+
+Crontab `abd` :
+
+```cron
+*/30 * * * * /srv/apps/rap_app/app/deploy/monitor_http_user.sh >> /srv/apps/rap_app/logs/monitor_http_user.log 2>&1
+*/30 * * * * /srv/apps/rap_app/app/deploy/monitor_services_user.sh >> /srv/apps/rap_app/logs/monitor_services_user.log 2>&1
+```
+
+Crontab `root` :
+
+```cron
+*/10 * * * * /usr/local/bin/monitor_system_root.sh >> /srv/apps/rap_app/logs/monitor_system_root.log 2>&1
+```
+
+Perimetre :
+
+- monitoring HTTP du frontend (`200`) et de l'API (`401`)
+- verification des services `gunicorn_rapapp`, `nginx`, `postgresql`
+- verification de la presence du front build et des repertoires critiques
+- verification de la fraicheur des sauvegardes locales
+- verification systeme root : `ssh`, `fail2ban`, `ufw`, disque et inodes
+
 ## Problemes rencontres et corrections
 
 ### 1. Permissions PostgreSQL insuffisantes
@@ -322,6 +361,7 @@ Le `401` sur `/api/` est normal : cela prouve que le backend repond derriere Ngi
 - `/srv/apps/rap_app/venv` : `abd:abd`
 - `/srv/apps/rap_app/logs` : `abd:abd`
 - `/srv/apps/rap_app/shared/media` : `abd:abd`
+- `/srv/backups/rap_app` : `abd:abd`
 - `/var/www/rap_app_front` : `www-data:www-data`
 
 ### Ports et exposition reseau
@@ -359,6 +399,7 @@ curl -Ik https://rap.adserv.fr/api/
 ls -lah /srv/backups/rap_app/db
 ls -lah /srv/backups/rap_app/media
 crontab -l
+sudo crontab -l
 sudo systemctl status fail2ban
 sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
@@ -564,7 +605,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 
 - **Risque moyen** : les sauvegardes existent, mais restent sur le meme VPS ; en cas de perte du disque ou compromission serveur, elles peuvent etre perdues aussi
 - **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
-- **Risque moyen** : absence de monitoring externe peut retarder la detection d'une panne applicative
+- **Risque faible a moyen** : le monitoring local par cron existe, mais l'absence de monitoring externe peut retarder la detection d'une panne reseau ou d'un incident complet VPS
 - **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
 - **Risque operationnel** : un futur `git pull` suivi d'un redeploiement avec des scripts locaux non pushes peut reintroduire un ecart entre repo et VPS
 
@@ -575,10 +616,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 | Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
 | Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
 | Moyenne | **Externaliser les sauvegardes** : copier `/srv/backups/rap_app` vers un stockage hors VPS (S3, autre machine, snapshot hebergeur, etc.). |
-| Moyenne | **Surveillance** : charge disque, RAM, services `gunicorn` / `nginx` (outil type Netdata, Uptime Kuma, ou alertes hebergeur). |
-| Moyenne | **Monitoring user toutes les 30 minutes** : ajouter la tache de supervision demandee cote utilisateur. |
-| Moyenne | **Monitoring user toutes les 30 minutes** : ajouter la deuxieme tache de supervision demandee cote utilisateur. |
-| Moyenne | **Monitoring root toutes les 10 minutes** : ajouter la tache de supervision demandee cote root. |
+| Moyenne | **Monitoring externe** : ajouter une supervision hors VPS (Uptime Kuma, Better Uptime, UptimeRobot) en complement des crons locaux deja en place. |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
 | Basse | **UFW** : supprimer les regles en double (80/443 vs *Nginx Full*) avec `sudo ufw status numbered` / `delete` si tu veux un affichage plus propre. |
 
@@ -597,6 +635,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - [x] Static et media routes vers les bons dossiers
 - [x] Repo, venv, logs et media alignes sur l'arborescence `/srv/apps/rap_app`
 - [x] Backups automatiques locaux formalises
+- [x] Monitoring cron local formalise
 - [ ] Monitoring externe formalise
 - [ ] Sauvegardes externalisees hors VPS
 - [ ] Nettoyage optionnel des regles UFW en doublon
