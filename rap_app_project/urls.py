@@ -13,9 +13,13 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from rap_app.api.viewsets.health_viewset import HealthViewSet
+
+health_view = HealthViewSet.as_view({"get": "list"})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('health/', health_view, name='health-root'),
 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
