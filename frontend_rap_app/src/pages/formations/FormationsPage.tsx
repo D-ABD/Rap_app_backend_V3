@@ -20,6 +20,8 @@ import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useFiltresFormations from "../../hooks/useFiltresFormations";
 import type { Formation, FiltresFormationsValues, PaginatedResponse } from "../../types/formation";
+import { useAuth } from "../../contexts/AuthContext";
+import { canWriteFormationsRole } from "../../utils/roleGroups";
 import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
@@ -30,9 +32,11 @@ import { buildFormationExportQueryParams } from "../../api/lot1ImportExport";
 import { useHardDeleteFormation } from "../../hooks/useFormations";
 
 export default function FormationsPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const canWriteFormations = canWriteFormationsRole(user?.role);
 
   // ── sélection / archivage
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -299,13 +303,15 @@ export default function FormationsPage() {
             ))}
           </Select>
 
-          <Button
-            variant="contained"
-            onClick={() => navigate("/formations/create")}
-            fullWidth={isMobile}
-          >
-            ➕ Ajouter une formation
-          </Button>
+          {canWriteFormations && (
+            <Button
+              variant="contained"
+              onClick={() => navigate("/formations/create")}
+              fullWidth={isMobile}
+            >
+              ➕ Ajouter une formation
+            </Button>
+          )}
 
           {selectedIds.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -393,9 +399,11 @@ export default function FormationsPage() {
           title="Aucune formation trouvée"
           description="Modifiez la recherche ou créez une formation."
           action={
-            <Button variant="contained" onClick={() => navigate("/formations/create")}>
-              Ajouter une formation
-            </Button>
+            canWriteFormations ? (
+              <Button variant="contained" onClick={() => navigate("/formations/create")}>
+                Ajouter une formation
+              </Button>
+            ) : undefined
           }
         />
       ) : (

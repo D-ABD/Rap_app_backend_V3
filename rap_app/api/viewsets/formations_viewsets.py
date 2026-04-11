@@ -46,7 +46,7 @@ from ...models.statut import Statut
 from ...models.types_offre import TypeOffre
 from ...models.candidat import Candidat
 from .scoped_viewset import ScopedModelViewSet
-from ..roles import can_write_formations, is_admin_like, is_staff_or_staffread, staff_centre_ids
+from ..roles import can_write_formations, is_admin_like, is_candidate_like, is_staff_or_staffread, staff_centre_ids
 
 logger = logging.getLogger("application.api")
 
@@ -481,14 +481,31 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
     @extend_schema(summary="Filtres disponibles (centres, statuts, types d’offre, activités, périodes à venir)")
     @action(detail=False, methods=["get"])
     def filtres(self, request):
-        """GET : options de filtres (centres, statuts, type_offres, activites, periodes_a_venir) selon get_queryset et ref_complet."""
+        """
+        Retourne les options de filtres formations.
+
+        Sans `ref_complet`, les centres/statuts/types reflètent les valeurs
+        effectivement présentes dans le queryset visible de l'utilisateur.
+
+        Avec `ref_complet`, les références de création/édition restent
+        exploitables même si aucune formation n'existe encore sur un centre
+        autorisé :
+        - admin-like : tous les centres actifs ;
+        - rôles internes centre-scopés : leurs centres attribués actifs ;
+        - rôles candidats/stagiaires : pas d'élargissement spécifique.
+        """
         user = request.user
         ref_complet = str(request.query_params.get("ref_complet", "")).lower() in {"1", "true", "yes", "on"}
         qs = self.get_queryset()
-        if is_admin_like(user):
+        if ref_complet and is_admin_like(user):
             from ...models.centres import Centre
 
             centres_qs = Centre.objects.filter(is_active=True).values_list("id", "nom").order_by("nom")
+        elif ref_complet and not is_candidate_like(user):
+            from ...models.centres import Centre
+
+            centre_ids = staff_centre_ids(user) or []
+            centres_qs = Centre.objects.filter(id__in=centre_ids, is_active=True).values_list("id", "nom").order_by("nom")
         else:
             centres_qs = qs.values_list("centre_id", "centre__nom").distinct().order_by("centre__nom")
         centres = [{"id": c[0], "nom": c[1]} for c in centres_qs if c[0]]

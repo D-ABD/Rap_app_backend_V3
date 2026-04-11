@@ -127,6 +127,7 @@ import CVThequeCandidatCreatePage from "src/pages/cvtheque/cvthequeCandidatCreat
 import {
   canAccessDeclicRole,
   canAccessPrepaRole,
+  canWriteFormationsRole,
   isAdminLikeRole,
   isCandidateLikeRole,
   isCoreStaffRole,
@@ -193,6 +194,14 @@ export default function AppRoute() {
   function CoreWriteRoute({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const allowed = isCoreWriteRole(user?.role);
+    if (!user) return <Navigate to="/login" replace />;
+    if (!allowed) return <ForbiddenPage />;
+    return <>{children}</>;
+  }
+
+  function FormationWriteRoute({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const allowed = canWriteFormationsRole(user?.role);
     if (!user) return <Navigate to="/login" replace />;
     if (!allowed) return <ForbiddenPage />;
     return <>{children}</>;
@@ -469,8 +478,8 @@ export default function AppRoute() {
 
         {/* Formations */}
         <Route path="/formations" element={<CoreStaffRoute><FormationsPage /></CoreStaffRoute>} />
-        <Route path="/formations/create" element={<CoreWriteRoute><FormationsCreatePage /></CoreWriteRoute>} />
-        <Route path="/formations/:id/edit" element={<CoreWriteRoute><FormationsEditPage /></CoreWriteRoute>} />
+        <Route path="/formations/create" element={<FormationWriteRoute><FormationsCreatePage /></FormationWriteRoute>} />
+        <Route path="/formations/:id/edit" element={<FormationWriteRoute><FormationsEditPage /></FormationWriteRoute>} />
         <Route path="/formations/:id" element={<CoreStaffRoute><FormationDetailPage /></CoreStaffRoute>} />
         <Route path="/evenements" element={<CoreStaffRoute><EvenementsPage /></CoreStaffRoute>} />
         <Route path="/evenements/create" element={<CoreWriteRoute><EvenementsCreatePage /></CoreWriteRoute>} />

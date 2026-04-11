@@ -117,6 +117,26 @@ class FormationSecurityTests(APITestCase):
         create_response = self.client.post("/api/formations/", payload, format="json")
         self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_staff_can_create_formation_in_scope(self):
+        centre = Centre.objects.create(nom="Centre Staff")
+        user = UserFactory(role="staff")
+        user.centres.add(centre)
+
+        self.client.force_authenticate(user=user)
+
+        payload = {
+            "nom": "Nouvelle formation staff",
+            "centre_id": centre.id,
+            "type_offre_id": TypeOffre.objects.create(nom=TypeOffre.CRIF).id,
+            "statut_id": Statut.objects.create(nom=Statut.NON_DEFINI).id,
+            "start_date": str(timezone.localdate() + timedelta(days=3)),
+            "end_date": str(timezone.localdate() + timedelta(days=10)),
+        }
+        create_response = self.client.post("/api/formations/", payload, format="json")
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Formation.objects.filter(nom="Nouvelle formation staff", centre=centre).exists())
+
     def test_charge_recrutement_can_retrieve_but_cannot_update_formation(self):
         centre = Centre.objects.create(nom="Centre Recrutement")
         user = UserFactory(role="charge_recrutement")
@@ -137,6 +157,59 @@ class FormationSecurityTests(APITestCase):
         self.assertEqual(patch_response.status_code, status.HTTP_403_FORBIDDEN)
         formation.refresh_from_db()
         self.assertEqual(formation.nom, "Formation Recrutement")
+
+    def test_charge_recrutement_cannot_create_formation(self):
+        centre = Centre.objects.create(nom="Centre Recrutement")
+        user = UserFactory(role="charge_recrutement")
+        user.centres.add(centre)
+
+        self.client.force_authenticate(user=user)
+
+        payload = {
+            "nom": "Nouvelle formation recrutement",
+            "centre_id": centre.id,
+            "type_offre_id": TypeOffre.objects.create(nom=TypeOffre.CRIF).id,
+            "statut_id": Statut.objects.create(nom=Statut.NON_DEFINI).id,
+            "start_date": str(timezone.localdate() + timedelta(days=3)),
+            "end_date": str(timezone.localdate() + timedelta(days=10)),
+        }
+        create_response = self.client.post("/api/formations/", payload, format="json")
+
+        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_formations_filtres_ref_complet_returns_staff_scope_centres_even_without_existing_formations(self):
+        centre_assigne = Centre.objects.create(nom="Centre Assigne")
+        centre_hors_scope = Centre.objects.create(nom="Centre Hors Scope")
+        user = UserFactory(role="staff")
+        user.centres.add(centre_assigne)
+
+        self._create_formation(centre_hors_scope, nom="Formation Hors Scope")
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get("/api/formations/filtres/?ref_complet=true")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        centres = response.data["data"]["centres"]
+        self.assertIn({"id": centre_assigne.id, "nom": centre_assigne.nom}, centres)
+        self.assertNotIn({"id": centre_hors_scope.id, "nom": centre_hors_scope.nom}, centres)
+
+    def test_formations_filtres_ref_complet_returns_charge_recrutement_scope_centres(self):
+        centre_assigne = Centre.objects.create(nom="Centre Recrutement Assigne")
+        centre_hors_scope = Centre.objects.create(nom="Centre Recrutement Hors Scope")
+        user = UserFactory(role="charge_recrutement")
+        user.centres.add(centre_assigne)
+
+        self._create_formation(centre_hors_scope, nom="Formation Hors Scope Recrutement")
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get("/api/formations/filtres/?ref_complet=true")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        centres = response.data["data"]["centres"]
+        self.assertIn({"id": centre_assigne.id, "nom": centre_assigne.nom}, centres)
+        self.assertNotIn({"id": centre_hors_scope.id, "nom": centre_hors_scope.nom}, centres)
 
     def test_list_dans_filter_stays_scoped_to_user_centres(self):
         centre_a = Centre.objects.create(nom="Centre A")

@@ -20,6 +20,10 @@ export function isCoreWriteRole(role: RoleLike): boolean {
   return ["admin", "superadmin", "staff", "commercial", "charge_recrutement"].includes(normalizeRole(role));
 }
 
+export function canWriteFormationsRole(role: RoleLike): boolean {
+  return ["admin", "superadmin", "staff"].includes(normalizeRole(role));
+}
+
 export function canAccessPrepaRole(role: RoleLike): boolean {
   return ["admin", "superadmin", "staff", "staff_read", "prepa_staff"].includes(normalizeRole(role));
 }
