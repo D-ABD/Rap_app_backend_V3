@@ -7,6 +7,7 @@ PYTHON_BIN="${PYTHON_BIN:-$VENV_DIR/bin/python}"
 SUBJECT="${1:-}"
 BODY_FILE="${2:-}"
 TO_ARG="${3:-}"
+ATTACHMENTS_ARG="${4:-}"
 
 if [ -z "$SUBJECT" ]; then
   echo "Usage: $0 \"Sujet\" /chemin/vers/body.txt [dest1,dest2]" >&2
@@ -27,6 +28,7 @@ export DJANGO_SETTINGS_MODULE="rap_app_project.settings"
 export MAIL_SUBJECT="$SUBJECT"
 export MAIL_BODY_FILE="$BODY_FILE"
 export MAIL_TO="$TO_ARG"
+export MAIL_ATTACHMENTS="$ATTACHMENTS_ARG"
 
 cd "$APP_DIR"
 
@@ -53,6 +55,9 @@ else:
     fallback = getattr(settings, "EMAIL_HOST_USER", "") or getattr(settings, "SERVER_EMAIL", "")
     recipients = [x.strip() for x in os.getenv("EMAIL_REPORT_TO", fallback).split(",") if x.strip()]
 
+raw_attachments = os.environ.get("MAIL_ATTACHMENTS", "").strip()
+attachments = [x.strip() for x in raw_attachments.split(",") if x.strip()]
+
 if not recipients:
     print("Erreur: aucun destinataire email configure.", file=sys.stderr)
     sys.exit(1)
@@ -63,6 +68,8 @@ message = EmailMessage(
     from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
     to=recipients,
 )
+for attachment in attachments:
+    message.attach_file(attachment)
 message.send(fail_silently=False)
 print("Email envoye a:", ", ".join(recipients))
 PY

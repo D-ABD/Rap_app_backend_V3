@@ -339,11 +339,18 @@ Lancer le backup manuellement :
 /srv/apps/rap_app/app/deploy/backup_rap_app.sh
 ```
 
+Lancer un backup DB compresse par email :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_db_backup_email.sh
+```
+
 Voir les backups :
 
 ```bash
 ls -lah /srv/backups/rap_app/db
 ls -lah /srv/backups/rap_app/media
+ls -lah /srv/backups/rap_app/db_email
 ```
 
 Voir le cron utilisateur :
@@ -390,6 +397,12 @@ Envoyer une notif de deploiement test :
 
 ```bash
 /srv/apps/rap_app/app/deploy/send_deploy_notification.sh manual-test
+```
+
+Envoyer un backup DB compresse par email :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_db_backup_email.sh
 ```
 
 Envoyer un email manuel :

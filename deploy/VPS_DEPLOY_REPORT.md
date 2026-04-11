@@ -213,6 +213,49 @@ Effets :
 - archive `tar.gz` quotidienne du dossier `media`
 - retention locale de `7` jours
 
+### 12.b Backup DB compresse par email
+
+Script installe :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_db_backup_email.sh
+```
+
+Destination locale :
+
+```bash
+/srv/backups/rap_app/db_email
+```
+
+Format :
+
+- dump PostgreSQL SQL plain
+- compression `gzip`
+- extension `.sql.gz`
+
+Garde-fou :
+
+- taille maximale d'envoi email : `20 MB`
+- si le fichier depasse cette taille, un email d'alerte est envoye sans piece jointe
+
+Commande de test a executer :
+
+```bash
+/srv/apps/rap_app/app/deploy/send_db_backup_email.sh
+```
+
+Test reel execute :
+
+- dump compresse genere avec succes
+- taille observee : `0.03 MB`
+- email recu avec piece jointe
+
+Cron installe :
+
+```cron
+30 7 * * * /srv/apps/rap_app/app/deploy/send_db_backup_email.sh >> /srv/apps/rap_app/logs/db_email_backup.log 2>&1
+```
+
 ### 13. Monitoring cron installe
 
 Scripts installes :
@@ -275,6 +318,7 @@ Resultat :
 - un email de notification de deploiement a ete envoye
 - destinataire de test : `adserv.fr@gmail.com`
 - reception validee cote utilisateur (mail visible sur mobile ; affichage navigateur a verifier/securiser cote client si besoin)
+- backup DB compresse par email valide avec piece jointe
 
 Cron ajoute pour l'utilisateur `abd` :
 
@@ -444,6 +488,7 @@ Ports internes utiles :
 - media : `/srv/apps/rap_app/shared/media`
 - logs applicatifs : `/srv/apps/rap_app/logs`
 - sauvegardes locales : `/srv/backups/rap_app/db` et `/srv/backups/rap_app/media`
+- sauvegardes DB email : `/srv/backups/rap_app/db_email`
 
 ## Verifications finales utiles
 
@@ -453,9 +498,11 @@ curl -Ik https://rap.adserv.fr/api/
 curl -Ik https://rap.adserv.fr/health/
 ls -lah /srv/backups/rap_app/db
 ls -lah /srv/backups/rap_app/media
+ls -lah /srv/backups/rap_app/db_email
 crontab -l
 sudo crontab -l
 /srv/apps/rap_app/app/deploy/send_daily_report.sh
+/srv/apps/rap_app/app/deploy/send_db_backup_email.sh
 sudo systemctl status fail2ban
 sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
@@ -694,6 +741,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 ## Points de securite restants
 
 - **Backups hors VPS** : les sauvegardes sont maintenant automatisees localement, mais pas encore externalisees hors du meme disque/VPS
+- **Backup VPS hebergeur** : recommande a activer quotidiennement avec retention `7 jours` dans le panneau de l'hebergeur
 - **Monitoring applicatif** : le monitoring local et un monitoring externe de base sont en place ; il reste a verifier la qualite des alertes, les destinataires et l'escalade si besoin
 - **Monitoring erreurs** : pas encore de Sentry backend/frontend documente comme actif
 - **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
@@ -704,6 +752,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 ## Risques residuels
 
 - **Risque moyen** : les sauvegardes existent, mais restent sur le meme VPS ; en cas de perte du disque ou compromission serveur, elles peuvent etre perdues aussi
+- **Risque faible a moyen** : le backup DB par email est pratique, mais ce n'est pas un coffre-fort ni une solution de restauration globale complete
 - **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
 - **Risque faible** : le monitoring externe de base existe, mais il faut encore confirmer les alertes email, les seuils et la procedure de reaction
 - **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
@@ -715,6 +764,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 |----------|--------|
 | Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
 | Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
+| Moyenne | **Activer le backup VPS hebergeur** : quotidien, retention `7 jours`, directement dans le panneau fournisseur. |
 | Moyenne | **Externaliser les sauvegardes** : copier `/srv/backups/rap_app` vers un stockage hors VPS (S3, autre machine, snapshot hebergeur, etc.). |
 | Moyenne | **Valider le monitoring externe** : verifier les emails d'alerte, les contacts, la frequence de check et la procedure de reaction. |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
@@ -735,9 +785,11 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - [x] Static et media routes vers les bons dossiers
 - [x] Repo, venv, logs et media alignes sur l'arborescence `/srv/apps/rap_app`
 - [x] Backups automatiques locaux formalises
+- [x] Backup DB compresse par email formalise
 - [x] Monitoring cron local formalise
 - [x] Emails automatiques de rapport et de deploiement formalises
 - [x] Monitoring externe de base formalise
+- [ ] Backup VPS hebergeur quotidien active
 - [ ] Sauvegardes externalisees hors VPS
 - [ ] Nettoyage optionnel des regles UFW en doublon
 - [ ] Migration optionnelle du role PostgreSQL `"ABD"` vers `abd`

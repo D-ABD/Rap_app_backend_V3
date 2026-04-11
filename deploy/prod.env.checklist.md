@@ -63,6 +63,8 @@ EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=RAP_APP <adserv.fr@gmail.com>
 SERVER_EMAIL=adserv.fr@gmail.com
 EMAIL_REPORT_TO=adserv.fr@gmail.com
+DB_EMAIL_BACKUP_TO=adserv.fr@gmail.com
+MAX_EMAIL_ATTACHMENT_MB=20
 ```
 
 Note :
