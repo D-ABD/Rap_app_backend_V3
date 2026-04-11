@@ -256,6 +256,45 @@ Cron installe :
 30 7 * * * /srv/apps/rap_app/app/deploy/send_db_backup_email.sh >> /srv/apps/rap_app/logs/db_email_backup.log 2>&1
 ```
 
+### 12.d Restauration DB
+
+Formats actuellement disponibles :
+
+- dump PostgreSQL local au format custom dans `/srv/backups/rap_app/db`
+- dump SQL compresse `.sql.gz` dans `/srv/backups/rap_app/db_email`
+
+Restauration depuis un dump custom `pg_dump -Fc` :
+
+```bash
+sudo systemctl stop gunicorn_rapapp
+sudo -u postgres dropdb rap_app_backend
+sudo -u postgres createdb -O "ABD" rap_app_backend
+PGPASSWORD='TON_MDP_DB' pg_restore -h 127.0.0.1 -p 5432 -U "ABD" -d rap_app_backend /srv/backups/rap_app/db/TON_BACKUP.dump
+sudo systemctl start gunicorn_rapapp
+```
+
+Restauration depuis un dump SQL compresse `.sql.gz` :
+
+```bash
+sudo systemctl stop gunicorn_rapapp
+sudo -u postgres dropdb rap_app_backend
+sudo -u postgres createdb -O "ABD" rap_app_backend
+gunzip -c /srv/backups/rap_app/db_email/TON_BACKUP.sql.gz | PGPASSWORD='TON_MDP_DB' psql -h 127.0.0.1 -p 5432 -U "ABD" -d rap_app_backend
+sudo systemctl start gunicorn_rapapp
+```
+
+Verification rapide apres restauration :
+
+```bash
+curl -Ik https://rap.adserv.fr/health/
+sudo systemctl status gunicorn_rapapp --no-pager
+```
+
+Precaution :
+
+- toujours verifier que tu restaures vers la bonne base
+- idealement faire une copie de l'etat courant avant ecrasement si la base existe encore
+
 ### 12.c Sauvegardes automatiques Hostinger
 
 Sauvegardes hebergeur deja disponibles :
@@ -531,6 +570,17 @@ sudo systemctl status fail2ban
 sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
 sudo systemctl status nginx
+```
+
+Restauration DB manuelle :
+
+```bash
+sudo systemctl stop gunicorn_rapapp
+sudo -u postgres dropdb rap_app_backend
+sudo -u postgres createdb -O "ABD" rap_app_backend
+PGPASSWORD='TON_MDP_DB' pg_restore -h 127.0.0.1 -p 5432 -U "ABD" -d rap_app_backend /srv/backups/rap_app/db/TON_BACKUP.dump
+sudo systemctl start gunicorn_rapapp
+curl -Ik https://rap.adserv.fr/health/
 ```
 
 ## Suite recommandee

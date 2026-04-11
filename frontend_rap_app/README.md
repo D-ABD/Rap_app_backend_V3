@@ -12,7 +12,7 @@ Le deploiement production n'est plus gere comme une application separee. Le fron
 Pour le deploiement complet, utiliser la documentation racine :
 
 - [`../DEPLOY.md`](../DEPLOY.md)
-- [`../commandes_deploy.md`](../commandes_deploy.md)
+- [`../deploy/commandes_deploy.md`](../deploy/commandes_deploy.md)
 - [`../deploy/deploy_frontend.sh`](../deploy/deploy_frontend.sh)
 
 Variable de production attendue :

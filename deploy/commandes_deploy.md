@@ -353,6 +353,35 @@ ls -lah /srv/backups/rap_app/media
 ls -lah /srv/backups/rap_app/db_email
 ```
 
+Restaurer la DB depuis un dump custom local :
+
+```bash
+sudo systemctl stop gunicorn_rapapp
+sudo -u postgres dropdb rap_app_backend
+sudo -u postgres createdb -O "ABD" rap_app_backend
+PGPASSWORD='TON_MDP_DB' pg_restore -h 127.0.0.1 -p 5432 -U "ABD" -d rap_app_backend /srv/backups/rap_app/db/TON_BACKUP.dump
+sudo systemctl start gunicorn_rapapp
+curl -Ik https://rap.adserv.fr/health/
+```
+
+Restaurer la DB depuis un backup email `.sql.gz` :
+
+```bash
+sudo systemctl stop gunicorn_rapapp
+sudo -u postgres dropdb rap_app_backend
+sudo -u postgres createdb -O "ABD" rap_app_backend
+gunzip -c /srv/backups/rap_app/db_email/TON_BACKUP.sql.gz | PGPASSWORD='TON_MDP_DB' psql -h 127.0.0.1 -p 5432 -U "ABD" -d rap_app_backend
+sudo systemctl start gunicorn_rapapp
+curl -Ik https://rap.adserv.fr/health/
+```
+
+Voir les dumps disponibles avec date :
+
+```bash
+ls -lht /srv/backups/rap_app/db
+ls -lht /srv/backups/rap_app/db_email
+```
+
 Voir le cron utilisateur :
 
 ```bash
