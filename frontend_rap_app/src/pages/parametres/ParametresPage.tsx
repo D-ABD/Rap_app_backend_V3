@@ -2,7 +2,6 @@ import { Link as RouterLink } from "react-router-dom";
 import { Grid, Card, CardContent, CardActions, Typography, Button, Stack } from "@mui/material";
 import PageTemplate from "../../components/PageTemplate";
 import { useAuth } from "../../hooks/useAuth";
-import { env } from "../../config/env";
 
 const ParametresPage = () => {
   const { logout } = useAuth();
@@ -41,7 +40,7 @@ const ParametresPage = () => {
     {
       title: "Administration",
       text: "Accès à l'interface d’administration Django.",
-      link: `${env.backendProxyTarget.replace(/\/$/, "")}/admin/`,
+      link: "/admin/",
 
       external: true,
     },

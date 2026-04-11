@@ -24,6 +24,14 @@ export function canWriteFormationsRole(role: RoleLike): boolean {
   return ["admin", "superadmin", "staff"].includes(normalizeRole(role));
 }
 
+export function canWritePrepaRole(role: RoleLike): boolean {
+  return ["admin", "superadmin", "staff", "prepa_staff"].includes(normalizeRole(role));
+}
+
+export function canWriteDeclicRole(role: RoleLike): boolean {
+  return ["admin", "superadmin", "staff", "declic_staff"].includes(normalizeRole(role));
+}
+
 export function canAccessPrepaRole(role: RoleLike): boolean {
   return ["admin", "superadmin", "staff", "staff_read", "prepa_staff"].includes(normalizeRole(role));
 }

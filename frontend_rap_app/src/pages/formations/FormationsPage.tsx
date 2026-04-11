@@ -20,7 +20,7 @@ import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useFiltresFormations from "../../hooks/useFiltresFormations";
 import type { Formation, FiltresFormationsValues, PaginatedResponse } from "../../types/formation";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { canWriteFormationsRole } from "../../utils/roleGroups";
 import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";

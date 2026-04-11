@@ -16,6 +16,8 @@ import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Prepa } from "src/types/prepa";
 import { useExportStagiairesPrepa } from "src/hooks/useStagiairesPrepa";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ─────────── Helpers ─────────── */
@@ -48,6 +50,8 @@ interface Props {
 /* ─────────── Component ─────────── */
 export default function PrepaDetailModal({ open, onClose, prepa, loading = false, onEdit }: Props) {
   const { exportPresence, exportEmargement } = useExportStagiairesPrepa();
+  const { user } = useAuth();
+  const canWritePrepa = canWritePrepaRole(user?.role);
   const isAtelierPrepa =
     prepa?.type_prepa?.startsWith("atelier") || prepa?.type_prepa === "autre";
   const exportSearch = prepa?.id ? `?prepa_origine=${prepa.id}` : "";
@@ -269,13 +273,15 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
             >
               Voir les stagiaires Prépa
             </Button>
-            <Button
-              component={RouterLink}
-              to={`/prepa/stagiaires/create?prepa_origine=${prepa.id}`}
-              variant="outlined"
-            >
-              Ajouter un stagiaire
-            </Button>
+            {canWritePrepa && (
+              <Button
+                component={RouterLink}
+                to={`/prepa/stagiaires/create?prepa_origine=${prepa.id}`}
+                variant="outlined"
+              >
+                Ajouter un stagiaire
+              </Button>
+            )}
             {isAtelierPrepa && prepa.id != null ? (
               <Button variant="outlined" onClick={() => exportPresence(undefined, exportSearch)}>
                 Feuille de présence

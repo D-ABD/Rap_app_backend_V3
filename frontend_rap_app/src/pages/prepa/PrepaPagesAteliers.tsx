@@ -30,9 +30,13 @@ import PrepaDetailModal from "./PrepaDetailModal";
 import ExportButtonPrepa from "src/components/export_buttons/ExportButtonPrepa";
 import FiltresPrepaPanel from "src/components/filters/FiltresPrepaPanel";
 import SearchInput from "src/components/SearchInput";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 
 export default function PrepaPageAteliers() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const canWritePrepa = canWritePrepaRole(user?.role);
 
   // Filtres
   const [filters, setFilters] = useState<PrepaFiltresValues>({
@@ -189,9 +193,11 @@ export default function PrepaPageAteliers() {
             ))}
           </Select>
 
-          <Button variant="contained" onClick={() => navigate("/prepa/create/ateliers")}>
-            ➕ Nouvelle séance
-          </Button>
+          {canWritePrepa && (
+            <Button variant="contained" onClick={() => navigate("/prepa/create/ateliers")}>
+              ➕ Nouvelle séance
+            </Button>
+          )}
 
           <ExportButtonPrepa data={items} selectedIds={selectedIds} />
 

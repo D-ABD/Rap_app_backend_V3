@@ -34,9 +34,13 @@ import DeclicTable from "./DeclicTable";
 import DeclicDetailModal from "./DeclicDetailModal";
 import ExportButtonDeclic from "src/components/export_buttons/ExportButtonDeclic";
 import SearchInput from "src/components/SearchInput";
+import { useAuth } from "src/hooks/useAuth";
+import { canWriteDeclicRole } from "src/utils/roleGroups";
 
 export default function DeclicPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
 
   // ───────────── Filtres (avec typage complet) ─────────────
   const [filters, setFilters] = useState<DeclicFiltresValues>({
@@ -218,9 +222,11 @@ export default function DeclicPage() {
           </Select>
 
           {/* Création */}
-          <Button variant="contained" onClick={() => navigate("/declic/create")}>
-            ➕ Ajouter une séance
-          </Button>
+          {canWriteDeclic && (
+            <Button variant="contained" onClick={() => navigate("/declic/create")}>
+              ➕ Ajouter une séance
+            </Button>
+          )}
 
           <Button variant="outlined" onClick={() => navigate("/participants-declic")}>
             👥 Gérer les participants

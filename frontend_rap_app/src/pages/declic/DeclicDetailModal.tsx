@@ -16,6 +16,8 @@ import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import { Declic } from "src/types/declic";
 import { useExportParticipantsDeclic } from "src/hooks/useParticipantsDeclic";
+import { useAuth } from "src/hooks/useAuth";
+import { canWriteDeclicRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ─────────── Helpers ─────────── */
@@ -54,6 +56,8 @@ export default function DeclicDetailModal({
   onEdit,
 }: Props) {
   const { exportPresence, exportEmargement } = useExportParticipantsDeclic();
+  const { user } = useAuth();
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
   const exportSearch = declic?.id ? `?declic_origine=${declic.id}` : "";
 
   if (!open) return null;
@@ -231,13 +235,15 @@ export default function DeclicDetailModal({
               >
               Voir les participants
               </Button>
-            <Button
-              component={RouterLink}
-              to={`/participants-declic/create?declic_origine=${declic.id}`}
-              variant="outlined"
-            >
-              Ajouter un participant
-            </Button>
+            {canWriteDeclic && (
+              <Button
+                component={RouterLink}
+                to={`/participants-declic/create?declic_origine=${declic.id}`}
+                variant="outlined"
+              >
+                Ajouter un participant
+              </Button>
+            )}
             <Button variant="outlined" onClick={() => exportPresence(undefined, exportSearch)}>
               Feuille de présence
             </Button>
@@ -304,4 +310,3 @@ function Field({ label, value }: { label: string; value?: string | number | null
     </Grid>
   );
 }
-

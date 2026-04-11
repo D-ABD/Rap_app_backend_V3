@@ -8,9 +8,13 @@ import { useDeleteStagiairePrepa, useDesarchiverStagiairePrepa, useExportStagiai
 import type { StagiairePrepaFiltersValues } from "src/types/prepa";
 import StagiairesPrepaTable from "./StagiairesPrepaTable";
 import StagiairesPrepaDetailModal from "./StagiairesPrepaDetailModal";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 
 export default function StagiairesPrepaPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const canWritePrepa = canWritePrepaRole(user?.role);
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<StagiairePrepaFiltersValues>({
     ordering: "nom",
@@ -90,9 +94,11 @@ export default function StagiairesPrepaPage() {
           <Button variant="outlined" onClick={() => navigate(-1)}>
             Retour
           </Button>
-          <Button variant="contained" onClick={() => navigate("/prepa/stagiaires/create")}>
-            ➕ Nouveau stagiaire
-          </Button>
+          {canWritePrepa && (
+            <Button variant="contained" onClick={() => navigate("/prepa/stagiaires/create")}>
+              ➕ Nouveau stagiaire
+            </Button>
+          )}
           <Button variant="outlined" onClick={() => exportList()}>
             ⬇️ Export liste
           </Button>

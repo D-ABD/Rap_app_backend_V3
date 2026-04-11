@@ -8,9 +8,13 @@ import { useDeleteParticipantDeclic, useDesarchiverParticipantDeclic, useExportP
 import type { ParticipantDeclicFiltersValues } from "src/types/declic";
 import ParticipantsDeclicTable from "./ParticipantsDeclicTable";
 import ParticipantsDeclicDetailModal from "./ParticipantsDeclicDetailModal";
+import { useAuth } from "src/hooks/useAuth";
+import { canWriteDeclicRole } from "src/utils/roleGroups";
 
 export default function ParticipantsDeclicPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<ParticipantDeclicFiltersValues>({
     ordering: "nom",
@@ -86,9 +90,11 @@ export default function ParticipantsDeclicPage() {
           <Button variant="outlined" onClick={() => navigate(-1)}>
             Retour
           </Button>
-          <Button variant="contained" onClick={() => navigate("/participants-declic/create")}>
-            ➕ Nouveau participant
-          </Button>
+          {canWriteDeclic && (
+            <Button variant="contained" onClick={() => navigate("/participants-declic/create")}>
+              ➕ Nouveau participant
+            </Button>
+          )}
           <Button variant="outlined" onClick={() => exportList()}>
             ⬇️ Export liste
           </Button>
