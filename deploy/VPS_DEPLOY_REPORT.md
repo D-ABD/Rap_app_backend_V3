@@ -120,14 +120,12 @@ Effets :
 - copie du build vers `/var/www/rap_app_front`
 - ownership final : `www-data:www-data`
 
-### 8. Gunicorn et isolation `rapapp`
+### 8. Gunicorn et permissions applicatives
 Etat retenu apres stabilisation :
 
 - Gunicorn tourne sous **`abd`**
 - le repo et l'arborescence applicative restent possedes par **`abd:abd`**
 - le frontend public reste en **`www-data:www-data`**
-
-Un essai d'isolation via un utilisateur systeme `rapapp` a ete fait, mais il a rendu le depot inaccessible a `abd` (`Permission denied` sur `cd /srv/apps/rap_app/app`, `git pull`, lecture des fichiers). Pour cette machine, la configuration stable retenue est donc **sans bascule automatique vers `rapapp`**.
 
 Service systemd attendu :
 
@@ -235,7 +233,7 @@ Symptome :
 
 Cause :
 
-- `/srv/apps/rap_app` avait ete repasse en `rapapp:rapapp` avec des droits restrictifs
+- les permissions de `/srv/apps/rap_app` avaient ete modifiees de facon trop restrictive
 - l'utilisateur `abd` ne pouvait plus traverser l'arborescence
 
 Correction appliquee :
@@ -248,7 +246,7 @@ sudo systemctl restart gunicorn_rapapp
 
 Mesure preventive retenue :
 
-- suppression de la bascule automatique vers `rapapp` dans `deploy/deploy_backend.sh`
+- suppression de la bascule automatique de proprietaire dans `deploy/deploy_backend.sh`
 - alignement de `deploy/gunicorn_rapapp.service` sur l'etat reel stable : `User=abd`, `Group=www-data`
 
 ## Etat final du VPS
@@ -408,7 +406,6 @@ Le serveur tourne maintenant de facon stable avec cette convention :
 
 Important :
 
-- l'essai d'isolation via `rapapp` est considere comme **abandonne pour cette machine**
 - `deploy/deploy_backend.sh` ne doit plus modifier le proprietaire du repo
 - `deploy/gunicorn_rapapp.service` doit rester coherent avec l'etat reel du VPS
 
@@ -425,7 +422,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 | Priorite | Action |
 |----------|--------|
 | Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
-| Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour eviter qu'un prochain `git pull` reintroduise la logique `rapapp`. |
+| Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
 | Moyenne | **Sauvegardes PostgreSQL** : `pg_dump` planifie (cron + repertoire dedie, retention). |
 | Moyenne | **Surveillance** : charge disque, RAM, services `gunicorn` / `nginx` (outil type Netdata, Uptime Kuma, ou alertes hebergeur). |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
