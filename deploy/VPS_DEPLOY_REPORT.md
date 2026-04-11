@@ -180,6 +180,39 @@ SECURE_SSL_REDIRECT=True
 sudo systemctl restart gunicorn_rapapp
 ```
 
+### 12. Sauvegardes locales automatisees
+
+Script installe :
+
+```bash
+/srv/apps/rap_app/app/deploy/backup_rap_app.sh
+```
+
+Arborescence creee :
+
+```bash
+/srv/backups/rap_app/db
+/srv/backups/rap_app/media
+```
+
+Commande de test executee :
+
+```bash
+/srv/apps/rap_app/app/deploy/backup_rap_app.sh
+```
+
+Cron ajoute pour l'utilisateur `abd` :
+
+```cron
+15 2 * * * /srv/apps/rap_app/app/deploy/backup_rap_app.sh >> /srv/apps/rap_app/logs/backup.log 2>&1
+```
+
+Effets :
+
+- dump PostgreSQL quotidien au format `pg_dump --format=custom`
+- archive `tar.gz` quotidienne du dossier `media`
+- retention locale de `7` jours
+
 ## Problemes rencontres et corrections
 
 ### 1. Permissions PostgreSQL insuffisantes
@@ -316,12 +349,16 @@ Ports internes utiles :
 - static : `/srv/apps/rap_app/app/staticfiles`
 - media : `/srv/apps/rap_app/shared/media`
 - logs applicatifs : `/srv/apps/rap_app/logs`
+- sauvegardes locales : `/srv/backups/rap_app/db` et `/srv/backups/rap_app/media`
 
 ## Verifications finales utiles
 
 ```bash
 curl -Ik https://rap.adserv.fr
 curl -Ik https://rap.adserv.fr/api/
+ls -lah /srv/backups/rap_app/db
+ls -lah /srv/backups/rap_app/media
+crontab -l
 sudo systemctl status fail2ban
 sudo fail2ban-client status sshd
 sudo systemctl status gunicorn_rapapp
@@ -516,7 +553,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 
 ## Points de securite restants
 
-- **Backups** : pas encore formalises dans ce rapport comme automatisation active cote VPS
+- **Backups hors VPS** : les sauvegardes sont maintenant automatisees localement, mais pas encore externalisees hors du meme disque/VPS
 - **Monitoring applicatif** : pas encore de supervision externe type Uptime Kuma / Better Uptime / UptimeRobot
 - **Monitoring erreurs** : pas encore de Sentry backend/frontend documente comme actif
 - **Nettoyage UFW** : doublons `80/tcp` et `443/tcp` encore presents en plus de `Nginx Full`
@@ -525,7 +562,7 @@ systemctl status gunicorn_rapapp nginx --no-pager
 
 ## Risques residuels
 
-- **Risque faible a moyen** : absence de backup automatise documente ; en cas d'incident disque ou erreur humaine, la restauration ne serait pas immediate
+- **Risque moyen** : les sauvegardes existent, mais restent sur le meme VPS ; en cas de perte du disque ou compromission serveur, elles peuvent etre perdues aussi
 - **Risque faible** : doublons UFW sans impact fonctionnel, mais lisibilite moindre
 - **Risque moyen** : absence de monitoring externe peut retarder la detection d'une panne applicative
 - **Risque faible** : role PostgreSQL en majuscules peut compliquer la maintenance future
@@ -537,8 +574,11 @@ systemctl status gunicorn_rapapp nginx --no-pager
 |----------|--------|
 | Haute | **Verifier la prod** : `curl -Ik https://rap.adserv.fr`, login app, `/admin/`, fichiers static/media. Commandes : `systemctl status gunicorn_rapapp nginx --no-pager`, `grep -E '^User=|^Group=' /etc/systemd/system/gunicorn_rapapp.service` (attendu : `abd` / `www-data`). |
 | Haute | **Pousser les correctifs locaux** : `deploy/deploy_backend.sh`, `deploy/gunicorn_rapapp.service` et ce rapport, pour garder le repo aligne sur l'etat stable du VPS. |
-| Moyenne | **Sauvegardes PostgreSQL** : `pg_dump` planifie (cron + repertoire dedie, retention). |
+| Moyenne | **Externaliser les sauvegardes** : copier `/srv/backups/rap_app` vers un stockage hors VPS (S3, autre machine, snapshot hebergeur, etc.). |
 | Moyenne | **Surveillance** : charge disque, RAM, services `gunicorn` / `nginx` (outil type Netdata, Uptime Kuma, ou alertes hebergeur). |
+| Moyenne | **Monitoring user toutes les 30 minutes** : ajouter la tache de supervision demandee cote utilisateur. |
+| Moyenne | **Monitoring user toutes les 30 minutes** : ajouter la deuxieme tache de supervision demandee cote utilisateur. |
+| Moyenne | **Monitoring root toutes les 10 minutes** : ajouter la tache de supervision demandee cote root. |
 | Basse | **PostgreSQL** : migrer le role `"ABD"` vers `abd` (minuscules) quand tu auras une fenetre de maintenance. |
 | Basse | **UFW** : supprimer les regles en double (80/443 vs *Nginx Full*) avec `sudo ufw status numbered` / `delete` si tu veux un affichage plus propre. |
 
@@ -556,7 +596,8 @@ systemctl status gunicorn_rapapp nginx --no-pager
 - [x] Backend accessible derriere Nginx sur `/api/`
 - [x] Static et media routes vers les bons dossiers
 - [x] Repo, venv, logs et media alignes sur l'arborescence `/srv/apps/rap_app`
-- [ ] Backups automatiques formalises
+- [x] Backups automatiques locaux formalises
 - [ ] Monitoring externe formalise
+- [ ] Sauvegardes externalisees hors VPS
 - [ ] Nettoyage optionnel des regles UFW en doublon
 - [ ] Migration optionnelle du role PostgreSQL `"ABD"` vers `abd`
