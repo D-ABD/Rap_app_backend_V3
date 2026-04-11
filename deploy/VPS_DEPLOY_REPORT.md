@@ -622,8 +622,9 @@ Lecture retenue :
   - doublons sur :
     - `admin/js/cancel.js`
     - `admin/js/popup_response.js`
-  - impact : Django garde le premier fichier rencontre
-  - statut : non bloquant actuellement
+  - origine identifiee : `jazzmin` surcharge volontairement les fichiers admin de `django.contrib.admin`
+  - impact : Django garde le premier fichier rencontre ; avec l'ordre actuel des apps, l'override `Jazzmin` est celui attendu
+  - statut : **warning compris**, non bloquant actuellement, pas de correction applicative necessaire
 
 - **Frontend build** :
   - warnings Vite sur `src/api/axios.ts` charge a la fois statiquement et dynamiquement
