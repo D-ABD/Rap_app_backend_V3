@@ -26,8 +26,12 @@ import SearchInput from "src/components/SearchInput";
 import { useObjectifsDeclic, useObjectifsDeclicFiltersOptions } from "src/hooks/useDeclicObjectifs";
 
 import type { ObjectifDeclicFiltresValues } from "src/types/declic";
+import { useAuth } from "src/hooks/useAuth";
+import { canWriteDeclicRole } from "src/utils/roleGroups";
 
 export default function ObjectifDeclicPage() {
+  const { user } = useAuth();
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
   const [searchParams] = useSearchParams();
   const scopedCentre = useMemo(() => {
     const raw = searchParams.get("centre");
@@ -171,16 +175,18 @@ export default function ObjectifDeclicPage() {
           <ExportButtonObjectifsDeclic data={objectifs} selectedIds={[]} />
 
           {/* ➕ Création */}
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => {
-              setEditId(null);
-              setShowForm(true);
-            }}
-          >
-            + Ajouter un objectif
-          </Button>
+          {canWriteDeclic && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setEditId(null);
+                setShowForm(true);
+              }}
+            >
+              + Ajouter un objectif
+            </Button>
+          )}
         </Stack>
       }
       footer={

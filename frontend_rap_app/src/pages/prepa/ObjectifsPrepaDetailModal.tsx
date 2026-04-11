@@ -18,6 +18,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useObjectifsPrepa } from "src/hooks/usePrepaObjectifs";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
 import type { ObjectifPrepa } from "src/types/prepa";
 
@@ -35,6 +37,8 @@ interface Props {
 // ─────────────────────────────────────────────
 export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: Props) {
   const { data: paginated, isLoading, isError } = useObjectifsPrepa();
+  const { user } = useAuth();
+  const canWritePrepa = canWritePrepaRole(user?.role);
   const [objectif, setObjectif] = useState<ObjectifPrepa | null>(null);
   const navigate = useNavigate();
 
@@ -182,9 +186,11 @@ export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: P
         <Typography component="div" variant="subtitle1" fontWeight={700}>
           🎯 Détail des objectifs — {objectif.centre?.nom ?? "Centre inconnu"}
         </Typography>
-        <Button startIcon={<EditIcon />} color="primary" variant="contained" onClick={handleEdit}>
-          Modifier
-        </Button>
+        {canWritePrepa && (
+          <Button startIcon={<EditIcon />} color="primary" variant="contained" onClick={handleEdit}>
+            Modifier
+          </Button>
+        )}
       </DialogTitle>
 
       {/* ────── Contenu ────── */}

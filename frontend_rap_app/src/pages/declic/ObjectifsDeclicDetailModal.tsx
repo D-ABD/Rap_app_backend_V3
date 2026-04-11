@@ -18,6 +18,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useObjectifsDeclic } from "src/hooks/useDeclicObjectifs";
+import { useAuth } from "src/hooks/useAuth";
+import { canWriteDeclicRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
 import type { ObjectifDeclic } from "src/types/declic";
 
@@ -35,6 +37,8 @@ interface Props {
 // ─────────────────────────────────────────────
 export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: Props) {
   const { data: paginated, isLoading, isError } = useObjectifsDeclic();
+  const { user } = useAuth();
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
   const [objectif, setObjectif] = useState<ObjectifDeclic | null>(null);
   const navigate = useNavigate();
 
@@ -182,9 +186,11 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
         <Typography component="div" variant="subtitle1" fontWeight={700}>
           🎯 Détail des objectifs — {objectif.centre?.nom ?? "Centre inconnu"}
         </Typography>
-        <Button startIcon={<EditIcon />} color="primary" variant="contained" onClick={handleEdit}>
-          Modifier
-        </Button>
+        {canWriteDeclic && (
+          <Button startIcon={<EditIcon />} color="primary" variant="contained" onClick={handleEdit}>
+            Modifier
+          </Button>
+        )}
       </DialogTitle>
 
       {/* ────── Contenu ────── */}

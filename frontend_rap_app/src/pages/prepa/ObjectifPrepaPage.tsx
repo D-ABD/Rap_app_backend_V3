@@ -26,8 +26,12 @@ import type { ObjectifPrepaFiltresValues } from "src/types/prepa";
 import FiltresObjectifsPrepaPanel from "src/components/filters/FiltresObjectifsPrepaPanel";
 import ExportButtonObjectifsPrepa from "src/components/export_buttons/ExportButtonPrepaObjectifs";
 import SearchInput from "src/components/SearchInput";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 
 export default function ObjectifPrepaPage() {
+  const { user } = useAuth();
+  const canWritePrepa = canWritePrepaRole(user?.role);
   const [searchParams] = useSearchParams();
   const scopedCentre = useMemo(() => {
     const raw = searchParams.get("centre");
@@ -171,16 +175,18 @@ export default function ObjectifPrepaPage() {
           <ExportButtonObjectifsPrepa data={objectifs} selectedIds={[]} />
 
           {/* ➕ Création */}
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => {
-              setEditId(null);
-              setShowForm(true);
-            }}
-          >
-            + Ajouter un objectif
-          </Button>
+          {canWritePrepa && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => {
+                setEditId(null);
+                setShowForm(true);
+              }}
+            >
+              + Ajouter un objectif
+            </Button>
+          )}
         </Stack>
       }
       footer={
