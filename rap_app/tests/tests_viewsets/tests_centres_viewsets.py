@@ -114,3 +114,79 @@ class CentreViewSetTestCase(AuthenticatedTestCase):
         returned_ids = [item["id"] for item in results]
         self.assertIn(visible.id, returned_ids)
         self.assertNotIn(archived.id, returned_ids)
+
+    def test_prepa_staff_list_is_scoped_to_assigned_centres(self):
+        visible = Centre.objects.create(nom="Centre Prepa Visible", code_postal="75003")
+        hidden = Centre.objects.create(nom="Centre Prepa Cache", code_postal="69003")
+        prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
+        prepa_staff.centres.add(visible)
+        self.client.force_authenticate(user=prepa_staff)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(hidden.id, returned_ids)
+
+    def test_prepa_staff_liste_simple_is_scoped_to_assigned_centres(self):
+        visible = Centre.objects.create(nom="Centre Prepa Select", code_postal="75004")
+        hidden = Centre.objects.create(nom="Centre Prepa Hors Scope", code_postal="69004")
+        prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
+        prepa_staff.centres.add(visible)
+        self.client.force_authenticate(user=prepa_staff)
+
+        response = self.client.get(reverse("centre-liste-simple"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(hidden.id, returned_ids)
+
+    def test_prepa_staff_cannot_create_centre(self):
+        prepa_staff = UserFactory(role=CustomUser.ROLE_PREPA_STAFF)
+        self.client.force_authenticate(user=prepa_staff)
+
+        response = self.client.post(self.list_url, {"nom": "Centre Interdit Prepa", "code_postal": "75016"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_declic_staff_list_is_scoped_to_assigned_centres(self):
+        visible = Centre.objects.create(nom="Centre Declic Visible", code_postal="75005")
+        hidden = Centre.objects.create(nom="Centre Declic Cache", code_postal="69005")
+        declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
+        declic_staff.centres.add(visible)
+        self.client.force_authenticate(user=declic_staff)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(hidden.id, returned_ids)
+
+    def test_declic_staff_liste_simple_is_scoped_to_assigned_centres(self):
+        visible = Centre.objects.create(nom="Centre Declic Select", code_postal="75006")
+        hidden = Centre.objects.create(nom="Centre Declic Hors Scope", code_postal="69006")
+        declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
+        declic_staff.centres.add(visible)
+        self.client.force_authenticate(user=declic_staff)
+
+        response = self.client.get(reverse("centre-liste-simple"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("data", {}).get("results", [])
+        returned_ids = [item["id"] for item in results]
+        self.assertIn(visible.id, returned_ids)
+        self.assertNotIn(hidden.id, returned_ids)
+
+    def test_declic_staff_cannot_create_centre(self):
+        declic_staff = UserFactory(role=CustomUser.ROLE_DECLIC_STAFF)
+        self.client.force_authenticate(user=declic_staff)
+
+        response = self.client.post(self.list_url, {"nom": "Centre Interdit Declic", "code_postal": "75017"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

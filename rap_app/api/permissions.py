@@ -133,6 +133,40 @@ class ReadWriteAdminReadStaff(BasePermission):
         return is_admin_like(user) or getattr(user, "is_superuser", False)
 
 
+class ReadWriteAdminReadCentresScoped(BasePermission):
+    """
+    Accès lecture aux rôles internes pouvant consulter des centres dans leur
+    propre périmètre ; écriture réservée aux admins.
+
+    Inclut en lecture :
+    - `staff`
+    - `staff_read`
+    - `prepa_staff`
+    - `declic_staff`
+    - `admin-like`
+
+    Les rôles spécialisés conservent un accès limité à leurs centres
+    attribués via le queryset du viewset.
+    """
+
+    message = "Lecture réservée aux rôles internes autorisés. Écriture réservée aux admins."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            self.message = "Authentification requise."
+            return False
+
+        if request.method in SAFE_METHODS:
+            return (
+                is_admin_like(user)
+                or is_staff_or_staffread(user)
+                or is_prepa_staff(user)
+                or is_declic_staff(user)
+            )
+        return is_admin_like(user) or getattr(user, "is_superuser", False)
+
+
 class IsStaffOrAbove(BasePermission):
     """
     Autorise les rôles coeur opérés par centre ainsi que les admins.

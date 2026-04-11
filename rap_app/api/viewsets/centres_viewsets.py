@@ -15,8 +15,8 @@ from ...models.centres import Centre
 from ...models.logs import LogUtilisateur
 from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..paginations import RapAppPagination
-from ..permissions import ReadWriteAdminReadStaff
-from ..roles import is_admin_like, is_staff_or_staffread
+from ..permissions import ReadWriteAdminReadCentresScoped
+from ..roles import is_admin_like, is_declic_staff, is_prepa_staff, is_staff_or_staffread
 from ..serializers.centres_serializers import CentreSerializer
 
 
@@ -29,11 +29,11 @@ from ..serializers.centres_serializers import CentreSerializer
     destroy=extend_schema(summary="Archiver un centre", tags=["Centres"]),
 )
 class CentreViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelViewSet):
-    """ViewSet CRUD pour Centre. Permission ReadWriteAdminReadStaff ; staff limité à user.centres. Filtres, search, ordering. Action liste-simple (GET) pour id/label. Import/export Excel Lot 1 : ``/api/import-export/centre/…``."""
+    """ViewSet CRUD pour Centre. Lecture limitée aux centres assignés pour les rôles internes autorisés ; écriture admin-only. Filtres, search, ordering. Action liste-simple (GET) pour id/label. Import/export Excel Lot 1 : ``/api/import-export/centre/…``."""
 
     serializer_class = CentreSerializer
     pagination_class = RapAppPagination
-    permission_classes = [IsAuthenticated & ReadWriteAdminReadStaff]
+    permission_classes = [IsAuthenticated & ReadWriteAdminReadCentresScoped]
     hard_delete_enabled = True
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
@@ -89,7 +89,7 @@ class CentreViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelVie
         if is_admin_like(user):
             return qs
 
-        if is_staff_or_staffread(user):
+        if is_staff_or_staffread(user) or is_prepa_staff(user) or is_declic_staff(user):
             try:
                 return qs.filter(id__in=user.centres.values_list("id", flat=True))
             except Exception:
@@ -105,7 +105,7 @@ class CentreViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelVie
 
         if is_admin_like(user):
             scoped_qs = qs
-        elif is_staff_or_staffread(user):
+        elif is_staff_or_staffread(user) or is_prepa_staff(user) or is_declic_staff(user):
             try:
                 scoped_qs = qs.filter(id__in=user.centres.values_list("id", flat=True))
             except Exception:
