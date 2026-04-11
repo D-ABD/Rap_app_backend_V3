@@ -347,6 +347,18 @@ sudo ufw enable
 sudo ufw status verbose
 ```
 
+Etat confirme sur le VPS :
+
+- `UFW` actif
+- politique : `deny (incoming)` / `allow (outgoing)`
+- SSH ouvert via `OpenSSH`
+- HTTP/HTTPS ouverts via `Nginx Full`
+
+Note :
+
+- il reste des regles explicites `80/tcp` et `443/tcp` en doublon du profil `Nginx Full`
+- c'est inoffensif ; nettoyage optionnel plus tard avec `sudo ufw status numbered`
+
 ### 2. Fail2ban (recommande si SSH expose sur Internet)
 
 Etat constate sur le VPS :
@@ -385,6 +397,12 @@ port = ssh
 logpath = %(sshd_log)s
 ```
 
+Etat observe apres redemarrage :
+
+- `fail2ban` actif
+- jail `sshd` active
+- bans SSH deja en cours sur plusieurs IP
+
 ### 3. Utilisateur PostgreSQL `"ABD"` vs `abd`
 
 Constat historique dans ce rapport : creation d'un role PostgreSQL nomme `"ABD"` (guillemets obligatoires a cause des majuscules). Ce n'est **pas bloquant** tant que tout tourne, mais c'est une **mauvaise pratique** : les majuscules imposent des identifiants quotes partout et compliquent scripts et maintenance.
@@ -411,6 +429,41 @@ Pour lister les jails actives si besoin :
 ```bash
 sudo fail2ban-client status
 sudo fail2ban-client status sshd
+```
+
+### 5. SSH durci explicitement (`2026-04-11`)
+
+Etat confirme :
+
+- `PermitRootLogin no`
+- `PasswordAuthentication no`
+- `PubkeyAuthentication yes`
+
+Un conflit de lecture potentiel existait dans les fragments `sshd_config.d` :
+
+- `50-cloud-init.conf` contenait encore `PasswordAuthentication yes`
+- `60-cloudimg-settings.conf` contenait deja `PasswordAuthentication no`
+
+Pour supprimer toute ambiguite, un override explicite a ete ajoute :
+
+```bash
+/etc/ssh/sshd_config.d/99-hardening.conf
+```
+
+Contenu :
+
+```text
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+```
+
+Verification :
+
+```bash
+sudo sshd -t
+sudo systemctl reload ssh
+sudo grep -E '^(PermitRootLogin|PasswordAuthentication|PubkeyAuthentication)' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf
 ```
 
 ## Choix d'exploitation retenu
