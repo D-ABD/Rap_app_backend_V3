@@ -13,6 +13,16 @@ Frontend React + TypeScript + Vite du monorepo RAP_APP.
 - Axios
 - Recharts
 
+## Architecture rapide
+
+```text
+React + React Router
+    -> hooks / TanStack Query
+    -> Axios
+    -> /api
+    -> backend Django
+```
+
 ## Structure
 
 Principaux dossiers :
@@ -55,6 +65,15 @@ Comportement :
 - en dev, Axios cible `${VITE_BACKEND_PROXY_TARGET}/api`
 - en prod, Axios cible `VITE_API_BASE_URL` et force le suffixe `/api`
 - le proxy Vite redirige `/api` vers `VITE_BACKEND_PROXY_TARGET`
+
+## Authentification
+
+Le frontend utilise un flux JWT :
+
+- stockage local des tokens `access` / `refresh`
+- ajout automatique du header `Authorization`
+- tentative automatique de refresh sur `401`
+- deconnexion globale si le refresh echoue
 
 ## Installation locale
 
@@ -122,6 +141,14 @@ npm ci
 npm run dev
 ```
 
+Pages metier importantes :
+
+- `Documents`
+- `Formations`
+- `Prospection`
+- `Commentaires`
+- `Utilisateurs`
+
 ## Production
 
 Le frontend n'est plus deployee comme une app separee.
@@ -152,6 +179,22 @@ VITE_API_BASE_URL=/api
 - il reste un warning de bundle Vite : chunk principal lourd
 - il reste un reliquat `npm audit` faible autour de `quill`
 - le warning Vite sur `src/api/axios.ts` importe statiquement et dynamiquement est non bloquant, mais merite une optimisation plus tard
+
+## Troubleshooting
+
+Problemes frequents :
+
+- l'API ne repond pas en local :
+  verifier que Django tourne bien sur `127.0.0.1:8000` et que `VITE_BACKEND_PROXY_TARGET` est correct
+
+- ecran blanc ou erreur apres build :
+  lancer `npm run lint`, puis `npm run build`, et verifier les variables `VITE_*`
+
+- deconnexion inattendue :
+  verifier les endpoints JWT backend et le comportement du refresh token
+
+- warning Vite sur les chunks :
+  non bloquant pour le moment ; a traiter plus tard avec du code splitting plus fin
 
 ## Liens utiles
 

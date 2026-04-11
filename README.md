@@ -18,6 +18,18 @@ Le depot contient :
 - admin theme avec `Jazzmin`
 - Gunicorn + Nginx en production
 
+## Architecture rapide
+
+```text
+Frontend React/Vite
+    -> /api
+Backend Django / DRF
+    -> PostgreSQL
+
+Production:
+Nginx -> Gunicorn -> Django -> PostgreSQL
+```
+
 ## Structure
 
 Principaux dossiers :
@@ -159,6 +171,17 @@ En local :
 - swagger : `http://127.0.0.1:8000/api/docs/`
 - redoc : `http://127.0.0.1:8000/api/redoc/`
 
+## Authentification
+
+Le backend utilise JWT avec `djangorestframework_simplejwt`.
+
+En pratique :
+
+- le frontend stocke `access` et `refresh`
+- les requetes API authentifiees envoient `Authorization: Bearer <token>`
+- un interceptor frontend tente un refresh automatique en cas de `401`
+- si le refresh echoue, la session frontend est videe et la deconnexion est declenchee
+
 ## Production
 
 La production est documentee ici :
@@ -180,3 +203,18 @@ Scripts principaux :
 - le projet utilise `Jazzmin`, ce qui explique certains warnings `collectstatic` non bloquants sur les assets admin
 - la doc API `drf-spectacular` est active et exposee via `/api/docs/`
 
+## Troubleshooting
+
+Problemes frequents :
+
+- `manage.py check --deploy` remonte des warnings en local :
+  souvent normal si ton `.env.local` de dev n'a pas les flags prod (`SECURE_SSL_REDIRECT`, cookies secure, etc.)
+
+- erreur base PostgreSQL au demarrage :
+  verifier `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` dans `.env.local`
+
+- fichiers media ou static introuvables :
+  verifier `MEDIA_ROOT`, `STATIC_ROOT`, puis relancer `collectstatic` si besoin
+
+- schema OpenAPI incomplet :
+  verifier les `serializer_class` et annotations `extend_schema` sur les vues DRF
