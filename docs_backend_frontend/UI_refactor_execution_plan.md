@@ -1,5 +1,310 @@
 # UI Refactor Execution Plan
 
+## 0. Plan d'execution 2026
+
+Ce plan est la feuille de route active a suivre maintenant.
+
+Objectif principal :
+
+- transformer RAP App en **belle application MUI Dashboard 2026**
+- renforcer la qualite visuelle
+- conserver le code metier intact
+- avancer par couches, sans casse fonctionnelle
+
+Regle d'or :
+
+- on ne refait pas l'application
+- on refond l'habillage et l'experience visuelle
+- on garde les routes, l'API, les hooks et les comportements CRUD
+
+### Vision cible
+
+Le rendu vise :
+
+- une interface premium
+- une navigation plus elegante
+- un dark mode propre et lisible
+- des cards, tableaux et formulaires plus modernes
+- une coherence visuelle proche des meilleurs templates admin MUI recents
+
+### Methode de travail
+
+A chaque etape :
+
+1. faire un savepoint git
+2. modifier uniquement la couche concernee
+3. verifier visuellement 3 ou 4 ecrans pilotes
+4. lancer les checks frontend
+5. commit si la passe est stable
+
+Checks a lancer :
+
+```bash
+cd frontend_rap_app
+npm run type-check
+npm run lint
+npm run build
+```
+
+Commandes de sauvegarde standard :
+
+```bash
+git add -A
+git commit -m "Savepoint before UI pass X"
+```
+
+### Etape 1 — Stabiliser le socle visuel
+
+But :
+
+- verrouiller la base du design system
+- fiabiliser le light/dark mode
+- supprimer les conflits entre MUI et le CSS global
+
+Fichiers cibles :
+
+- `frontend_rap_app/src/theme.ts`
+- `frontend_rap_app/src/index.css`
+- `frontend_rap_app/tsconfig.json`
+
+Livrables attendus :
+
+- palette claire et sombre stable
+- typographie cohérente
+- surfaces globales cohérentes
+- CSS global minimal et compatible MUI
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 1: establish 2026 dashboard theme foundation"
+```
+
+Statut :
+
+- deja entame
+
+### Etape 2 — Refaire les layouts et la navigation
+
+But :
+
+- changer la perception globale de l'app des la premiere seconde
+- rendre sidebar, topbar, breadcrumbs et footer plus premium
+
+Fichiers cibles :
+
+- `frontend_rap_app/src/layout/MainLayout.tsx`
+- `frontend_rap_app/src/layout/MainLayoutPrepa.tsx`
+- `frontend_rap_app/src/layout/MainLayoutDeclic.tsx`
+- `frontend_rap_app/src/layout/MainLayoutCandidat.tsx`
+- `frontend_rap_app/src/layout/navigationStyles.ts`
+- `frontend_rap_app/src/components/layout/AppBreadcrumbs.tsx`
+- `frontend_rap_app/src/layout/footer.tsx`
+
+Livrables attendus :
+
+- fond principal coherent
+- sidebar plus MUI dashboard premium
+- topbar lisible
+- breadcrumbs elegant
+- footer aligne sur le theme
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 2: redesign layouts and navigation surfaces"
+```
+
+### Etape 3 — Refaire les shells de page
+
+But :
+
+- harmoniser les pages sans toucher les pages metier une par une
+- donner une structure plus premium aux ecrans
+
+Fichiers cibles :
+
+- `frontend_rap_app/src/components/PageTemplate.tsx`
+- `frontend_rap_app/src/components/PageWrapper.tsx`
+- `frontend_rap_app/src/components/PageSection.tsx`
+- `frontend_rap_app/src/components/BackNavButton.tsx`
+
+Livrables attendus :
+
+- headers de page plus haut de gamme
+- sections mieux espacees
+- largeur de contenu plus propre
+- navigation retour plus elegante
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 3: refine shared page shells"
+```
+
+### Etape 4 — Moderniser formulaires et surfaces de contenu
+
+But :
+
+- rendre les formulaires et cartes de section plus premium
+- eliminer les fonds blancs fixes qui cassent le dark mode
+
+Fichiers cibles :
+
+- `frontend_rap_app/src/components/forms/FormSectionCard.tsx`
+- `frontend_rap_app/src/components/forms/FormActionsBar.tsx`
+- `frontend_rap_app/src/components/forms/RichHtmlEditorField.tsx`
+- `frontend_rap_app/src/components/forms/fields/*`
+
+Puis :
+
+- formulaires metier les plus visibles
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 4: upgrade form surfaces and dark mode consistency"
+```
+
+### Etape 5 — Nettoyer modales, dialogues et etats UI
+
+But :
+
+- rendre les interactions quotidiennes plus propres
+- uniformiser modales, loaders, erreurs, etats vides
+
+Fichiers cibles :
+
+- `frontend_rap_app/src/components/ui/*`
+- `frontend_rap_app/src/components/dialogs/*`
+- `frontend_rap_app/src/components/modals/*`
+- `frontend_rap_app/src/components/layout/DetailViewLayout.tsx`
+- `frontend_rap_app/src/components/ui/DetailSection.tsx`
+- `frontend_rap_app/src/components/ui/DetailField.tsx`
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 5: polish dialogs modals and interface states"
+```
+
+### Etape 6 — Refaire les tableaux et listes metier
+
+But :
+
+- normaliser les couleurs
+- rendre les tables plus propres et plus lisibles
+- corriger les zones les plus fragiles en dark mode
+
+Reference de travail :
+
+- `docs/HARDCODED_FRONT_COLORS.md`
+
+Fichiers cibles prioritaires :
+
+- tables `Prepa`
+- tables `Declic`
+- `FormationTable.tsx`
+- `ProspectionTable.tsx`
+- composants de filtre / toolbar / pagination si necessaire
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 6: normalize table colors and list components"
+```
+
+### Etape 7 — Elever les dashboards
+
+But :
+
+- amener la partie analytics au niveau du reste de l'app
+- unifier les cartes KPI et les palettes de graphes
+
+Fichiers cibles :
+
+- composants dashboard partages
+- dashboards overview
+- dashboards grouped
+- widgets KPI / charts
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 7: elevate dashboard widgets and chart system"
+```
+
+### Etape 8 — Finition generale
+
+But :
+
+- supprimer les incoherences residuelles
+- verifier la coherence globale
+- finaliser l'effet "dashboard 2026"
+
+Checklist :
+
+- dark mode OK
+- light mode OK
+- dashboard OK
+- liste OK
+- formulaire OK
+- modale OK
+- mobile acceptable
+- aucune regression fonctionnelle visible
+
+Commit de fin d'etape :
+
+```bash
+git add -A
+git commit -m "UI pass 8: final polish for MUI dashboard 2026 look"
+```
+
+### Savepoints recommandes
+
+Si une etape grossit trop, on coupe avec un commit intermediaire :
+
+```bash
+git add -A
+git commit -m "Savepoint before layouts cleanup"
+
+git add -A
+git commit -m "Savepoint before forms cleanup"
+
+git add -A
+git commit -m "Savepoint before prepa and declic tables cleanup"
+```
+
+### Ordre concret recommande maintenant
+
+Ordre reel a partir d'aujourd'hui :
+
+1. Etape 2 — layouts et navigation
+2. Etape 4 — formulaires et surfaces
+3. Etape 5 — modales et etats UI
+4. Etape 6 — tables et listes
+5. Etape 7 — dashboards
+6. Etape 8 — finition
+
+### Definition de "termine"
+
+Le chantier sera considere comme termine quand :
+
+- l'app a un look premium coherent
+- le dark mode est propre
+- les couleurs dures les plus visibles ont disparu
+- les pages principales ont une signature MUI admin claire
+- le code metier n'a pas ete casse
+
+---
+
 ## 1. Resume executif
 
 L'objectif n'est pas de refaire le frontend.
