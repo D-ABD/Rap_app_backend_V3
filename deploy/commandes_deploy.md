@@ -553,5 +553,5 @@ ls -lah /srv/backups/rap_app/media | tail
 ```bash
 cd /srv/apps/rap_app/app
 sed -n '1,220p' deploy/VPS_DEPLOY_REPORT.md
-sed -n '1,220p' DEPLOY.md
+sed -n '1,220p' deploy/DEPLOY.md
 ```

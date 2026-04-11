@@ -247,7 +247,7 @@ Ancienne procedure frontend separee supprimee.
 
 Le deploiement production actuel est celui du monorepo front + back :
 
-- guide complet : `DEPLOY.md`
+- guide complet : `deploy/DEPLOY.md`
 - commandes pas a pas : `deploy/commandes_deploy.md`
 - script backend : `deploy/deploy_backend.sh`
 - script frontend : `deploy/deploy_frontend.sh`
@@ -258,7 +258,7 @@ Le deploiement production actuel est celui du monorepo front + back :
 
 Toujours lancer npm run precommit avant tout commit important.
 
-Toujours exécuter la procédure `DEPLOY.md` / `deploy/commandes_deploy.md` pour publier en prod.
+Toujours exécuter la procédure `deploy/DEPLOY.md` / `deploy/commandes_deploy.md` pour publier en prod.
 
 Ne jamais modifier manuellement le dossier `/var/www/rap_app_front` côté serveur.
 
