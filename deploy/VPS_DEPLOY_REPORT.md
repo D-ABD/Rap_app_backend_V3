@@ -604,10 +604,10 @@ curl -Ik https://rap.adserv.fr/health/
   - warning Vite sur `axios.ts` importe a la fois statiquement et dynamiquement
 
 - **A corriger bientot** :
-  - `npm audit` frontend, car il y a des vulnerabilites signalees, dont `1 high` et `1 critical`
   - bundle frontend principal tres lourd (`index-*.js` > `500 kB`)
 
 - **A corriger plus tard** :
+  - reliquat `npm audit` sur `quill` / `react-quilljs`
   - optimisation du decoupage Vite (`manualChunks`, imports dynamiques plus propres)
   - nettoyage des dependances frontend depreciees si cela impose des mises a jour plus structurelles
 
@@ -638,9 +638,11 @@ Lecture retenue :
   - statut : non bloquant, mais optimisation recommandee plus tard
 
 - **npm audit** :
-  - vulnerabilites signalees lors du build frontend
-  - detail vu pendant le deploiement : `5 vulnerabilities (3 low, 1 high, 1 critical)`
-  - statut : a revoir bientot, mais pas traite dans cette phase de stabilisation VPS
+  - apres mise a jour de `axios` et `vite`, il reste un reliquat autour de `quill`
+  - detail actuel : `2 low severity vulnerabilities`
+  - dependance concernee : `react-quilljs` -> `quill@2.0.3`
+  - correctif automatique propose : `npm audit fix --force`
+  - statut retenu : **non urgent**, a traiter plus tard avec verification fonctionnelle de l'editeur riche
 
 ### Erreurs rencontrees et corrigees
 
