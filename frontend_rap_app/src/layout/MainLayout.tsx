@@ -482,7 +482,8 @@ export default function MainLayout() {
           flex: 1,
           p: { xs: 2, sm: 3 },
           mt: { xs: 7, sm: 8 },
-          backgroundColor: (theme) => (theme.palette.mode === "light" ? "#f9f9f9" : "#121212"),
+          backgroundColor: (theme) => theme.palette.background.default,
+          color: (theme) => theme.palette.text.primary,
           transition: "background-color 0.3s ease",
         }}
       >
@@ -498,7 +499,7 @@ export default function MainLayout() {
           py: 2,
           textAlign: "center",
           borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-          backgroundColor: (theme) => (theme.palette.mode === "light" ? "#fafafa" : "#1a1a1a"),
+          backgroundColor: (theme) => theme.palette.background.paper,
         }}
       >
         <Typography variant="caption" color="text.secondary">

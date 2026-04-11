@@ -313,7 +313,8 @@ export default function MainLayoutCandidat() {
           p: { xs: 2, sm: 3 },
           mt: { xs: 7, sm: 8 },
           backgroundColor: (theme) =>
-            theme.palette.mode === "light" ? "#f9f9f9" : "#121212",
+            theme.palette.background.default,
+          color: (theme) => theme.palette.text.primary,
         }}
       >
         <AppBreadcrumbs pathname={location.pathname} />
