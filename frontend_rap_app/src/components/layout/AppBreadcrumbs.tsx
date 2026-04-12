@@ -1,7 +1,7 @@
 import HomeIcon from "@mui/icons-material/Home";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { alpha } from "@mui/material/styles";
-import { Box, Breadcrumbs, Link as MuiLink, Paper, Typography } from "@mui/material";
+import { Box, Breadcrumbs, Link as MuiLink, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import { breadcrumbLabels } from "src/utils/breadcrumbLabels";
 
@@ -15,26 +15,10 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
   if (pathnames.length === 0) return null;
 
   return (
-    <Paper
-      elevation={0}
+    <Box
       sx={{
-        mb: { xs: 1.5, sm: 2 },
-        px: { xs: 1.1, sm: 1.5 },
-        py: { xs: 1, sm: 1.15 },
-        borderRadius: 4,
-        border: "1px solid",
-        borderColor: (theme) => alpha(theme.palette.divider, 0.95),
+        mb: { xs: 0.75, sm: 1 },
         color: "text.secondary",
-        bgcolor: (theme) =>
-          alpha(theme.palette.background.paper, theme.palette.mode === "light" ? 0.94 : 0.88),
-        backgroundImage: (theme) =>
-          `linear-gradient(135deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.06 : 0.16)} 0%, ${alpha(theme.palette.secondary.main, theme.palette.mode === "light" ? 0.035 : 0.1)} 100%)`,
-        boxShadow: (theme) =>
-          theme.palette.mode === "light"
-            ? `0 12px 32px ${alpha(theme.palette.common.black, 0.06)}`
-            : `0 18px 38px ${alpha(theme.palette.common.black, 0.28)}`,
-        backdropFilter: "blur(14px)",
-        overflow: "hidden",
       }}
     >
       <Box
@@ -42,9 +26,9 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
           overflowX: "auto",
           overflowY: "hidden",
           scrollbarWidth: "thin",
-          "&::-webkit-scrollbar": { height: 6 },
+          "&::-webkit-scrollbar": { height: 4 },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: (theme) => alpha(theme.palette.text.secondary, 0.22),
+            backgroundColor: (theme) => alpha(theme.palette.text.secondary, 0.16),
             borderRadius: 999,
           },
         }}
@@ -58,15 +42,13 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                bgcolor: (theme) => alpha(theme.palette.text.primary, theme.palette.mode === "light" ? 0.05 : 0.1),
+                width: 16,
+                height: 16,
                 color: "text.disabled",
                 flexShrink: 0,
               }}
             >
-              <NavigateNextIcon sx={{ fontSize: 15 }} />
+              <NavigateNextIcon sx={{ fontSize: 14 }} />
             </Box>
           }
           sx={{
@@ -75,7 +57,7 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
             "& .MuiBreadcrumbs-ol": {
               flexWrap: "nowrap",
               alignItems: "center",
-              gap: { xs: 0.4, sm: 0.65 },
+              gap: { xs: 0.2, sm: 0.35 },
             },
           }}
         >
@@ -87,26 +69,20 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
             sx={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 0.75,
-              px: { xs: 1, sm: 1.2 },
-              py: 0.7,
-              borderRadius: 999,
-              fontSize: { xs: "0.84rem", sm: "0.9rem" },
-              fontWeight: 700,
+              gap: 0.45,
+              px: 0,
+              py: 0.15,
+              fontSize: { xs: "0.78rem", sm: "0.82rem" },
+              fontWeight: 600,
               color: "text.secondary",
-              bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.08 : 0.16),
-              border: "1px solid",
-              borderColor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.14 : 0.28),
               transition: "all 180ms ease",
               whiteSpace: "nowrap",
               "&:hover": {
                 color: "primary.main",
-                bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.12 : 0.22),
-                transform: "translateY(-1px)",
               },
             }}
           >
-            <HomeIcon sx={{ fontSize: 16 }} />
+            <HomeIcon sx={{ fontSize: 14 }} />
             Accueil
           </MuiLink>
 
@@ -120,15 +96,11 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
                 key={to}
                 color="text.primary"
                 sx={{
-                  px: { xs: 1, sm: 1.2 },
-                  py: 0.7,
-                  borderRadius: 999,
-                  fontSize: { xs: "0.84rem", sm: "0.9rem" },
+                  px: 0,
+                  py: 0.15,
+                  fontSize: { xs: "0.78rem", sm: "0.82rem" },
                   fontWeight: 700,
                   whiteSpace: "nowrap",
-                  bgcolor: (theme) => alpha(theme.palette.text.primary, theme.palette.mode === "light" ? 0.05 : 0.1),
-                  border: "1px solid",
-                  borderColor: (theme) => alpha(theme.palette.divider, 0.95),
                 }}
               >
                 {label}
@@ -143,17 +115,15 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
                 sx={{
                   display: "inline-flex",
                   alignItems: "center",
-                  px: { xs: 0.85, sm: 1 },
-                  py: 0.6,
-                  borderRadius: 999,
-                  fontSize: { xs: "0.82rem", sm: "0.88rem" },
+                  px: 0,
+                  py: 0.15,
+                  fontSize: { xs: "0.78rem", sm: "0.82rem" },
                   fontWeight: 600,
                   color: "text.secondary",
                   whiteSpace: "nowrap",
                   transition: "all 180ms ease",
                   "&:hover": {
                     color: "text.primary",
-                    bgcolor: (theme) => alpha(theme.palette.text.primary, theme.palette.mode === "light" ? 0.045 : 0.08),
                   },
                 }}
               >
@@ -163,6 +133,6 @@ export default function AppBreadcrumbs({ pathname }: AppBreadcrumbsProps) {
           })}
         </Breadcrumbs>
       </Box>
-    </Paper>
+    </Box>
   );
 }

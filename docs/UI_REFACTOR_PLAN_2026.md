@@ -106,6 +106,8 @@ Ce qui est deja fait :
 - [MainLayoutPrepa.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutPrepa.tsx) a ete aligne sur le nouveau niveau visuel du shell principal
 - [MainLayoutDeclic.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutDeclic.tsx) est maintenant harmonise avec les autres layouts specialises
 - [MainLayoutCandidat.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutCandidat.tsx) a recu une harmonisation legere pour mieux coller au standard visuel des autres shells
+- [PageTemplate.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageTemplate.tsx) a ete rehausse avec un header plus premium et une meilleure hierarchie visuelle
+- [PageWrapper.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageWrapper.tsx) et [PageSection.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageSection.tsx) ont ete harmonises pour soutenir les nouveaux shells de page
 
 Ce qui a ete tente puis annule :
 
@@ -242,8 +244,13 @@ git commit -m "UI pass 3: refine shared page shells and surfaces"
 
 Statut actuel :
 
-- pas commencee
-- a lancer seulement apres validation de la passe 2
+- commencee
+- [PageTemplate.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageTemplate.tsx) : bien avance
+- [PageWrapper.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageWrapper.tsx) : bien avance
+- [PageSection.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/PageSection.tsx) : bien avance
+- prochaine cible logique :
+  - [BackNavButton.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/BackNavButton.tsx)
+  - ou [ResponsiveTableTemplate.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/ResponsiveTableTemplate.tsx)
 
 ### Passe 4 — Etats UI et modales
 
