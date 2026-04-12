@@ -1,4 +1,5 @@
 import { ReactNode, useMemo } from "react";
+import type { SvgIconComponent } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
 import {
   canAccessDeclicRole,
@@ -35,6 +36,17 @@ export interface SidebarItem {
   children?: SidebarItem[];
 }
 
+const createSidebarIcon = (
+  IconComponent: SvgIconComponent,
+  color:
+    | "primary.main"
+    | "secondary.main"
+    | "warning.main"
+    | "success.main"
+    | "info.main"
+    | "text.secondary"
+) => <IconComponent sx={{ color, fontSize: 20 }} />;
+
 /* ────────────────────────────────────────── */
 /*                MENU LATÉRAL                */
 /* ────────────────────────────────────────── */
@@ -43,34 +55,34 @@ export const sidebarItems: SidebarItem[] = [
   {
     label: "Accueil",
     path: "/",
-    icon: <HomeIcon sx={{ color: "primary.main" }} />,
+    icon: createSidebarIcon(HomeIcon, "primary.main"),
   },
 
   {
     label: "Dashboard",
     path: "/dashboard",
-    icon: <DashboardIcon sx={{ color: "secondary.main" }} />,
+    icon: createSidebarIcon(DashboardIcon, "secondary.main"),
   },
 
   /* 🔹 Déclic */
   {
     label: "Déclic",
-    icon: <EmojiObjectsIcon sx={{ color: "warning.main" }} />,
+    icon: createSidebarIcon(EmojiObjectsIcon, "warning.main"),
     children: [
       {
         label: "Séances Déclic",
         path: "/declic",
-        icon: <EmojiObjectsIcon sx={{ color: "warning.main" }} />,
+        icon: createSidebarIcon(EmojiObjectsIcon, "warning.main"),
       },
       {
         label: "Objectifs Déclic",
         path: "/declic/objectifs",
-        icon: <TrackChangesIcon sx={{ color: "warning.main" }} />,
+        icon: createSidebarIcon(TrackChangesIcon, "warning.main"),
       },
       {
         label: "Participants Déclic",
         path: "/participants-declic",
-        icon: <PeopleIcon sx={{ color: "warning.main" }} />,
+        icon: createSidebarIcon(PeopleIcon, "warning.main"),
       },
     ],
   },
@@ -78,27 +90,27 @@ export const sidebarItems: SidebarItem[] = [
   /* 🔹 Prépa Comp */
   {
     label: "Prépa Comp",
-    icon: <InsightsIcon sx={{ color: "success.main" }} />,
+    icon: createSidebarIcon(InsightsIcon, "success.main"),
     children: [
       {
         label: "IC Prépa",
         path: "/prepa/ic",
-        icon: <SchoolIcon sx={{ color: "success.main" }} />,
+        icon: createSidebarIcon(SchoolIcon, "success.main"),
       },
       {
-        label: "Atelier1 Prépa",
+        label: "Ateliers Prépa",
         path: "/prepa/ateliers",
-        icon: <SchoolIcon sx={{ color: "success.main" }} />,
+        icon: createSidebarIcon(SchoolIcon, "success.main"),
       },
       {
         label: "Stagiaires Prépa",
         path: "/prepa/stagiaires",
-        icon: <PeopleIcon sx={{ color: "success.main" }} />,
+        icon: createSidebarIcon(PeopleIcon, "success.main"),
       },
       {
         label: "Objectifs Prépa",
         path: "/prepa/objectifs",
-        icon: <BarChartIcon sx={{ color: "success.main" }} />,
+        icon: createSidebarIcon(BarChartIcon, "success.main"),
       },
     ],
   },
@@ -106,47 +118,47 @@ export const sidebarItems: SidebarItem[] = [
   /* 🔹 CRM */
   {
     label: "CRM",
-    icon: <SearchIcon sx={{ color: "info.main" }} />,
+    icon: createSidebarIcon(SearchIcon, "info.main"),
     children: [
       {
         label: "Prospections",
         path: "/prospections",
-        icon: <SearchIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(SearchIcon, "info.main"),
       },
       {
         label: "Prospections commentaires",
         path: "/prospection-commentaires",
-        icon: <CommentIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(CommentIcon, "info.main"),
       },
       {
         label: "Partenaires",
         path: "/partenaires",
-        icon: <BusinessIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(BusinessIcon, "info.main"),
       },
       {
         label: "Contrats CERFA",
         path: "/cerfa",
-        icon: <DescriptionIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(DescriptionIcon, "info.main"),
       },
       {
         label: "Appairage",
         path: "/appairages",
-        icon: <WorkIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(WorkIcon, "info.main"),
       },
       {
         label: "Appairages commentaires",
         path: "/appairage-commentaires",
-        icon: <CommentIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(CommentIcon, "info.main"),
       },
       {
         label: "Candidats",
         path: "/candidats",
-        icon: <PeopleIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(PeopleIcon, "info.main"),
       },
       {
         label: "Ateliers TRE",
         path: "/ateliers-tre",
-        icon: <SchoolIcon sx={{ color: "info.main" }} />,
+        icon: createSidebarIcon(SchoolIcon, "info.main"),
       },
     ],
   },
@@ -154,17 +166,17 @@ export const sidebarItems: SidebarItem[] = [
   /* 🔹 CVThèque (PLACÉ ICI, au bon niveau) */
   {
     label: "CVThèque",
-    icon: <DescriptionIcon sx={{ color: "primary.main" }} />,
+    icon: createSidebarIcon(DescriptionIcon, "primary.main"),
     children: [
       {
         label: "Liste des CV",
         path: "/cvtheque",
-        icon: <DescriptionIcon fontSize="small" />,
+        icon: createSidebarIcon(DescriptionIcon, "primary.main"),
       },
       {
         label: "Ajouter un CV",
         path: "/cvtheque/create",
-        icon: <DescriptionIcon fontSize="small" />,
+        icon: createSidebarIcon(DescriptionIcon, "primary.main"),
       },
     ],
   },
@@ -172,27 +184,27 @@ export const sidebarItems: SidebarItem[] = [
   /* 🔹 Revue d'offres */
   {
     label: "Revue d’offres",
-    icon: <FolderIcon sx={{ color: "secondary.main" }} />,
+    icon: createSidebarIcon(FolderIcon, "secondary.main"),
     children: [
       {
         label: "Formations",
         path: "/formations",
-        icon: <AssignmentIcon sx={{ color: "secondary.main" }} />,
+        icon: createSidebarIcon(AssignmentIcon, "secondary.main"),
       },
       {
         label: "Commentaires",
         path: "/commentaires",
-        icon: <CommentIcon sx={{ color: "secondary.main" }} />,
+        icon: createSidebarIcon(CommentIcon, "secondary.main"),
       },
       {
         label: "Documents",
         path: "/documents",
-        icon: <DescriptionIcon sx={{ color: "secondary.main" }} />,
+        icon: createSidebarIcon(DescriptionIcon, "secondary.main"),
       },
       {
         label: "Événements",
         path: "/evenements",
-        icon: <EventIcon sx={{ color: "secondary.main" }} />,
+        icon: createSidebarIcon(EventIcon, "secondary.main"),
       },
     ],
   },
@@ -201,14 +213,14 @@ export const sidebarItems: SidebarItem[] = [
   {
     label: "Historique imports Excel",
     path: "/import-export/jobs",
-    icon: <HistoryIcon sx={{ color: "primary.main" }} />,
+    icon: createSidebarIcon(HistoryIcon, "primary.main"),
   },
 
   /* 🔹 Paramètres */
   {
     label: "Paramètres",
     path: "/parametres",
-    icon: <SettingsIcon sx={{ color: "grey.600" }} />,
+    icon: createSidebarIcon(SettingsIcon, "text.secondary"),
   },
 ];
 

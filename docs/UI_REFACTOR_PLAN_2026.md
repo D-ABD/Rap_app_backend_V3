@@ -100,6 +100,8 @@ Ce qui est deja fait :
 - la prod et les roles ont ete stabilises avant de reprendre la refonte UI
 - [AppBreadcrumbs.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/layout/AppBreadcrumbs.tsx) a recu une premiere refonte visuelle premium, compatible light/dark et responsive
 - [footer.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/footer.tsx) a deja une base premium coherente avec le theme
+- [SidebarItems.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/SidebarItems.tsx) a ete nettoye pour uniformiser les icones et renforcer la coherence visuelle de la navigation
+- [navigationStyles.ts](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/navigationStyles.ts) a ete retravaille pour donner de meilleurs etats actifs, hover et surfaces de navigation
 - [MainLayout.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayout.tsx) a ete retravaille pour donner au shell principal un rendu plus premium, avec topbar plus marquee, drawer plus soigne et meilleure integration light/dark
 - [MainLayoutPrepa.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutPrepa.tsx) a ete aligne sur le nouveau niveau visuel du shell principal
 - [MainLayoutDeclic.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutDeclic.tsx) est maintenant harmonise avec les autres layouts specialises
@@ -196,12 +198,14 @@ Statut actuel :
 - elle est maintenant **commencee proprement**
 - ordre concret recommande :
   - [AppBreadcrumbs.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/components/layout/AppBreadcrumbs.tsx) : fait
+  - [SidebarItems.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/SidebarItems.tsx) : fait
+  - [navigationStyles.ts](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/navigationStyles.ts) : bien avance
   - [footer.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/footer.tsx) : base deja en place, a retoucher seulement si besoin apres le layout principal
   - [MainLayout.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayout.tsx) : bien avance
   - [MainLayoutPrepa.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutPrepa.tsx) : bien avance
   - [MainLayoutDeclic.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutDeclic.tsx) : bien avance
   - [MainLayoutCandidat.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/layout/MainLayoutCandidat.tsx) : bien avance
-  - la passe 2 est maintenant bien engagee sur tous les layouts principaux
+  - la passe 2 est maintenant bien engagee sur tous les layouts principaux et sur le socle partage de navigation
 
 ### Passe 3 — Shells de page et composants partages
 

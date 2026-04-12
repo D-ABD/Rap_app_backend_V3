@@ -1,31 +1,72 @@
 import type { SxProps, Theme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 
 export const getDrawerItemSx = (nested = false): SxProps<Theme> => ({
-  borderRadius: 1.5,
+  minHeight: nested ? 42 : 46,
+  borderRadius: nested ? 2 : 2.75,
   mx: nested ? 0.75 : 1,
-  my: 0.25,
-  pl: nested ? 4 : undefined,
+  my: 0.35,
+  px: nested ? 1.25 : 1.5,
+  pl: nested ? 4 : 1.5,
+  transition: "all 180ms ease",
+  "& .MuiListItemIcon-root": {
+    minWidth: 38,
+    color: (theme) => theme.palette.text.secondary,
+    transition: "color 180ms ease, transform 180ms ease",
+  },
+  "& .MuiListItemText-primary": {
+    fontSize: nested ? "0.92rem" : "0.96rem",
+    fontWeight: nested ? 500 : 600,
+    color: (theme) => theme.palette.text.secondary,
+    transition: "color 180ms ease",
+  },
   "&.Mui-selected": {
     backgroundColor: (theme) =>
-      theme.palette.mode === "light" ? "rgba(99,102,241,0.12)" : "rgba(99,102,241,0.24)",
+      alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.12 : 0.2),
+    boxShadow: (theme) =>
+      `inset 0 0 0 1px ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.12 : 0.24)}`,
     "& .MuiListItemIcon-root, & .MuiListItemText-primary": {
       fontWeight: 700,
       color: (theme) => theme.palette.primary.main,
     },
+    "& .MuiListItemIcon-root": {
+      transform: "translateX(1px)",
+    },
   },
   "&:hover": {
     backgroundColor: (theme) =>
-      theme.palette.mode === "light" ? "rgba(15,23,42,0.05)" : "rgba(148,163,184,0.10)",
+      alpha(theme.palette.text.primary, theme.palette.mode === "light" ? 0.05 : 0.08),
+    "& .MuiListItemIcon-root": {
+      color: (theme) => theme.palette.text.primary,
+    },
+    "& .MuiListItemText-primary": {
+      color: (theme) => theme.palette.text.primary,
+    },
   },
 });
 
 export const getTopNavButtonSx = (isActive: boolean): SxProps<Theme> => ({
   textTransform: "none",
-  fontWeight: isActive ? 700 : 500,
-  borderBottom: isActive ? "2px solid currentColor" : "2px solid transparent",
-  borderRadius: 0,
+  minHeight: 38,
+  px: 1.4,
+  borderRadius: 999,
+  fontSize: "0.94rem",
+  letterSpacing: "-0.01em",
+  fontWeight: isActive ? 700 : 600,
+  color: "inherit",
+  border: "1px solid",
+  borderColor: (theme) =>
+    isActive
+      ? alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.22 : 0.18)
+      : "transparent",
+  backgroundColor: (theme) =>
+    isActive
+      ? alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.16 : 0.1)
+      : "transparent",
+  boxShadow: isActive ? "inset 0 -1px 0 rgba(255,255,255,0.08)" : "none",
+  transition: "all 180ms ease",
   "&:hover": {
-    borderBottom: "2px solid currentColor",
-    backgroundColor: "transparent",
+    borderColor: (theme) => alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.18 : 0.14),
+    backgroundColor: (theme) => alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.12 : 0.08),
   },
 });
