@@ -1,5 +1,11 @@
 # RAP App — Plan de refonte UI MUI Dashboard 2026
 
+Statut : archive
+
+Ce document conserve l'historique du chantier precedent.
+Le plan actif de reference est maintenant :
+- [frontend_rap_app/src/theme/_migration-plan.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/theme/_migration-plan.md)
+
 Objectif :
 
 - donner a l'application un look **MUI dashboard puissant 2026**

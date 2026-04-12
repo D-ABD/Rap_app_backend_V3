@@ -1,5 +1,11 @@
 # RAP App — Plan de standardisation UI a partir de la page Formations
 
+Statut : archive
+
+Ce document conserve l'historique du chantier precedent centre sur les pages liste.
+Le plan actif de reference est maintenant :
+- [frontend_rap_app/src/theme/_migration-plan.md](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/theme/_migration-plan.md)
+
 Objectif :
 
 - prendre [FormationsPage.tsx](/Users/abd/Documents/GIT/RapApp/Rap_App_Dj_V2-main/frontend_rap_app/src/pages/formations/FormationsPage.tsx) comme reference visuelle
@@ -271,3 +277,14 @@ Pages deja alignees sur la reference Formations :
 Suite logique :
 
 - le plan actuel pages liste est termine
+
+
+
+
+
+
+
+
+git add .
+git commit -m "UI pass Uniformisation des pages 1 "
+git push origin main

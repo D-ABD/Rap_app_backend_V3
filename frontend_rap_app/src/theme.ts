@@ -1,5 +1,9 @@
 // src/theme.ts
 import { alpha, createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createAppCustomTokens, type AppTheme } from "./theme/tokens";
+
+/** Réexport du thème applicatif (`custom` garanti) pour `useTheme<AppTheme>()`. */
+export type { AppTheme } from "./theme/tokens";
 
 // 🔹 Étendre MUI pour ajouter `tertiary`, `neutral` et `gradients`
 declare module "@mui/material/styles" {
@@ -42,7 +46,7 @@ declare module "@mui/material/Chip" {
   }
 }
 
-export const getTheme = (mode: "light" | "dark") => {
+export const getTheme = (mode: "light" | "dark"): AppTheme => {
   const isLight = mode === "light";
 
   const primaryMain = "#4F46E5";
@@ -818,7 +822,11 @@ export const getTheme = (mode: "light" | "dark") => {
   });
 
   theme = responsiveFontSizes(theme);
-  return theme;
+  // Jetons design system imbriqués (`theme.custom.*`) — sans modifier le rendu des composants existants
+  theme = createTheme(theme, {
+    custom: createAppCustomTokens(theme),
+  });
+  return theme as AppTheme;
 };
 
 export default getTheme("light");

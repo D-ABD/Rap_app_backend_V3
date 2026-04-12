@@ -37,6 +37,7 @@ import logo from "../assets/logo.png";
 import Footer from "./footer";
 import AppBreadcrumbs from "../components/layout/AppBreadcrumbs";
 import { getDrawerItemSx, getTopNavButtonSx } from "./navigationStyles";
+import type { AppTheme } from "../theme";
 
 const drawerWidth = 240;
 
@@ -54,7 +55,7 @@ export default function MainLayoutDeclic() {
   }
   const { mode, toggleTheme } = themeContext;
 
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const toggleDrawer = () => setOpen((prev) => !prev);
@@ -124,19 +125,9 @@ export default function MainLayoutDeclic() {
         display: "flex",
         flexDirection: "column",
         minHeight: "100vh",
-        background: (currentTheme) =>
-          currentTheme.palette.mode === "light"
-            ? `radial-gradient(circle at top, ${alpha(
-                currentTheme.palette.primary.main,
-                0.08
-              )} 0%, transparent 34%), ${currentTheme.palette.background.default}`
-            : `radial-gradient(circle at top, ${alpha(
-                currentTheme.palette.primary.main,
-                0.22
-              )} 0%, transparent 28%), linear-gradient(180deg, ${alpha(
-                currentTheme.palette.common.black,
-                0.18
-              )} 0%, transparent 24%), ${currentTheme.palette.background.default}`,
+        background: theme.palette.mode === "light"
+          ? theme.custom.layout.shell.backgroundGradient.light
+          : theme.custom.layout.shell.backgroundGradient.dark,
       }}
     >
       <CssBaseline />
@@ -465,7 +456,11 @@ export default function MainLayoutDeclic() {
         component="main"
         sx={{
           flex: 1,
-          px: { xs: 1.5, sm: 2.5, lg: 3.5 },
+          px: {
+            xs: theme.custom.layout.main.paddingX.xs,
+            sm: theme.custom.layout.main.paddingX.sm,
+            lg: theme.custom.layout.main.paddingX.md,
+          },
           pt: { xs: 8.5, sm: 10 },
           pb: { xs: 2, sm: 3 },
           color: (currentTheme) => currentTheme.palette.text.primary,
@@ -479,6 +474,11 @@ export default function MainLayoutDeclic() {
             sx={{
               minHeight: "calc(100vh - 172px)",
               px: { xs: 0.25, sm: 0.5 },
+              backdropFilter: {
+                xs: theme.custom.layout.main.backdropBlur.sm,
+                sm: theme.custom.layout.main.backdropBlur.md,
+                lg: theme.custom.layout.main.backdropBlur.lg,
+              },
             }}
           >
             <Outlet />
