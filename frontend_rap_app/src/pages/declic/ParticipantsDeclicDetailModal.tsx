@@ -1,6 +1,7 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Typography } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Typography, useTheme } from "@mui/material";
 import type { ParticipantDeclic } from "src/types/declic";
 import CommentaireContent from "../commentaires/CommentaireContent";
+import type { AppTheme } from "src/theme";
 
 interface Props {
   open: boolean;
@@ -20,9 +21,14 @@ function Field({ label, value }: { label: string; value?: string | number | null
 }
 
 export default function ParticipantsDeclicDetailModal({ open, onClose, participant, onEdit }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Détail participant Déclic</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth BackdropProps={{ sx: { backgroundColor: modalScrim } }}>
+      <DialogTitle sx={{ backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>Détail participant Déclic</DialogTitle>
       <DialogContent dividers>
         {!participant ? null : (
           <Paper variant="outlined" sx={{ p: 2 }}>
@@ -44,7 +50,7 @@ export default function ParticipantsDeclicDetailModal({ open, onClose, participa
           </Paper>
         )}
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ borderTop: modalTitleBorder }}>
         {participant?.id && onEdit ? (
           <Button variant="contained" onClick={() => onEdit(participant.id!)}>
             Modifier

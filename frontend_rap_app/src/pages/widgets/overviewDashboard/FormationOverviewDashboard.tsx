@@ -9,6 +9,7 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SchoolIcon from "@mui/icons-material/School";
@@ -27,6 +28,7 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
+import type { AppTheme } from "src/theme";
 import {
   Filters,
   GroupRow,
@@ -46,12 +48,24 @@ function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K
   return clone;
 }
 
-/* 🎨 Couleurs */
-const COLORS1 = ["#4caf50", "#ff9800", "#2196f3"];
-const COLORS2 = ["#1e88e5", "#43a047", "#8e24aa"];
-const COLORS3 = { places: "#42a5f5", inscrits: "#66bb6a", dispo: "#ffa726" };
-
 export default function FormationOverviewDashboard({ filters }: { filters?: Filters }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartGridStroke = isLight
+    ? theme.custom.chart.grid.stroke.light
+    : theme.custom.chart.grid.stroke.dark;
+  const chartAxisStroke = isLight
+    ? theme.custom.chart.axis.stroke.light
+    : theme.custom.chart.axis.stroke.dark;
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
+  const piePaletteOne = chartSeries.slice(0, 3);
+  const piePaletteTwo = chartSeries.slice(3, 6);
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
   React.useEffect(() => {
     if (filters) setLocalFilters(filters);
@@ -268,15 +282,20 @@ export default function FormationOverviewDashboard({ filters }: { filters?: Filt
                     label={({ name, value }) => `${name} (${value})`}
                   >
                     {pie1.map((_, i) => (
-                      <Cell key={i} fill={COLORS1[i % COLORS1.length]} />
+                      <Cell key={i} fill={piePaletteOne[i % piePaletteOne.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => `${v} formations`} />
+                  <Tooltip
+                    formatter={(v) => `${v} formations`}
+                    contentStyle={{ background: chartTooltipBackground, border: chartTooltipBorder, borderRadius: 12 }}
+                    itemStyle={{ color: theme.palette.text.primary }}
+                    labelStyle={{ color: theme.palette.text.secondary }}
+                  />
                   <Legend
                     verticalAlign="bottom"
                     height={28}
                     iconType="circle"
-                    wrapperStyle={{ fontSize: 11 }}
+                    wrapperStyle={{ fontSize: 11, color: theme.palette.text.secondary }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -308,17 +327,20 @@ export default function FormationOverviewDashboard({ filters }: { filters?: Filt
                     label={({ name, value }) => `${name} (${pct(value as number)}%)`}
                   >
                     {pie2.map((_, i) => (
-                      <Cell key={i} fill={COLORS2[i % COLORS2.length]} />
+                      <Cell key={i} fill={piePaletteTwo[i % piePaletteTwo.length]} />
                     ))}
                   </Pie>
                   <Tooltip
                     formatter={(v, n) => [`${v} places (${pct(v as number)}%)`, n as string]}
+                    contentStyle={{ background: chartTooltipBackground, border: chartTooltipBorder, borderRadius: 12 }}
+                    itemStyle={{ color: theme.palette.text.primary }}
+                    labelStyle={{ color: theme.palette.text.secondary }}
                   />
                   <Legend
                     verticalAlign="bottom"
                     height={28}
                     iconType="circle"
-                    wrapperStyle={{ fontSize: 11 }}
+                    wrapperStyle={{ fontSize: 11, color: theme.palette.text.secondary }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -343,18 +365,18 @@ export default function FormationOverviewDashboard({ filters }: { filters?: Filt
                   barSize={30}
                   margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={50} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="Places" fill={COLORS3.places}>
+                  <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+                  <YAxis dataKey="name" type="category" width={50} axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: chartTooltipBackground, border: chartTooltipBorder, borderRadius: 12 }} itemStyle={{ color: theme.palette.text.primary }} labelStyle={{ color: theme.palette.text.secondary }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: theme.palette.text.secondary }} />
+                  <Bar dataKey="Places" fill={chartSeries[0]}>
                     <LabelList dataKey="Places" position="right" fontSize={11} />
                   </Bar>
-                  <Bar dataKey="Inscrits" fill={COLORS3.inscrits}>
+                  <Bar dataKey="Inscrits" fill={chartSeries[1]}>
                     <LabelList dataKey="Inscrits" position="right" fontSize={11} />
                   </Bar>
-                  <Bar dataKey="Dispo" fill={COLORS3.dispo}>
+                  <Bar dataKey="Dispo" fill={chartSeries[2]}>
                     <LabelList dataKey="Dispo" position="right" fontSize={11} />
                   </Bar>
                 </BarChart>

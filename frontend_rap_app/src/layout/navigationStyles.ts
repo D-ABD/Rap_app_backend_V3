@@ -1,72 +1,116 @@
-import type { SxProps, Theme } from "@mui/material";
+import type { SxProps } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import type { AppTheme } from "../theme";
 
-export const getDrawerItemSx = (nested = false): SxProps<Theme> => ({
-  minHeight: nested ? 42 : 46,
-  borderRadius: nested ? 2 : 2.75,
-  mx: nested ? 0.75 : 1,
-  my: 0.35,
-  px: nested ? 1.25 : 1.5,
-  pl: nested ? 4 : 1.5,
-  transition: "all 180ms ease",
-  "& .MuiListItemIcon-root": {
-    minWidth: 38,
-    color: (theme) => theme.palette.text.secondary,
-    transition: "color 180ms ease, transform 180ms ease",
-  },
-  "& .MuiListItemText-primary": {
-    fontSize: nested ? "0.92rem" : "0.96rem",
-    fontWeight: nested ? 500 : 600,
-    color: (theme) => theme.palette.text.secondary,
-    transition: "color 180ms ease",
-  },
-  "&.Mui-selected": {
-    backgroundColor: (theme) =>
-      alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.12 : 0.2),
-    boxShadow: (theme) =>
-      `inset 0 0 0 1px ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.12 : 0.24)}`,
-    "& .MuiListItemIcon-root, & .MuiListItemText-primary": {
-      fontWeight: 700,
-      color: (theme) => theme.palette.primary.main,
-    },
+export const getDrawerItemSx = (theme: AppTheme, nested = false): SxProps<AppTheme> => {
+  const drawerItem = theme.custom.nav.drawerItem;
+  const variant = nested ? "branch" : "root";
+
+  return {
+    minHeight: drawerItem.sizing.minHeightSx[variant],
+    borderRadius: drawerItem.sizing.borderRadiusSx[variant],
+    mx: nested ? drawerItem.spacing.marginXSx - 0.25 : drawerItem.spacing.marginXSx,
+    my: drawerItem.spacing.marginYSx,
+    px: drawerItem.spacing.paddingXSx[variant],
+    pl: drawerItem.spacing.paddingLeftSx[variant],
+    transition: `all ${drawerItem.transitionDurationMs}ms ${drawerItem.easing}`,
     "& .MuiListItemIcon-root": {
-      transform: "translateX(1px)",
-    },
-  },
-  "&:hover": {
-    backgroundColor: (theme) =>
-      alpha(theme.palette.text.primary, theme.palette.mode === "light" ? 0.05 : 0.08),
-    "& .MuiListItemIcon-root": {
-      color: (theme) => theme.palette.text.primary,
+      minWidth: drawerItem.icon.minWidthPx,
+      color: theme.palette.text.secondary,
+      transition: `color ${drawerItem.transitionDurationMs}ms ${drawerItem.easing}, transform ${drawerItem.transitionDurationMs}ms ${drawerItem.easing}`,
     },
     "& .MuiListItemText-primary": {
-      color: (theme) => theme.palette.text.primary,
+      fontSize: drawerItem.label[variant].fontSizeRem,
+      fontWeight: drawerItem.label[variant].fontWeight,
+      color: theme.palette.text.secondary,
+      transition: `color ${drawerItem.transitionDurationMs}ms ${drawerItem.easing}`,
     },
-  },
-});
+    "&.Mui-selected": {
+      backgroundColor: alpha(
+        theme.palette.primary.main,
+        theme.palette.mode === "light"
+          ? drawerItem.interaction.selected.background.light
+          : drawerItem.interaction.selected.background.dark
+      ),
+      boxShadow: `inset 0 0 0 1px ${alpha(
+        theme.palette.primary.main,
+        theme.palette.mode === "light"
+          ? drawerItem.interaction.selected.insetRing.light
+          : drawerItem.interaction.selected.insetRing.dark
+      )}`,
+      "& .MuiListItemIcon-root, & .MuiListItemText-primary": {
+        fontWeight: 700,
+        color: theme.palette.primary.main,
+      },
+      "& .MuiListItemIcon-root": {
+        transform: `translateX(${drawerItem.icon.translateXSelectedPx}px)`,
+      },
+    },
+    "&:hover": {
+      backgroundColor: alpha(
+        theme.palette.text.primary,
+        theme.palette.mode === "light"
+          ? drawerItem.interaction.hover.backdropFromText.light
+          : drawerItem.interaction.hover.backdropFromText.dark
+      ),
+      "& .MuiListItemIcon-root": {
+        color: theme.palette.text.primary,
+      },
+      "& .MuiListItemText-primary": {
+        color: theme.palette.text.primary,
+      },
+    },
+  };
+};
 
-export const getTopNavButtonSx = (isActive: boolean): SxProps<Theme> => ({
-  textTransform: "none",
-  minHeight: 38,
-  px: 1.4,
-  borderRadius: 999,
-  fontSize: "0.94rem",
-  letterSpacing: "-0.01em",
-  fontWeight: isActive ? 700 : 600,
-  color: "inherit",
-  border: "1px solid",
-  borderColor: (theme) =>
-    isActive
-      ? alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.22 : 0.18)
-      : "transparent",
-  backgroundColor: (theme) =>
-    isActive
-      ? alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.16 : 0.1)
-      : "transparent",
-  boxShadow: isActive ? "inset 0 -1px 0 rgba(255,255,255,0.08)" : "none",
-  transition: "all 180ms ease",
-  "&:hover": {
-    borderColor: (theme) => alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.18 : 0.14),
-    backgroundColor: (theme) => alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.12 : 0.08),
-  },
-});
+export const getTopNavButtonSx = (theme: AppTheme, isActive: boolean): SxProps<AppTheme> => {
+  const topButton = theme.custom.nav.topButton;
+
+  return {
+    textTransform: "none",
+    minHeight: topButton.shape.minHeightPx,
+    px: topButton.shape.paddingXSx,
+    borderRadius: topButton.shape.borderRadiusPill,
+    fontSize: topButton.typography.fontSizeRem,
+    letterSpacing: topButton.typography.letterSpacing,
+    fontWeight: isActive
+      ? topButton.typography.fontWeight.active
+      : topButton.typography.fontWeight.idle,
+    color: "inherit",
+    border: `${topButton.border.widthPx}px ${topButton.border.style}`,
+    borderColor: isActive
+      ? alpha(
+          theme.palette.common.white,
+          theme.palette.mode === "light"
+            ? topButton.state.active.borderWhiteAlpha.light
+            : topButton.state.active.borderWhiteAlpha.dark
+        )
+      : topButton.state.idle.borderColor,
+    backgroundColor: isActive
+      ? alpha(
+          theme.palette.common.white,
+          theme.palette.mode === "light"
+            ? topButton.state.active.backgroundWhiteAlpha.light
+            : topButton.state.active.backgroundWhiteAlpha.dark
+        )
+      : topButton.state.idle.backgroundColor,
+    boxShadow: isActive
+      ? topButton.state.active.insetBottomShadow
+      : topButton.state.idle.boxShadow,
+    transition: `all ${topButton.transitionDurationMs}ms ${topButton.easing}`,
+    "&:hover": {
+      borderColor: alpha(
+        theme.palette.common.white,
+        theme.palette.mode === "light"
+          ? topButton.state.hover.borderWhiteAlpha.light
+          : topButton.state.hover.borderWhiteAlpha.dark
+      ),
+      backgroundColor: alpha(
+        theme.palette.common.white,
+        theme.palette.mode === "light"
+          ? topButton.state.hover.backgroundWhiteAlpha.light
+          : topButton.state.hover.backgroundWhiteAlpha.dark
+      ),
+    },
+  };
+};

@@ -18,6 +18,7 @@ import {
   Card,
   FormControl,
   Button,
+  useTheme,
 } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import ArchiveIcon from "@mui/icons-material/Archive";
@@ -33,6 +34,7 @@ import {
   LabelList,
   Cell,
 } from "recharts";
+import type { AppTheme } from "src/theme";
 
 /* Utils */
 function fmt(n?: number | null) {
@@ -46,6 +48,21 @@ export default function AppairageOverviewWidget({
   defaultFilters?: AppairageFilters;
   showFilters?: boolean;
 }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartGridStroke = isLight
+    ? theme.custom.chart.grid.stroke.light
+    : theme.custom.chart.grid.stroke.dark;
+  const chartAxisStroke = isLight
+    ? theme.custom.chart.axis.stroke.light
+    : theme.custom.chart.axis.stroke.dark;
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
   const [filters, setFilters] = React.useState<AppairageFilters>(defaultFilters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState(false);
 
@@ -88,10 +105,10 @@ export default function AppairageOverviewWidget({
   const total = data?.kpis.appairages_total ?? 0;
   const statuts = data?.kpis.statuts ?? {};
   const chartData = [
-    { name: "À faire", value: statuts["a_faire"] ?? 0, color: "#ffa726" },
-    { name: "Transmis", value: statuts["transmis"] ?? 0, color: "#42a5f5" },
-    { name: "En attente", value: statuts["en_attente"] ?? 0, color: "#ab47bc" },
-    { name: "OK", value: statuts["appairage_ok"] ?? 0, color: "#66bb6a" },
+    { name: "À faire", value: statuts["a_faire"] ?? 0, color: chartSeries[0] },
+    { name: "Transmis", value: statuts["transmis"] ?? 0, color: chartSeries[1] },
+    { name: "En attente", value: statuts["en_attente"] ?? 0, color: chartSeries[2] },
+    { name: "OK", value: statuts["appairage_ok"] ?? 0, color: chartSeries[3] },
   ];
 
   return (
@@ -202,15 +219,20 @@ export default function AppairageOverviewWidget({
         ) : (
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} barSize={32}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip formatter={(v) => `${v} appairages`} />
+              <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+              <YAxis allowDecimals={false} axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+              <Tooltip
+                formatter={(v) => `${v} appairages`}
+                contentStyle={{ background: chartTooltipBackground, border: chartTooltipBorder, borderRadius: 12 }}
+                itemStyle={{ color: theme.palette.text.primary }}
+                labelStyle={{ color: theme.palette.text.secondary }}
+              />
               <Legend
                 verticalAlign="bottom"
                 height={30}
                 iconType="circle"
-                wrapperStyle={{ fontSize: 11 }}
+                wrapperStyle={{ fontSize: 11, color: theme.palette.text.secondary }}
               />
               <Bar dataKey="value">
                 {chartData.map((entry, index) => (

@@ -13,6 +13,7 @@ import {
   Divider,
   Paper,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +23,7 @@ import { useAuth } from "src/hooks/useAuth";
 import { canWriteDeclicRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
 import type { ObjectifDeclic } from "src/types/declic";
+import type { AppTheme } from "src/theme";
 
 // ─────────────────────────────────────────────
 // 📌 Props
@@ -36,6 +38,11 @@ interface Props {
 // 📘 Component principal
 // ─────────────────────────────────────────────
 export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const { data: paginated, isLoading, isError } = useObjectifsDeclic();
   const { user } = useAuth();
   const canWriteDeclic = canWriteDeclicRole(user?.role);
@@ -95,7 +102,7 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
   // 🌀 Loading
   if (isLoading) {
     return (
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" BackdropProps={{ sx: { backgroundColor: modalScrim } }}>
         <DialogContent sx={{ textAlign: "center", py: 5 }}>
           <CircularProgress />
           <Typography variant="body2" sx={{ mt: 2 }}>
@@ -109,7 +116,7 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
   // ⚠️ Erreur
   if (isError || !objectif) {
     return (
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" BackdropProps={{ sx: { backgroundColor: modalScrim } }}>
         <DialogContent>
           <Typography color="error">
             Erreur lors du chargement des informations du centre.
@@ -174,6 +181,7 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
       maxWidth="md"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       {/* ────── En-tête ────── */}
       <DialogTitle
@@ -181,6 +189,8 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
         }}
       >
         <Typography component="div" variant="subtitle1" fontWeight={700}>
@@ -234,7 +244,7 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
       </DialogContent>
 
       {/* ────── Actions ────── */}
-      <DialogActions sx={{ justifyContent: "flex-end", px: 3, py: 2 }}>
+      <DialogActions sx={{ justifyContent: "flex-end", px: 3, py: 2, borderTop: modalTitleBorder }}>
         <Button variant="outlined" onClick={onClose}>
           Fermer
         </Button>
@@ -247,12 +257,18 @@ export default function ObjectifsDeclicDetailModal({ open, onClose, centreId }: 
 // 🔹 Sous-composants réutilisables
 // ─────────────────────────────────────────────
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main", mb: 0.5 }}>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box sx={{ mb: 1, px: 1.25, py: 0.75, borderRadius: 1.5, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>

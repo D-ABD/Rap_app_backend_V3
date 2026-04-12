@@ -1,6 +1,7 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../theme";
 
 export type StatCardProps = {
   /** Libellé sous la valeur (ex. « Actives », « Archivées ») */
@@ -31,10 +32,7 @@ export default function StatCard({
   highlightColor,
   sx,
 }: StatCardProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
-  const statBoxBg = isDark ? "rgba(255,255,255,0.04)" : "background.paper";
-  const statShadow = isDark ? "0 2px 6px rgba(0,0,0,0.5)" : "0 2px 6px rgba(0,0,0,0.05)";
+  const theme = useTheme<AppTheme>();
 
   return (
     <Box
@@ -43,14 +41,25 @@ export default function StatCard({
         p: 2.5,
         borderRadius: 2.5,
         textAlign: "center",
-        bgcolor: statBoxBg,
-        boxShadow: statShadow,
+        bgcolor:
+          theme.palette.mode === "light"
+            ? theme.custom.kpi.cardBackground.rest.light
+            : theme.custom.kpi.cardBackground.rest.dark,
+        boxShadow:
+          theme.palette.mode === "light"
+            ? theme.custom.kpi.elevation.rest.light
+            : theme.custom.kpi.elevation.rest.dark,
         transition: "all 0.2s ease",
         cursor: onClick ? "pointer" : "default",
         outline:
-          highlighted && highlightColor ? `2px solid ${highlightColor}` : "none",
+          highlighted && highlightColor
+            ? `${theme.custom.kpi.highlight.outlineWidthPx}px ${theme.custom.kpi.highlight.outlineStyle} ${highlightColor}`
+            : "none",
         "&:hover": {
-          boxShadow: isDark ? "0 4px 14px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.08)",
+          boxShadow:
+            theme.palette.mode === "light"
+              ? theme.custom.kpi.elevation.hover.light
+              : theme.custom.kpi.elevation.hover.dark,
           transform: onClick ? "translateY(-2px)" : undefined,
         },
         ...sx,

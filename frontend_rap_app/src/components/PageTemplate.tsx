@@ -9,13 +9,14 @@ import {
   Collapse,
   Tooltip,
   type SxProps,
-  type Theme,
+  useTheme,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PageWrapper from "./PageWrapper";
 import PageSection from "./PageSection";
+import type { AppTheme } from "../theme";
 
 export type PageTemplateProps = {
   title?: React.ReactNode;
@@ -36,7 +37,7 @@ export type PageTemplateProps = {
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   fullWidth?: boolean;
   hero?: boolean;
-  contentSx?: SxProps<Theme>;
+  contentSx?: SxProps<AppTheme>;
 };
 
 const centeredBoxStyles = {
@@ -47,24 +48,6 @@ const centeredBoxStyles = {
   justifyContent: "center",
   textAlign: "center",
   gap: 2,
-} as const;
-
-const headerSurfaceSx = {
-  px: { xs: 0.25, sm: 0.5 },
-  py: { xs: 0.25, sm: 0.4 },
-} as const;
-
-const headerInnerSurfaceSx = {
-  px: { xs: 1, sm: 1.2, lg: 1.4 },
-  py: { xs: 0.9, sm: 1.05 },
-  borderRadius: 3,
-  border: "1px solid",
-  borderColor: "divider",
-  backgroundColor: "background.paper",
-  boxShadow: (theme: Theme) =>
-    theme.palette.mode === "light"
-      ? `0 10px 24px ${alpha(theme.palette.common.black, 0.035)}`
-      : `0 14px 28px ${alpha(theme.palette.common.black, 0.14)}`,
 } as const;
 
 function PageTemplate({
@@ -96,6 +79,10 @@ function PageTemplate({
     }
   };
 
+  const theme = useTheme<AppTheme>();
+  const headerOuter = theme.custom.surface.pageHeader.outer;
+  const headerInner = theme.custom.surface.pageHeader.inner;
+
   return (
     <PageWrapper maxWidth={maxWidth} fullWidth={fullWidth}>
       <Stack
@@ -103,7 +90,8 @@ function PageTemplate({
         spacing={1.25}
         mb={1.35}
         sx={{
-          ...headerSurfaceSx,
+          px: headerOuter.paddingX,
+          py: headerOuter.paddingY,
           ...(hero
             ? {
                 px: { xs: 1.25, sm: 1.5, lg: 1.75 },
@@ -111,7 +99,7 @@ function PageTemplate({
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor: "divider",
-                background: (theme: Theme) =>
+                background:
                   theme.palette.mode === "light"
                     ? `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`
                     : `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
@@ -121,7 +109,13 @@ function PageTemplate({
       >
         <Box
           sx={{
-            ...headerInnerSurfaceSx,
+            px: headerInner.paddingX,
+            py: headerInner.paddingY,
+            borderRadius: headerInner.shape.borderRadiusSx,
+            border: `${headerInner.border.width} ${headerInner.border.style}`,
+            borderColor: headerInner.border.color,
+            backgroundColor: "background.paper",
+            boxShadow: headerInner.boxShadow,
             ...(hero
               ? {
                   px: { xs: 1.1, sm: 1.35, lg: 1.6 },

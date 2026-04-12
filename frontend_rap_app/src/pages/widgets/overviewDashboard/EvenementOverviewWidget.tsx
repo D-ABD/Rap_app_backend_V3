@@ -10,17 +10,17 @@ import {
   Select,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import EventIcon from "@mui/icons-material/Event";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import type { AppTheme } from "src/theme";
 import {
   EvenementBreakdownRow,
   EvenementStatsFilters,
   getErrorMessage,
   useEvenementOverview,
 } from "../../../types/evenementStats";
-
-const COLORS = ["#42a5f5", "#ef5350", "#ffb300", "#66bb6a", "#90a4ae"];
 
 type Props = {
   title?: string;
@@ -31,6 +31,15 @@ export default function EvenementOverviewWidget({
   title = "Vue d'ensemble Evenements",
   initialFilters,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
   const [filters, setFilters] = React.useState<EvenementStatsFilters>(initialFilters ?? {});
   const { data, isLoading, error } = useEvenementOverview(filters);
 
@@ -127,11 +136,25 @@ export default function EvenementOverviewWidget({
                 labelLine={false}
               >
                 {pieData.map((_, index) => (
-                  <Cell key={`evenement-pie-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`evenement-pie-${index}`} fill={chartSeries[index % chartSeries.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `${value} événements`} />
-              <Legend verticalAlign="bottom" height={30} iconType="circle" wrapperStyle={{ fontSize: "11px" }} />
+              <Tooltip
+                formatter={(value) => `${value} événements`}
+                contentStyle={{
+                  background: chartTooltipBackground,
+                  border: chartTooltipBorder,
+                  borderRadius: 12,
+                }}
+                itemStyle={{ color: theme.palette.text.primary }}
+                labelStyle={{ color: theme.palette.text.secondary }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={30}
+                iconType="circle"
+                wrapperStyle={{ fontSize: "11px", color: theme.palette.text.secondary }}
+              />
             </PieChart>
           </ResponsiveContainer>
         ) : (

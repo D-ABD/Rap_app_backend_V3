@@ -11,10 +11,12 @@ import {
   TableCell,
   TableContainer,
   TableRow,
+  useTheme,
 } from "@mui/material";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
 import type { Centre } from "../../types/centre";
+import type { AppTheme } from "../../theme";
 
 /**
  * 🔹 Page ou composant intégré pour afficher les détails d’un centre
@@ -24,6 +26,7 @@ type Props = {
 };
 
 export default function CentreDetailPage({ centre: propCentre }: Props) {
+  const theme = useTheme<AppTheme>();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -63,9 +66,12 @@ export default function CentreDetailPage({ centre: propCentre }: Props) {
     <Paper
       sx={{
         p: 2.5,
-        backgroundColor: "#fafafa",
+        backgroundColor:
+          theme.palette.mode === "light"
+            ? theme.custom.form.section.paperBackground.light
+            : theme.custom.form.section.paperBackground.dark,
         borderRadius: 2,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
       }}
     >
       <Section title="🏫 Informations générales">
@@ -124,18 +130,30 @@ export default function CentreDetailPage({ centre: propCentre }: Props) {
 /* ───────── Sous-composants ───────── */
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
   return (
     <Box sx={{ mb: 3 }}>
       <Typography variant="subtitle1" fontWeight="bold" sx={{ color: "primary.main", mb: 1 }}>
         {title}
       </Typography>
-      <Divider sx={{ mb: 1.5 }} />
+      <Divider
+        sx={{
+          mb: 1.5,
+          borderBottomStyle: "dashed",
+          borderBottomWidth: theme.custom.form.divider.dashedWidth,
+          borderColor:
+            theme.palette.mode === "light"
+              ? theme.custom.form.divider.dashedColor.light
+              : theme.custom.form.divider.dashedColor.dark,
+        }}
+      />
       {children}
     </Box>
   );
 }
 
 function DetailTable({ rows }: { rows: (string | number | null | undefined)[][] }) {
+  const theme = useTheme<AppTheme>();
   return (
     <TableContainer>
       <Table size="small" sx={{ tableLayout: "fixed" }}>
@@ -147,7 +165,11 @@ function DetailTable({ rows }: { rows: (string | number | null | undefined)[][] 
                   width: "40%",
                   fontWeight: 600,
                   color: "text.secondary",
-                  borderBottom: "1px dashed #ddd",
+                  borderBottom: `${theme.custom.form.divider.dashedWidth} dashed ${
+                    theme.palette.mode === "light"
+                      ? theme.custom.form.divider.dashedColor.light
+                      : theme.custom.form.divider.dashedColor.dark
+                  }`,
                   py: 0.5,
                 }}
               >
@@ -157,7 +179,11 @@ function DetailTable({ rows }: { rows: (string | number | null | undefined)[][] 
                 sx={{
                   width: "60%",
                   textAlign: "right",
-                  borderBottom: "1px dashed #ddd",
+                  borderBottom: `${theme.custom.form.divider.dashedWidth} dashed ${
+                    theme.palette.mode === "light"
+                      ? theme.custom.form.divider.dashedColor.light
+                      : theme.custom.form.divider.dashedColor.dark
+                  }`,
                   py: 0.5,
                 }}
               >

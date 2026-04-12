@@ -11,12 +11,14 @@ import {
   Paper,
   CircularProgress,
   Link,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddCommentIcon from "@mui/icons-material/AddComment";
 import LaunchIcon from "@mui/icons-material/Launch";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import type { Appairage, AppairageListItem } from "../../types/appairage";
+import type { AppTheme } from "src/theme";
 
 interface Props {
   open: boolean;
@@ -34,6 +36,17 @@ export default function AppairageDetailModal({
   onEdit,
 }: Props) {
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight
+    ? theme.custom.overlay.scrim.background.light
+    : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   if (!open) return null;
 
   return (
@@ -44,12 +57,15 @@ export default function AppairageDetailModal({
       maxWidth="lg"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       <DialogTitle
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
         }}
       >
         <Typography component="div" variant="h6" fontWeight={700}>
@@ -288,7 +304,7 @@ export default function AppairageDetailModal({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
+      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, borderTop: modalTitleBorder }}>
         <Box display="flex" gap={1} flexWrap="wrap">
           {appairage && onEdit && (
             <Button
@@ -329,12 +345,31 @@ export default function AppairageDetailModal({
 }
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }} gutterBottom>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box
+        sx={{
+          mb: 1,
+          px: 1.25,
+          py: 0.75,
+          borderRadius: 1.5,
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
+        }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       {children}
     </Box>
   );
@@ -348,4 +383,3 @@ function Item({ label, value }: { label: string; value?: React.ReactNode }) {
     </Typography>
   );
 }
-

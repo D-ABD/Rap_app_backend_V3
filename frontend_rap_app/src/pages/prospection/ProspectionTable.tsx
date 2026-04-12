@@ -414,7 +414,15 @@ export default function ProspectionTable({
       )}
       onRowClick={(p) => onRowClick(p.id)}
       rowSx={(row) =>
-        row.activite === "archivee" ? { backgroundColor: "#f6f6f6", opacity: 0.85 } : {}
+        row.activite === "archivee"
+          ? {
+              backgroundColor: (theme: Theme) =>
+                theme.palette.mode === "light"
+                  ? theme.custom.table.row.archived.background.light
+                  : theme.custom.table.row.archived.background.dark,
+              opacity: (theme: Theme) => theme.custom.table.row.archived.opacity,
+            }
+          : {}
       }
     />
   );

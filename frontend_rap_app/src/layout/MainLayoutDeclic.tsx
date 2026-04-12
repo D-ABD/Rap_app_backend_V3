@@ -268,7 +268,7 @@ export default function MainLayoutDeclic() {
                   component={Link}
                   to={item.path}
                   color="inherit"
-                  sx={getTopNavButtonSx(isActive(item.path))}
+                  sx={getTopNavButtonSx(theme, isActive(item.path))}
                 >
                   {item.label}
                 </Button>
@@ -443,7 +443,7 @@ export default function MainLayoutDeclic() {
               to={item.path}
               selected={isActive(item.path)}
               onClick={toggleDrawer}
-              sx={getDrawerItemSx()}
+              sx={getDrawerItemSx(theme)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.label} />

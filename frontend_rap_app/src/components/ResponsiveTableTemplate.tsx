@@ -17,6 +17,7 @@ import {
   type Theme,
 } from "@mui/material";
 import type { ElementType, ReactNode } from "react";
+import type { AppTheme } from "../theme";
 
 export type TableColumn<T> = {
   key: keyof T | string;
@@ -56,13 +57,27 @@ export default function ResponsiveTableTemplate<T>({
   containerSx,
   actionsAlign = "center",
 }: Props<T>) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isLight = theme.palette.mode === "light";
+  const tableHeaderBackground = isLight
+    ? theme.custom.table.header.background.light
+    : theme.custom.table.header.background.dark;
+  const tableHeaderBorder = isLight
+    ? theme.custom.table.header.borderBottom.light
+    : theme.custom.table.header.borderBottom.dark;
+  const tableRowHoverBackground = isLight
+    ? theme.custom.table.row.hover.light
+    : theme.custom.table.row.hover.dark;
+  const tableCellBorder = isLight
+    ? theme.custom.table.cell.borderBottom.light
+    : theme.custom.table.cell.borderBottom.dark;
   const actionCellSx = {
     position: "sticky" as const,
     right: 0,
     backgroundColor: theme.palette.background.paper,
     zIndex: theme.zIndex.appBar - 1,
+    borderBottom: tableCellBorder,
   };
 
   /* 🔹 Vue mobile => affichage en cartes */
@@ -136,7 +151,8 @@ export default function ResponsiveTableTemplate<T>({
                   zIndex: col.sticky ? theme.zIndex.appBar : 1,
                   minWidth: col.width,
                   flexGrow: col.flexGrow ?? 0,
-                  backgroundColor: theme.palette.background.paper,
+                  backgroundColor: tableHeaderBackground,
+                  borderBottom: tableHeaderBorder,
                   fontWeight: "bold",
                 }}
               >
@@ -149,7 +165,8 @@ export default function ResponsiveTableTemplate<T>({
                 sx={{
                   position: "sticky",
                   right: 0,
-                  backgroundColor: theme.palette.background.paper,
+                  backgroundColor: tableHeaderBackground,
+                  borderBottom: tableHeaderBorder,
                   fontWeight: "bold",
                   zIndex: theme.zIndex.appBar,
                 }}
@@ -168,6 +185,9 @@ export default function ResponsiveTableTemplate<T>({
               onClick={() => onRowClick?.(row)}
               sx={{
                 cursor: onRowClick ? "pointer" : "default",
+                "&:hover": {
+                  backgroundColor: tableRowHoverBackground,
+                },
                 ...(rowSx ? rowSx(row) : {}),
               }}
             >
@@ -183,6 +203,7 @@ export default function ResponsiveTableTemplate<T>({
                     minWidth: col.width,
                     flexGrow: col.flexGrow ?? 0,
                     backgroundColor: theme.palette.background.paper,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}

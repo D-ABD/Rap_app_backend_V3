@@ -263,7 +263,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/dashboard"
-                sx={getTopNavButtonSx(isActive("/dashboard"))}
+                sx={getTopNavButtonSx(theme, isActive("/dashboard"))}
               >
                 Dashboard
               </Button>
@@ -272,7 +272,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/prospections/candidat"
-                sx={getTopNavButtonSx(isActive("/prospections/candidat"))}
+                sx={getTopNavButtonSx(theme, isActive("/prospections/candidat"))}
               >
                 Prospections
               </Button>
@@ -281,7 +281,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/prospection-commentaires"
-                sx={getTopNavButtonSx(isActive("/prospection-commentaires"))}
+                sx={getTopNavButtonSx(theme, isActive("/prospection-commentaires"))}
               >
                 Commentaires prospections
               </Button>
@@ -290,7 +290,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/partenaires/candidat"
-                sx={getTopNavButtonSx(isActive("/partenaires/candidat"))}
+                sx={getTopNavButtonSx(theme, isActive("/partenaires/candidat"))}
               >
                 Partenaires
               </Button>
@@ -299,7 +299,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/cvtheque/candidat"
-                sx={getTopNavButtonSx(isActive("/cvtheque/candidat"))}
+                sx={getTopNavButtonSx(theme, isActive("/cvtheque/candidat"))}
               >
                 CVThèque
               </Button>
@@ -308,7 +308,7 @@ export default function MainLayoutCandidat() {
                 color="inherit"
                 component={Link}
                 to="/about"
-                sx={getTopNavButtonSx(isActive("/about"))}
+                sx={getTopNavButtonSx(theme, isActive("/about"))}
               >
                 À propos
               </Button>
@@ -483,7 +483,7 @@ export default function MainLayoutCandidat() {
             to="/dashboard"
             onClick={toggleDrawer}
             selected={isActive("/dashboard")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <DashboardIcon color="primary" />
@@ -496,7 +496,7 @@ export default function MainLayoutCandidat() {
             to="/prospections/candidat"
             onClick={toggleDrawer}
             selected={isActive("/prospections/candidat")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <AssignmentIcon color="info" />
@@ -509,7 +509,7 @@ export default function MainLayoutCandidat() {
             to="/prospection-commentaires"
             onClick={toggleDrawer}
             selected={isActive("/prospection-commentaires")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <CommentIcon color="secondary" />
@@ -522,7 +522,7 @@ export default function MainLayoutCandidat() {
             to="/partenaires/candidat"
             onClick={toggleDrawer}
             selected={isActive("/partenaires/candidat")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <GroupIcon color="success" />
@@ -535,7 +535,7 @@ export default function MainLayoutCandidat() {
             to="/cvtheque/candidat"
             onClick={toggleDrawer}
             selected={isActive("/cvtheque/candidat")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <DescriptionIcon color="primary" />
@@ -548,7 +548,7 @@ export default function MainLayoutCandidat() {
             to="/about"
             onClick={toggleDrawer}
             selected={isActive("/about")}
-            sx={getDrawerItemSx()}
+            sx={getDrawerItemSx(theme)}
           >
             <ListItemIcon>
               <InfoIcon color="action" />

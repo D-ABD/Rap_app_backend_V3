@@ -9,12 +9,14 @@ import {
   Button,
   Stack,
   Collapse,
+  useTheme,
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
 import AppTextField from "src/components/forms/fields/AppTextField";
+import type { AppTheme } from "../../theme";
 
 interface Props {
   initialValues?: Partial<Prepa>;
@@ -43,6 +45,7 @@ export default function PrepaForm({
   onCancel,
   onCentreChange,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const [form, setForm] = useState<Partial<Prepa>>({
     type_prepa: initialValues?.type_prepa ?? "info_collective",
     date_prepa: initialValues?.date_prepa ?? "",
@@ -121,12 +124,20 @@ export default function PrepaForm({
   /* ===================== DÉTERMINER LE TYPE ===================== */
   const isInfoCollective = form.type_prepa === "info_collective";
   const isAtelier = form.type_prepa?.startsWith("atelier");
+  const sectionPaperSx = {
+    p: 2,
+    mb: 2,
+    backgroundColor:
+      theme.palette.mode === "light"
+        ? theme.custom.form.section.paperBackground.light
+        : theme.custom.form.section.paperBackground.dark,
+  } as const;
 
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
         {/* --- Informations principales --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper sx={sectionPaperSx}>
           <Typography variant="h6">Informations principales</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Type, date et centre de la séance Prépa.
@@ -206,7 +217,7 @@ export default function PrepaForm({
 
         {/* --- Informations collectives --- */}
         <Collapse in={isInfoCollective} unmountOnExit>
-          <Paper sx={{ p: 2, mb: 2 }}>
+          <Paper sx={sectionPaperSx}>
             <Typography variant="h6">Information collective</Typography>
             <Grid container spacing={2}>
               {[
@@ -243,7 +254,7 @@ export default function PrepaForm({
 
         {/* --- Ateliers Prépa --- */}
         <Collapse in={isAtelier} unmountOnExit>
-          <Paper sx={{ p: 2, mb: 2 }}>
+          <Paper sx={sectionPaperSx}>
             <Typography variant="h6">Ateliers Prépa</Typography>
             <Grid container spacing={2}>
               {[
@@ -285,7 +296,7 @@ export default function PrepaForm({
         />
 
         {/* --- Commentaire --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper sx={sectionPaperSx}>
           <Typography variant="h6">Commentaire</Typography>
           <RichHtmlEditorField
             label="Commentaire"

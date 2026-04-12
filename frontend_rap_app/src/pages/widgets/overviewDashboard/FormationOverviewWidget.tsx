@@ -9,10 +9,12 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SchoolIcon from "@mui/icons-material/School";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import type { AppTheme } from "src/theme";
 
 import {
   Filters,
@@ -30,9 +32,6 @@ function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K
   for (const k of keys) delete clone[k];
   return clone;
 }
-
-/* 🎨 Couleurs cohérentes */
-const COLORS = ["#4caf50", "#ff9800", "#2196f3"];
 
 /* 🏷️ Label custom pourcentage */
 const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -62,6 +61,15 @@ export default function FormationOverviewWidget({
   title?: string;
   filters?: Filters;
 }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered.slice(0, 3);
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState(false);
 
@@ -249,10 +257,19 @@ export default function FormationOverviewWidget({
                   label={renderLabel}
                 >
                   {pieData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={chartSeries[index % chartSeries.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => `${v} formations`} />
+                <Tooltip
+                  formatter={(v) => `${v} formations`}
+                  contentStyle={{
+                    background: chartTooltipBackground,
+                    border: chartTooltipBorder,
+                    borderRadius: 12,
+                  }}
+                  itemStyle={{ color: theme.palette.text.primary }}
+                  labelStyle={{ color: theme.palette.text.secondary }}
+                />
                 <Legend
                   verticalAlign="bottom"
                   height={40}
@@ -263,6 +280,7 @@ export default function FormationOverviewWidget({
                     flexWrap: "wrap",
                     justifyContent: "center",
                     lineHeight: "14px",
+                    color: theme.palette.text.secondary,
                   }}
                 />
               </PieChart>

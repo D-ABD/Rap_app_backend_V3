@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Paper,
   Stack,
+  useTheme,
 } from "@mui/material";
 import { useFormation } from "../../hooks/useFormations";
 import { useState } from "react";
@@ -21,6 +22,7 @@ import AddDocumentButton from "../../pages/formations/componentsFormations/AddDo
 import FormationCommentsModal from "../../components/modals/FormationCommentsModal";
 import { Commentaire } from "src/types/commentaire";
 import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
+import type { AppTheme } from "src/theme";
 
 /* ---------- Types ---------- */
 type Props = {
@@ -94,6 +96,17 @@ const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
 
 /* ---------- Composant principal ---------- */
 export default function FormationDetailModal({ open, onClose, formationId }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight
+    ? theme.custom.overlay.scrim.background.light
+    : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const { data: formation, loading, error } = useFormation(formationId);
   const [openComments, setOpenComments] = useState(false);
   const navigate = useNavigate();
@@ -129,8 +142,9 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
       maxWidth="md"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
-      <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+      <DialogTitle sx={{ fontWeight: 700, pb: 1, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
         📘 Détail de la formation :{" "}
         <Typography component="span" color="primary" fontWeight={600}>
           {formation.nom}
@@ -542,12 +556,22 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
 
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box sx={{ mb: 1, px: 1.25, py: 0.75, borderRadius: 1.5, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>

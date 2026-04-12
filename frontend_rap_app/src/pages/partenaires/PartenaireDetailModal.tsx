@@ -11,6 +11,7 @@ import {
   Link,
   CircularProgress,
   Paper,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import CampaignIcon from "@mui/icons-material/Campaign";
@@ -18,6 +19,7 @@ import HandshakeIcon from "@mui/icons-material/Handshake";
 import LaunchIcon from "@mui/icons-material/Launch";
 import { useNavigate } from "react-router-dom";
 import type { Partenaire } from "../../types/partenaire";
+import type { AppTheme } from "src/theme";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -101,6 +103,11 @@ export default function PartenaireDetailModal({
   loading = false,
   onEdit,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const navigate = useNavigate();
   if (!open) return null;
 
@@ -129,6 +136,7 @@ export default function PartenaireDetailModal({
       maxWidth="lg"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       <DialogTitle
         sx={{
@@ -137,6 +145,8 @@ export default function PartenaireDetailModal({
           justifyContent: "space-between",
           alignItems: "center",
           pr: 2,
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
         }}
       >
         <Typography variant="h6" component="span">
@@ -360,7 +370,7 @@ export default function PartenaireDetailModal({
         </Paper>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between", borderTop: modalTitleBorder }}>
         <Box display="flex" gap={1} flexWrap="wrap">
           <Button
             variant="outlined"
@@ -412,12 +422,18 @@ export default function PartenaireDetailModal({
 }
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box sx={{ mb: 1, px: 1.25, py: 0.75, borderRadius: 1.5, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>
@@ -442,4 +458,3 @@ function Field({ label, value }: { label: string; value: string | number | React
     </Grid>
   );
 }
-

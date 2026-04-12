@@ -12,6 +12,7 @@ import {
   Link,
   CircularProgress,
   Chip,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddCommentIcon from "@mui/icons-material/AddComment";
@@ -21,6 +22,7 @@ import { useProspection } from "../../hooks/useProspection";
 import React from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import CommentaireContent from "../commentaires/CommentaireContent";
+import type { AppTheme } from "src/theme";
 
 /* ---------- Helpers ---------- */
 const useFormatters = () => {
@@ -63,6 +65,11 @@ type Props = {
 
 /* ---------- Component ---------- */
 export default function ProspectionDetailModal({ open, onClose, prospectionId, onEdit }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const navigate = useNavigate();
   const { fmt, nn, yn } = useFormatters();
   const { data: prospection, loading } = useProspection(prospectionId ?? null);
@@ -80,6 +87,7 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
       scroll="paper"
       disableEnforceFocus
       aria-labelledby={titleId}
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       <DialogTitle
         id={titleId}
@@ -87,6 +95,8 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
         }}
       >
         <Typography component="div" variant="h6" fontWeight={700}>
@@ -348,7 +358,7 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
       </DialogContent>
 
       {/* ---------- Actions ---------- */}
-      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
+      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, borderTop: modalTitleBorder }}>
         <Box display="flex" gap={1} flexWrap="wrap">
           {prospection && onEdit && prospection.id != null && (
             <Button
@@ -394,12 +404,18 @@ const Section = React.memo(function Section({
   title: string;
   children: React.ReactNode;
 }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }} gutterBottom>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box sx={{ mb: 1, px: 1.25, py: 0.75, borderRadius: 1.5, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>
@@ -445,4 +461,3 @@ const Field = React.memo(function Field({
     </Grid>
   );
 });
-

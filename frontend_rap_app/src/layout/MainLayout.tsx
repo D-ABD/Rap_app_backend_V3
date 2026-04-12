@@ -286,10 +286,10 @@ export default function MainLayout() {
                 bgcolor: topSurfaceBg,
               }}
             >
-              <Button color="inherit" component={Link} to="/" sx={getTopNavButtonSx(isActive("/"))}>
+              <Button color="inherit" component={Link} to="/" sx={getTopNavButtonSx(theme, isActive("/"))}>
                 Accueil
               </Button>
-              <Button color="inherit" component={Link} to="/dashboard" sx={getTopNavButtonSx(isActive("/dashboard"))}>
+              <Button color="inherit" component={Link} to="/dashboard" sx={getTopNavButtonSx(theme, isActive("/dashboard"))}>
                 Dashboard
               </Button>
 
@@ -300,7 +300,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorDeclic(e.currentTarget)}
                     endIcon={<EmojiObjectsIcon />}
-                    sx={getTopNavButtonSx(isActive("/declic"))}
+                    sx={getTopNavButtonSx(theme, isActive("/declic"))}
                   >
                     Déclic
                   </Button>
@@ -331,7 +331,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorPrepa(e.currentTarget)}
                     endIcon={<InsightsIcon />}
-                    sx={getTopNavButtonSx(isActive("/prepa"))}
+                    sx={getTopNavButtonSx(theme, isActive("/prepa"))}
                   >
                     Prépa Comp
                   </Button>
@@ -375,7 +375,7 @@ export default function MainLayout() {
                 color="inherit"
                 onClick={(e) => setAnchorCvtheque(e.currentTarget)}
                 endIcon={<DescriptionIcon />}
-                sx={getTopNavButtonSx(isActive("/cvtheque"))}
+                sx={getTopNavButtonSx(theme, isActive("/cvtheque"))}
               >
                 CVThèque
               </Button>
@@ -407,7 +407,7 @@ export default function MainLayout() {
                 color="inherit"
                 onClick={(e) => setAnchorCrm(e.currentTarget)}
                 endIcon={<SearchIcon />}
-                sx={getTopNavButtonSx(isActive("/prospections") || isActive("/partenaires") || isActive("/cerfa") || isActive("/appairages") || isActive("/candidats") || isActive("/ateliers-tre"))}
+                sx={getTopNavButtonSx(theme, isActive("/prospections") || isActive("/partenaires") || isActive("/cerfa") || isActive("/appairages") || isActive("/candidats") || isActive("/ateliers-tre"))}
               >
                 CRM
               </Button>
@@ -455,7 +455,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorRevue(e.currentTarget)}
                     endIcon={<FolderIcon />}
-                    sx={getTopNavButtonSx(isActive("/formations") || isActive("/commentaires") || isActive("/documents") || isActive("/evenements"))}
+                    sx={getTopNavButtonSx(theme, isActive("/formations") || isActive("/commentaires") || isActive("/documents") || isActive("/evenements"))}
                   >
                     Revue d&apos;offres
                   </Button>
@@ -481,11 +481,11 @@ export default function MainLayout() {
                 </>
               )}
 
-              <Button color="inherit" component={Link} to="/about" sx={getTopNavButtonSx(isActive("/about"))}>
+              <Button color="inherit" component={Link} to="/about" sx={getTopNavButtonSx(theme, isActive("/about"))}>
                 À propos
               </Button>
               {canSeeParametres && (
-                <Button color="inherit" component={Link} to="/parametres" sx={getTopNavButtonSx(isActive("/parametres"))}>
+                <Button color="inherit" component={Link} to="/parametres" sx={getTopNavButtonSx(theme, isActive("/parametres"))}>
                   Paramètres
                 </Button>
               )}
@@ -645,7 +645,7 @@ export default function MainLayout() {
                   if (item.children) toggleSubmenu(item.label);
                   if (item.path) toggleDrawer();
                 }}
-                sx={getDrawerItemSx()}
+                sx={getDrawerItemSx(theme)}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.label} />
@@ -658,7 +658,7 @@ export default function MainLayout() {
                     {item.children.map((child) => (
                       <ListItemButton
                         key={child.label}
-                        sx={getDrawerItemSx(true)}
+                        sx={getDrawerItemSx(theme, true)}
                         component={Link}
                         to={child.path || ""}
                         selected={isActive(child.path)}

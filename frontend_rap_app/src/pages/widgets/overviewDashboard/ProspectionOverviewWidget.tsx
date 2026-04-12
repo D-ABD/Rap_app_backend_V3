@@ -12,6 +12,7 @@ import {
   Button,
   Chip,
   Stack,
+  useTheme,
 } from "@mui/material";
 
 import {
@@ -27,17 +28,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import ArchiveIcon from "@mui/icons-material/Archive";
 
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
-
-/* 🎨 Couleurs cohérentes */
-const COLORS = [
-  "#66bb6a", // success
-  "#ffa726", // warning
-  "#42a5f5", // info
-  "#ef5350", // error
-  "#ab47bc", // violet
-  "#8d6e63", // brown
-  "#26c6da", // cyan
-];
+import type { AppTheme } from "src/theme";
 
 type Props = {
   title?: string;
@@ -48,6 +39,15 @@ export default function ProspectionOverviewWidget({
   title = "Overview Prospections",
   initialFilters,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
   const [filters, setFilters] = React.useState<ProspectionFilters>(initialFilters ?? {});
 
   const includeArchived = Boolean(filters.avec_archivees);
@@ -246,15 +246,24 @@ export default function ProspectionOverviewWidget({
                 labelLine={false}
               >
                 {pieData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={chartSeries[index % chartSeries.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v) => `${v} prospections`} />
+              <Tooltip
+                formatter={(v) => `${v} prospections`}
+                contentStyle={{
+                  background: chartTooltipBackground,
+                  border: chartTooltipBorder,
+                  borderRadius: 12,
+                }}
+                itemStyle={{ color: theme.palette.text.primary }}
+                labelStyle={{ color: theme.palette.text.secondary }}
+              />
               <Legend
                 verticalAlign="bottom"
                 height={30}
                 iconType="circle"
-                wrapperStyle={{ fontSize: "11px" }}
+                wrapperStyle={{ fontSize: "11px", color: theme.palette.text.secondary }}
               />
             </PieChart>
           </ResponsiveContainer>

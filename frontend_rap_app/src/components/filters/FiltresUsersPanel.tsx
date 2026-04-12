@@ -20,10 +20,10 @@ export interface FiltresUsersPanelProps<
 
 const LoadingBox = styled.div.attrs({ role: "status", "aria-live": "polite" })`
   padding: 0.75rem 1rem;
-  border: 1px dashed ${({ theme }) => theme?.colors?.border ?? "#e5e7eb"};
-  border-radius: ${({ theme }) => theme?.borderRadius?.m ?? "10px"};
-  color: #6b7280;
-  background: ${({ theme }) => theme?.colors?.backgroundLight ?? "#f9fafb"};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.m};
+  color: ${({ theme }) => theme.colors.textSecondary};
+  background: ${({ theme }) => theme.colors.backgroundLight};
   margin-bottom: 1rem;
   text-align: center;
 `;

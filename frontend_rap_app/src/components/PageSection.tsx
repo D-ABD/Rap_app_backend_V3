@@ -1,9 +1,18 @@
 // src/components/PageSection.tsx
-import { Paper } from "@mui/material";
+import { Paper, useTheme } from "@mui/material";
+import type { SxProps } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import { ReactNode } from "react";
+import type { AppTheme } from "../theme";
 
-export default function PageSection({ children }: { children: ReactNode }) {
+export default function PageSection({
+  children,
+  sx,
+}: {
+  children: ReactNode;
+  sx?: SxProps<AppTheme>;
+}) {
+  const theme = useTheme<AppTheme>();
   return (
     <Paper
       sx={{
@@ -15,19 +24,19 @@ export default function PageSection({ children }: { children: ReactNode }) {
         border: "1px solid",
         borderColor: "divider",
         backgroundColor: "background.paper",
-        boxShadow: (theme) =>
-          theme.palette.mode === "light"
-            ? `0 18px 36px ${alpha(theme.palette.common.black, 0.05)}`
-            : `0 20px 40px ${alpha(theme.palette.common.black, 0.2)}`,
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
         transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
         "&::before": {
           content: '""',
           position: "absolute",
           inset: 0,
           pointerEvents: "none",
-          background: (theme) =>
-            `linear-gradient(180deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.03 : 0.06)} 0%, transparent 26%)`,
+          background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.03 : 0.06)} 0%, transparent 26%)`,
         },
+        "&:hover": {
+          boxShadow: theme.custom.surface.elevated.boxShadowHover,
+        },
+        ...sx,
       }}
     >
       {children}

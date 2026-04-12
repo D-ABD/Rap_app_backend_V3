@@ -1,6 +1,7 @@
-import { Box, Card, Divider, LinearProgress, Typography } from "@mui/material";
+import { Box, Card, Divider, LinearProgress, Typography, useTheme } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../theme";
 
 export type ChartCardProps = {
   title: string;
@@ -33,6 +34,8 @@ export default function ChartCard({
   minHeight,
   sx,
 }: ChartCardProps) {
+  const theme = useTheme<AppTheme>();
+
   return (
     <Card
       elevation={3}
@@ -43,6 +46,15 @@ export default function ChartCard({
         flexDirection: "column",
         gap: 2,
         height: "100%",
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
+        bgcolor:
+          theme.palette.mode === "light"
+            ? theme.custom.surface.muted.background.light
+            : theme.custom.surface.muted.background.dark,
+        transition: "box-shadow 180ms ease, transform 180ms ease",
+        "&:hover": {
+          boxShadow: theme.custom.surface.elevated.boxShadowHover,
+        },
         ...sx,
       }}
     >

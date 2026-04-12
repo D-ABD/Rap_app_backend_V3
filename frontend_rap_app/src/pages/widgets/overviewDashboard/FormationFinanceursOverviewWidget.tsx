@@ -9,11 +9,13 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PieChartIcon from "@mui/icons-material/PieChart";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import type { AppTheme } from "src/theme";
 
 import {
   Filters,
@@ -30,9 +32,6 @@ function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K
   for (const k of keys) delete clone[k];
   return clone;
 }
-
-/* 🎨 Couleurs fixes */
-const COLORS = ["#1e88e5", "#43a047", "#fbc02d", "#8e24aa"];
 
 /* 🏷️ Label custom */
 const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -62,6 +61,15 @@ export default function FormationFinanceursOverviewWidget({
   title?: string;
   filters?: Filters;
 }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState<boolean>(!!filters?.avec_archivees);
 
@@ -248,10 +256,19 @@ export default function FormationFinanceursOverviewWidget({
                 label={renderLabel}
               >
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  <Cell key={i} fill={chartSeries[i % chartSeries.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v, n) => [`${v} places (${pct(v as number)}%)`, n as string]} />
+              <Tooltip
+                formatter={(v, n) => [`${v} places (${pct(v as number)}%)`, n as string]}
+                contentStyle={{
+                  background: chartTooltipBackground,
+                  border: chartTooltipBorder,
+                  borderRadius: 12,
+                }}
+                itemStyle={{ color: theme.palette.text.primary }}
+                labelStyle={{ color: theme.palette.text.secondary }}
+              />
               <Legend
                 verticalAlign="bottom"
                 height={40}
@@ -262,6 +279,7 @@ export default function FormationFinanceursOverviewWidget({
                   flexWrap: "wrap",
                   justifyContent: "center",
                   lineHeight: "14px",
+                  color: theme.palette.text.secondary,
                 }}
               />
             </PieChart>

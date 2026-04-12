@@ -5,6 +5,7 @@
 // ======================================================
 
 import Quill from "quill";
+import { getTheme } from "../theme";
 
 /* ---------- Base Inline ---------- */
 const Inline = (Quill as any).import("blots/inline");
@@ -77,22 +78,24 @@ class UnderlineStyle extends Inline {
 // (Quill as any).register(Block, true);
 
 /* ---------- Palette de couleurs étendue ---------- */
+const editorQuill = getTheme("light").custom.editor.quill;
+
 export const colorOptions = [
-  "#000000",
+  editorQuill.black,
   "#444444",
   "#666666",
   "#999999",
   "#cccccc",
   "#eeeeee",
-  "#ffffff",
+  editorQuill.white,
   "#ff0000",
-  "#e60000",
+  editorQuill.red,
   "#cc0000",
   "#990000",
   "#660000",
   "#330000",
-  "#ff9900",
-  "#ffcc00",
+  editorQuill.orange,
+  editorQuill.yellow,
   "#ffff00",
   "#99cc00",
   "#66cc00",
@@ -102,15 +105,16 @@ export const colorOptions = [
   "#00cc99",
   "#00cccc",
   "#0099cc",
-  "#0066cc",
+  editorQuill.blue,
   "#003399",
   "#0000cc",
   "#6600cc",
-  "#9900cc",
+  editorQuill.purple,
   "#cc00cc",
   "#cc0099",
   "#cc0066",
   "#cc0033",
+  editorQuill.green,
 ];
 
 /* ---------- Modules de base ---------- */

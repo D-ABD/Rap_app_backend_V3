@@ -11,12 +11,14 @@ import {
   Stack,
   Paper,
   Chip,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
 import { Link } from "@mui/material";
 import type { Prepa } from "src/types/prepa";
+import type { AppTheme } from "src/theme";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
@@ -63,6 +65,20 @@ export default function PrepaTableAteliers({
   maxHeight,
 }: Props) {
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const tableHeaderBackground = isLight
+    ? theme.custom.table.header.background.light
+    : theme.custom.table.header.background.dark;
+  const tableHeaderBorder = isLight
+    ? theme.custom.table.header.borderBottom.light
+    : theme.custom.table.header.borderBottom.dark;
+  const tableRowStripedBackground = isLight
+    ? theme.custom.table.row.stripedEven.light
+    : theme.custom.table.row.stripedEven.dark;
+  const tableCellBorder = isLight
+    ? theme.custom.table.cell.borderBottom.light
+    : theme.custom.table.cell.borderBottom.dark;
 
   const goEdit = useCallback(
     (id: number) => (onEdit ? onEdit(id) : navigate(`/prepa/${id}/edit`)),
@@ -135,8 +151,9 @@ export default function PrepaTableAteliers({
                 position: "sticky",
                 left: 0,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: tableHeaderBackground,
                 minWidth: W_CHECK,
+                borderBottom: tableHeaderBorder,
               }}
             >
               <Checkbox
@@ -152,8 +169,9 @@ export default function PrepaTableAteliers({
                 position: "sticky",
                 left: W_CHECK,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: tableHeaderBackground,
                 minWidth: W_TYPE,
+                borderBottom: tableHeaderBorder,
               }}
             >
               📌 Session
@@ -164,8 +182,9 @@ export default function PrepaTableAteliers({
                 position: "sticky",
                 left: W_CHECK + W_TYPE,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: tableHeaderBackground,
                 minWidth: W_DATE,
+                borderBottom: tableHeaderBorder,
               }}
             >
               📅 Date
@@ -176,8 +195,9 @@ export default function PrepaTableAteliers({
                 position: "sticky",
                 left: W_CHECK + W_TYPE + W_DATE,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: tableHeaderBackground,
                 minWidth: W_CENTRE,
+                borderBottom: tableHeaderBorder,
               }}
             >
               🏫 Centre
@@ -209,7 +229,7 @@ export default function PrepaTableAteliers({
                 onClick={() => onRowClick?.(d.id)}
                 sx={{
                   cursor: "pointer",
-                  "&:nth-of-type(even)": { bgcolor: "grey.50" },
+                  "&:nth-of-type(even)": { bgcolor: tableRowStripedBackground },
                 }}
               >
                 <TableCell
@@ -219,7 +239,8 @@ export default function PrepaTableAteliers({
                     position: "sticky",
                     left: 0,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   <Checkbox
@@ -233,7 +254,8 @@ export default function PrepaTableAteliers({
                     position: "sticky",
                     left: W_CHECK,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   <Typography fontWeight={600}>{d.type_prepa_display}</Typography>
@@ -244,7 +266,8 @@ export default function PrepaTableAteliers({
                     position: "sticky",
                     left: W_CHECK + W_TYPE,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   <Chip size="small" color="info" label={dateTxt} />
@@ -255,7 +278,8 @@ export default function PrepaTableAteliers({
                     position: "sticky",
                     left: W_CHECK + W_TYPE + W_DATE,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   {d.centre?.id ? (
@@ -356,8 +380,8 @@ export default function PrepaTableAteliers({
             sx={{
               position: "sticky",
               bottom: 0,
-              bgcolor: "#f4f6f8",
-              borderTop: "2px solid #ddd",
+              bgcolor: tableRowStripedBackground,
+              borderTop: tableHeaderBorder,
               zIndex: 6,
             }}
           >

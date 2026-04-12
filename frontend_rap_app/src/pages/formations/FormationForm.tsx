@@ -17,6 +17,7 @@ import {
   Paper,
   Divider,
   FormHelperText,
+  useTheme,
 } from "@mui/material";
 import {
   School as SchoolIcon,
@@ -30,6 +31,7 @@ import type { NomId } from "../../types/formation";
 import { toApiError } from "../../api/httpClient";
 import { NSF_SPECIALITE_OPTIONS } from "../../constants/nsfOptions";
 import { suggestNsfSpecialite } from "../../constants/nsfSuggestions";
+import type { AppTheme } from "../../theme";
 
 /* =========================================
  * Sous-composants au niveau module
@@ -37,15 +39,37 @@ import { suggestNsfSpecialite } from "../../constants/nsfSuggestions";
 
 type SectionProps = { icon: React.ReactNode; title: string; children: React.ReactNode };
 function Section({ icon, title, children }: SectionProps) {
+  const theme = useTheme<AppTheme>();
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, backgroundColor: "#fafafa" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        mb: 3,
+        borderRadius: 2,
+        backgroundColor:
+          theme.palette.mode === "light"
+            ? theme.custom.form.section.paperBackground.light
+            : theme.custom.form.section.paperBackground.dark,
+      }}
+    >
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
         {icon}
         <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
           {title}
         </Typography>
       </Stack>
-      <Divider sx={{ mb: 2 }} />
+      <Divider
+        sx={{
+          mb: 2,
+          borderBottomStyle: "dashed",
+          borderBottomWidth: theme.custom.form.divider.dashedWidth,
+          borderColor:
+            theme.palette.mode === "light"
+              ? theme.custom.form.divider.dashedColor.light
+              : theme.custom.form.divider.dashedColor.dark,
+        }}
+      />
       <Grid container spacing={2}>
         {children}
       </Grid>

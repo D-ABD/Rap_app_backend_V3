@@ -11,6 +11,7 @@ import {
   Paper,
   CircularProgress,
   Link,
+  useTheme,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
@@ -19,6 +20,7 @@ import { useExportStagiairesPrepa } from "src/hooks/useStagiairesPrepa";
 import { useAuth } from "src/hooks/useAuth";
 import { canWritePrepaRole } from "src/utils/roleGroups";
 import CommentaireContent from "../commentaires/CommentaireContent";
+import type { AppTheme } from "src/theme";
 
 /* ─────────── Helpers ─────────── */
 const dtfFR =
@@ -49,6 +51,17 @@ interface Props {
 
 /* ─────────── Component ─────────── */
 export default function PrepaDetailModal({ open, onClose, prepa, loading = false, onEdit }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight
+    ? theme.custom.overlay.scrim.background.light
+    : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const { exportPresence, exportEmargement } = useExportStagiairesPrepa();
   const { user } = useAuth();
   const canWritePrepa = canWritePrepaRole(user?.role);
@@ -66,6 +79,7 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
       maxWidth="lg"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       {/* ────── En-tête ────── */}
       <DialogTitle
@@ -73,7 +87,8 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: "1px solid #e0e0e0",
+          borderBottom: modalTitleBorder,
+          backgroundColor: modalTitleBackground,
         }}
       >
         <Typography component="span" variant="h6" fontWeight={700}>
@@ -252,7 +267,7 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
           justifyContent: "space-between",
           px: 3,
           py: 2,
-          borderTop: "1px solid #e0e0e0",
+          borderTop: modalTitleBorder,
         }}
       >
         {prepa && onEdit && prepa.id != null && (
@@ -312,21 +327,30 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
 
 /* ─────────── Sous-composants ─────────── */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography
-        variant="subtitle1"
-        sx={{
-          fontWeight: 700,
-          color: "primary.main",
-          mb: 0.5,
-          textTransform: "uppercase",
-          letterSpacing: 0.3,
-        }}
-      >
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box sx={{ mb: 1, px: 1.25, py: 0.75, borderRadius: 1.5, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontWeight: 700,
+            color: "primary.main",
+            textTransform: "uppercase",
+            letterSpacing: 0.3,
+          }}
+        >
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>

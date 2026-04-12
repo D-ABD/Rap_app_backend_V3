@@ -2,6 +2,7 @@
 import { Container, type SxProps, type Theme } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { ReactNode } from "react";
+import type { AppTheme } from "../theme";
 
 type PageWrapperProps = {
   children: ReactNode;
@@ -35,10 +36,14 @@ export default function PageWrapper({
           inset: 0,
           pointerEvents: "none",
           borderRadius: { xs: 0, sm: 4 },
-          background: (theme) =>
+          background: (theme: AppTheme) =>
             fullWidth
               ? "transparent"
-              : `linear-gradient(180deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.015 : 0.04)} 0%, transparent 30%)`,
+              : `linear-gradient(180deg, ${
+                  theme.palette.mode === "light"
+                    ? alpha(theme.custom.surface.muted.background.light, 0.9)
+                    : alpha(theme.custom.surface.muted.background.dark, 0.9)
+                } 0%, transparent 30%)`,
         },
         ...sx,
       }}

@@ -9,6 +9,7 @@ import {
   Typography,
   Card,
   Alert,
+  useTheme,
 } from "@mui/material";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -24,6 +25,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
+import type { AppTheme } from "src/theme";
 
 import {
   Filters,
@@ -49,6 +51,21 @@ export default function FormationPlacesWidget({
   title?: string;
   filters?: Filters;
 }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const chartGridStroke = isLight
+    ? theme.custom.chart.grid.stroke.light
+    : theme.custom.chart.grid.stroke.dark;
+  const chartAxisStroke = isLight
+    ? theme.custom.chart.axis.stroke.light
+    : theme.custom.chart.axis.stroke.dark;
+  const chartTooltipBackground = isLight
+    ? theme.custom.chart.tooltip.background.light
+    : theme.custom.chart.tooltip.background.dark;
+  const chartTooltipBorder = isLight
+    ? theme.custom.chart.tooltip.border.light
+    : theme.custom.chart.tooltip.border.dark;
+  const chartSeries = theme.custom.chart.series.ordered;
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState<boolean>(!!filters?.avec_archivees);
 
@@ -240,18 +257,18 @@ export default function FormationPlacesWidget({
                 barSize={30}
                 margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" allowDecimals={false} />
-                <YAxis dataKey="name" type="category" width={50} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="Places" fill="#42a5f5">
+                <CartesianGrid stroke={chartGridStroke} strokeDasharray="3 3" />
+                <XAxis type="number" allowDecimals={false} axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" width={50} axisLine={{ stroke: chartAxisStroke }} tickLine={{ stroke: chartAxisStroke }} tick={{ fill: theme.palette.text.secondary, fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: chartTooltipBackground, border: chartTooltipBorder, borderRadius: 12 }} itemStyle={{ color: theme.palette.text.primary }} labelStyle={{ color: theme.palette.text.secondary }} />
+                <Legend wrapperStyle={{ fontSize: 11, color: theme.palette.text.secondary }} />
+                <Bar dataKey="Places" fill={chartSeries[0]}>
                   <LabelList dataKey="Places" position="right" fontSize={11} />
                 </Bar>
-                <Bar dataKey="Inscrits" fill="#66bb6a">
+                <Bar dataKey="Inscrits" fill={chartSeries[1]}>
                   <LabelList dataKey="Inscrits" position="right" fontSize={11} />
                 </Bar>
-                <Bar dataKey="Dispo" fill="#ffa726">
+                <Bar dataKey="Dispo" fill={chartSeries[2]}>
                   <LabelList dataKey="Dispo" position="right" fontSize={11} />
                 </Bar>
               </BarChart>

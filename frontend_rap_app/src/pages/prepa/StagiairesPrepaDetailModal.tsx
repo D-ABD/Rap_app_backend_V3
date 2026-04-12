@@ -1,6 +1,7 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Typography } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Typography, useTheme } from "@mui/material";
 import type { StagiairePrepa } from "src/types/prepa";
 import CommentaireContent from "../commentaires/CommentaireContent";
+import type { AppTheme } from "src/theme";
 
 interface Props {
   open: boolean;
@@ -20,9 +21,14 @@ function Field({ label, value }: { label: string; value?: string | number | null
 }
 
 export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, onEdit }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight ? theme.custom.overlay.modalSectionTitle.background.light : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight ? theme.custom.overlay.modalSectionTitle.borderBottom.light : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Détail stagiaire Prépa</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth BackdropProps={{ sx: { backgroundColor: modalScrim } }}>
+      <DialogTitle sx={{ backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>Détail stagiaire Prépa</DialogTitle>
       <DialogContent dividers>
         {!stagiaire ? null : (
           <Paper variant="outlined" sx={{ p: 2 }}>
@@ -49,7 +55,7 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
           </Paper>
         )}
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ borderTop: modalTitleBorder }}>
         {stagiaire?.id && onEdit ? (
           <Button variant="contained" onClick={() => onEdit(stagiaire.id!)}>
             Modifier

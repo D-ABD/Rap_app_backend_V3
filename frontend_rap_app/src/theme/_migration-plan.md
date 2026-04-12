@@ -47,9 +47,11 @@ Ne refactore pas la structure des fichiers au-delà de ce qui est nécessaire au
 
 ### Pas encore fait (objet des lots ci-dessous)
 
-- Les **composants** consomment encore en majorité des littéraux ou `sx` locaux au lieu de `theme.custom.*`.
-- **`navigationStyles.ts`** et **`getDrawerItemSx` / `getTopNavButtonSx`** ne lisent pas encore les sous-structures `theme.custom.nav.drawerItem` / `theme.custom.nav.topButton` (les valeurs sont alignées dans la fabrique pour préparer la bascule).
-- **Refactor modulaire** `palette.ts` / `components.ts` extraits de `theme.ts` : hors périmètre des lots UI ; peut suivre une fois la migration des consommations stabilisée.
+- La **migration principale** des consommations design system est réalisée sur les périmètres couverts par les lots 1 à 7.
+- Il subsiste des **écarts résiduels** identifiés et cadrés dans le **lot 8** :
+  composants encore partiellement hardcodés, styles locaux non tokenisés, usages encore centrés sur `theme.palette` sans centralisation `theme.custom.*`, et homogénéisation incomplète de `useTheme<AppTheme>()`.
+- La liste du **lot 8** constitue une **base de travail fiable pour la consolidation**, mais doit être lue comme un périmètre d’audit priorisé, pas comme une vérité absolue ligne par ligne sans revalidation locale.
+- **Refactor modulaire** `palette.ts` / `components.ts` extraits de `theme.ts` : hors périmètre des lots UI ; peut suivre une fois la consolidation du lot 8 stabilisée.
 
 ### Prérequis pour chaque lot
 
@@ -114,7 +116,7 @@ Statut : Terminé le 12 avril 2026
 - `src/layout/SidebarItems.tsx`
 - Sections `AppBar` / `Drawer` / `ListItemButton` dans les `MainLayout*` (restes du lot 1)
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Tokens à brancher
 
@@ -142,11 +144,24 @@ Implémentation attendue : **`getDrawerItemSx(theme, nested)`** et **`getTopNavB
 2. Ajuster **`SidebarItems`** si des `sx` inline doublonnent.
 3. Repasser les **`MainLayout*`** pour retirer les derniers styles de nav en dur.
 
+### Réalisé
+
+- `src/layout/navigationStyles.ts`
+- `src/layout/MainLayout.tsx`
+- `src/layout/MainLayoutPrepa.tsx`
+- `src/layout/MainLayoutDeclic.tsx`
+- `src/layout/MainLayoutCandidat.tsx`
+
+### Note d'exécution
+
+- `src/layout/SidebarItems.tsx` a été relu dans le cadre du lot.
+- Aucun remplacement n'y était nécessaire pour `theme.custom.nav.*` sans élargir le périmètre ni forcer un changement artificiel.
+
 ---
 
 ## Lot 3 — Surfaces communes
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Fichiers concernés
 
@@ -178,11 +193,19 @@ Statut : À faire
 1. **`StatCard`** (réutilisé partout).
 2. **`PageTemplate`** puis **`PageWrapper`** / **`PageSection`**.
 
+### Réalisé
+
+- `src/components/PageTemplate.tsx`
+- `src/components/PageWrapper.tsx`
+- `src/components/PageSection.tsx`
+- `src/components/dashboard/StatCard.tsx`
+- `src/components/dashboard/ChartCard.tsx`
+
 ---
 
 ## Lot 4 — Formulaires
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Fichiers concernés (échantillon)
 
@@ -206,11 +229,19 @@ Statut : À faire
 1. **`FormSectionCard`**.  
 2. Un formulaire pilote, puis déclinaison.
 
+### Réalisé
+
+- `src/components/forms/FormSectionCard.tsx`
+- `src/pages/partenaires/PartenaireCandidatForm.tsx`
+- `src/pages/centres/CentreDetailPage.tsx`
+- `src/pages/formations/FormationForm.tsx`
+- `src/pages/prepa/PrepaForm.tsx`
+
 ---
 
 ## Lot 5 — Tables
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Fichiers concernés (exemples)
 
@@ -233,11 +264,25 @@ Cohérence avec **`MuiTableHead` / `MuiTableRow` / `MuiTableCell`** du thème : 
 1. **`ResponsiveTableTemplate`**.  
 2. Tables métier par ordre de visibilité.
 
+### Réalisé
+
+- `src/components/ResponsiveTableTemplate.tsx`
+- `src/pages/declic/ObjectifDeclicTable.tsx`
+- `src/pages/prospection/ProspectionTable.tsx`
+- `src/pages/prepa/PrepaTableAteliers.tsx`
+- `src/pages/prepa/PrepaTableIC.tsx`
+
+### Note d'exécution
+
+- `src/pages/formations/FormationTable.tsx` a été relu dans le cadre du lot.
+- Le composant hérite désormais du socle table migré via `ResponsiveTableTemplate`.
+- Aucun patch local supplémentaire n'était nécessaire sur ce fichier sans élargir artificiellement le périmètre vers des couleurs métier hors `theme.custom.table.*`.
+
 ---
 
 ## Lot 6 — Cards, widgets & modales
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Fichiers concernés
 
@@ -267,16 +312,59 @@ Statut : À faire
 2. Déclinaison par dossier widget.  
 3. **Modales** en dernier.
 
+### Réalisé
+
+- `src/pages/widgets/overviewDashboard/AppairageOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/FormationPlacesWidget.tsx`
+- `src/pages/widgets/overviewDashboard/FormationOverviewDashboard.tsx`
+- `src/pages/widgets/overviewDashboard/FormationOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/FormationFinanceursOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/ProspectionOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/EvenementOverviewWidget.tsx`
+- `src/pages/appairage/AppairageDetailModal.tsx`
+- `src/pages/cerfa/CerfaDetailModal.tsx`
+- `src/pages/candidats/CandidatDetailModal.tsx`
+- `src/pages/partenaires/PartenaireDetailModal.tsx`
+- `src/pages/partenaires/PartenaireCandidatDetailModal.tsx`
+- `src/pages/prepa/ObjectifsPrepaDetailModal.tsx`
+- `src/pages/declic/ObjectifsDeclicDetailModal.tsx`
+- `src/pages/prospection/ProspectionDetailModal.tsx`
+- `src/pages/prepa/PrepaDetailModal.tsx`
+- `src/pages/declic/DeclicDetailModal.tsx`
+- `src/pages/formations/FormationDetailModal.tsx`
+- `src/pages/declic/ParticipantsDeclicDetailModal.tsx`
+- `src/pages/prepa/StagiairesPrepaDetailModal.tsx`
+- `src/pages/logs/LogDetailModal.tsx`
+
+### Note d'exécution
+
+- La passe actuelle a branché les tokens `chart.*` sur les widgets Recharts les plus centraux du dossier `overviewDashboard`.
+- La passe actuelle a branché les tokens `overlay.*` sur les modales de détail qui dupliquaient directement des surfaces `DialogTitle` / `DialogActions` / sections internes.
+- Les fichiers de `groupeddashboard` et `commentsDahboard` ont été relus dans le cadre du lot :
+  ils relèvent surtout de tables, de KPI métier ou de `Tooltip` MUI, sans duplication directe de `chart.*` ou `overlay.*` à corriger dans le fichier.
+- Les modales déjà basées sur des shells partagés comme `DetailViewLayout` ont été relues :
+  aucun patch local supplémentaire n'était nécessaire sans élargir artificiellement le périmètre vers les composants partagés.
+
 ---
 
 ## Lot 7 (optionnel) — Éditeur & styled-components
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Fichiers concernés
 
 - `src/utils/registerQuillFormats.ts` — aligner les presets sur `theme.custom.editor.quill.*` si unification souhaitée.
 - `src/components/filters/FiltresUsersPanel.tsx` — `styled-components` + fallbacks hex : bridge vers MUI / tokens ou retrait progressif.
+
+### Réalisé
+
+- `src/utils/registerQuillFormats.ts`
+- `src/components/filters/FiltresUsersPanel.tsx`
+
+### Note d'exécution
+
+- `src/utils/registerQuillFormats.ts` a été aligné sur les entrées canoniques déjà définies dans `theme.custom.editor.quill.*`, tout en conservant les autres couleurs utiles au preset pour éviter une régression d'usage.
+- `src/components/filters/FiltresUsersPanel.tsx` n'utilise plus de fallbacks hex dans ses `styled-components` pour les zones ciblées par le lot.
 
 ---
 
@@ -294,13 +382,204 @@ Statut : À faire
 ## Check-list avant clôture globale
 
 - [x] Jetons `theme.custom` définis et typés (`appCustomTokens.types` + `createAppCustomTokens`) ; **`AppTheme`** + convention **`useTheme<AppTheme>()`** documentée (`_tokens.md`, `_design-system.md`).
-- [ ] Layouts : shell + footer consomment `custom.layout` / `custom.footer` sans littéraux équivalents.
-- [ ] Navigation : `navigationStyles` + sidebars basés sur `custom.nav.drawerItem` / `custom.nav.topButton`.
-- [ ] `PageTemplate` / `StatCard` sur `custom.surface` / `custom.kpi`.
-- [ ] Tables alignées sur `custom.table` + cohérence `MuiTable*`.
-- [ ] Widgets Recharts sur `custom.chart` ; statuts sélecteurs sur `custom.dataviz.statut` (ou dépréciation documentée de `constants/colors.ts` en import direct dans les pages).
-- [ ] Quill / styled-components traités (lot 7) si objectif « zéro hex hors thème ».
+- [x] Layouts : shell + footer consomment `custom.layout` / `custom.footer` dans le périmètre du lot 1.
+- [x] Navigation : `navigationStyles` + layouts alignés sur `custom.nav.drawerItem` / `custom.nav.topButton` dans le périmètre du lot 2.
+- [x] `PageTemplate` / `StatCard` alignés sur `custom.surface` / `custom.kpi` (lot 3).
+- [x] Tables alignées sur `custom.table` + cohérence `MuiTable*`.
+- [x] Widgets Recharts alignés sur `custom.chart` et modales sur `custom.overlay` (lot 6).
+- [x] Quill / styled-components traités (lot 7) si objectif « zéro hex hors thème ».
 
 ---
 
 *Dernière mise à jour : tokens (`src/theme/tokens/`), convention `AppTheme` / `useTheme<AppTheme>()`, docs `_tokens.md` et `_design-system.md`.*
+
+---
+
+## Lot 8 — Audit & consolidation design system
+
+Statut : À faire
+
+### Objectif
+
+Vérifier la conformité complète du frontend avec `theme.ts` et `theme.custom.*`.
+
+### Constats
+
+- [ ] Hex encore présents dans certains composants
+- [ ] Styles `sx` non tokenisés
+- [ ] Composants déjà thémés via `theme.palette`, mais pas encore centralisés via `theme.custom.*`
+- [ ] Doubles sources de vérité (theme vs composants)
+- [ ] Typage `AppTheme` non respecté partout
+
+### Fichiers concernés
+
+- `src/components/EtatBadge.tsx`
+- `src/components/forms/RichHtmlEditorField.tsx`
+- `src/components/modals/CandidatsSelectModal.tsx`
+- `src/components/modals/CerfaSelectModal.tsx`
+- `src/components/modals/FormationCommentsModal.tsx`
+- `src/components/modals/FormationSelectModal.tsx`
+- `src/components/modals/PartenairesSelectModal.tsx`
+- `src/components/modals/UsersSelectModal.tsx`
+- `src/pages/widgets/groupeddashboard/AppairageGroupedTableWidget.tsx`
+- `src/pages/widgets/groupeddashboard/AteliersTREGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/CandidatGroupedTableWidget.tsx`
+- `src/pages/widgets/groupeddashboard/DeclicGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/EvenementGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/FormationGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/PrepaGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/ProspectionGroupedWidget.tsx`
+- `src/pages/widgets/overviewDashboard/CandidatContratOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/CandidatOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/CandidatsOverviewDashboard.tsx`
+- `src/pages/widgets/overviewDashboard/FormationStatsSummary.tsx`
+- `src/pages/prepa/PrepaStatsSummary.tsx`
+- `src/pages/prepa/PrepaStatsOperations.tsx`
+- `src/pages/declic/DeclicStatsSummary.tsx`
+- `src/pages/declic/DéclicStatsOperations.tsx`
+- `src/pages/prepa/ObjectifPrepaTable.tsx`
+- `src/pages/declic/DeclicTable.tsx`
+- `src/pages/partenaires/PartenaireForm.tsx`
+- `src/pages/prospection/ProspectionForm.tsx`
+- `src/pages/prospection/ProspectionTable.tsx`
+- `src/pages/formations/FormationTable.tsx`
+- `src/pages/HomePage.tsx`
+- `src/pages/DashboardPage.tsx`
+- `src/pages/partenaires/PartenairesPage.tsx`
+- `src/pages/partenaires/PartenairesCandidatPage.tsx`
+- `src/pages/formations/FormationsPage.tsx`
+- `src/pages/commentaires/CommentairesPage.tsx`
+- `src/pages/Documents/DocumentsPage.tsx`
+- `src/pages/Documents/DocumentsTable.tsx`
+- `src/pages/cvtheque/cvthequeTable.tsx`
+- `src/pages/cvtheque/cvthequeTableCandidat.tsx`
+- `src/pages/appairage/AppairagesPage.tsx`
+- `src/pages/centres/CentresPage.tsx`
+- `src/pages/candidats/candidatsPage.tsx`
+- `src/pages/statuts/StatutsPage.tsx`
+- `src/pages/typeOffres/TypeOffresPage.tsx`
+- `src/pages/users/UsersPage.tsx`
+
+### Actions à mener
+
+- Remplacer toutes les couleurs hardcodées
+- Migrer les styles vers `theme.custom.*`
+- Recentrer les composants déjà thémés via `theme.palette` vers des sources de vérité `theme.custom.*` quand un token existe
+- Supprimer les duplications
+- Uniformiser `useTheme<AppTheme>()`
+
+### Risques
+
+- Régression visuelle mineure
+- incohérence temporaire si migration partielle
+
+### Priorité
+
+P1 — consolidation finale avant stabilisation design system
+
+### Découpage d’exécution recommandé
+
+#### Lot 8.1 — Widgets `groupeddashboard`
+
+Statut : À faire
+
+**Périmètre**
+
+- `src/pages/widgets/groupeddashboard/AppairageGroupedTableWidget.tsx`
+- `src/pages/widgets/groupeddashboard/AteliersTREGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/CandidatGroupedTableWidget.tsx`
+- `src/pages/widgets/groupeddashboard/DeclicGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/EvenementGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/FormationGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/PrepaGroupedWidget.tsx`
+- `src/pages/widgets/groupeddashboard/ProspectionGroupedWidget.tsx`
+
+**Objectif**
+
+- Supprimer les hex et styles inline de tableaux groupés
+- Aligner les fonds de structure sur `theme.custom.table.*`
+- Isoler clairement les couleurs métier restantes
+
+#### Lot 8.2 — Overview + stats summary
+
+Statut : À faire
+
+**Périmètre**
+
+- `src/pages/widgets/overviewDashboard/CandidatContratOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/CandidatOverviewWidget.tsx`
+- `src/pages/widgets/overviewDashboard/CandidatsOverviewDashboard.tsx`
+- `src/pages/widgets/overviewDashboard/FormationStatsSummary.tsx`
+- `src/pages/prepa/PrepaStatsSummary.tsx`
+- `src/pages/prepa/PrepaStatsOperations.tsx`
+- `src/pages/declic/DeclicStatsSummary.tsx`
+- `src/pages/declic/DéclicStatsOperations.tsx`
+
+**Objectif**
+
+- Remplacer les palettes hardcodées des widgets overview
+- Recentrer les cartes KPI sur `theme.custom.kpi.*`
+- Uniformiser les surfaces via `theme.custom.surface.*`
+
+#### Lot 8.3 — Forms legacy
+
+Statut : À faire
+
+**Périmètre**
+
+- `src/pages/partenaires/PartenaireForm.tsx`
+- `src/pages/prospection/ProspectionForm.tsx`
+- `src/components/forms/RichHtmlEditorField.tsx`
+- `src/components/EtatBadge.tsx`
+
+**Objectif**
+
+- Retirer les surcharges locales résiduelles
+- Revenir aux sources de vérité `theme.custom.form.*`
+- Éliminer les couleurs hardcodées encore présentes dans les composants de formulaire associés
+
+#### Lot 8.4 — Tables restantes
+
+Statut : À faire
+
+**Périmètre**
+
+- `src/pages/prepa/ObjectifPrepaTable.tsx`
+- `src/pages/declic/DeclicTable.tsx`
+- `src/pages/prospection/ProspectionTable.tsx`
+- `src/pages/formations/FormationTable.tsx`
+
+**Objectif**
+
+- Finir l’alignement sur `theme.custom.table.*`
+- Réduire les doubles sources de vérité entre tables métier et socle commun
+- Laisser explicitement à part les couleurs métier qui doivent rester dynamiques
+
+#### Lot 8.5 — Typage `useTheme`
+
+Statut : À faire
+
+**Périmètre**
+
+- `src/pages/HomePage.tsx`
+- `src/pages/DashboardPage.tsx`
+- `src/pages/partenaires/PartenairesPage.tsx`
+- `src/pages/partenaires/PartenairesCandidatPage.tsx`
+- `src/pages/formations/FormationsPage.tsx`
+- `src/pages/commentaires/CommentairesPage.tsx`
+- `src/pages/Documents/DocumentsPage.tsx`
+- `src/pages/Documents/DocumentsTable.tsx`
+- `src/pages/cvtheque/cvthequeTable.tsx`
+- `src/pages/cvtheque/cvthequeTableCandidat.tsx`
+- `src/pages/appairage/AppairagesPage.tsx`
+- `src/pages/centres/CentresPage.tsx`
+- `src/pages/candidats/candidatsPage.tsx`
+- `src/pages/statuts/StatutsPage.tsx`
+- `src/pages/typeOffres/TypeOffresPage.tsx`
+- `src/pages/users/UsersPage.tsx`
+
+**Objectif**
+
+- Uniformiser `useTheme<AppTheme>()`
+- Éliminer les écarts de typage qui fragilisent la lecture future de `theme.custom.*`
+- Traiter ce sous-lot comme une homogénéisation DX sûre, sans changement visuel attendu

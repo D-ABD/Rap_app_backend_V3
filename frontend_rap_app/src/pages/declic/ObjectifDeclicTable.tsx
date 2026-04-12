@@ -11,9 +11,11 @@ import {
   Paper,
   Typography,
   Box,
+  useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import type { ObjectifDeclic } from "src/types/declic";
+import type { AppTheme } from "src/theme";
 import ObjectifsDeclicDetailModal from "./ObjectifsDeclicDetailModal";
 
 interface Props {
@@ -22,6 +24,23 @@ interface Props {
 
 export default function ObjectifDeclicTable({ data }: Props) {
   const [selectedCentreId, setSelectedCentreId] = useState<number | null>(null);
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const tableHeaderBackground = isLight
+    ? theme.custom.table.header.background.light
+    : theme.custom.table.header.background.dark;
+  const tableHeaderBorder = isLight
+    ? theme.custom.table.header.borderBottom.light
+    : theme.custom.table.header.borderBottom.dark;
+  const tableRowHoverBackground = isLight
+    ? theme.custom.table.row.hover.light
+    : theme.custom.table.row.hover.dark;
+  const tableRowStripedBackground = isLight
+    ? theme.custom.table.row.stripedEven.light
+    : theme.custom.table.row.stripedEven.dark;
+  const tableCellBorder = isLight
+    ? theme.custom.table.cell.borderBottom.light
+    : theme.custom.table.cell.borderBottom.dark;
 
   // 🧮 Totaux
   const totalObjectif = data.reduce((sum, o) => sum + (o.valeur_objectif ?? 0), 0);
@@ -40,11 +59,11 @@ export default function ObjectifDeclicTable({ data }: Props) {
     <>
       <TableContainer
         component={Paper}
-        sx={{
-          borderRadius: 3,
-          overflow: "auto",
-          boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
-          maxHeight: "75vh",
+          sx={{
+            borderRadius: 3,
+            overflow: "auto",
+            boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
+            maxHeight: "75vh",
         }}
       >
         <Table
@@ -56,7 +75,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
           }}
         >
           {/* ─────────── HEADER ─────────── */}
-          <TableHead sx={{ backgroundColor: "#f4f6f8" }}>
+          <TableHead sx={{ backgroundColor: tableHeaderBackground }}>
             <TableRow>
               {[
                 "Année",
@@ -73,8 +92,8 @@ export default function ObjectifDeclicTable({ data }: Props) {
                   sx={{
                     fontWeight: 700,
                     color: "text.primary",
-                    borderBottom: "2px solid #e0e0e0",
-                    backgroundColor: "#f4f6f8",
+                    borderBottom: tableHeaderBorder,
+                    backgroundColor: tableHeaderBackground,
                     position: idx < 3 ? "sticky" : "static",
                     left: idx === 0 ? 0 : idx === 1 ? 100 : idx === 2 ? 280 : "auto",
                     zIndex: idx < 3 ? 2 : 1,
@@ -96,7 +115,8 @@ export default function ObjectifDeclicTable({ data }: Props) {
                 sx={{
                   cursor: "pointer",
                   transition: "background-color 0.2s ease",
-                  "&:hover": { backgroundColor: "#f5faff" },
+                  "&:nth-of-type(even)": { backgroundColor: tableRowStripedBackground },
+                  "&:hover": { backgroundColor: tableRowHoverBackground },
                 }}
               >
                 {/* Année */}
@@ -107,6 +127,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                     left: 0,
                     backgroundColor: "#fff",
                     zIndex: 2,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   {obj.annee}
@@ -121,6 +142,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                     left: 100,
                     backgroundColor: "#fff",
                     zIndex: 2,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   {obj.centre?.nom ?? "—"}
@@ -133,6 +155,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                     left: 280,
                     backgroundColor: "#fff",
                     zIndex: 2,
+                    borderBottom: tableCellBorder,
                   }}
                 >
                   {obj.departement ?? "—"}
@@ -166,15 +189,16 @@ export default function ObjectifDeclicTable({ data }: Props) {
             ))}
 
             {/* Ligne TOTAL */}
-            <TableRow sx={{ backgroundColor: "#fafbfc" }}>
+            <TableRow sx={{ backgroundColor: tableRowStripedBackground }}>
               <TableCell
                 colSpan={3}
                 sx={{
                   position: "sticky",
                   left: 0,
                   zIndex: 3,
-                  backgroundColor: "#fafbfc",
+                  backgroundColor: tableRowStripedBackground,
                   fontWeight: 700,
+                  borderBottom: tableCellBorder,
                 }}
               >
                 TOTAL

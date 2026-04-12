@@ -13,6 +13,7 @@ import {
   Paper,
   Tooltip,
   Alert,
+  useTheme,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import EditIcon from "@mui/icons-material/Edit";
@@ -21,6 +22,7 @@ import { toast } from "react-toastify";
 import { useCerfaGeneratePdf, useCerfaDownloadPdf, downloadBlob } from "../../hooks/useCerfa";
 import type { CerfaContrat } from "../../types/cerfa";
 import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
+import type { AppTheme } from "src/theme";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -107,6 +109,17 @@ export default function CerfaDetailModal({
   onEdit,
   canWrite = true,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalScrim = isLight
+    ? theme.custom.overlay.scrim.background.light
+    : theme.custom.overlay.scrim.background.dark;
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const { mutateAsync: generatePdf, isPending: isGenerating } = useCerfaGeneratePdf(
     contrat?.id ?? 0
   );
@@ -116,7 +129,7 @@ export default function CerfaDetailModal({
 
   if (loading || !contrat)
     return (
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" BackdropProps={{ sx: { backgroundColor: modalScrim } }}>
         <DialogContent sx={{ textAlign: "center", py: 6 }}>
           <CircularProgress />
         </DialogContent>
@@ -181,6 +194,7 @@ export default function CerfaDetailModal({
       maxWidth="lg"
       scroll="paper"
       disableEnforceFocus
+      BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
       <DialogTitle
         sx={{
@@ -189,6 +203,8 @@ export default function CerfaDetailModal({
           justifyContent: "space-between",
           alignItems: "center",
           pr: 2,
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
         }}
       >
         <Typography variant="h6" component="span">
@@ -513,7 +529,7 @@ export default function CerfaDetailModal({
         </Paper>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, borderTop: modalTitleBorder }}>
         <Button onClick={onClose} variant="outlined">
           Fermer
         </Button>
@@ -524,12 +540,31 @@ export default function CerfaDetailModal({
 
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const modalTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const modalTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
-        {title}
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+      <Box
+        sx={{
+          mb: 1,
+          px: 1.25,
+          py: 0.75,
+          borderRadius: 1.5,
+          backgroundColor: modalTitleBackground,
+          borderBottom: modalTitleBorder,
+        }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider sx={{ mb: 1, display: "none" }} />
       <Grid container spacing={1}>
         {children}
       </Grid>

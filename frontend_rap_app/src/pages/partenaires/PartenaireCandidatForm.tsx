@@ -13,6 +13,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   MenuItem,
+  useTheme,
 } from "@mui/material";
 import {
   Description as DescriptionIcon,
@@ -25,6 +26,7 @@ import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 
 import type { Partenaire, PartenaireChoicesResponse } from "../../types/partenaire";
 import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
+import type { AppTheme } from "../../theme";
 
 type FormProps = {
   initialValues?: Partial<Partenaire>;
@@ -44,15 +46,37 @@ function Section({
   title: string;
   children: React.ReactNode;
 }) {
+  const theme = useTheme<AppTheme>();
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, backgroundColor: "#fafafa" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        mb: 3,
+        borderRadius: 2,
+        backgroundColor:
+          theme.palette.mode === "light"
+            ? theme.custom.form.section.paperBackground.light
+            : theme.custom.form.section.paperBackground.dark,
+      }}
+    >
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
         {icon}
         <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
           {title}
         </Typography>
       </Stack>
-      <Divider sx={{ mb: 2 }} />
+      <Divider
+        sx={{
+          mb: 2,
+          borderBottomStyle: "dashed",
+          borderBottomWidth: theme.custom.form.divider.dashedWidth,
+          borderColor:
+            theme.palette.mode === "light"
+              ? theme.custom.form.divider.dashedColor.light
+              : theme.custom.form.divider.dashedColor.dark,
+        }}
+      />
       {children}
     </Paper>
   );
@@ -67,6 +91,7 @@ export default function PartenaireCandidatForm({
   choices,
   readOnlyCentre = false, // ✅ valeur par défaut
 }: FormProps) {
+  const theme = useTheme<AppTheme>();
   const [form, setForm] = useState<Partial<Partenaire>>(initialValues);
 
   useEffect(() => {
@@ -263,8 +288,15 @@ export default function PartenaireCandidatForm({
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           sx={{
-            backgroundColor: "rgba(25,118,210,0.08)",
-            borderBottom: "1px solid #ddd",
+            backgroundColor:
+              theme.palette.mode === "light"
+                ? theme.custom.form.section.accentHeaderBackground.light
+                : theme.custom.form.section.accentHeaderBackground.dark,
+            borderBottom: `${theme.custom.form.divider.dashedWidth} solid ${
+              theme.palette.mode === "light"
+                ? theme.custom.form.divider.dashedColor.light
+                : theme.custom.form.divider.dashedColor.dark
+            }`,
             borderRadius: "8px 8px 0 0",
             "& .MuiAccordionSummary-content": { alignItems: "center", gap: 1 },
           }}
@@ -275,7 +307,15 @@ export default function PartenaireCandidatForm({
           </Typography>
         </AccordionSummary>
 
-        <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
+        <AccordionDetails
+          sx={{
+            p: 3,
+            backgroundColor:
+              theme.palette.mode === "light"
+                ? theme.custom.form.section.paperBackground.light
+                : theme.custom.form.section.paperBackground.dark,
+          }}
+        >
           <RichHtmlEditorField
             label={`Informations complémentaires (${count(form.description)}/2000)`}
             value={form.description || ""}
