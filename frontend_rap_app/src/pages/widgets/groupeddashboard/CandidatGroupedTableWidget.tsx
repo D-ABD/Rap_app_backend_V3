@@ -12,6 +12,7 @@ import {
   useTheme,
 } from "@mui/material";
 import ArchiveIcon from "@mui/icons-material/Archive";
+import type { AppTheme } from "../../../theme";
 import {
   CandidatFilters,
   CandidatGroupBy,
@@ -76,7 +77,7 @@ export default function CandidatGroupedTableWidget({
   showControls?: boolean;
   className?: string;
 }) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const initial = React.useRef<CandidatFilters>(defaultFilters ?? {});
   const [by, setBy] = React.useState<CandidatGroupBy>(defaultBy);
   const [filters, setFilters] = React.useState<CandidatFilters>(initial.current);
@@ -99,8 +100,13 @@ export default function CandidatGroupedTableWidget({
   const colorSuccess =
     theme.palette.mode === "dark" ? theme.palette.success.dark : theme.palette.success.light;
   const colorTotal =
-    theme.palette.mode === "dark" ? theme.palette.grey[800] : theme.palette.grey[100];
-  const colorHeader = theme.palette.mode === "dark" ? theme.palette.background.default : "#e3f2fd";
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
+  const colorHeader =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
 
   return (
     <Card className={className}>

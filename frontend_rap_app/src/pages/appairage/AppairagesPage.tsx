@@ -40,6 +40,7 @@ import AppairageDetailModal from "./AppairageDetailModal";
 import { useAuth } from "../../hooks/useAuth";
 import SearchInput from "../../components/SearchInput";
 import { isAdminLikeRole } from "../../utils/roleGroups";
+import type { AppTheme } from "../../theme";
 
 type AppairagePageFilters = AppairageFiltresValues & {
   centre?: number;
@@ -48,7 +49,7 @@ type AppairagePageFilters = AppairageFiltresValues & {
 export const AppairagesPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);

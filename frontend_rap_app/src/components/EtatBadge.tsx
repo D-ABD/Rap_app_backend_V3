@@ -49,12 +49,12 @@ function mapVariantToStyle(variant: BadgeVariant): {
     case "dark":
       return {
         color: "default",
-        customSx: { bgcolor: "#343a40", color: "white" },
+        customSx: { bgcolor: "grey.900", color: "common.white" },
       };
     case "orange":
       return {
         color: "default",
-        customSx: { bgcolor: "orange", color: "white" },
+        customSx: { bgcolor: "warning.main", color: "common.white" },
       };
     default:
       return { color: "default" };

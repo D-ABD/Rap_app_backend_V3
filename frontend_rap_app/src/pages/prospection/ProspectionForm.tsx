@@ -37,6 +37,8 @@ import PartenaireSelectModal from "../../components/modals/PartenairesSelectModa
 import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
 import FormSectionCard from "../../components/forms/FormSectionCard";
 import FormActionsBar from "../../components/forms/FormActionsBar";
+import type { Theme } from "@mui/material/styles";
+import type { AppTheme } from "../../theme";
 import AppDateField from "../../components/forms/fields/AppDateField";
 import AppSelectField from "../../components/forms/fields/AppSelectField";
 import EntityPickerField from "../../components/forms/fields/EntityPickerField";
@@ -257,7 +259,16 @@ export default function ProspectionForm({
         </Alert>
       ) : null}
 
-      <FormSectionCard sx={{ mb: 3, background: "#fafafa" }} title={sectionTitle(<BusinessIcon color="primary" />, "Entités liées (Partenaire, Formation, Candidat)")}>
+      <FormSectionCard
+        sx={{
+          mb: 3,
+          background: (theme: Theme) =>
+            theme.palette.mode === "light"
+              ? (theme as AppTheme).custom.form.section.paperBackground.light
+              : (theme as AppTheme).custom.form.section.paperBackground.dark,
+        }}
+        title={sectionTitle(<BusinessIcon color="primary" />, "Entités liées (Partenaire, Formation, Candidat)")}
+      >
         <Stack spacing={2}>
           <EntityPickerField
             label="Partenaire"
@@ -308,7 +319,16 @@ export default function ProspectionForm({
         </Stack>
       </FormSectionCard>
 
-      <FormSectionCard sx={{ mb: 3, background: "#fafafa" }} title={sectionTitle(<AssignmentIcon color="primary" />, "Informations de prospection")}>
+      <FormSectionCard
+        sx={{
+          mb: 3,
+          background: (theme: Theme) =>
+            theme.palette.mode === "light"
+              ? (theme as AppTheme).custom.form.section.paperBackground.light
+              : (theme as AppTheme).custom.form.section.paperBackground.dark,
+        }}
+        title={sectionTitle(<AssignmentIcon color="primary" />, "Informations de prospection")}
+      >
         <Grid
           container
           spacing={2}
@@ -421,7 +441,16 @@ export default function ProspectionForm({
         </Grid>
       </FormSectionCard>
 
-      <FormSectionCard sx={{ mb: 3, background: "#fafafa" }} title={sectionTitle(<AssignmentIcon color="primary" />, "Commentaire libre")}>
+      <FormSectionCard
+        sx={{
+          mb: 3,
+          background: (theme: Theme) =>
+            theme.palette.mode === "light"
+              ? (theme as AppTheme).custom.form.section.paperBackground.light
+              : (theme as AppTheme).custom.form.section.paperBackground.dark,
+        }}
+        title={sectionTitle(<AssignmentIcon color="primary" />, "Commentaire libre")}
+      >
         <RichHtmlEditorField
           label="Commentaire"
           value={form.commentaire ?? ""}

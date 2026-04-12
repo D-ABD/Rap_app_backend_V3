@@ -44,6 +44,7 @@ import { buildCandidatExportQueryParams } from "../../api/lot1ImportExport";
 import CandidatDetailModal from "./CandidatDetailModal";
 import api from "../../api/axios";
 import SearchInput from "../../components/SearchInput";
+import type { AppTheme } from "../../theme";
 
 type AtelierTreOption = {
   id: number;
@@ -55,7 +56,7 @@ type AtelierTreOption = {
 export default function CandidatsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const toNum = useCallback((value: string | null) => {

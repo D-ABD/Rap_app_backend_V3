@@ -24,6 +24,7 @@ import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
+import type { AppTheme } from "../../theme";
 
 type Statut = {
   id: number;
@@ -48,7 +49,7 @@ export default function StatutsPage() {
   const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
 
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { data, loading, error, fetchData } = useFetch<{

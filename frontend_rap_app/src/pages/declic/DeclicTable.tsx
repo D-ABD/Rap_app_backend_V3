@@ -15,6 +15,7 @@ import {
   Stack,
   Paper,
   Chip,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ import type { Declic } from "src/types/declic";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import type { AppTheme } from "../../theme";
 
 /* ---------- Helpers ---------- */
 const dtfDateFR =
@@ -67,7 +69,20 @@ export default function DeclicTable({
   onRowClick,
   maxHeight,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const navigate = useNavigate();
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableHeaderBorder =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.borderBottom.light
+      : theme.custom.table.header.borderBottom.dark;
+  const tableRowStripedBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   const goEdit = useCallback(
     (id: number) => (onEdit ? onEdit(id) : navigate(`/declic/${id}/edit`)),
@@ -158,7 +173,7 @@ export default function DeclicTable({
                 position: "sticky",
                 left: 0,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: "background.paper",
                 minWidth: W_CHECK,
                 width: W_CHECK,
               }}
@@ -177,7 +192,7 @@ export default function DeclicTable({
                 position: "sticky",
                 left: W_CHECK,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: "background.paper",
                 minWidth: W_TYPE,
                 width: W_TYPE,
               }}
@@ -191,7 +206,7 @@ export default function DeclicTable({
                 position: "sticky",
                 left: W_CHECK + W_TYPE,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: "background.paper",
                 minWidth: W_DATE,
                 width: W_DATE,
               }}
@@ -205,7 +220,7 @@ export default function DeclicTable({
                 position: "sticky",
                 left: W_CHECK + W_TYPE + W_DATE,
                 zIndex: 10,
-                backgroundColor: "#fff",
+                backgroundColor: "background.paper",
                 minWidth: W_CENTRE,
                 width: W_CENTRE,
               }}
@@ -236,7 +251,7 @@ export default function DeclicTable({
                 onClick={() => onRowClick?.(d.id)}
                 sx={{
                   cursor: "pointer",
-                  "&:nth-of-type(even)": { bgcolor: "grey.50" },
+                  "&:nth-of-type(even)": { bgcolor: tableRowStripedBackground },
                 }}
               >
                 {/* Sticky 1 : Checkbox */}
@@ -247,7 +262,7 @@ export default function DeclicTable({
                     position: "sticky",
                     left: 0,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     minWidth: W_CHECK,
                     width: W_CHECK,
                   }}
@@ -264,7 +279,7 @@ export default function DeclicTable({
                     position: "sticky",
                     left: W_CHECK,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     minWidth: W_TYPE,
                     width: W_TYPE,
                   }}
@@ -278,7 +293,7 @@ export default function DeclicTable({
                     position: "sticky",
                     left: W_CHECK + W_TYPE,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     minWidth: W_DATE,
                     width: W_DATE,
                   }}
@@ -292,7 +307,7 @@ export default function DeclicTable({
                     position: "sticky",
                     left: W_CHECK + W_TYPE + W_DATE,
                     zIndex: 9,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     minWidth: W_CENTRE,
                     width: W_CENTRE,
                   }}
@@ -410,8 +425,8 @@ export default function DeclicTable({
             sx={{
               position: "sticky",
               bottom: 0,
-              bgcolor: "#f4f6f8",
-              borderTop: "2px solid #ddd",
+              bgcolor: tableHeaderBackground,
+              borderTop: tableHeaderBorder,
               zIndex: 4,
             }}
           >

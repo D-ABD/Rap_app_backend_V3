@@ -1,6 +1,7 @@
 // src/components/PageWrapper.tsx
-import { Container, type SxProps, type Theme } from "@mui/material";
+import { Container } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { ReactNode } from "react";
 import type { AppTheme } from "../theme";
 
@@ -22,31 +23,39 @@ export default function PageWrapper({
   fullWidth = false,
   sx,
 }: PageWrapperProps) {
+  const baseSx: SxProps<Theme> = {
+    position: "relative",
+    py: { xs: 2.5, sm: 3.5, lg: 4 },
+    px: fullWidth ? { xs: 0, sm: 0 } : undefined,
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      borderRadius: { xs: 0, sm: 4 },
+      background: (theme: Theme) => {
+        if (fullWidth) return "transparent";
+        const appTheme = theme as AppTheme;
+        return `linear-gradient(180deg, ${
+          appTheme.palette.mode === "light"
+            ? alpha(appTheme.custom.surface.muted.background.light, 0.9)
+            : alpha(appTheme.custom.surface.muted.background.dark, 0.9)
+        } 0%, transparent 30%)`;
+      },
+    },
+  };
+
   return (
     <Container
       maxWidth={fullWidth ? false : maxWidth}
       disableGutters={disableGutters}
-      sx={{
-        position: "relative",
-        py: { xs: 2.5, sm: 3.5, lg: 4 },
-        px: fullWidth ? { xs: 0, sm: 0 } : undefined,
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          pointerEvents: "none",
-          borderRadius: { xs: 0, sm: 4 },
-          background: (theme: AppTheme) =>
-            fullWidth
-              ? "transparent"
-              : `linear-gradient(180deg, ${
-                  theme.palette.mode === "light"
-                    ? alpha(theme.custom.surface.muted.background.light, 0.9)
-                    : alpha(theme.custom.surface.muted.background.dark, 0.9)
-                } 0%, transparent 30%)`,
-        },
-        ...sx,
-      }}
+      sx={
+        sx === undefined
+          ? baseSx
+          : Array.isArray(sx)
+            ? [baseSx, ...sx]
+            : [baseSx, sx]
+      }
     >
       {children}
     </Container>

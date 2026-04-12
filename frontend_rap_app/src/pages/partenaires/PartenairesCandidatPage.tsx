@@ -40,6 +40,7 @@ import ExportButtonPartenaires from "../../components/export_buttons/ExportButto
 import PartenairesTable from "./PartenaireTable";
 import PartenaireCandidatDetailModal from "./PartenaireCandidatDetailModal";
 import { isCoreStaffRole } from "../../utils/roleGroups";
+import type { AppTheme } from "../../theme";
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -86,7 +87,7 @@ function dedupeById<T extends { id: number }>(arr: T[] = []): T[] {
    ───────────────────────────────────────────── */
 export default function PartenairesCandidatPage() {
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { user, loading: userLoading, error: userError } = useMe();

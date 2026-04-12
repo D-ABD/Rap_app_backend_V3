@@ -21,6 +21,7 @@ import { Link as RouterLink } from "react-router-dom";
 
 import { CVThequeItem } from "src/types/cvtheque";
 import { useCVThequeDownload } from "src/hooks/useCvtheque";
+import type { AppTheme } from "src/theme";
 
 type Props = {
   rows: CVThequeItem[];
@@ -46,7 +47,7 @@ export default function CVThequeTable({
   onHardDelete,
   canHardDelete = false,
 }: Props) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { download } = useCVThequeDownload();
 

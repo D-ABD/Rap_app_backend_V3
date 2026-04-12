@@ -9,7 +9,9 @@ import {
   Divider,
   Select,
   MenuItem,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "src/theme";
 
 import {
   CandidatFilters,
@@ -39,16 +41,6 @@ function fmt(n?: number | null) {
   return n == null ? "0" : Math.round(n).toString();
 }
 
-// 🎨 Palette cohérente
-const COLORS = [
-  "#1e88e5", // Apprentissage
-  "#43a047", // Professionnalisation
-  "#fbc02d", // CRIF
-  "#8e24aa", // POEI/POEC
-  "#ef5350", // Sans contrat
-  "#6d4c41", // Autre
-];
-
 export default function CandidatContratOverviewWidget({
   title = "Répartition des contrats",
   initialFilters,
@@ -56,6 +48,7 @@ export default function CandidatContratOverviewWidget({
   title?: string;
   initialFilters?: CandidatFilters;
 }) {
+  const theme = useTheme<AppTheme>();
   const [filters, setFilters] = React.useState<CandidatFilters>(initialFilters ?? {});
 
   const { data, isLoading, error } = useCandidatOverview(filters);
@@ -101,22 +94,27 @@ export default function CandidatContratOverviewWidget({
 
   const k = data?.kpis;
 
+  const seriesColors = React.useMemo(
+    () => [...theme.custom.chart.series.ordered].slice(0, 6),
+    [theme]
+  );
+
   // ✅ Données du graphique contrats
   const chartData = [
     {
       name: "Apprentissage",
       value: k?.contrat_apprentissage ?? 0,
-      color: COLORS[0],
+      color: seriesColors[0],
     },
     {
       name: "Professionnalisation",
       value: k?.contrat_professionnalisation ?? 0,
-      color: COLORS[1],
+      color: seriesColors[1],
     },
-    { name: "CRIF", value: k?.contrat_crif ?? 0, color: COLORS[2] },
-    { name: "POEI / POEC", value: k?.contrat_poei_poec ?? 0, color: COLORS[3] },
-    { name: "Sans contrat", value: k?.contrat_sans ?? 0, color: COLORS[4] },
-    { name: "Autre", value: k?.contrat_autre ?? 0, color: COLORS[5] },
+    { name: "CRIF", value: k?.contrat_crif ?? 0, color: seriesColors[2] },
+    { name: "POEI / POEC", value: k?.contrat_poei_poec ?? 0, color: seriesColors[3] },
+    { name: "Sans contrat", value: k?.contrat_sans ?? 0, color: seriesColors[4] },
+    { name: "Autre", value: k?.contrat_autre ?? 0, color: seriesColors[5] },
   ];
 
   return (
@@ -213,7 +211,15 @@ export default function CandidatContratOverviewWidget({
         ) : (
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke={
+                  theme.palette.mode === "light"
+                    ? theme.custom.chart.grid.stroke.light
+                    : theme.custom.chart.grid.stroke.dark
+                }
+              />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => `${v} candidats`} />

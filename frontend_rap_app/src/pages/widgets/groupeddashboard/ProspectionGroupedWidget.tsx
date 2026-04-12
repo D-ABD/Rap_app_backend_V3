@@ -21,9 +21,11 @@ import {
   IconButton,
   TextField,
   Button,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArchiveIcon from "@mui/icons-material/Archive";
+import type { AppTheme } from "../../../theme";
 
 /* 🛠 Utils */
 function toFixed0(n?: number | null) {
@@ -105,6 +107,7 @@ export default function ProspectionGroupedWidget({
   initialBy = "centre",
   initialFilters,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const [by, setBy] = React.useState<ProspectionGroupBy>(initialBy);
   const [filters, setFilters] = React.useState<ProspectionFilters>(initialFilters ?? {});
 
@@ -149,6 +152,14 @@ export default function ProspectionGroupedWidget({
     } as ProspectionGroupRow;
     return [...rows, totalRow];
   }, [rows]);
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableRowTotalBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   return (
     <Card sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -239,7 +250,7 @@ export default function ProspectionGroupedWidget({
         <Box sx={{ overflowX: "auto", maxHeight: "70vh" }}>
           <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#e3f2fd" }}>
+              <TableRow sx={{ bgcolor: tableHeaderBackground }}>
                 <TableCell>Groupe</TableCell>
                 <TableCell>Total</TableCell>
                 <TableCell>Actives</TableCell>
@@ -265,10 +276,12 @@ export default function ProspectionGroupedWidget({
                     ? "Total"
                     : resolveProspectionGroupLabel(r, by);
                 const taux = r.taux_acceptation ?? 0;
-                let tauxColor: "inherit" | "green" | "orange" | "red" = "inherit";
-                if (taux >= 60) tauxColor = "green";
-                else if (taux >= 30) tauxColor = "orange";
-                else tauxColor = "red";
+                const tauxColor =
+                  taux >= 60
+                    ? theme.palette.success.main
+                    : taux >= 30
+                      ? theme.palette.warning.main
+                      : theme.palette.error.main;
 
                 const isTotal = String(r.group_key).toLowerCase() === "total";
 
@@ -277,7 +290,7 @@ export default function ProspectionGroupedWidget({
                     key={idx}
                     hover={!isTotal}
                     sx={{
-                      bgcolor: isTotal ? "#f5f5f5" : undefined,
+                      bgcolor: isTotal ? tableRowTotalBackground : undefined,
                       fontWeight: isTotal ? 700 : 500,
                     }}
                   >

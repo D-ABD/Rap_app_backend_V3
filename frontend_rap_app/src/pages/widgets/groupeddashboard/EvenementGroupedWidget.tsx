@@ -12,8 +12,10 @@ import {
   TableRow,
   TextField,
   Typography,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import type { AppTheme } from "../../../theme";
 import {
   EvenementGroupBy,
   EvenementGroupRow,
@@ -41,12 +43,17 @@ export default function EvenementGroupedWidget({
   initialBy = "centre",
   initialFilters,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const [by, setBy] = React.useState<EvenementGroupBy>(initialBy);
   const [filters, setFilters] = React.useState<EvenementStatsFilters>(initialFilters ?? {});
 
   const { data, isLoading, error, refetch } = useEvenementGrouped(by, filters);
 
   const rows = React.useMemo<EvenementGroupRow[]>(() => data?.results ?? [], [data]);
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
 
   return (
     <Card sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -102,7 +109,7 @@ export default function EvenementGroupedWidget({
         <Box sx={{ overflowX: "auto", maxHeight: "70vh" }}>
           <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#e3f2fd" }}>
+              <TableRow sx={{ bgcolor: tableHeaderBackground }}>
                 <TableCell>Groupe</TableCell>
                 <TableCell>Total</TableCell>
                 <TableCell>Aujourd'hui</TableCell>

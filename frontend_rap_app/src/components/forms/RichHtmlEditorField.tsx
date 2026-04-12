@@ -62,7 +62,7 @@ export default function RichHtmlEditorField({
           border: (theme) => `1px solid ${error ? theme.palette.error.main : theme.palette.divider}`,
           borderRadius: 1,
           overflow: "hidden",
-          backgroundColor: "#fff",
+          backgroundColor: "background.paper",
           "& .ql-toolbar": {
             border: "none",
             borderBottom: (theme) => `1px solid ${theme.palette.divider}`,

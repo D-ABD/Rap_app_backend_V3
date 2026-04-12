@@ -388,28 +388,29 @@ Statut : Terminé le 12 avril 2026
 - [x] Tables alignées sur `custom.table` + cohérence `MuiTable*`.
 - [x] Widgets Recharts alignés sur `custom.chart` et modales sur `custom.overlay` (lot 6).
 - [x] Quill / styled-components traités (lot 7) si objectif « zéro hex hors thème ».
+- [x] Lot 8 — audit & consolidation : overview/stats, formulaires typés, tables métier, pages liste (`useTheme<AppTheme>()`), documenté dans cette section.
 
 ---
 
-*Dernière mise à jour : tokens (`src/theme/tokens/`), convention `AppTheme` / `useTheme<AppTheme>()`, docs `_tokens.md` et `_design-system.md`.*
+*Dernière mise à jour : Lot 8 clôturé (12 avril 2026) ; tokens (`src/theme/tokens/`), convention `AppTheme` / `useTheme<AppTheme>()`, docs `_tokens.md` et `_design-system.md`.*
 
 ---
 
 ## Lot 8 — Audit & consolidation design system
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 ### Objectif
 
 Vérifier la conformité complète du frontend avec `theme.ts` et `theme.custom.*`.
 
-### Constats
+### Constats (post-lot 8)
 
-- [ ] Hex encore présents dans certains composants
-- [ ] Styles `sx` non tokenisés
-- [ ] Composants déjà thémés via `theme.palette`, mais pas encore centralisés via `theme.custom.*`
-- [ ] Doubles sources de vérité (theme vs composants)
-- [ ] Typage `AppTheme` non respecté partout
+- [x] Hex et rgba « critiques » retirés sur le périmètre Lot 8 (overview candidats, stats, tables formation/prospection) — où un équivalent `theme.custom.*` ou `theme.palette.*` existait.
+- [x] Styles `sx` migrés vers tokens (`kpi`, `surface`, `chart`, `status.prospection`, `table`) lorsque applicable.
+- [x] Pages liste (Lot 8.5) : `useTheme<AppTheme>()` uniformisé.
+- [ ] Hex résiduels possibles hors périmètre Lot 8 (ex. autres widgets, `FormationOverviewWidget` avec `fill` Recharts).
+- [ ] Couleurs métier dynamiques (`type_offre.couleur`, `statut.couleur`) : conservées ; seuls les fallbacks utilisent la palette.
 
 ### Fichiers concernés
 
@@ -477,11 +478,62 @@ Vérifier la conformité complète du frontend avec `theme.ts` et `theme.custom.
 
 P1 — consolidation finale avant stabilisation design system
 
+### Réalisé (passe finale Lot 8 — 12 avril 2026)
+
+**Fichiers modifiés (cette exécution)**
+
+- `src/pages/widgets/overviewDashboard/CandidatsOverviewDashboard.tsx` — pie statuts : couleurs via `theme.palette.*` (mapping sémantique) ; bar contrats : `theme.custom.chart.series.ordered` ; grille Recharts : `theme.custom.chart.grid.stroke.*`
+- `src/pages/widgets/overviewDashboard/CandidatOverviewWidget.tsx` — idem pie (palette sémantique)
+- `src/pages/widgets/overviewDashboard/CandidatContratOverviewWidget.tsx` — séries bar : `chart.series.ordered` ; grille chart
+- `src/pages/widgets/overviewDashboard/FormationStatsSummary.tsx` — fond carte / tuiles : `surface.muted`, `kpi.*`, `surface.elevated` ; alpha via `alpha()` ; `useTheme<AppTheme>()`
+- `src/pages/prepa/PrepaStatsSummary.tsx`, `PrepaStatsOperations.tsx` — KPI / ombres / survol : `theme.custom.kpi.*`, `surface.elevated` ; selects : `alpha(common.white,0.06)`
+- `src/pages/declic/DeclicStatsSummary.tsx`, `src/pages/declic/DéclicStatsOperations.tsx` — idem pattern kpi / surface
+- `src/pages/partenaires/PartenaireForm.tsx` — callbacks `sx` : paramètre MUI `Theme` + accès `theme.custom.form.*` via `(theme as AppTheme).custom` (compatibilité typage MUI)
+- `src/pages/prospection/ProspectionForm.tsx` — idem `FormSectionCard` backgrounds
+- `src/pages/prospection/ProspectionTable.tsx` — chip activité : `theme.custom.status.prospection.*` ; ligne archivée : `theme.custom.table.row.archived.*` ; commentaire : `palette.action.hover` ; placeholder candidat : `text.disabled`
+- `src/pages/formations/FormationTable.tsx` — barres progression / couleurs seuils : `palette` ; fond piste : `grey[200|800]` ; chips activité / fallbacks type & statut : `palette` (couleurs API conservées si présentes)
+- **Lot 8.5** — `useTheme<AppTheme>()` : `HomePage.tsx`, `DashboardPage.tsx`, `PartenairesPage.tsx`, `PartenairesCandidatPage.tsx`, `FormationsPage.tsx`, `CommentairesPage.tsx`, `DocumentsPage.tsx`, `DocumentsTable.tsx`, `cvtheque/cvthequeTable.tsx`, `cvtheque/cvthequeTableCandidat.tsx`, `AppairagesPage.tsx`, `CentresPage.tsx`, `candidats/candidatsPage.tsx`, `StatutsPage.tsx`, `TypeOffresPage.tsx`, `UsersPage.tsx`
+
+**Correction technique hors liste Lot 8 (compilation)**
+
+- `src/pages/cvtheque/cvthequePage.tsx` — import manquant `Box` (usage JSX existant) pour `tsc` vert.
+
+**Fichiers du périmètre Lot 8 relus sans changement nécessaire (déjà conformes ou sans hex/token cible)**
+
+- `src/components/EtatBadge.tsx`, `RichHtmlEditorField.tsx`
+- Modales `CandidatsSelectModal`, `CerfaSelectModal`, `FormationCommentsModal`, `FormationSelectModal`, `PartenairesSelectModal`, `UsersSelectModal`
+- Widgets `groupeddashboard/*`, `ObjectifPrepaTable.tsx`, `DeclicTable.tsx`
+
+**Catégories de corrections**
+
+- Suppression de hex / rgba hardcodés au profit de `theme.custom.kpi`, `surface`, `chart`, `status.prospection`, `table` ou `theme.palette` / `alpha()`
+- Uniformisation `useTheme<AppTheme>()` sur les pages liste
+- Compatibilité TS sur callbacks `sx` : `Theme` en paramètre + cast `(theme as AppTheme)` pour `theme.custom` dans les formulaires
+
+### Styles locaux restants (volontaires)
+
+- Couleurs **API** (`couleur` sur type d’offre / statut formation) : inchangées ; texte contraste via `palette.common.white`.
+- **Recharts** hors fichiers modifiés : certains widgets peuvent encore avoir des `fill` ou strokes isolés hors périmètre.
+- **Dépendance technique** : `cvthequePage` — seul ajout `Box` pour build ; pas de refonte design.
+
+### Risques résiduels
+
+- Légère variation de teinte sur graphiques overview contrats (passage de hex métier à `chart.series.ordered` piloté par la palette MUI).
+- `ProspectionTable` / `FormationTable` : comportement visuel conservé ; chips prospection alignés sur tokens `status` du thème (proches des anciens styles Material).
+
+### Sous-lots Lot 8 (état final)
+
+- **8.1** groupeddashboard : inchangé (déjà traité en amont).
+- **8.2** overview + stats : **Terminé le 12 avril 2026** (fichiers listés ci-dessus).
+- **8.3** forms : **Terminé le 12 avril 2026** (`PartenaireForm`, `ProspectionForm` ; autres déjà OK).
+- **8.4** tables : **Terminé le 12 avril 2026** (`ProspectionTable`, `FormationTable` ; autres déjà OK).
+- **8.5** typage `useTheme` : **Terminé le 12 avril 2026** (pages liste Lot 8).
+
 ### Découpage d’exécution recommandé
 
 #### Lot 8.1 — Widgets `groupeddashboard`
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 **Périmètre**
 
@@ -502,7 +554,7 @@ Statut : À faire
 
 #### Lot 8.2 — Overview + stats summary
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 **Périmètre**
 
@@ -523,7 +575,7 @@ Statut : À faire
 
 #### Lot 8.3 — Forms legacy
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 **Périmètre**
 
@@ -540,7 +592,7 @@ Statut : À faire
 
 #### Lot 8.4 — Tables restantes
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 **Périmètre**
 
@@ -557,7 +609,7 @@ Statut : À faire
 
 #### Lot 8.5 — Typage `useTheme`
 
-Statut : À faire
+Statut : Terminé le 12 avril 2026
 
 **Périmètre**
 

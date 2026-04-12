@@ -299,7 +299,7 @@ export default function PartenaireSelectModal({
         )}
 
         {canCreate && (
-          <Box sx={{ mt: 2, p: 2, border: "1px dashed #ccc", borderRadius: 1 }}>
+          <Box sx={{ mt: 2, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
               Créer et lier un partenaire
             </Typography>

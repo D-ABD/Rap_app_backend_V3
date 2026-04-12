@@ -1,5 +1,6 @@
-import { Checkbox, Typography, Button, Box, Chip, Link } from "@mui/material";
-import { Theme } from "@mui/material/styles";
+import { Checkbox, Typography, Button, Box, Chip, Link, useTheme } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
+import type { AppTheme } from "../../theme";
 import { Link as RouterLink } from "react-router-dom";
 import ResponsiveTableTemplate, {
   type TableColumn,
@@ -88,6 +89,7 @@ export default function ProspectionTable({
   onHardDeleteClick,
   canHardDelete = false,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const columns: TableColumn<ProspectionWithLast>[] = [
     {
       key: "select",
@@ -121,7 +123,9 @@ export default function ProspectionTable({
                 {row.owner_username}
               </Link>
             ) : (
-              <span style={{ color: "#aaa" }}>—</span>
+              <Typography component="span" variant="body2" color="text.disabled">
+                —
+              </Typography>
             )}
           </Typography>
           {row.date_prospection ? (
@@ -187,9 +191,18 @@ export default function ProspectionTable({
           color={row.activite === "archivee" ? "default" : "success"}
           sx={{
             fontStyle: row.activite === "archivee" ? "italic" : "normal",
-            bgcolor: row.activite === "archivee" ? "#e0e0e0" : "rgba(76,175,80,0.1)",
-            color: row.activite === "archivee" ? "#555" : "green",
-            border: row.activite === "archivee" ? "1px solid #ccc" : "1px solid #9ccc65",
+            bgcolor:
+              row.activite === "archivee"
+                ? theme.custom.status.prospection.archived.chipBackground
+                : theme.custom.status.prospection.active.chipBackground,
+            color:
+              row.activite === "archivee"
+                ? theme.custom.status.prospection.archived.chipColor
+                : theme.custom.status.prospection.active.chipColor,
+            border:
+              row.activite === "archivee"
+                ? theme.custom.status.prospection.archived.chipBorder
+                : theme.custom.status.prospection.active.chipBorder,
           }}
         />
       ),
@@ -416,11 +429,11 @@ export default function ProspectionTable({
       rowSx={(row) =>
         row.activite === "archivee"
           ? {
-              backgroundColor: (theme: Theme) =>
-                theme.palette.mode === "light"
-                  ? theme.custom.table.row.archived.background.light
-                  : theme.custom.table.row.archived.background.dark,
-              opacity: (theme: Theme) => theme.custom.table.row.archived.opacity,
+              backgroundColor: (t: AppTheme) =>
+                t.palette.mode === "light"
+                  ? t.custom.table.row.archived.background.light
+                  : t.custom.table.row.archived.background.dark,
+              opacity: (t: AppTheme) => t.custom.table.row.archived.opacity,
             }
           : {}
       }

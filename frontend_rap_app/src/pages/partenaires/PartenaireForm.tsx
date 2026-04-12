@@ -38,6 +38,8 @@ import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import type { Partenaire, PartenaireChoicesResponse, CentreLite } from "../../types/partenaire";
 import CentresSelectModal from "../../components/modals/CentresSelectModal";
 import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
+import type { Theme } from "@mui/material/styles";
+import type { AppTheme } from "../../theme";
 
 type CentreOption = { value: number; label: string };
 
@@ -69,7 +71,18 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, backgroundColor: "#fafafa" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        mb: 3,
+        borderRadius: 2,
+        backgroundColor: (theme: Theme) =>
+          theme.palette.mode === "light"
+            ? (theme as AppTheme).custom.form.section.paperBackground.light
+            : (theme as AppTheme).custom.form.section.paperBackground.dark,
+      }}
+    >
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
         {icon}
         <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
@@ -407,8 +420,16 @@ export default function PartenaireForm({
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           sx={{
-            backgroundColor: "rgba(25, 118, 210, 0.08)",
-            borderBottom: "1px solid #ddd",
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.accentHeaderBackground.light
+                : (theme as AppTheme).custom.form.section.accentHeaderBackground.dark,
+            borderBottom: (theme: Theme) =>
+              `${(theme as AppTheme).custom.form.divider.dashedWidth} solid ${
+                theme.palette.mode === "light"
+                  ? (theme as AppTheme).custom.form.divider.dashedColor.light
+                  : (theme as AppTheme).custom.form.divider.dashedColor.dark
+              }`,
             borderRadius: "8px 8px 0 0",
             "& .MuiAccordionSummary-content": { alignItems: "center", gap: 1 },
           }}
@@ -419,7 +440,15 @@ export default function PartenaireForm({
           </Typography>
         </AccordionSummary>
 
-        <AccordionDetails sx={{ p: 3, backgroundColor: "#fafafa" }}>
+        <AccordionDetails
+          sx={{
+            p: 3,
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.paperBackground.light
+                : (theme as AppTheme).custom.form.section.paperBackground.dark,
+          }}
+        >
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <TextField
@@ -524,8 +553,16 @@ export default function PartenaireForm({
             <AccordionSummary
               expandIcon={<ExpandMoreIcon />}
               sx={{
-                backgroundColor: "rgba(25,118,210,0.08)",
-                borderBottom: "1px solid #ddd",
+                backgroundColor: (theme: Theme) =>
+                  theme.palette.mode === "light"
+                    ? (theme as AppTheme).custom.form.section.accentHeaderBackground.light
+                    : (theme as AppTheme).custom.form.section.accentHeaderBackground.dark,
+                borderBottom: (theme: Theme) =>
+                  `${(theme as AppTheme).custom.form.divider.dashedWidth} solid ${
+                    theme.palette.mode === "light"
+                      ? (theme as AppTheme).custom.form.divider.dashedColor.light
+                      : (theme as AppTheme).custom.form.divider.dashedColor.dark
+                  }`,
                 borderRadius: "8px 8px 0 0",
                 "& .MuiAccordionSummary-content": {
                   alignItems: "center",
@@ -538,7 +575,15 @@ export default function PartenaireForm({
               </Typography>
             </AccordionSummary>
 
-            <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
+            <AccordionDetails
+              sx={{
+                backgroundColor: (theme: Theme) =>
+                  theme.palette.mode === "light"
+                    ? (theme as AppTheme).custom.form.section.paperBackground.light
+                    : (theme as AppTheme).custom.form.section.paperBackground.dark,
+                p: 3,
+              }}
+            >
               <Grid container spacing={2}>
                 {[
                   ["Nom de naissance", `maitre${n}_nom_naissance`],
@@ -620,8 +665,16 @@ export default function PartenaireForm({
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           sx={{
-            backgroundColor: "rgba(25,118,210,0.08)",
-            borderBottom: "1px solid #ddd",
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.accentHeaderBackground.light
+                : (theme as AppTheme).custom.form.section.accentHeaderBackground.dark,
+            borderBottom: (theme: Theme) =>
+              `${(theme as AppTheme).custom.form.divider.dashedWidth} solid ${
+                theme.palette.mode === "light"
+                  ? (theme as AppTheme).custom.form.divider.dashedColor.light
+                  : (theme as AppTheme).custom.form.divider.dashedColor.dark
+              }`,
             borderRadius: "8px 8px 0 0",
             "& .MuiAccordionSummary-content": { alignItems: "center", gap: 1 },
           }}
@@ -632,7 +685,15 @@ export default function PartenaireForm({
           </Typography>
         </AccordionSummary>
 
-        <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
+        <AccordionDetails
+          sx={{
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.paperBackground.light
+                : (theme as AppTheme).custom.form.section.paperBackground.dark,
+            p: 3,
+          }}
+        >
           <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <TextField
@@ -678,8 +739,16 @@ export default function PartenaireForm({
         <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
           sx={{
-            backgroundColor: "rgba(25,118,210,0.08)",
-            borderBottom: "1px solid #ddd",
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.accentHeaderBackground.light
+                : (theme as AppTheme).custom.form.section.accentHeaderBackground.dark,
+            borderBottom: (theme: Theme) =>
+              `${(theme as AppTheme).custom.form.divider.dashedWidth} solid ${
+                theme.palette.mode === "light"
+                  ? (theme as AppTheme).custom.form.divider.dashedColor.light
+                  : (theme as AppTheme).custom.form.divider.dashedColor.dark
+              }`,
             borderRadius: "8px 8px 0 0",
             "& .MuiAccordionSummary-content": { alignItems: "center", gap: 1 },
           }}
@@ -690,7 +759,15 @@ export default function PartenaireForm({
           </Typography>
         </AccordionSummary>
 
-        <AccordionDetails sx={{ backgroundColor: "#fafafa", p: 3 }}>
+        <AccordionDetails
+          sx={{
+            backgroundColor: (theme: Theme) =>
+              theme.palette.mode === "light"
+                ? (theme as AppTheme).custom.form.section.paperBackground.light
+                : (theme as AppTheme).custom.form.section.paperBackground.dark,
+            p: 3,
+          }}
+        >
           <RichHtmlEditorField
             label={`Informations complémentaires (${count(form.description)}/2000)`}
             value={form.description || ""}

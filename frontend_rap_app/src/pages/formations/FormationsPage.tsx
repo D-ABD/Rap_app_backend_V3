@@ -32,11 +32,12 @@ import FormationExportButton from "../../components/export_buttons/ExportButtonF
 import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import { buildFormationExportQueryParams } from "../../api/lot1ImportExport";
 import { useHardDeleteFormation } from "../../hooks/useFormations";
+import type { AppTheme } from "../../theme";
 
 export default function FormationsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const canWriteFormations = canWriteFormationsRole(user?.role);
 

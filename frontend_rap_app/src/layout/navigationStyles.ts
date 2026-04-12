@@ -1,8 +1,8 @@
-import type { SxProps } from "@mui/material";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import type { AppTheme } from "../theme";
 
-export const getDrawerItemSx = (theme: AppTheme, nested = false): SxProps<AppTheme> => {
+export const getDrawerItemSx = (theme: AppTheme, nested = false): SxProps<Theme> => {
   const drawerItem = theme.custom.nav.drawerItem;
   const variant = nested ? "branch" : "root";
 
@@ -63,7 +63,7 @@ export const getDrawerItemSx = (theme: AppTheme, nested = false): SxProps<AppThe
   };
 };
 
-export const getTopNavButtonSx = (theme: AppTheme, isActive: boolean): SxProps<AppTheme> => {
+export const getTopNavButtonSx = (theme: AppTheme, isActive: boolean): SxProps<Theme> => {
   const topButton = theme.custom.nav.topButton;
 
   return {

@@ -2,8 +2,9 @@
 // 📊 PrepaGroupedWidget — statistiques groupées Prépa (corrigé, sans objectifs)
 // -----------------------------------------------------------------------------
 import * as React from "react";
-import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton } from "@mui/material";
+import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton, useTheme } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import type { AppTheme } from "../../../theme";
 
 import {
   PREPA_TYPE_LABELS,
@@ -21,6 +22,7 @@ const fmt = (n?: number | null) => (n === undefined || n === null ? "—" : Math
 type PrepaTypeKey = keyof typeof PREPA_TYPE_LABELS;
 
 export default function PrepaGroupedWidget() {
+  const theme = useTheme<AppTheme>();
   const initialRef = React.useRef<PrepaFilters>({
     annee: new Date().getFullYear(),
   });
@@ -59,6 +61,14 @@ export default function PrepaGroupedWidget() {
     () => JSON.stringify(filters) !== JSON.stringify(initialRef.current),
     [filters]
   );
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableRowTotalBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   const reset = () => setFilters(initialRef.current);
 
@@ -197,7 +207,7 @@ export default function PrepaGroupedWidget() {
               }}
             >
               <thead>
-                <tr style={{ background: "#e3f2fd" }}>
+                <tr style={{ background: tableHeaderBackground }}>
                   <th style={{ textAlign: "left", padding: "8px" }}>Groupe</th>
                   <th>Inscrits</th>
                   <th>Présents</th>
@@ -218,7 +228,7 @@ export default function PrepaGroupedWidget() {
                     <tr
                       key={idx}
                       style={{
-                        background: isTotal ? "#f5f5f5" : undefined,
+                        background: isTotal ? tableRowTotalBackground : undefined,
                         fontWeight: isTotal ? 700 : 500,
                       }}
                     >
@@ -226,21 +236,21 @@ export default function PrepaGroupedWidget() {
                         {isTotal ? "Total" : resolveGroupLabel(r)}
                       </td>
 
-                      <td style={{ background: "#fff9c4" }}>{fmt(r.nb_inscrits_prepa)}</td>
-                      <td style={{ background: "#c8e6c9" }}>{fmt(r.nb_presents_prepa)}</td>
-                      <td style={{ background: "#ffcdd2" }}>{fmt(r.nb_absents_prepa)}</td>
+                      <td style={{ background: theme.palette.warning.light }}>{fmt(r.nb_inscrits_prepa)}</td>
+                      <td style={{ background: theme.palette.success.light }}>{fmt(r.nb_presents_prepa)}</td>
+                      <td style={{ background: theme.palette.error.light }}>{fmt(r.nb_absents_prepa)}</td>
 
-                      <td style={{ background: "#bbdefb" }}>
+                      <td style={{ background: theme.palette.info.light }}>
                         {r.taux_presence_prepa != null
                           ? `${r.taux_presence_prepa.toFixed(1)} %`
                           : "—"}
                       </td>
 
-                      <td style={{ background: "#fff9c4" }}>
+                      <td style={{ background: theme.palette.warning.light }}>
                         {r.taux_adhesion != null ? `${r.taux_adhesion.toFixed(1)} %` : "—"}
                       </td>
 
-                      <td style={{ background: "#d1c4e9" }}>
+                      <td style={{ background: theme.palette.secondary.light }}>
                         {r.taux_retention != null ? `${r.taux_retention.toFixed(1)} %` : "—"}
                       </td>
 

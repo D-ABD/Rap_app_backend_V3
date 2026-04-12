@@ -5,12 +5,13 @@ import { FaChartLine, FaHandshake, FaUserTie, FaInfoCircle } from "react-icons/f
 import { useAuth } from "../hooks/useAuth";
 import logo from "../assets/logo.png";
 import PageWrapper from "../components/PageWrapper"; // ✅ wrapper responsive
+import type { AppTheme } from "../theme";
 import BackNavButton from "../components/BackNavButton";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
 
   const features = [
     {

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton } from "@mui/material";
+import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton, useTheme } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   ATELIER_TYPE_LABELS,
@@ -10,12 +10,14 @@ import {
   resolveGroupLabel,
   useAtelierTREGrouped,
 } from "../../../types/atelierTreStats";
+import type { AppTheme } from "../../../theme";
 
 const fmt = (n?: number | null) => (n === undefined || n === null ? "—" : Math.round(n).toString());
 
 type AtelierTypeKey = keyof typeof ATELIER_TYPE_LABELS;
 
 export default function AteliersTREGroupedWidget() {
+  const theme = useTheme<AppTheme>();
   const initialRef = React.useRef<AtelierTREFilters>({});
   const [by, setBy] = React.useState<AtelierTREGroupBy>("centre");
   const [filters, setFilters] = React.useState<AtelierTREFilters>(initialRef.current);
@@ -83,6 +85,14 @@ export default function AteliersTREGroupedWidget() {
     };
     return [...grouped.results, totalRow];
   }, [grouped]);
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableRowTotalBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   return (
     <Card>
@@ -191,7 +201,7 @@ export default function AteliersTREGroupedWidget() {
               }}
             >
               <thead>
-                <tr style={{ background: "#e3f2fd" }}>
+                <tr style={{ background: tableHeaderBackground }}>
                   <th style={{ textAlign: "left", padding: "8px" }}>Groupe</th>
                   <th>Ateliers</th>
                   <th>Candidats uniques</th>
@@ -210,7 +220,7 @@ export default function AteliersTREGroupedWidget() {
                     <tr
                       key={idx}
                       style={{
-                        background: isTotal ? "#f5f5f5" : undefined,
+                        background: isTotal ? tableRowTotalBackground : undefined,
                         fontWeight: isTotal ? 700 : 500,
                       }}
                     >
@@ -220,11 +230,11 @@ export default function AteliersTREGroupedWidget() {
                       <td>{fmt(r.nb_ateliers)}</td>
                       <td>{fmt(r.candidats_uniques)}</td>
                       <td>{fmt(r.presences_total)}</td>
-                      <td style={{ background: "#c8e6c9" }}>{fmt(r.present)}</td>
-                      <td style={{ background: "#ffcdd2" }}>{fmt(r.absent)}</td>
-                      <td style={{ background: "#ffe0b2" }}>{fmt(r.excuse)}</td>
-                      <td style={{ background: "#e0e0e0" }}>{fmt(r.inconnu)}</td>
-                      <td style={{ background: "#bbdefb" }}>
+                      <td style={{ background: theme.palette.success.light }}>{fmt(r.present)}</td>
+                      <td style={{ background: theme.palette.error.light }}>{fmt(r.absent)}</td>
+                      <td style={{ background: theme.palette.warning.light }}>{fmt(r.excuse)}</td>
+                      <td style={{ background: theme.palette.action.disabledBackground }}>{fmt(r.inconnu)}</td>
+                      <td style={{ background: theme.palette.info.light }}>
                         {r.taux_presence != null ? `${r.taux_presence.toFixed(1)} %` : "—"}
                       </td>
                     </tr>

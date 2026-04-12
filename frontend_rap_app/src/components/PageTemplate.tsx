@@ -11,6 +11,7 @@ import {
   type SxProps,
   useTheme,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -37,7 +38,7 @@ export type PageTemplateProps = {
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   fullWidth?: boolean;
   hero?: boolean;
-  contentSx?: SxProps<AppTheme>;
+  contentSx?: SxProps<Theme>;
 };
 
 const centeredBoxStyles = {

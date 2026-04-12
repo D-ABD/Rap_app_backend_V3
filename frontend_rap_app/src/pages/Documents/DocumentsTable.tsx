@@ -18,6 +18,7 @@ import { useTheme } from "@mui/material/styles";
 import type { Document } from "../../types/document";
 import DocumentPreview from "./DocumentPreview";
 import { useDocumentsApi } from "src/hooks/useDocuments";
+import type { AppTheme } from "src/theme";
 
 interface Props {
   documents: Document[];
@@ -37,7 +38,7 @@ export default function DocumentsTable({
   canHardDelete = false,
 }: Props) {
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { downloadDocument } = useDocumentsApi();
 

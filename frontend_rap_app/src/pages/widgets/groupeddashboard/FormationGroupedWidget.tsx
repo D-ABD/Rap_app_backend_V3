@@ -15,8 +15,10 @@ import {
   TableFooter,
   Button,
   FormControl,
+  useTheme,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import type { AppTheme } from "../../../theme";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import {
   Filters,
@@ -81,6 +83,7 @@ export default function FormationGroupedWidget({
   initialBy?: GroupBy;
   filters?: Filters;
 }) {
+  const theme = useTheme<AppTheme>();
   const [by, setBy] = React.useState<GroupBy>(initialBy);
   const [includeArchived, setIncludeArchived] = React.useState<boolean>(!!filters?.avec_archivees);
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters);
@@ -92,6 +95,18 @@ export default function FormationGroupedWidget({
 
   const { data: dicts, isLoading: isLoadingDicts, error: dictError } = useFormationDictionaries();
   const { data, isLoading, error } = useFormationGrouped(by, effectiveFilters);
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableRowStripedBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
+  const tableRowHoverBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.hover.light
+      : theme.custom.table.row.hover.dark;
 
   const totals = React.useMemo(() => {
     if (!data?.results?.length) return null;
@@ -287,7 +302,7 @@ export default function FormationGroupedWidget({
                     position: "sticky",
                     left: 0,
                     zIndex: 2,
-                    backgroundColor: "primary.light",
+                    backgroundColor: tableHeaderBackground,
                     fontWeight: "bold",
                   }}
                 >
@@ -298,7 +313,7 @@ export default function FormationGroupedWidget({
                     key={col}
                     align="right"
                     sx={{
-                      backgroundColor: "primary.light",
+                      backgroundColor: tableHeaderBackground,
                       fontWeight: "bold",
                       fontSize: "0.8rem",
                       whiteSpace: "nowrap",
@@ -328,15 +343,15 @@ export default function FormationGroupedWidget({
                   <TableRow
                     key={idx}
                     sx={{
-                      backgroundColor: isEven ? "background.default" : "grey.50",
-                      "&:hover": { backgroundColor: "action.hover" },
+                      backgroundColor: isEven ? "background.default" : tableRowStripedBackground,
+                      "&:hover": { backgroundColor: tableRowHoverBackground },
                     }}
                   >
                     <TableCell
                       sx={{
                         position: "sticky",
                         left: 0,
-                        backgroundColor: isEven ? "background.default" : "grey.50",
+                        backgroundColor: isEven ? "background.default" : tableRowStripedBackground,
                         zIndex: 1,
                         fontWeight: 500,
                         minWidth: 180,
@@ -394,7 +409,15 @@ export default function FormationGroupedWidget({
 
             {totals && (
               <TableFooter>
-                <TableRow sx={{ backgroundColor: alpha("#1976d2", 0.1), fontWeight: "bold" }}>
+                <TableRow
+                  sx={{
+                    backgroundColor:
+                      theme.palette.mode === "light"
+                        ? alpha(theme.palette.primary.main, 0.1)
+                        : alpha(theme.palette.primary.main, 0.16),
+                    fontWeight: "bold",
+                  }}
+                >
                   <TableCell sx={{ fontWeight: 700 }}>TOTAL</TableCell>
                   <TableCell align="right">{toFixed0(totals.nbFormations)}</TableCell>
                   <TableCell align="right">{toFixed0(totals.totalPlacesCrif)}</TableCell>

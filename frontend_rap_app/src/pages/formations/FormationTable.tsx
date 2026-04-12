@@ -1,6 +1,7 @@
 // src/pages/formations/FormationTable.tsx
 import { useMemo, useState } from "react";
-import { Button, Chip, LinearProgress, Typography, Box, Stack, Checkbox } from "@mui/material";
+import { Button, Chip, LinearProgress, Typography, Box, Stack, Checkbox, useTheme } from "@mui/material";
+import type { AppTheme } from "../../theme";
 import { useNavigate } from "react-router-dom";
 import { Formation } from "../../types/formation";
 import { getFieldValue } from "../../utils/getFieldValue";
@@ -22,12 +23,6 @@ const buildInscritsUrl = (id: number) => `/candidats?formation=${id}&parcours_ph
 const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
 const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
 const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
-const getProgressColor = (value?: number | null) => {
-  if (typeof value !== "number" || Number.isNaN(value)) return "#757575";
-  if (value >= 80) return "#2e7d32";
-  if (value >= 25) return "#ed6c02";
-  return "#d32f2f";
-};
 const getProspectionsCount = (row: Formation) =>
   typeof row.nombre_prospections === "number"
     ? row.nombre_prospections
@@ -48,7 +43,16 @@ export default function FormationTable({
   onToggleArchive,
   onHardDelete,
 }: Props) {
+  const theme = useTheme<AppTheme>();
   const navigate = useNavigate();
+  const getProgressMetricColor = (value?: number | null) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return theme.palette.grey[600];
+    if (value >= 80) return theme.palette.success.main;
+    if (value >= 25) return theme.palette.warning.main;
+    return theme.palette.error.main;
+  };
+  const progressTrackBg =
+    theme.palette.mode === "light" ? theme.palette.grey[200] : theme.palette.grey[800];
   const [sortField, _setSortField] = useState<string | null>(null); // ✅ renommé
   const [sortAsc, _setSortAsc] = useState(true); // ✅ renommé
 
@@ -164,8 +168,9 @@ export default function FormationTable({
           size="small"
           label={row.activite === "archivee" ? "Archivée" : "Active"}
           sx={{
-            backgroundColor: row.activite === "archivee" ? "#9e9e9e" : "#4caf50",
-            color: "#fff",
+            backgroundColor:
+              row.activite === "archivee" ? theme.palette.grey[500] : theme.palette.success.main,
+            color: theme.palette.common.white,
             fontWeight: 500,
           }}
         />
@@ -180,8 +185,8 @@ export default function FormationTable({
             size="small"
             label={row.type_offre.libelle || row.type_offre.nom}
             sx={{
-              backgroundColor: row.type_offre.couleur || "#546e7a",
-              color: "#fff",
+              backgroundColor: row.type_offre.couleur || theme.palette.grey[700],
+              color: theme.palette.common.white,
               fontWeight: 500,
             }}
           />
@@ -198,8 +203,8 @@ export default function FormationTable({
             size="small"
             label={row.statut.libelle || row.statut.nom}
             sx={{
-              backgroundColor: row.statut.couleur || "#9e9e9e",
-              color: "#fff",
+              backgroundColor: row.statut.couleur || theme.palette.grey[500],
+              color: theme.palette.common.white,
               fontWeight: 500,
             }}
           />
@@ -334,9 +339,9 @@ export default function FormationTable({
                   mt: 0.5,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: "#eee",
+                  backgroundColor: progressTrackBg,
                   "& .MuiLinearProgress-bar": {
-                    backgroundColor: getProgressColor(pct),
+                    backgroundColor: getProgressMetricColor(pct),
                   },
                 }}
               />
@@ -354,7 +359,7 @@ export default function FormationTable({
             <Typography
               variant="body2"
               fontWeight={700}
-              sx={{ color: getProgressColor(row.saturation) }}
+              sx={{ color: getProgressMetricColor(row.saturation) }}
             >
               {Math.round(row.saturation)}%
             </Typography>
@@ -364,9 +369,9 @@ export default function FormationTable({
               sx={{
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: "#eee",
+                backgroundColor: progressTrackBg,
                 "& .MuiLinearProgress-bar": {
-                  backgroundColor: getProgressColor(row.saturation),
+                  backgroundColor: getProgressMetricColor(row.saturation),
                 },
               }}
             />
@@ -384,7 +389,7 @@ export default function FormationTable({
             <Typography
               variant="body2"
               fontWeight={700}
-              sx={{ color: getProgressColor(row.taux_transformation) }}
+              sx={{ color: getProgressMetricColor(row.taux_transformation) }}
             >
               {row.taux_transformation}%
             </Typography>
@@ -394,9 +399,9 @@ export default function FormationTable({
               sx={{
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: "#eee",
+                backgroundColor: progressTrackBg,
                 "& .MuiLinearProgress-bar": {
-                  backgroundColor: getProgressColor(row.taux_transformation),
+                  backgroundColor: getProgressMetricColor(row.taux_transformation),
                 },
               }}
             />

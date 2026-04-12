@@ -10,7 +10,9 @@ import {
   Alert,
   Divider,
   Chip,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "src/theme";
 
 import {
   CandidatFilters,
@@ -29,14 +31,27 @@ import {
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-const STATUS_COLOR_HEX: Record<string, string> = {
-  default: "#90a4ae",
-  info: "#1e88e5",
-  secondary: "#6d4c41",
-  warning: "#fb8c00",
-  success: "#43a047",
-  error: "#e53935",
-};
+function semanticStatusFill(
+  theme: AppTheme,
+  semantic: ReturnType<typeof getCandidatBusinessStatusColorByValue>
+): string {
+  switch (semantic) {
+    case "default":
+      return theme.palette.grey[500];
+    case "info":
+      return theme.palette.info.main;
+    case "secondary":
+      return theme.palette.secondary.main;
+    case "warning":
+      return theme.palette.warning.main;
+    case "success":
+      return theme.palette.success.main;
+    case "error":
+      return theme.palette.error.main;
+    default:
+      return theme.palette.grey[500];
+  }
+}
 
 export default function CandidatOverviewWidget({
   title = "Overview Candidats",
@@ -45,6 +60,7 @@ export default function CandidatOverviewWidget({
   title?: string;
   initialFilters?: CandidatFilters;
 }) {
+  const theme = useTheme<AppTheme>();
   const [filters, setFilters] = React.useState<CandidatFilters>(initialFilters ?? {});
 
   const { data, isLoading, error } = useCandidatOverview(filters);
@@ -99,7 +115,7 @@ export default function CandidatOverviewWidget({
         return {
           name: getCandidatBusinessStatusLabelFromValue(key),
           value,
-          color: STATUS_COLOR_HEX[getCandidatBusinessStatusColorByValue(key)],
+          color: semanticStatusFill(theme, getCandidatBusinessStatusColorByValue(key)),
         };
       })
       .filter(

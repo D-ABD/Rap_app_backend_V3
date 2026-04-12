@@ -11,17 +11,36 @@ import {
   Paper,
   Typography,
   Box,
+  useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import type { ObjectifPrepa } from "src/types/prepa";
 import ObjectifsPrepaDetailModal from "./ObjectifsPrepaDetailModal";
+import type { AppTheme } from "../../theme";
 
 interface Props {
   data: ObjectifPrepa[];
 }
 
 export default function ObjectifPrepaTable({ data }: Props) {
+  const theme = useTheme<AppTheme>();
   const [selectedCentreId, setSelectedCentreId] = useState<number | null>(null);
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableHeaderBorder =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.borderBottom.light
+      : theme.custom.table.header.borderBottom.dark;
+  const tableRowHoverBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.hover.light
+      : theme.custom.table.row.hover.dark;
+  const tableRowStripedBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   // 🧮 Totaux
   const totalObjectif = data.reduce((sum, o) => sum + (o.valeur_objectif ?? 0), 0);
@@ -43,7 +62,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
         sx={{
           borderRadius: 3,
           overflow: "auto",
-          boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
+          boxShadow: theme.custom.surface.elevated.boxShadowRest,
           maxHeight: "75vh",
         }}
       >
@@ -56,7 +75,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
           }}
         >
           {/* ─────────── HEADER ─────────── */}
-          <TableHead sx={{ backgroundColor: "#f4f6f8" }}>
+          <TableHead sx={{ backgroundColor: tableHeaderBackground }}>
             <TableRow>
               {[
                 "Année",
@@ -77,8 +96,8 @@ export default function ObjectifPrepaTable({ data }: Props) {
                   sx={{
                     fontWeight: 700,
                     color: "text.primary",
-                    borderBottom: "2px solid #e0e0e0",
-                    backgroundColor: "#f4f6f8",
+                    borderBottom: tableHeaderBorder,
+                    backgroundColor: tableHeaderBackground,
                     position: idx < 3 ? "sticky" : "static",
                     left: idx === 0 ? 0 : idx === 1 ? 100 : idx === 2 ? 280 : "auto",
                     zIndex: idx < 3 ? 2 : 1,
@@ -100,7 +119,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
                 sx={{
                   cursor: "pointer",
                   transition: "background-color 0.2s ease",
-                  "&:hover": { backgroundColor: "#f5faff" },
+                  "&:hover": { backgroundColor: tableRowHoverBackground },
                 }}
               >
                 {/* Année */}
@@ -109,7 +128,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
                     fontWeight: 500,
                     position: "sticky",
                     left: 0,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                   }}
                 >
@@ -123,7 +142,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
                     color: "primary.main",
                     position: "sticky",
                     left: 100,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                   }}
                 >
@@ -135,7 +154,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
                   sx={{
                     position: "sticky",
                     left: 280,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                   }}
                 >
@@ -182,14 +201,14 @@ export default function ObjectifPrepaTable({ data }: Props) {
             ))}
 
             {/* Ligne TOTAL */}
-            <TableRow sx={{ backgroundColor: "#fafbfc" }}>
+            <TableRow sx={{ backgroundColor: tableRowStripedBackground }}>
               <TableCell
                 colSpan={3}
                 sx={{
                   position: "sticky",
                   left: 0,
                   zIndex: 3,
-                  backgroundColor: "#fafbfc",
+                  backgroundColor: tableRowStripedBackground,
                   fontWeight: 700,
                 }}
               >

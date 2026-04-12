@@ -10,7 +10,9 @@ import {
   Select,
   MenuItem,
   Chip,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "src/theme";
 
 import {
   CandidatFilters,
@@ -42,29 +44,34 @@ import {
   LabelList,
 } from "recharts";
 
-const STATUS_COLOR_HEX: Record<string, string> = {
-  default: "#90a4ae",
-  info: "#1e88e5",
-  secondary: "#6d4c41",
-  warning: "#fb8c00",
-  success: "#43a047",
-  error: "#e53935",
-};
-
-const CONTRAT_COLORS = [
-  "#1e88e5", // Apprentissage
-  "#43a047", // Professionnalisation
-  "#fbc02d", // CRIF
-  "#8e24aa", // POEI/POEC
-  "#ef5350", // Sans contrat
-  "#6d4c41", // Autre
-];
+function semanticStatusFill(
+  theme: AppTheme,
+  semantic: ReturnType<typeof getCandidatBusinessStatusColorByValue>
+): string {
+  switch (semantic) {
+    case "default":
+      return theme.palette.grey[500];
+    case "info":
+      return theme.palette.info.main;
+    case "secondary":
+      return theme.palette.secondary.main;
+    case "warning":
+      return theme.palette.warning.main;
+    case "success":
+      return theme.palette.success.main;
+    case "error":
+      return theme.palette.error.main;
+    default:
+      return theme.palette.grey[500];
+  }
+}
 
 export default function CandidatsOverviewDashboard({
   initialFilters,
 }: {
   initialFilters?: CandidatFilters;
 }) {
+  const theme = useTheme<AppTheme>();
   const [filters, setFilters] = React.useState<CandidatFilters>(initialFilters ?? {});
 
   const { data, isLoading, error } = useCandidatOverview(filters);
@@ -119,7 +126,7 @@ export default function CandidatsOverviewDashboard({
         return {
           name: getCandidatBusinessStatusLabelFromValue(key),
           value,
-          color: STATUS_COLOR_HEX[getCandidatBusinessStatusColorByValue(key)],
+          color: semanticStatusFill(theme, getCandidatBusinessStatusColorByValue(key)),
         };
       })
       .filter(
@@ -147,30 +154,35 @@ export default function CandidatsOverviewDashboard({
     { label: "Abandons", value: k?.abandons_phase ?? 0 },
   ];
 
-  /* ✅ Données bar chart (contrats) */
+  const contratSeriesColors = React.useMemo(
+    () => [...theme.custom.chart.series.ordered].slice(0, 6),
+    [theme]
+  );
+
+  /* ✅ Données bar chart (contrats) — couleurs = série chart du design system */
   const contratData = [
     {
       name: "Apprentissage",
       value: k?.contrat_apprentissage ?? 0,
-      color: CONTRAT_COLORS[0],
+      color: contratSeriesColors[0],
     },
     {
       name: "Professionnalisation",
       value: k?.contrat_professionnalisation ?? 0,
-      color: CONTRAT_COLORS[1],
+      color: contratSeriesColors[1],
     },
-    { name: "CRIF", value: k?.contrat_crif ?? 0, color: CONTRAT_COLORS[2] },
+    { name: "CRIF", value: k?.contrat_crif ?? 0, color: contratSeriesColors[2] },
     {
       name: "POEI / POEC",
       value: k?.contrat_poei_poec ?? 0,
-      color: CONTRAT_COLORS[3],
+      color: contratSeriesColors[3],
     },
     {
       name: "Sans contrat",
       value: k?.contrat_sans ?? 0,
-      color: CONTRAT_COLORS[4],
+      color: contratSeriesColors[4],
     },
-    { name: "Autre", value: k?.contrat_autre ?? 0, color: CONTRAT_COLORS[5] },
+    { name: "Autre", value: k?.contrat_autre ?? 0, color: contratSeriesColors[5] },
   ];
 
   return (
@@ -294,7 +306,15 @@ export default function CandidatsOverviewDashboard({
           ) : (
             <ResponsiveContainer width="100%" aspect={2}>
               <BarChart data={contratData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={
+                    theme.palette.mode === "light"
+                      ? theme.custom.chart.grid.stroke.light
+                      : theme.custom.chart.grid.stroke.dark
+                  }
+                />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => `${v} candidats`} />

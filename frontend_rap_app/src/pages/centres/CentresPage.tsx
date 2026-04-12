@@ -28,6 +28,7 @@ import usePagination from "../../hooks/usePagination";
 import { buildLot1ExportQueryParams } from "../../api/lot1ImportExport";
 import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import PageTemplate from "../../components/PageTemplate";
+import type { AppTheme } from "../../theme";
 
 type Centre = {
   id: number;
@@ -49,7 +50,7 @@ export default function CentresPage() {
   const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination(1, 5);
 
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { data, loading, error, fetchData } = useFetch<{

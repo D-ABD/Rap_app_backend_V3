@@ -30,10 +30,11 @@ import type { PaginatedResponse } from "../../types/api";
 import type { User, UserFiltresValues, CustomUserRole } from "../../types/User";
 import FiltresUsersPanel from "../../components/filters/FiltresUsersPanel";
 import UserTable from "./UserTable";
+import type { AppTheme } from "../../theme";
 
 export default function UsersPage() {
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [search, setSearch] = useState("");

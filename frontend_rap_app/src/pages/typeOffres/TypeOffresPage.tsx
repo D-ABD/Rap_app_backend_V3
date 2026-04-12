@@ -16,6 +16,7 @@ import EntityToolbar from "../../components/filters/EntityToolbar";
 import PageSizeSelect from "../../components/filters/PageSizeSelect";
 import ListPaginationBar from "../../components/tables/ListPaginationBar";
 import SelectionToolbar from "../../components/tables/SelectionToolbar";
+import type { AppTheme } from "../../theme";
 
 type TypeOffre = {
   id: number;
@@ -60,7 +61,7 @@ export default function TypeOffresPage() {
   const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
 
   const navigate = useNavigate();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { data, loading, error, fetchData } = useFetch<{

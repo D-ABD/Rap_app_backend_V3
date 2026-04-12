@@ -1,6 +1,6 @@
 // src/components/PageSection.tsx
 import { Paper, useTheme } from "@mui/material";
-import type { SxProps } from "@mui/material/styles";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import { ReactNode } from "react";
 import type { AppTheme } from "../theme";
@@ -10,7 +10,7 @@ export default function PageSection({
   sx,
 }: {
   children: ReactNode;
-  sx?: SxProps<AppTheme>;
+  sx?: SxProps<Theme>;
 }) {
   const theme = useTheme<AppTheme>();
   return (

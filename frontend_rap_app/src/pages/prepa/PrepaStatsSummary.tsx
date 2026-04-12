@@ -3,6 +3,8 @@
 // -----------------------------------------------------------------------------
 import * as React from "react";
 import { Card, Typography, Box, Grid, Alert, FormControl, Select, MenuItem, useTheme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import type { AppTheme } from "src/theme";
 import StatCardSkeleton from "../../components/ui/StatCardSkeleton";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useAuth } from "src/hooks/useAuth";
@@ -35,7 +37,7 @@ export default function PrepaStatsSummary({
   title?: string;
   initialFilters?: PrepaFilters;
 }) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
   const { user } = useAuth();
   const isAdminLike = isAdminLikeRole(user?.role);
@@ -68,9 +70,8 @@ export default function PrepaStatsSummary({
 
   if (!resume) return null;
 
-  // 🎨 Styles dynamiques
-  const statBoxBg = isDark ? "rgba(255,255,255,0.04)" : "background.paper";
-  const statShadow = isDark ? "0 2px 6px rgba(0,0,0,0.5)" : "0 2px 6px rgba(0,0,0,0.05)";
+  const statBoxBg = isDark ? theme.custom.kpi.cardBackground.rest.dark : theme.custom.kpi.cardBackground.rest.light;
+  const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
 
   // 🧮 Données principales (basées sur ton backend Prépa)
   const objectif = resume.objectif_total ?? 0;
@@ -107,7 +108,7 @@ export default function PrepaStatsSummary({
       sx={{
         p: 3,
         borderRadius: 3,
-        boxShadow: isDark ? "0 2px 12px rgba(0,0,0,0.6)" : 2,
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
         transition: "all 0.3s ease",
       }}
     >
@@ -155,7 +156,7 @@ export default function PrepaStatsSummary({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >
@@ -186,7 +187,7 @@ export default function PrepaStatsSummary({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >
@@ -218,7 +219,7 @@ export default function PrepaStatsSummary({
                 transition: "all 0.2s ease",
                 "&:hover": {
                   transform: "translateY(-2px)",
-                  boxShadow: isDark ? "0 4px 14px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.08)",
+                  boxShadow: isDark ? theme.custom.kpi.elevation.hover.dark : theme.custom.kpi.elevation.hover.light,
                 },
               }}
             >

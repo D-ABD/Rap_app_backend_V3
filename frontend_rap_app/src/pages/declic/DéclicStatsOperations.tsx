@@ -14,6 +14,8 @@ import {
   MenuItem,
   useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import type { AppTheme } from "src/theme";
 import InsightsIcon from "@mui/icons-material/Insights";
 import { useAuth } from "src/hooks/useAuth";
 import { isAdminLikeRole } from "src/utils/roleGroups";
@@ -45,7 +47,7 @@ export default function DeclicStatsOperations({
   title?: string;
   initialFilters?: DeclicFilters;
 }) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
 
   const { user } = useAuth();
@@ -86,8 +88,8 @@ export default function DeclicStatsOperations({
 
   if (!data) return null;
 
-  const statBoxBg = isDark ? "rgba(255,255,255,0.04)" : "background.paper";
-  const statShadow = isDark ? "0 2px 6px rgba(0,0,0,0.5)" : "0 2px 6px rgba(0,0,0,0.05)";
+  const statBoxBg = isDark ? theme.custom.kpi.cardBackground.rest.dark : theme.custom.kpi.cardBackground.rest.light;
+  const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
 
   // ===========================================================================
   // 🎯 Données opérationnelles Déclic unifiées IC + ateliers
@@ -116,7 +118,7 @@ export default function DeclicStatsOperations({
       sx={{
         p: 3,
         borderRadius: 3,
-        boxShadow: isDark ? "0 2px 12px rgba(0,0,0,0.6)" : 2,
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
         transition: "all 0.3s ease",
       }}
     >
@@ -164,7 +166,7 @@ export default function DeclicStatsOperations({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >
@@ -196,7 +198,7 @@ export default function DeclicStatsOperations({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >
@@ -229,7 +231,7 @@ export default function DeclicStatsOperations({
                 transition: "all 0.2s ease",
                 "&:hover": {
                   transform: "translateY(-2px)",
-                  boxShadow: isDark ? "0 4px 14px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.08)",
+                  boxShadow: isDark ? theme.custom.kpi.elevation.hover.dark : theme.custom.kpi.elevation.hover.light,
                 },
               }}
             >

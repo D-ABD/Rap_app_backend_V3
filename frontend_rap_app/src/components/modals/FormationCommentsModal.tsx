@@ -238,7 +238,8 @@ export default function FormationCommentsModal({
               width: "100%",
               padding: "6px 10px",
               borderRadius: 4,
-              border: "1px solid #ccc",
+              border: "1px solid",
+              borderColor: "divider",
             }}
           />
         </Box>

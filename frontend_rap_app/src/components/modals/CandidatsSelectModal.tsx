@@ -513,9 +513,10 @@ export default function CandidatsSelectModal({
                     onClose();
                   }}
                   sx={{
-                    borderBottom: "1px solid #eee",
-                    backgroundColor: "#f9fafb",
-                    "&:hover": { backgroundColor: "#f3f4f6" },
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    backgroundColor: "background.default",
+                    "&:hover": { backgroundColor: "action.hover" },
                   }}
                 >
                   <ListItemText
@@ -538,7 +539,7 @@ export default function CandidatsSelectModal({
                     onSelect(c);
                     onClose();
                   }}
-                  sx={{ borderBottom: "1px solid #eee" }}
+                  sx={{ borderBottom: "1px solid", borderColor: "divider" }}
                 >
                   {multiple && (
                     <Checkbox
@@ -552,7 +553,7 @@ export default function CandidatsSelectModal({
                     primary={
                       <>
                         <strong>{c.nom_complet}</strong>
-                        {c.email && <span style={{ color: "#6b7280" }}> ({c.email})</span>}
+                        {c.email && <span style={{ color: "var(--mui-palette-text-secondary)" }}> ({c.email})</span>}
                       </>
                     }
                     secondary={
@@ -582,7 +583,7 @@ export default function CandidatsSelectModal({
         )}
 
         {canCreate && (
-          <Box sx={{ mt: 2, p: 2, border: "1px dashed #ccc", borderRadius: 1 }}>
+          <Box sx={{ mt: 2, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
               Créer et lier un candidat
             </Typography>

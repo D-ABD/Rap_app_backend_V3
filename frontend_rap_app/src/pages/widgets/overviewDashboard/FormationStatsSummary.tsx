@@ -11,6 +11,8 @@ import {
   MenuItem,
   useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import type { AppTheme } from "src/theme";
 import StatCardSkeleton from "../../../components/ui/StatCardSkeleton";
 import StatCard from "../../../components/dashboard/StatCard";
 import ArchiveIcon from "@mui/icons-material/Archive";
@@ -47,7 +49,7 @@ export default function FormationStatsSummary({
   title?: string;
   filters?: Filters;
 }) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
 
   // 🔘 Inclut les archivées à la demande
@@ -95,13 +97,12 @@ export default function FormationStatsSummary({
 
   if (!k) return null;
 
-  // 🎨 Palette dynamique selon le thème
   const cardBg = isDark
-    ? "linear-gradient(180deg, #1E1E1E 0%, #121212 100%)"
-    : "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)";
+    ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.98)} 0%, ${theme.palette.background.default} 100%)`
+    : `linear-gradient(180deg, ${theme.custom.surface.muted.background.light} 0%, ${theme.palette.background.paper} 100%)`;
 
-  const statBoxBg = isDark ? "rgba(255,255,255,0.04)" : "background.paper";
-  const statShadow = isDark ? "0 2px 6px rgba(0,0,0,0.5)" : "0 2px 6px rgba(0,0,0,0.05)";
+  const statBoxBg = isDark ? theme.custom.kpi.cardBackground.rest.dark : theme.custom.kpi.cardBackground.rest.light;
+  const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
 
   const stats = [
     { label: "Actives", value: k.nb_actives ?? 0, color: theme.palette.primary.main },
@@ -149,7 +150,7 @@ export default function FormationStatsSummary({
       sx={{
         p: 3,
         borderRadius: 3,
-        boxShadow: isDark ? "0 2px 12px rgba(0,0,0,0.6)" : 2,
+        boxShadow: theme.custom.surface.elevated.boxShadowRest,
         background: cardBg,
         transition: "all 0.3s ease",
       }}
@@ -181,10 +182,10 @@ export default function FormationStatsSummary({
             borderColor: isDark ? theme.palette.grey[700] : theme.palette.grey[300],
             bgcolor: includeArchived
               ? isDark
-                ? "rgba(255,255,255,0.12)"
-                : "rgba(25,118,210,0.12)"
+                ? alpha(theme.palette.common.white, 0.12)
+                : alpha(theme.palette.primary.main, 0.12)
               : isDark
-                ? "rgba(255,255,255,0.05)"
+                ? alpha(theme.palette.common.white, 0.05)
                 : "transparent",
             cursor: "pointer",
           }}
@@ -205,7 +206,7 @@ export default function FormationStatsSummary({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >
@@ -237,7 +238,7 @@ export default function FormationStatsSummary({
             }
             displayEmpty
             sx={{
-              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "background.paper",
+              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
               borderRadius: 1,
             }}
           >

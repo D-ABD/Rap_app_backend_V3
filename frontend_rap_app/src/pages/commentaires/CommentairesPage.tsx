@@ -39,11 +39,12 @@ import CommentairesTable from "./CommentairesTable";
 import ExportButtonCommentaires from "../../components/export_buttons/ExportButtonCommentaires";
 import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
+import type { AppTheme } from "../../theme";
 
 export default function CommentairesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);

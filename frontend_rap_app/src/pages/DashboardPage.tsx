@@ -23,6 +23,7 @@ import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/PageWrapper";
 import BackNavButton from "../components/BackNavButton";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
+import type { AppTheme } from "../theme";
 
 // ---------- Widgets ----------
 import FormationSaturationWidget from "./widgets/saturationdashboard/FormationSaturationWidget";
@@ -60,7 +61,7 @@ type PaletteColorKey = "primary" | "secondary" | "success" | "warning" | "info" 
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const minCardHeight = isMobile ? 200 : 240;

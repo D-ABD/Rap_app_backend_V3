@@ -35,9 +35,10 @@ import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
 import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import { buildDocumentExportQueryParams } from "../../api/lot1ImportExport";
+import type { AppTheme } from "../../theme";
 
 export default function DocumentsPage() {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [search, setSearch] = useState("");
   const [searchParams] = useSearchParams();

@@ -2,8 +2,9 @@
 // 📊 DeclicGroupedWidget — version corrigée et complète (Atelier 1, rétention, totaux justes)
 // -----------------------------------------------------------------------------
 import * as React from "react";
-import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton } from "@mui/material";
+import { Card, CardHeader, CardContent, Typography, Box, Button, IconButton, useTheme } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import type { AppTheme } from "../../../theme";
 
 import {
   DECLIC_TYPE_LABELS,
@@ -21,6 +22,7 @@ const fmt = (n?: number | null) => (n === undefined || n === null ? "—" : Math
 type DeclicTypeKey = keyof typeof DECLIC_TYPE_LABELS;
 
 export default function DeclicGroupedWidget() {
+  const theme = useTheme<AppTheme>();
   const initialRef = React.useRef<DeclicFilters>({
     annee: new Date().getFullYear(),
   });
@@ -59,6 +61,14 @@ export default function DeclicGroupedWidget() {
     () => JSON.stringify(filters) !== JSON.stringify(initialRef.current),
     [filters]
   );
+  const tableHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
+  const tableRowTotalBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   const reset = () => setFilters(initialRef.current);
 
@@ -193,7 +203,7 @@ export default function DeclicGroupedWidget() {
               }}
             >
               <thead>
-                <tr style={{ background: "#e3f2fd" }}>
+                <tr style={{ background: tableHeaderBackground }}>
                   <th style={{ textAlign: "left", padding: "8px" }}>Groupe</th>
                   <th>Présents (IC)</th>
                   <th>Absents (IC)</th>
@@ -215,22 +225,22 @@ export default function DeclicGroupedWidget() {
                     <tr
                       key={idx}
                       style={{
-                        background: isTotal ? "#f5f5f5" : undefined,
+                        background: isTotal ? tableRowTotalBackground : undefined,
                         fontWeight: isTotal ? 700 : 500,
                       }}
                     >
                       <td style={{ padding: "6px 8px" }}>
                         {isTotal ? "Total" : resolveGroupLabel(r)}
                       </td>
-                      <td style={{ background: "#c8e6c9" }}>{fmt(r.nb_presents_declic)}</td>
-                      <td style={{ background: "#ffcdd2" }}>{fmt(r.nb_absents_declic)}</td>
+                      <td style={{ background: theme.palette.success.light }}>{fmt(r.nb_presents_declic)}</td>
+                      <td style={{ background: theme.palette.error.light }}>{fmt(r.nb_absents_declic)}</td>
 
-                      <td style={{ background: "#bbdefb" }}>
+                      <td style={{ background: theme.palette.info.light }}>
                         {r.taux_presence_declic != null
                           ? `${r.taux_presence_declic.toFixed(1)} %`
                           : "—"}
                       </td>
-                      <td style={{ background: "#d1c4e9" }}>
+                      <td style={{ background: theme.palette.secondary.light }}>
                         {r.taux_retention != null ? `${r.taux_retention.toFixed(1)} %` : "—"}
                       </td>
                       <td style={{ fontWeight: isTotal ? 700 : 500 }}>{fmt(r.total)}</td>

@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArchiveIcon from "@mui/icons-material/Archive";
+import type { AppTheme } from "../../../theme";
 import {
   AppairageFilters,
   AppairageGroupBy,
@@ -87,7 +88,7 @@ export default function AppairageGroupedTableWidget({
   defaultFilters,
   title = "Détails des Appairages",
 }: Props) {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const [by, setBy] = React.useState<AppairageGroupBy>(defaultBy);
   const [filters, setFilters] = React.useState<AppairageFilters>(defaultFilters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState(false);
@@ -135,9 +136,14 @@ export default function AppairageGroupedTableWidget({
     theme.palette.mode === "dark" ? theme.palette.warning.dark : theme.palette.warning.light;
   const colorInfo =
     theme.palette.mode === "dark" ? theme.palette.info.dark : theme.palette.info.light;
-  const colorHeader = theme.palette.mode === "dark" ? theme.palette.background.default : "#e3f2fd";
+  const colorHeader =
+    theme.palette.mode === "light"
+      ? theme.custom.table.header.background.light
+      : theme.custom.table.header.background.dark;
   const colorTotal =
-    theme.palette.mode === "dark" ? theme.palette.grey[800] : theme.palette.grey[100];
+    theme.palette.mode === "light"
+      ? theme.custom.table.row.stripedEven.light
+      : theme.custom.table.row.stripedEven.dark;
 
   return (
     <Card sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>

@@ -175,7 +175,7 @@ export default function UsersSelectModal({
                 primary={
                   <>
                     <strong>{u.full_name}</strong>
-                    {u.email && <span style={{ color: "#6b7280" }}> ({u.email})</span>}
+                    {u.email && <span style={{ color: "var(--mui-palette-text-secondary)" }}> ({u.email})</span>}
                     {u.role && (
                       <Chip
                         size="small"
@@ -183,8 +183,8 @@ export default function UsersSelectModal({
                         sx={{
                           ml: 1,
                           fontWeight: 600,
-                          bgcolor: "#eef2ff",
-                          color: "#3730a3",
+                          bgcolor: "primary.50",
+                          color: "primary.dark",
                         }}
                       />
                     )}

@@ -181,7 +181,7 @@ export default function CerfaSelectModal({ show, onClose, onSelect, onCreate }: 
           <List>
             {filtered.map((c) => (
               <ListItem key={c.id} disablePadding>
-                <ListItemButton onClick={() => onSelect(c)} sx={{ borderBottom: "1px solid #eee" }}>
+                <ListItemButton onClick={() => onSelect(c)} sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
                   <ListItemText
                     primary={
                       <strong>
@@ -205,7 +205,7 @@ export default function CerfaSelectModal({ show, onClose, onSelect, onCreate }: 
         )}
 
         {canCreate && (
-          <Box sx={{ mt: 2, p: 2, border: "1px dashed #ccc", borderRadius: 1 }}>
+          <Box sx={{ mt: 2, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
             <Typography variant="subtitle1" gutterBottom>
               Créer un nouveau CERFA
             </Typography>

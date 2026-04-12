@@ -167,8 +167,8 @@ export default function FormationSelectModal({ show, onClose, onSelect }: Props)
                           size="small"
                           sx={{
                             ml: 1,
-                            backgroundColor: pick.type_offre?.couleur ?? "#dbeafe",
-                            color: "#1e40af",
+                            backgroundColor: pick.type_offre?.couleur ?? "primary.light",
+                            color: "primary.dark",
                             fontWeight: 600,
                           }}
                         />
