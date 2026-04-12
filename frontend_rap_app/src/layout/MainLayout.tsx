@@ -21,6 +21,7 @@ import {
   useMediaQuery,
   Stack,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import DescriptionIcon from "@mui/icons-material/Description";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -55,7 +56,7 @@ import { ThemeContext } from "../contexts/ThemeContext";
 import logo from "../assets/logo.png";
 import Footer from "./footer";
 import AppBreadcrumbs from "../components/layout/AppBreadcrumbs";
-import { getDrawerItemSx } from "./navigationStyles";
+import { getDrawerItemSx, getTopNavButtonSx } from "./navigationStyles";
 
 const drawerWidth = 240;
 
@@ -128,40 +129,142 @@ export default function MainLayout() {
   const canSeeDeclic = canAccessDeclicRole(role);
   const canSeePrepa = canAccessPrepaRole(role);
   const canSeeParametres = isAdminLikeRole(role);
+  const appBarTextColor = theme.palette.common.white;
+  const topSurfaceBorderColor = alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.16 : 0.12);
+  const topSurfaceBg = alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.08 : 0.05);
+  const menuPaperSx = {
+    mt: 1.25,
+    borderRadius: 3,
+    minWidth: 220,
+    border: "1px solid",
+    borderColor: alpha(theme.palette.divider, 0.9),
+    backgroundColor: alpha(theme.palette.background.paper, theme.palette.mode === "light" ? 0.96 : 0.92),
+    backgroundImage: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.04 : 0.1)} 0%, ${alpha(theme.palette.background.paper, 0)} 100%)`,
+    backdropFilter: "blur(16px)",
+    boxShadow:
+      theme.palette.mode === "light"
+        ? `0 18px 40px ${alpha(theme.palette.common.black, 0.12)}`
+        : `0 24px 52px ${alpha(theme.palette.common.black, 0.34)}`,
+    "& .MuiMenuItem-root": {
+      borderRadius: 2,
+      mx: 0.75,
+      my: 0.25,
+      minHeight: 40,
+      fontSize: "0.92rem",
+      transition: "all 180ms ease",
+      "&:hover": {
+        backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.08 : 0.16),
+      },
+    },
+  } as const;
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        background: (currentTheme) =>
+          currentTheme.palette.mode === "light"
+            ? `radial-gradient(circle at top, ${alpha(currentTheme.palette.primary.main, 0.08)} 0%, transparent 34%), ${currentTheme.palette.background.default}`
+            : `radial-gradient(circle at top, ${alpha(currentTheme.palette.primary.main, 0.22)} 0%, transparent 28%), linear-gradient(180deg, ${alpha(currentTheme.palette.common.black, 0.18)} 0%, transparent 24%), ${currentTheme.palette.background.default}`,
+      }}
+    >
       <CssBaseline />
 
       {/* 🔹 Navbar */}
       <AppBar
         position="fixed"
-        elevation={3}
+        elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          backdropFilter: "blur(8px)",
-          background: (theme) =>
-            theme.palette.mode === "light" ? "rgba(25, 118, 210, 0.9)" : "rgba(18,18,18,0.9)",
+          backdropFilter: "blur(18px)",
+          background: (currentTheme) =>
+            currentTheme.palette.mode === "light"
+              ? currentTheme.palette.gradients.primary
+              : `linear-gradient(135deg, ${alpha(currentTheme.palette.background.paper, 0.96)} 0%, ${alpha(currentTheme.palette.primary.dark, 0.9)} 100%)`,
+          color: appBarTextColor,
+          borderBottom: (currentTheme) =>
+            `1px solid ${alpha(
+              currentTheme.palette.mode === "light" ? currentTheme.palette.common.white : currentTheme.palette.primary.light,
+              currentTheme.palette.mode === "light" ? 0.18 : 0.16
+            )}`,
+          boxShadow: (currentTheme) =>
+            currentTheme.palette.mode === "light"
+              ? `0 16px 38px ${alpha(currentTheme.palette.primary.dark, 0.24)}`
+              : `0 16px 40px ${alpha(currentTheme.palette.common.black, 0.3)}`,
         }}
       >
-        <Toolbar sx={{ px: { xs: 1, sm: 2 }, minHeight: 56 }}>
+        <Toolbar
+          sx={{
+            px: { xs: 1.25, sm: 2.25, lg: 3 },
+            minHeight: { xs: 64, sm: 72 },
+            gap: 1,
+          }}
+        >
           {/* Bouton menu burger */}
-          <IconButton color="inherit" edge="start" onClick={toggleDrawer} sx={{ mr: 1 }}>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={toggleDrawer}
+            sx={{
+              mr: 0.5,
+              width: 42,
+              height: 42,
+              border: "1px solid",
+              borderColor: topSurfaceBorderColor,
+              bgcolor: topSurfaceBg,
+              "&:hover": {
+                bgcolor: (currentTheme) =>
+                  alpha(
+                    currentTheme.palette.common.white,
+                    currentTheme.palette.mode === "light" ? 0.16 : 0.1
+                  ),
+              },
+            }}
+          >
             <MenuIcon />
           </IconButton>
 
           {/* Logo + Titre */}
-          <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
-            <img src={logo} alt="Logo" style={{ height: 28, marginRight: 8 }} />
+          <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: { xs: 40, sm: 44 },
+                height: { xs: 40, sm: 44 },
+                mr: 1.25,
+                borderRadius: 2.5,
+                display: "grid",
+                placeItems: "center",
+                border: "1px solid",
+                borderColor: topSurfaceBorderColor,
+                background: (currentTheme) =>
+                  currentTheme.palette.mode === "light"
+                    ? `linear-gradient(135deg, ${alpha(currentTheme.palette.common.white, 0.18)} 0%, ${alpha(currentTheme.palette.common.white, 0.08)} 100%)`
+                    : `linear-gradient(135deg, ${alpha(currentTheme.palette.primary.light, 0.2)} 0%, ${alpha(currentTheme.palette.secondary.main, 0.12)} 100%)`,
+                boxShadow: (currentTheme) =>
+                  currentTheme.palette.mode === "light"
+                    ? `0 10px 24px ${alpha(currentTheme.palette.primary.dark, 0.22)}`
+                    : `0 12px 28px ${alpha(currentTheme.palette.common.black, 0.24)}`,
+                overflow: "hidden",
+              }}
+            >
+              <Box component="img" src={logo} alt="Logo" sx={{ height: 26, width: "auto" }} />
+            </Box>
             <Typography
               variant="h6"
               noWrap
               component={Link}
               to="/"
               sx={{
-                color: "inherit",
+                color: appBarTextColor,
                 textDecoration: "none",
-                fontWeight: 600,
-                fontSize: { xs: "1rem", sm: "1.1rem" },
+                fontWeight: 800,
+                fontSize: { xs: "1rem", sm: "1.1rem", lg: "1.18rem" },
+                letterSpacing: "-0.02em",
+                textShadow:
+                  theme.palette.mode === "light"
+                    ? `0 1px 2px ${alpha(theme.palette.primary.dark, 0.18)}`
+                    : "none",
               }}
             >
               Rap App
@@ -170,11 +273,23 @@ export default function MainLayout() {
 
           {/* 🔹 Menu Desktop */}
           {!isMobile && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button color="inherit" component={Link} to="/">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              alignItems="center"
+              sx={{
+                px: 0.75,
+                py: 0.5,
+                borderRadius: 999,
+                border: "1px solid",
+                borderColor: topSurfaceBorderColor,
+                bgcolor: topSurfaceBg,
+              }}
+            >
+              <Button color="inherit" component={Link} to="/" sx={getTopNavButtonSx(isActive("/"))}>
                 Accueil
               </Button>
-              <Button color="inherit" component={Link} to="/dashboard">
+              <Button color="inherit" component={Link} to="/dashboard" sx={getTopNavButtonSx(isActive("/dashboard"))}>
                 Dashboard
               </Button>
 
@@ -185,6 +300,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorDeclic(e.currentTarget)}
                     endIcon={<EmojiObjectsIcon />}
+                    sx={getTopNavButtonSx(isActive("/declic"))}
                   >
                     Déclic
                   </Button>
@@ -192,7 +308,7 @@ export default function MainLayout() {
                     anchorEl={anchorDeclic}
                     open={Boolean(anchorDeclic)}
                     onClose={() => setAnchorDeclic(null)}
-                    PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                    PaperProps={{ sx: menuPaperSx }}
                   >
                     <MenuItem component={Link} to="/declic" onClick={() => setAnchorDeclic(null)}>
                       <EmojiObjectsIcon fontSize="small" sx={{ mr: 1 }} /> Séances Déclic
@@ -215,6 +331,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorPrepa(e.currentTarget)}
                     endIcon={<InsightsIcon />}
+                    sx={getTopNavButtonSx(isActive("/prepa"))}
                   >
                     Prépa Comp
                   </Button>
@@ -222,7 +339,7 @@ export default function MainLayout() {
                     anchorEl={anchorPrepa}
                     open={Boolean(anchorPrepa)}
                     onClose={() => setAnchorPrepa(null)}
-                    PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                    PaperProps={{ sx: menuPaperSx }}
                   >
                     <MenuItem component={Link} to="/prepa/ic" onClick={() => setAnchorPrepa(null)}>
                       <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> IC Prépa
@@ -258,6 +375,7 @@ export default function MainLayout() {
                 color="inherit"
                 onClick={(e) => setAnchorCvtheque(e.currentTarget)}
                 endIcon={<DescriptionIcon />}
+                sx={getTopNavButtonSx(isActive("/cvtheque"))}
               >
                 CVThèque
               </Button>
@@ -265,7 +383,7 @@ export default function MainLayout() {
                 anchorEl={anchorCvtheque}
                 open={Boolean(anchorCvtheque)}
                 onClose={() => setAnchorCvtheque(null)}
-                PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                PaperProps={{ sx: menuPaperSx }}
               >
                 <MenuItem
                   component={Link}
@@ -289,6 +407,7 @@ export default function MainLayout() {
                 color="inherit"
                 onClick={(e) => setAnchorCrm(e.currentTarget)}
                 endIcon={<SearchIcon />}
+                sx={getTopNavButtonSx(isActive("/prospections") || isActive("/partenaires") || isActive("/cerfa") || isActive("/appairages") || isActive("/candidats") || isActive("/ateliers-tre"))}
               >
                 CRM
               </Button>
@@ -296,7 +415,7 @@ export default function MainLayout() {
                 anchorEl={anchorCrm}
                 open={Boolean(anchorCrm)}
                 onClose={() => setAnchorCrm(null)}
-                PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                PaperProps={{ sx: menuPaperSx }}
               >
                 <MenuItem component={Link} to="/prospections">
                   Prospections
@@ -336,6 +455,7 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorRevue(e.currentTarget)}
                     endIcon={<FolderIcon />}
+                    sx={getTopNavButtonSx(isActive("/formations") || isActive("/commentaires") || isActive("/documents") || isActive("/evenements"))}
                   >
                     Revue d&apos;offres
                   </Button>
@@ -343,9 +463,7 @@ export default function MainLayout() {
                     anchorEl={anchorRevue}
                     open={Boolean(anchorRevue)}
                     onClose={() => setAnchorRevue(null)}
-                    PaperProps={{
-                      sx: { borderRadius: 2, boxShadow: 3, mt: 1 },
-                    }}
+                    PaperProps={{ sx: menuPaperSx }}
                   >
                     <MenuItem component={Link} to="/formations">
                       Formations
@@ -363,11 +481,11 @@ export default function MainLayout() {
                 </>
               )}
 
-              <Button color="inherit" component={Link} to="/about">
+              <Button color="inherit" component={Link} to="/about" sx={getTopNavButtonSx(isActive("/about"))}>
                 À propos
               </Button>
               {canSeeParametres && (
-                <Button color="inherit" component={Link} to="/parametres">
+                <Button color="inherit" component={Link} to="/parametres" sx={getTopNavButtonSx(isActive("/parametres"))}>
                   Paramètres
                 </Button>
               )}
@@ -375,21 +493,56 @@ export default function MainLayout() {
           )}
 
           {/* Toggle thème */}
-          <IconButton color="inherit" onClick={toggleTheme}>
+          <IconButton
+            color="inherit"
+            onClick={toggleTheme}
+            sx={{
+              ml: { xs: 0.25, sm: 0.5 },
+              width: 42,
+              height: 42,
+              border: "1px solid",
+              borderColor: topSurfaceBorderColor,
+              bgcolor: topSurfaceBg,
+              "&:hover": {
+                bgcolor: (currentTheme) =>
+                  alpha(
+                    currentTheme.palette.common.white,
+                    currentTheme.palette.mode === "light" ? 0.16 : 0.1
+                  ),
+              },
+            }}
+          >
             {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
 
           {/* Auth */}
           {isAuthenticated ? (
             <>
-              <IconButton color="inherit" onClick={(e) => setAnchorUser(e.currentTarget)}>
+              <IconButton
+                color="inherit"
+                onClick={(e) => setAnchorUser(e.currentTarget)}
+                sx={{
+                  width: 42,
+                  height: 42,
+                  border: "1px solid",
+                  borderColor: topSurfaceBorderColor,
+                  bgcolor: topSurfaceBg,
+                  "&:hover": {
+                    bgcolor: (currentTheme) =>
+                      alpha(
+                        currentTheme.palette.common.white,
+                        currentTheme.palette.mode === "light" ? 0.16 : 0.1
+                      ),
+                  },
+                }}
+              >
                 <AccountCircle />
               </IconButton>
               <Menu
                 anchorEl={anchorUser}
                 open={Boolean(anchorUser)}
                 onClose={() => setAnchorUser(null)}
-                PaperProps={{ sx: { borderRadius: 2, boxShadow: 3, mt: 1 } }}
+                PaperProps={{ sx: menuPaperSx }}
               >
                 <MenuItem disabled>{user?.username || user?.email}</MenuItem>
                 {user?.role && <MenuItem disabled>🎭 Rôle : {user.role}</MenuItem>}
@@ -407,7 +560,14 @@ export default function MainLayout() {
               component={Link}
               to="/login"
               startIcon={<LoginIcon />}
-              sx={{ fontSize: { xs: "0.8rem", sm: "1rem" } }}
+              sx={{
+                fontSize: { xs: "0.8rem", sm: "0.95rem" },
+                borderRadius: 999,
+                border: "1px solid",
+                borderColor: topSurfaceBorderColor,
+                px: 1.5,
+                bgcolor: topSurfaceBg,
+              }}
             >
               Connexion
             </Button>
@@ -425,15 +585,56 @@ export default function MainLayout() {
           "& .MuiDrawer-paper": {
             width: drawerWidth,
             boxSizing: "border-box",
-            borderRight: (theme) => `1px solid ${theme.palette.divider}`,
-            borderTopRightRadius: 12,
-            borderBottomRightRadius: 12,
+            borderRight: (currentTheme) => `1px solid ${alpha(currentTheme.palette.divider, 0.95)}`,
+            borderTopRightRadius: 24,
+            borderBottomRightRadius: 24,
+            background: (currentTheme) =>
+              currentTheme.palette.mode === "light"
+                ? `linear-gradient(180deg, ${alpha(currentTheme.palette.common.white, 0.99)} 0%, ${alpha(currentTheme.palette.background.default, 0.98)} 100%)`
+                : `linear-gradient(180deg, ${alpha(currentTheme.palette.background.paper, 0.98)} 0%, ${alpha(currentTheme.palette.primary.dark, 0.24)} 100%)`,
+            boxShadow: (currentTheme) =>
+              currentTheme.palette.mode === "light"
+                ? `0 24px 48px ${alpha(currentTheme.palette.common.black, 0.14)}`
+                : `0 28px 60px ${alpha(currentTheme.palette.common.black, 0.34)}`,
+            backdropFilter: "blur(18px)",
+            overflowX: "hidden",
           },
         }}
       >
         <Toolbar />
-        <Divider />
-        <List>
+        <Box
+          sx={{
+            px: 2,
+            pt: 2,
+            pb: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+          }}
+        >
+          <Box
+            component="img"
+            src={logo}
+            alt="Logo"
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: 2,
+              p: 0.75,
+              bgcolor: (currentTheme) => alpha(currentTheme.palette.primary.main, currentTheme.palette.mode === "light" ? 0.1 : 0.18),
+            }}
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "text.primary" }}>
+              RAP App
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              Navigation principale
+            </Typography>
+          </Box>
+        </Box>
+        <Divider sx={{ mx: 2 }} />
+        <List sx={{ px: 1.25, py: 1.25 }}>
           {sidebarItems.map((item) => (
             <Box key={item.label}>
               <ListItemButton
@@ -480,31 +681,30 @@ export default function MainLayout() {
         component="main"
         sx={{
           flex: 1,
-          p: { xs: 2, sm: 3 },
-          mt: { xs: 7, sm: 8 },
-          backgroundColor: (theme) => theme.palette.background.default,
-          color: (theme) => theme.palette.text.primary,
+          px: { xs: 1.5, sm: 2.5, lg: 3.5 },
+          pt: { xs: 8.5, sm: 10 },
+          pb: { xs: 2, sm: 3 },
+          color: (currentTheme) => currentTheme.palette.text.primary,
           transition: "background-color 0.3s ease",
         }}
       >
-        <AppBreadcrumbs pathname={location.pathname} />
+        <Box sx={{ maxWidth: 1600, mx: "auto", width: "100%" }}>
+          <AppBreadcrumbs pathname={location.pathname} />
 
-        <Outlet />
+          <Box
+            sx={{
+              minHeight: "calc(100vh - 172px)",
+              px: { xs: 0.25, sm: 0.5 },
+            }}
+          >
+            <Outlet />
+          </Box>
+        </Box>
       </Box>
 
       {/* 🔹 Footer */}
-      <Box
-        component="footer"
-        sx={{
-          py: 2,
-          textAlign: "center",
-          borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-          backgroundColor: (theme) => theme.palette.background.paper,
-        }}
-      >
-        <Typography variant="caption" color="text.secondary">
-          <Footer />
-        </Typography>
+      <Box sx={{ px: { xs: 0, sm: 0.75 }, pb: { xs: 0, sm: 0.75 } }}>
+        <Footer />
       </Box>
     </Box>
   );
