@@ -47,11 +47,9 @@ Ne refactore pas la structure des fichiers au-delà de ce qui est nécessaire au
 
 ### Pas encore fait (objet des lots ci-dessous)
 
-- La **migration principale** des consommations design system est réalisée sur les périmètres couverts par les lots 1 à 7.
-- Il subsiste des **écarts résiduels** identifiés et cadrés dans le **lot 8** :
-  composants encore partiellement hardcodés, styles locaux non tokenisés, usages encore centrés sur `theme.palette` sans centralisation `theme.custom.*`, et homogénéisation incomplète de `useTheme<AppTheme>()`.
-- La liste du **lot 8** constitue une **base de travail fiable pour la consolidation**, mais doit être lue comme un périmètre d’audit priorisé, pas comme une vérité absolue ligne par ligne sans revalidation locale.
-- **Refactor modulaire** `palette.ts` / `components.ts` extraits de `theme.ts` : hors périmètre des lots UI ; peut suivre une fois la consolidation du lot 8 stabilisée.
+- La **migration principale** est réalisée sur les périmètres couverts par les **lots 1 à 8** ; le **design system** est en place et **largement consommé** dans l’application.
+- Le **Lot 9** (reliquat final de centralisation thème) est **exécuté** : les écarts non métier du périmètre audit ont été traités ; restent des **exceptions documentées** (palette Quill étendue dans `registerQuillFormats.ts`, couleurs API dynamiques, etc.) — voir section Lot 9 ci-dessous.
+- **Refactor modulaire** `palette.ts` / `components.ts` extraits de `theme.ts` : hors périmètre des lots UI ; peut suivre une fois la base UI stabilisée après le Lot 9.
 
 ### Prérequis pour chaque lot
 
@@ -389,10 +387,11 @@ Statut : Terminé le 12 avril 2026
 - [x] Widgets Recharts alignés sur `custom.chart` et modales sur `custom.overlay` (lot 6).
 - [x] Quill / styled-components traités (lot 7) si objectif « zéro hex hors thème ».
 - [x] Lot 8 — audit & consolidation : overview/stats, formulaires typés, tables métier, pages liste (`useTheme<AppTheme>()`), documenté dans cette section.
+- [x] Lot 9 — reliquat final : périmètre `_design-system-audit-final.md` traité (modales, formulaires, widgets, auth, typage `AppTheme`, `App.css` legacy neutralisé) ; exceptions produit documentées sous le Lot 9.
 
 ---
 
-*Dernière mise à jour : Lot 8 clôturé (12 avril 2026) ; tokens (`src/theme/tokens/`), convention `AppTheme` / `useTheme<AppTheme>()`, docs `_tokens.md` et `_design-system.md`.*
+*Dernière mise à jour : Lots 8 et 9 clôturés (12 avril 2026) ; tokens (`src/theme/tokens/`), convention `AppTheme` / `useTheme<AppTheme>()`, docs `_tokens.md` et `_design-system.md`.*
 
 ---
 
@@ -635,3 +634,88 @@ Statut : Terminé le 12 avril 2026
 - Uniformiser `useTheme<AppTheme>()`
 - Éliminer les écarts de typage qui fragilisent la lecture future de `theme.custom.*`
 - Traiter ce sous-lot comme une homogénéisation DX sûre, sans changement visuel attendu
+
+---
+
+## Lot 9 — Reliquat final de centralisation thème
+
+Statut : Terminé le 12 avril 2026
+
+### Objectif
+
+Clôturer le **reliquat résiduel** (`_design-system-audit-final.md`) : durcissement ciblé, **sans** migration globale ni extension du catalogue de tokens.
+
+**Règle tokens (lot 9) :** ne pas créer de nouveaux chemins `theme.custom.*` dans ce lot ; utiliser **uniquement** les tokens déjà définis dans `createAppCustomTokens`, ou `theme.palette.*` / `alpha()`.
+
+### Checklist fichier par fichier
+
+Chaque ligne = fichier traité et validé (`tsc` OK sur le frontend).
+
+- [x] `src/contexts/AuthProvider.tsx` — splash session : `background.default` ; `useTheme<AppTheme>()`.
+- [x] `src/utils/registerQuillFormats.ts` — **exception documentée** : palette étendue conservée ; entrées `getTheme(...).custom.editor.quill.*` inchangées ; commentaire de périmètre produit.
+- [x] `src/pages/widgets/overviewDashboard/FormationOverviewWidget.tsx` — label camembert : `theme.palette.primary.dark` via callback lié au thème.
+- [x] `src/pages/prepa/PrepaDetailModal.tsx` — `Paper` : `theme.custom.form.section.paperBackground.{light,dark}`.
+- [x] `src/pages/declic/DeclicDetailModal.tsx` — idem.
+- [x] `src/pages/appairage/AppairageDetailModal.tsx` — dernier commentaire + audit activité : `form.section.paperBackground`, `divider`, `text.secondary` / `success.main`.
+- [x] `src/pages/formations/FormationDetailModal.tsx` — liens documents, encadré commentaire : `primary.main` + `alpha(primary, 0.04)` ; état vide : `error.main`.
+- [x] `src/pages/cerfa/CerfaDetailModal.tsx` — champ manquant : `palette.error.main` (composant `Field`).
+- [x] `src/pages/users/MonProfil.tsx` — lien politique : `Link` MUI `color="primary"`.
+- [x] `src/pages/prospection/ProspectionFormCandidat.tsx` — sections : `form.section.paperBackground` ; `Section` avec `useTheme<AppTheme>()`.
+- [x] `src/pages/prepa/StagiairesPrepaForm.tsx` — encadré récap ateliers : `form.section.paperBackground`.
+- [x] `src/pages/commentaires/CommentaireForm.tsx` — fond éditeur Quill : `background.paper`.
+- [x] `src/pages/prospection/prospectioncomments/ProspectionCommentForm.tsx` — idem.
+- [x] `src/pages/commentaires/CommentairesEditPage.tsx` — conteneur Quill : `Box` + `bgcolor: background.paper`.
+- [x] `src/pages/declic/ObjectifDeclicTable.tsx` — ombre conteneur : `theme.shadows[2]` ; colonnes sticky : `background.paper`.
+- [x] `src/pages/typeOffres/TypeOffresPage.tsx` — **relu sans changement** : seul fallback métier `#6c757d` si pas de couleur API (inchangé volontairement).
+- [x] `src/pages/prospection/prospectioncomments/ProspectionCommentTable.tsx` — `useTheme<AppTheme>()` (aucun hex dans le fichier).
+- [x] `src/pages/widgets/overviewDashboard/AteliersTREOverviewWidget.tsx` — `useTheme<AppTheme>()` (déjà branché sur `palette` pour les barres).
+- [x] `src/pages/cerfa/CerfaPage.tsx` — suppression du `useTheme` inutilisé (pas d’hex résiduel).
+- [x] `src/App.css` — **non importé** par l’app ; fichier neutralisé (commentaire + vide), anciens hex Vite retirés.
+
+### Réalisé (fichiers modifiés — exhaustif)
+
+- `src/contexts/AuthProvider.tsx`
+- `src/utils/registerQuillFormats.ts`
+- `src/pages/widgets/overviewDashboard/FormationOverviewWidget.tsx`
+- `src/pages/prepa/PrepaDetailModal.tsx`
+- `src/pages/declic/DeclicDetailModal.tsx`
+- `src/pages/appairage/AppairageDetailModal.tsx`
+- `src/pages/formations/FormationDetailModal.tsx`
+- `src/pages/cerfa/CerfaDetailModal.tsx`
+- `src/pages/users/MonProfil.tsx`
+- `src/pages/prospection/ProspectionFormCandidat.tsx`
+- `src/pages/prepa/StagiairesPrepaForm.tsx`
+- `src/pages/commentaires/CommentaireForm.tsx`
+- `src/pages/prospection/prospectioncomments/ProspectionCommentForm.tsx`
+- `src/pages/commentaires/CommentairesEditPage.tsx`
+- `src/pages/declic/ObjectifDeclicTable.tsx`
+- `src/pages/prospection/prospectioncomments/ProspectionCommentTable.tsx`
+- `src/pages/widgets/overviewDashboard/AteliersTREOverviewWidget.tsx`
+- `src/pages/cerfa/CerfaPage.tsx`
+- `src/App.css`
+
+### Relu sans changement fonctionnel
+
+- `src/pages/typeOffres/TypeOffresPage.tsx` — périmètre déjà conforme (couleurs = API / fallback métier `#6c757d`).
+
+### Corrections appliquées (résumé)
+
+- **Hardcoded** : `#fafafa`, `#fff`, `#ddd`, `#1976d2`, `#0d47a1`, `#d32f2f`, `#777` / `green`, rgba document formation, ombre table, splash `#f9f9f9` / `#121212` → **`theme.custom.*`** (`form.section.paperBackground`, `overlay` déjà en place) ou **`theme.palette.*`** / **`alpha()`** / **`background.paper`**, **`shadows[2]`**, **`divider`**, **`text.secondary`**, **`success.main`**.
+- **Typage** : `useTheme<AppTheme>()` là où le fichier utilisait `useTheme()` non typé ou nécessitait le thème (`AuthProvider`, `ProspectionCommentTable`, `AteliersTREOverviewWidget`, `ProspectionFormCandidat` / sous-composant `Section`).
+- **Quill** : pas de réduction de palette (risque produit) ; **commentaire** explicite dans `registerQuillFormats.ts`.
+
+### Styles locaux restants (légitimes)
+
+- **`registerQuillFormats.ts`** : hex supplémentaires dans `colorOptions` (exception produit — grille riche pour l’utilisateur).
+- **`TypeOffresPage.tsx`** : `type.couleur` API et fallback `#6c757d`.
+- **Contenu HTML** Quill / **Recharts** : comportement inchangé hors libellés corrigés ci-dessus.
+
+### Risques résiduels
+
+- Légère différence visuelle sur le **splash** auth (passage à `palette.background.default` strict).
+- **Camembert** : pourcentages utilisent `primary.dark` (aligné thème, peut différer du bleu `#0d47a1` fixe).
+- **`App.css`** : si un outil externe l’injectait encore, il n’applique plus de styles (fichier vide hors commentaire).
+
+### Priorité
+
+P2 — finalisation / durcissement du design system

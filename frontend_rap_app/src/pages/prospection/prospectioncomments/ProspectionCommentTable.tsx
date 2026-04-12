@@ -20,6 +20,7 @@ import ResponsiveTableTemplate, { TableColumn } from "../../../components/Respon
 import type { ProspectionCommentDTO } from "../../../types/prospectionComment";
 import { useState } from "react";
 import CommentaireContent from "../../commentaires/CommentaireContent";
+import type { AppTheme } from "../../../theme";
 
 interface Props {
   rows: ProspectionCommentDTO[];
@@ -56,7 +57,7 @@ export default function ProspectionCommentTable({
   onSelectionChange,
 }: Props) {
   const [selected, setSelected] = useState<number[]>([]);
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const toggleRow = (id: number) => {

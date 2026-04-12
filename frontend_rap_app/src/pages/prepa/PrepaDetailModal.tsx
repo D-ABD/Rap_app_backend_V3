@@ -62,6 +62,9 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
   const modalTitleBorder = isLight
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+  const sectionPaperBg = isLight
+    ? theme.custom.form.section.paperBackground.light
+    : theme.custom.form.section.paperBackground.dark;
   const { exportPresence, exportEmargement } = useExportStagiairesPrepa();
   const { user } = useAuth();
   const canWritePrepa = canWritePrepaRole(user?.role);
@@ -111,7 +114,7 @@ export default function PrepaDetailModal({ open, onClose, prepa, loading = false
             sx={{
               p: 3,
               borderRadius: 2,
-              backgroundColor: "#fafafa",
+              backgroundColor: sectionPaperBg,
             }}
           >
             <Grid container spacing={3}>

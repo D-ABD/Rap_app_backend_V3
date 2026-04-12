@@ -1,4 +1,19 @@
-import { Alert, Box, Button, Chip, FormControlLabel, Grid, MenuItem, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  FormControlLabel,
+  Grid,
+  MenuItem,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import type { AppTheme } from "src/theme";
 import { useMemo, useState } from "react";
 import type { StagiairePrepa } from "src/types/prepa";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
@@ -28,6 +43,11 @@ export default function StagiairesPrepaForm({
   onSubmit,
   onCancel,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+  const sectionPaperBg = isLight
+    ? theme.custom.form.section.paperBackground.light
+    : theme.custom.form.section.paperBackground.dark;
   const [form, setForm] = useState<Partial<StagiairePrepa>>({
     nom: initialValues?.nom ?? "",
     prenom: initialValues?.prenom ?? "",
@@ -222,7 +242,7 @@ export default function StagiairesPrepaForm({
         <Typography variant="h6" mb={2}>
           Ateliers réalisés
         </Typography>
-        <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: "#fafafa" }}>
+        <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: sectionPaperBg }}>
           <Typography variant="body2" fontWeight={600} gutterBottom>
             Récapitulatif du parcours atelier
           </Typography>

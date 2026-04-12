@@ -14,6 +14,7 @@ import {
   Stack,
   useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useFormation } from "../../hooks/useFormations";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -377,31 +378,33 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                       <Box component="span" sx={{ color: "text.primary" }}>
                         {formation.documents.map((doc, idx) => (
                           <span key={doc.id}>
-                            <a
+                            <Box
+                              component="a"
                               href={doc.download_url || "#"}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{
+                              sx={{
                                 textDecoration: "underline",
-                                color: "#1976d2",
+                                color: "primary.main",
                               }}
                             >
                               {doc.nom_fichier}
-                            </a>
+                            </Box>
                             {idx < (formation.documents?.length ?? 0) - 1 ? ", " : ""}
                           </span>
                         ))}
                       </Box>
                     ) : (
-                      <span
-                        style={{
-                          color: "red",
+                      <Box
+                        component="span"
+                        sx={{
+                          color: "error.main",
                           fontStyle: "italic",
                           opacity: 0.8,
                         }}
                       >
                         — Aucun document
-                      </span>
+                      </Box>
                     )}
                   </Typography>
 
@@ -440,9 +443,9 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                           sx={{
                             mt: 1,
                             ml: 1,
-                            borderLeft: "3px solid #1976d2",
+                            borderLeft: (t) => `3px solid ${t.palette.primary.main}`,
                             pl: 1.5,
-                            bgcolor: "rgba(25, 118, 210, 0.04)",
+                            bgcolor: (t) => alpha(t.palette.primary.main, 0.04),
                             borderRadius: 1,
                           }}
                         >

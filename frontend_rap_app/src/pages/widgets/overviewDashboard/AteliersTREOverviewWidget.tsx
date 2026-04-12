@@ -22,6 +22,7 @@ import {
   useTheme,
   Divider,
 } from "@mui/material";
+import type { AppTheme } from "src/theme";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import {
   BarChart,
@@ -44,7 +45,7 @@ function fmt(n?: number | null) {
 type AtelierTypeKey = keyof typeof ATELIER_TYPE_LABELS;
 
 export default function AteliersTREOverviewWidget() {
-  const theme = useTheme();
+  const theme = useTheme<AppTheme>();
   const initialRef = React.useRef<AtelierTREFilters>({});
   const [filters, setFilters] = React.useState<AtelierTREFilters>(initialRef.current);
 

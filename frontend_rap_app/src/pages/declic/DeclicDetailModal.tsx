@@ -68,6 +68,9 @@ export default function DeclicDetailModal({
   const modalTitleBorder = isLight
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+  const sectionPaperBg = isLight
+    ? theme.custom.form.section.paperBackground.light
+    : theme.custom.form.section.paperBackground.dark;
   const { exportPresence, exportEmargement } = useExportParticipantsDeclic();
   const { user } = useAuth();
   const canWriteDeclic = canWriteDeclicRole(user?.role);
@@ -115,7 +118,7 @@ export default function DeclicDetailModal({
             sx={{
               p: 3,
               borderRadius: 2,
-              backgroundColor: "#fafafa",
+              backgroundColor: sectionPaperBg,
             }}
           >
             <Grid container spacing={3}>

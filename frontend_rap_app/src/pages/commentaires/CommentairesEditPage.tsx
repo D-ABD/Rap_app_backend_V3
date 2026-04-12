@@ -244,13 +244,13 @@ export default function CommentairesEditPage() {
                 },
               }}
             >
-              <div
+              <Box
                 ref={quillRef}
-                style={{
+                sx={{
                   height: 200,
-                  backgroundColor: "#fff",
-                  borderRadius: 8,
-                  marginBottom: "1rem",
+                  bgcolor: "background.paper",
+                  borderRadius: 1,
+                  mb: 2,
                 }}
               />
             </Box>

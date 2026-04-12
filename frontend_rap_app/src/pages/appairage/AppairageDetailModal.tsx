@@ -47,6 +47,9 @@ export default function AppairageDetailModal({
   const modalTitleBorder = isLight
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+  const sectionPaperBg = isLight
+    ? theme.custom.form.section.paperBackground.light
+    : theme.custom.form.section.paperBackground.dark;
   if (!open) return null;
 
   return (
@@ -211,16 +214,17 @@ export default function AppairageDetailModal({
                         label="Activité"
                         value={
                           appairage.activite_display ? (
-                            <span
-                              style={{
-                                color: appairage.activite_display.toLowerCase().includes("archiv")
-                                  ? "#777"
-                                  : "green",
+                            <Box
+                              component="span"
+                              sx={{
                                 fontWeight: 600,
+                                color: appairage.activite_display.toLowerCase().includes("archiv")
+                                  ? "text.secondary"
+                                  : "success.main",
                               }}
                             >
                               {appairage.activite_display}
-                            </span>
+                            </Box>
                           ) : (
                             "—"
                           )
@@ -268,8 +272,8 @@ export default function AppairageDetailModal({
                       sx={{
                         p: 1.5,
                         borderRadius: 1,
-                        backgroundColor: "#fafafa",
-                        borderColor: "#ddd",
+                        backgroundColor: sectionPaperBg,
+                        borderColor: "divider",
                       }}
                     >
                       <Typography

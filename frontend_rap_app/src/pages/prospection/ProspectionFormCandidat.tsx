@@ -13,7 +13,9 @@ import {
   Paper,
   Stack,
   Divider,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "../../theme";
 import {
   Business as BusinessIcon,
   Assignment as AssignmentIcon,
@@ -212,18 +214,25 @@ export default function ProspectionFormCandidat({
     icon: React.ReactNode;
     title: string;
     children: React.ReactNode;
-  }) => (
-    <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, background: "#fafafa" }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-        {icon}
-        <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
-          {title}
-        </Typography>
-      </Stack>
-      <Divider sx={{ mb: 2 }} />
-      {children}
-    </Paper>
-  );
+  }) => {
+    const theme = useTheme<AppTheme>();
+    const isLight = theme.palette.mode === "light";
+    const sectionBg = isLight
+      ? theme.custom.form.section.paperBackground.light
+      : theme.custom.form.section.paperBackground.dark;
+    return (
+      <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderRadius: 2, backgroundColor: sectionBg }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+          {icon}
+          <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
+            {title}
+          </Typography>
+        </Stack>
+        <Divider sx={{ mb: 2 }} />
+        {children}
+      </Paper>
+    );
+  };
 
   return (
     <Box component="form" onSubmit={handleSubmit}>

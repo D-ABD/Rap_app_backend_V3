@@ -33,27 +33,6 @@ function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K
   return clone;
 }
 
-/* 🏷️ Label custom pourcentage */
-const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) / 2;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#0d47a1"
-      textAnchor="middle"
-      dominantBaseline="middle"
-      style={{ fontSize: "13px", fontWeight: "bold" }}
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-};
-
 export default function FormationOverviewWidget({
   title = "Formations - Vue d'ensemble",
   filters,
@@ -70,6 +49,28 @@ export default function FormationOverviewWidget({
     ? theme.custom.chart.tooltip.border.light
     : theme.custom.chart.tooltip.border.dark;
   const chartSeries = theme.custom.chart.series.ordered.slice(0, 3);
+  const renderLabel = React.useCallback(
+    ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+      const RADIAN = Math.PI / 180;
+      const radius = innerRadius + (outerRadius - innerRadius) / 2;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+      const fill = theme.palette.primary.dark;
+      return (
+        <text
+          x={x}
+          y={y}
+          fill={fill}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          style={{ fontSize: "13px", fontWeight: "bold" }}
+        >
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      );
+    },
+    [theme.palette.primary.dark]
+  );
   const [localFilters, setLocalFilters] = React.useState<Filters>(filters ?? {});
   const [includeArchived, setIncludeArchived] = React.useState(false);
 

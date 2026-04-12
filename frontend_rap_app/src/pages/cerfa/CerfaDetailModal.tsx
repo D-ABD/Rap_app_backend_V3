@@ -573,6 +573,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Field({ label, value }: { label: string; value: string | number | React.ReactNode }) {
+  const theme = useTheme<AppTheme>();
   const str = typeof value === "number" ? String(value) : value;
   const isMissing = str === null || str === undefined || str === "" || str === "—";
 
@@ -581,9 +582,12 @@ function Field({ label, value }: { label: string; value: string | number | React
       <Typography variant="body2">
         <strong>{label} :</strong>{" "}
         {isMissing ? (
-          <span style={{ color: "#d32f2f", fontStyle: "italic", fontWeight: 500 }}>
+          <Box
+            component="span"
+            sx={{ color: theme.palette.error.main, fontStyle: "italic", fontWeight: 500 }}
+          >
             — Non communiqué
-          </span>
+          </Box>
         ) : (
           str
         )}

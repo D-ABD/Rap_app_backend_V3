@@ -21,6 +21,7 @@ import {
   FormControlLabel,
   Checkbox,
   Divider,
+  Link,
 } from "@mui/material";
 import { toast } from "react-toastify";
 import { useMe } from "../../hooks/useUsers";
@@ -1102,14 +1103,15 @@ export default function MonProfil() {
 
           <Typography variant="body2" sx={{ mt: 1 }}>
             Consultez notre{" "}
-            <a
+            <Link
               href="/politique-confidentialite"
-              style={{ color: "#1976d2", textDecoration: "underline" }}
+              color="primary"
+              underline="always"
               target="_blank"
               rel="noopener noreferrer"
             >
               politique de confidentialité
-            </a>{" "}
+            </Link>{" "}
             pour plus d’informations.
           </Typography>
         </Box>

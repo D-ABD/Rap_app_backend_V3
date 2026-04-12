@@ -77,7 +77,12 @@ class UnderlineStyle extends Inline {
 // (Block as any).tagName = "P";
 // (Quill as any).register(Block, true);
 
-/* ---------- Palette de couleurs étendue ---------- */
+/* ---------- Palette de couleurs étendue ----------
+ * Exception produit (Lot 9) : la barre Quill expose une grille riche pour le contenu
+ * saisi par l’utilisateur. Les entrées canoniques `getTheme(...).custom.editor.quill.*`
+ * sont injectées là où elles existent ; les hex restants restent volontaires pour ne pas
+ * réduire le preset éditorial sans décision produit dédiée.
+ * ---------- */
 const editorQuill = getTheme("light").custom.editor.quill;
 
 export const colorOptions = [

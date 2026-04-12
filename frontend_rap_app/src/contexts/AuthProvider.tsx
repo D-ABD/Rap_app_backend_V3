@@ -7,7 +7,8 @@ import { storeTokens, getTokens, clearTokens } from "../api/tokenStorage";
 import { toast } from "react-toastify";
 import type { User } from "../types/User";
 import { registerLogoutCallback } from "../api/globalLogout";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, useTheme } from "@mui/material";
+import type { AppTheme } from "../theme";
 import logo from "../assets/logo.png"; // ✅ ton logo
 
 // ✅ Fonction helper pour enrichir l'objet user
@@ -37,6 +38,7 @@ function normalizeUser(userData: User): User {
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const theme = useTheme<AppTheme>();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -111,7 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           alignItems: "center",
           justifyContent: "center",
           height: "100vh",
-          backgroundColor: (theme) => (theme.palette.mode === "light" ? "#f9f9f9" : "#121212"),
+          backgroundColor: theme.palette.background.default,
         }}
       >
         <img src={logo} alt="Logo" style={{ height: 80, marginBottom: 20 }} />

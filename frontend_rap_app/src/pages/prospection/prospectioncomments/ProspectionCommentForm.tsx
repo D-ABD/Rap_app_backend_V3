@@ -214,7 +214,7 @@ export default function ProspectionCommentForm({
                 minHeight: 160,
                 maxHeight: 320,
                 overflowY: "auto",
-                backgroundColor: "#fff",
+                backgroundColor: "background.paper",
                 borderRadius: 1,
                 padding: "0.5rem",
                 fontSize: "0.95rem",

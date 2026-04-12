@@ -59,11 +59,11 @@ export default function ObjectifDeclicTable({ data }: Props) {
     <>
       <TableContainer
         component={Paper}
-          sx={{
-            borderRadius: 3,
-            overflow: "auto",
-            boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
-            maxHeight: "75vh",
+        sx={{
+          borderRadius: 3,
+          overflow: "auto",
+          boxShadow: (t) => t.shadows[2],
+          maxHeight: "75vh",
         }}
       >
         <Table
@@ -125,7 +125,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                     fontWeight: 500,
                     position: "sticky",
                     left: 0,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                     borderBottom: tableCellBorder,
                   }}
@@ -140,7 +140,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                     color: "primary.main",
                     position: "sticky",
                     left: 100,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                     borderBottom: tableCellBorder,
                   }}
@@ -153,7 +153,7 @@ export default function ObjectifDeclicTable({ data }: Props) {
                   sx={{
                     position: "sticky",
                     left: 280,
-                    backgroundColor: "#fff",
+                    backgroundColor: "background.paper",
                     zIndex: 2,
                     borderBottom: tableCellBorder,
                   }}

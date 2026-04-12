@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { toast } from "react-toastify";
@@ -36,7 +35,6 @@ import { useCentres } from "../../hooks/useCentres";
 import FiltresCerfaPanel, { CerfaFiltresValues } from "../../components/filters/FiltresCerfaPanel";
 
 export default function CerfaPage() {
-  const _theme = useTheme(); // eslint-disable-line @typescript-eslint/no-unused-vars
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
