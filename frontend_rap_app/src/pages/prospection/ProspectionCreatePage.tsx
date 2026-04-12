@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { Alert } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import ProspectionForm from "./ProspectionForm";
 
 import type {
@@ -155,18 +156,26 @@ export default function ProspectionCreatePage() {
   };
 
   return (
-    <PageTemplate title="Nouvelle prospection" backButton onBack={() => navigate(-1)}>
+    <PageTemplate
+      title="Créer une prospection"
+      subtitle="Préparez une nouvelle prospection avec un shell de page plus compact."
+      maxWidth="xl"
+      backButton
+      onBack={() => navigate(-1)}
+    >
       {createError ? (
         <Alert severity="error">Le formulaire de prospection n'a pas pu être initialisé.</Alert>
       ) : (
-        <ProspectionForm
-          key={`create-${presetPartenaire ?? "none"}-${partenaireNom ?? ""}-${presetFormation ?? "none"}-${formationNom ?? ""}`}
-          mode="create"
-          initialValues={initialValues}
-          onSubmit={handleSubmit}
-          loading={creating}
-          fixedFormationId={presetFormation ?? undefined}
-        />
+        <PageSection>
+          <ProspectionForm
+            key={`create-${presetPartenaire ?? "none"}-${partenaireNom ?? ""}-${presetFormation ?? "none"}-${formationNom ?? ""}`}
+            mode="create"
+            initialValues={initialValues}
+            onSubmit={handleSubmit}
+            loading={creating}
+            fixedFormationId={presetFormation ?? undefined}
+          />
+        </PageSection>
       )}
     </PageTemplate>
   );

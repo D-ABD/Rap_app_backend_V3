@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Paper,
   Stack,
   Typography,
   Dialog,
@@ -27,6 +26,7 @@ import "quill/dist/quill.snow.css";
 import api from "../../api/axios";
 import useForm from "../../hooks/useForm";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import CommentaireContent from "./CommentaireContent";
 import { Commentaire } from "../../types/commentaire";
 
@@ -164,10 +164,12 @@ export default function CommentairesEditPage() {
   /* ---------- Rendu ---------- */
   return (
     <PageTemplate
-      title="✏️ Modifier un commentaire"
+      title="Modifier un commentaire"
+      subtitle="Mettez à jour le commentaire en conservant son contexte de formation."
+      maxWidth="lg"
       backButton
       onBack={() => navigate(returnToListUrl)}
-      actionsRight={
+      actions={
         !loading && (
           <Button
             variant="contained"
@@ -186,7 +188,7 @@ export default function CommentairesEditPage() {
           <Typography>Chargement du commentaire...</Typography>
         </Box>
       ) : (
-        <Paper sx={{ p: 3 }}>
+        <PageSection>
           <Stack spacing={2} component="form" onSubmit={handleSubmit}>
             {/* --- Meta infos --- */}
             <Box sx={{ bgcolor: "grey.100", p: 2, borderRadius: 1 }}>
@@ -275,7 +277,7 @@ export default function CommentairesEditPage() {
               </Button>
             </Stack>
           </Stack>
-        </Paper>
+        </PageSection>
       )}
 
       {/* --- Confirmation après sauvegarde --- */}

@@ -8,6 +8,7 @@ import { useMe } from "../../hooks/useUsers";
 
 import type { Candidat, CandidatFormData } from "../../types/candidat";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import CandidatForm from "./CandidatForm";
 import { isAdminLikeRole, isCoreWriteRole } from "../../utils/roleGroups";
 
@@ -156,7 +157,14 @@ export default function CandidatEditPage() {
   // ── Loading / Erreurs ────────────────────────────────
   if (loadingMeta || loadingItem) {
     return (
-      <PageTemplate title="Modifier le candidat" backButton onBack={() => navigate(-1)} centered>
+      <PageTemplate
+        title="Modifier le candidat"
+        subtitle="Chargement des données du candidat."
+        maxWidth="xl"
+        backButton
+        onBack={() => navigate(-1)}
+        centered
+      >
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
       </PageTemplate>
@@ -165,7 +173,13 @@ export default function CandidatEditPage() {
 
   if (!data) {
     return (
-      <PageTemplate title="Modifier le candidat" backButton onBack={() => navigate(-1)}>
+      <PageTemplate
+        title="Modifier le candidat"
+        subtitle="Le candidat demandé n'a pas été trouvé."
+        maxWidth="xl"
+        backButton
+        onBack={() => navigate(-1)}
+      >
         <Typography color="error">❌ Candidat introuvable.</Typography>
       </PageTemplate>
     );
@@ -174,27 +188,30 @@ export default function CandidatEditPage() {
   // ── Page principale ────────────────────────────────
   return (
     <PageTemplate
-      title={`👤 ${candidatDisplayName} — édition`}
+      title={`Modifier ${candidatDisplayName}`}
+      subtitle="Mettez à jour le candidat dans un shell plus compact, sans toucher au formulaire métier."
+      maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}
     >
-      {/* Formulaire d’édition — section cible du scroll */}
-      <Box id="edit-section" sx={{ scrollMarginTop: "80px" }}>
-        <Typography variant="h6" gutterBottom>
-          ✏️ Modifier les informations
-        </Typography>
+      <PageSection>
+        <Box id="edit-section" sx={{ scrollMarginTop: "80px" }}>
+          <Typography variant="h6" gutterBottom>
+            Modifier les informations
+          </Typography>
 
-        <CandidatForm
-          initialValues={data as Candidat}
-          initialFormationInfo={data.formation_info ?? null}
-          meta={meta}
-          currentUser={me}
-          canEditFormation={canEditFormation}
-          onSubmit={handleSubmit}
-          onCancel={() => navigate("/candidats")}
-          submitting={saving}
-        />
-      </Box>
+          <CandidatForm
+            initialValues={data as Candidat}
+            initialFormationInfo={data.formation_info ?? null}
+            meta={meta}
+            currentUser={me}
+            canEditFormation={canEditFormation}
+            onSubmit={handleSubmit}
+            onCancel={() => navigate("/candidats")}
+            submitting={saving}
+          />
+        </Box>
+      </PageSection>
     </PageTemplate>
   );
 }

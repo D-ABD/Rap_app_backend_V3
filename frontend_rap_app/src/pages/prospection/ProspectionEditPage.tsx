@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import ProspectionForm from "./ProspectionForm";
 import ProspectionLastCommentRow from "./prospectioncomments/ProspectionLastCommentRow";
 import ProspectionCommentsModal from "../../components/modals/ProspectionCommentsModal";
@@ -167,7 +168,12 @@ export default function ProspectionEditPage() {
   if (!prospectionId) return null;
   if (loading) {
     return (
-      <PageTemplate title={`Prospection #${prospectionId}`} centered>
+      <PageTemplate
+        title={`Prospection #${prospectionId}`}
+        subtitle="Chargement de la prospection."
+        maxWidth="xl"
+        centered
+      >
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>Chargement de la prospection...</Typography>
       </PageTemplate>
@@ -175,7 +181,11 @@ export default function ProspectionEditPage() {
   }
   if (error || !localDetail) {
     return (
-      <PageTemplate title={`Prospection #${prospectionId}`}>
+      <PageTemplate
+        title={`Prospection #${prospectionId}`}
+        subtitle="Le contenu n'a pas pu être chargé."
+        maxWidth="xl"
+      >
         <Alert severity="error">
           La prospection n'a pas pu être chargée. Vérifie l'identifiant ou recharge la page.
         </Alert>
@@ -223,6 +233,8 @@ export default function ProspectionEditPage() {
       title={`Prospection #${prospectionId} — ${
         localDetail.activite_display ?? (isArchived ? "Archivée" : "Active")
       }`}
+      subtitle="Consultez le résumé, les commentaires et modifiez la prospection dans un shell plus compact."
+      maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}
       actions={
@@ -260,7 +272,7 @@ export default function ProspectionEditPage() {
       />
 
       {/* Résumé */}
-      <Box mb={2} p={2} border={1} borderRadius={2}>
+      <PageSection sx={{ mb: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2">🏢 Partenaire</Typography>
@@ -299,7 +311,7 @@ export default function ProspectionEditPage() {
             </Typography>
           </Grid>
         </Grid>
-      </Box>
+      </PageSection>
 
       {/* Dernier commentaire */}
       <Box my={2}>
@@ -312,14 +324,16 @@ export default function ProspectionEditPage() {
       </Box>
 
       {/* Formulaire */}
-      <Box ref={formRef} mt={4}>
-        <ProspectionForm
-          mode="edit"
-          initialValues={initialValues}
-          onSubmit={handleUpdate}
-          loading={saving}
-        />
-      </Box>
+      <PageSection sx={{ mt: 3 }}>
+        <Box ref={formRef}>
+          <ProspectionForm
+            mode="edit"
+            initialValues={initialValues}
+            onSubmit={handleUpdate}
+            loading={saving}
+          />
+        </Box>
+      </PageSection>
 
       {/* Dialog archivage */}
       <Dialog

@@ -12,6 +12,7 @@ import {
   MenuItem,
   Pagination,
   Box,
+  Menu,
 } from "@mui/material";
 import { toast } from "react-toastify";
 
@@ -118,13 +119,22 @@ export default function ObjectifPrepaPage() {
   // 🧩 État du formulaire (modale)
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   return (
     <PageTemplate
-      title="Objectifs Prépa"
-      subtitle={`Suivi des objectifs ${filters.annee ?? new Date().getFullYear()}`}
       refreshButton
       onRefresh={() => refetch()}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un objectif Prépa..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       filters={
         showFilters && (
           <FiltresObjectifsPrepaPanel
@@ -138,24 +148,21 @@ export default function ObjectifPrepaPage() {
         )
       }
       showFilters={showFilters}
-      actionsRight={
+      actions={
         <Stack direction="row" spacing={1} flexWrap="wrap">
-          {/* 🔎 Bouton filtres */}
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} size="small">
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher un objectif Prépa..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
+            Options
+          </Button>
 
-          {/* 📄 Taille page */}
           <Select
             size="small"
             value={pageSize}
@@ -171,10 +178,6 @@ export default function ObjectifPrepaPage() {
             ))}
           </Select>
 
-          {/* 📤 Export Excel */}
-          <ExportButtonObjectifsPrepa data={objectifs} selectedIds={[]} />
-
-          {/* ➕ Création */}
           {canWritePrepa && (
             <Button
               variant="contained"
@@ -187,6 +190,34 @@ export default function ObjectifPrepaPage() {
               + Ajouter un objectif
             </Button>
           )}
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonObjectifsPrepa data={objectifs} selectedIds={[]} />
+            </Stack>
+          </Menu>
         </Stack>
       }
       footer={

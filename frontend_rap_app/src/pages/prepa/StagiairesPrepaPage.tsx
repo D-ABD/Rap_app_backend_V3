@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
 import { useDeleteStagiairePrepa, useDesarchiverStagiairePrepa, useExportStagiairesPrepa, useHardDeleteStagiairePrepa, useStagiairePrepaDetail, useStagiairesPrepaList, useStagiairesPrepaMeta } from "src/hooks/useStagiairesPrepa";
@@ -10,6 +10,7 @@ import StagiairesPrepaTable from "./StagiairesPrepaTable";
 import StagiairesPrepaDetailModal from "./StagiairesPrepaDetailModal";
 import { useAuth } from "src/hooks/useAuth";
 import { canWritePrepaRole } from "src/utils/roleGroups";
+import SearchInput from "src/components/SearchInput";
 
 export default function StagiairesPrepaPage() {
   const { user } = useAuth();
@@ -47,6 +48,18 @@ export default function StagiairesPrepaPage() {
   const { data: detailData } = useStagiairePrepaDetail(detailId);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("stagiairesPrepa.showFilters");
+    return saved === "1";
+  });
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("stagiairesPrepa.showFilters", showFilters ? "1" : "0");
+    }
+  }, [showFilters]);
 
   const refresh = () => setFilters((prev) => ({ ...prev }));
 
@@ -84,30 +97,138 @@ export default function StagiairesPrepaPage() {
     }
   };
 
+  const activeFiltersCount = useMemo(() => {
+    const ignored = new Set(["ordering", "page", "search"]);
+    return Object.entries(filters).filter(([key, value]) => {
+      if (ignored.has(key)) return false;
+      if (value == null) return false;
+      if (typeof value === "string") return value.trim() !== "";
+      return true;
+    }).length;
+  }, [filters]);
+
   return (
     <PageTemplate
-      title="Stagiaires Prépa"
+      backButton
+      onBack={() => navigate(-1)}
       refreshButton
       onRefresh={refresh}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un stagiaire Prépa..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
+      filters={
+        showFilters ? (
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} flexWrap="wrap">
+            <TextField
+              select
+              size="small"
+              label="Centre"
+              value={filters.centre ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  centre: e.target.value === "" ? undefined : Number(e.target.value),
+                }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              {centres.map((centre) => (
+                <MenuItem key={centre.id} value={centre.id}>
+                  {centre.nom}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Statut"
+              value={filters.statut_parcours ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  statut_parcours: e.target.value === "" ? undefined : (e.target.value as any),
+                }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 190 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              {statuts.map((statut) => (
+                <MenuItem key={statut.value} value={statut.value}>
+                  {statut.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Type d'atelier"
+              value={filters.type_atelier ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  type_atelier: e.target.value === "" ? undefined : e.target.value,
+                }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              {ateliers.map((atelier) => (
+                <MenuItem key={atelier.value} value={atelier.value}>
+                  {atelier.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              size="small"
+              label="Année"
+              type="number"
+              value={filters.annee ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  annee: e.target.value === "" ? undefined : Number(e.target.value),
+                }));
+                setPage(1);
+              }}
+              sx={{ maxWidth: 130 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setFilters({ ordering: "nom", page: 1 });
+                setPage(1);
+              }}
+            >
+              Réinitialiser
+            </Button>
+          </Stack>
+        ) : undefined
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" onClick={() => navigate(-1)}>
-            Retour
+          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
+            {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
+            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
           </Button>
           {canWritePrepa && (
             <Button variant="contained" onClick={() => navigate("/prepa/stagiaires/create")}>
               ➕ Nouveau stagiaire
             </Button>
           )}
-          <Button variant="outlined" onClick={() => exportList()}>
-            ⬇️ Export liste
-          </Button>
-          <Button variant="outlined" onClick={() => exportPresence()}>
-            📋 Feuille de présence
-          </Button>
-          <Button variant="outlined" onClick={() => exportEmargement()}>
-            📝 Feuille d'émargement
-          </Button>
           <Button
             variant={filters.avec_archivees ? "contained" : "outlined"}
             onClick={() => {
@@ -150,6 +271,40 @@ export default function StagiairesPrepaPage() {
               </MenuItem>
             ))}
           </TextField>
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Exports et documents liés aux stagiaires
+              </Typography>
+            </Box>
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Button variant="outlined" onClick={() => exportList()}>
+                ⬇️ Export liste
+              </Button>
+              <Button variant="outlined" onClick={() => exportPresence()}>
+                📋 Feuille de présence
+              </Button>
+              <Button variant="outlined" onClick={() => exportEmargement()}>
+                📝 Feuille d&apos;émargement
+              </Button>
+            </Stack>
+          </Menu>
         </Stack>
       }
       footer={
@@ -163,106 +318,6 @@ export default function StagiairesPrepaPage() {
         ) : undefined
       }
     >
-      <Box mt={2}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} flexWrap="wrap">
-          <TextField
-            size="small"
-            label="Recherche"
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
-          <TextField
-            select
-            size="small"
-            label="Centre"
-            value={filters.centre ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({
-                ...prev,
-                centre: e.target.value === "" ? undefined : Number(e.target.value),
-              }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            {centres.map((centre) => (
-              <MenuItem key={centre.id} value={centre.id}>
-                {centre.nom}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Statut"
-            value={filters.statut_parcours ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({
-                ...prev,
-                statut_parcours: e.target.value === "" ? undefined : (e.target.value as any),
-              }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 190 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            {statuts.map((statut) => (
-              <MenuItem key={statut.value} value={statut.value}>
-                {statut.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Type d'atelier"
-            value={filters.type_atelier ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({
-                ...prev,
-                type_atelier: e.target.value === "" ? undefined : e.target.value,
-              }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            {ateliers.map((atelier) => (
-              <MenuItem key={atelier.value} value={atelier.value}>
-                {atelier.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            size="small"
-            label="Année"
-            type="number"
-            value={filters.annee ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({
-                ...prev,
-                annee: e.target.value === "" ? undefined : Number(e.target.value),
-              }));
-              setPage(1);
-            }}
-            sx={{ maxWidth: 130 }}
-          />
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setFilters({ ordering: "nom", page: 1 });
-              setPage(1);
-            }}
-          >
-            Réinitialiser
-          </Button>
-        </Stack>
-      </Box>
-
       <Box mt={2}>
         {loading || loadingMeta ? (
           <CircularProgress />

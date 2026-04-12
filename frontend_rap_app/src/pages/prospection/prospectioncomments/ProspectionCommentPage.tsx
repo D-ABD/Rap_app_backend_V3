@@ -17,6 +17,8 @@ import {
   Pagination,
   MenuItem,
   Select,
+  Menu,
+  TextField,
 } from "@mui/material";
 
 import PageTemplate from "../../../components/PageTemplate";
@@ -191,6 +193,7 @@ export default function ProspectionCommentPage() {
   const [selectedRow, setSelectedRow] = useState<ProspectionCommentDTO | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteRow, setHardDeleteRow] = useState<ProspectionCommentDTO | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   const handleDelete = useCallback(async () => {
     if (!selectedRow) return;
@@ -229,9 +232,24 @@ export default function ProspectionCommentPage() {
 
   return (
     <PageTemplate
-      title="Commentaires de prospection"
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <TextField
+          type="search"
+          size="small"
+          fullWidth
+          placeholder="Rechercher un commentaire..."
+          value={params.search ?? ""}
+          onChange={(event) => {
+            setParams((prev) => ({
+              ...prev,
+              search: event.target.value || "",
+            }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {/* 🔹 Bouton toggle filtres */}
@@ -267,8 +285,9 @@ export default function ProspectionCommentPage() {
             {params.est_archive === true ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
-          <Chip label={`Rôle : ${role}`} size="small" color="primary" variant="outlined" />
-          <ExportButtonProspectionComment data={exportRows} selectedIds={[]} />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           <Select
             size="small"
@@ -297,6 +316,34 @@ export default function ProspectionCommentPage() {
           >
             ➕ Nouveau commentaire
           </Button>
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                p: 1.25,
+                borderRadius: 3,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions secondaires de la liste
+              </Typography>
+            </Box>
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Chip label={`Rôle : ${role}`} size="small" color="primary" variant="outlined" />
+              <ExportButtonProspectionComment data={exportRows} selectedIds={[]} />
+            </Stack>
+          </Menu>
         </Stack>
       }
       filters={

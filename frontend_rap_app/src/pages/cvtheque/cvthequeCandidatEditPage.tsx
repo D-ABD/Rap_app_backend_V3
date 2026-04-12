@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { CVThequePayload } from "src/types/cvtheque";
 import CVThequeFormCandidat from "./cvthequeFormCandidat";
 import { useCVDetail, useUpdateCV } from "src/hooks/useCvtheque";
+import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 export default function CVThequeCandidatEditPage() {
   const { id } = useParams();
@@ -29,14 +31,49 @@ export default function CVThequeCandidatEditPage() {
     }
   };
 
-  if (loading) return <CircularProgress />;
-  if (!cv) return <Typography>Document introuvable</Typography>;
+  if (loading) {
+    return (
+      <PageTemplate
+        title="Modifier un document"
+        subtitle="Chargement du document."
+        maxWidth="lg"
+        backButton
+        onBack={() => navigate("/cvtheque/candidat")}
+        centered
+      >
+        <CircularProgress />
+      </PageTemplate>
+    );
+  }
+  if (!cv) {
+    return (
+      <PageTemplate
+        title="Modifier un document"
+        subtitle="Le document demandé est introuvable."
+        maxWidth="lg"
+        backButton
+        onBack={() => navigate("/cvtheque/candidat")}
+      >
+        <Typography>Document introuvable</Typography>
+      </PageTemplate>
+    );
+  }
 
   return (
-    <CVThequeFormCandidat
-      defaultValues={cv}
-      onSubmit={handleSubmit}
-      loading={updating}
-    />
+    <PageTemplate
+      title="Modifier un document"
+      subtitle="Mettez à jour le document CVThèque candidat dans un shell plus compact."
+      maxWidth="lg"
+      backButton
+      onBack={() => navigate("/cvtheque/candidat")}
+    >
+      <PageSection sx={{ maxWidth: 700, mx: "auto" }}>
+        <CVThequeFormCandidat
+          defaultValues={cv}
+          onSubmit={handleSubmit}
+          loading={updating}
+        />
+      </PageSection>
+    </PageTemplate>
   );
 }

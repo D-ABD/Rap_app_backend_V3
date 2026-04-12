@@ -6,8 +6,9 @@
 
 import { useParams } from "react-router-dom";
 import { useState } from "react";
-import { Box, Paper, Typography, Divider } from "@mui/material";
+import { Box, Typography, Divider } from "@mui/material";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import CommentaireForm from "./CommentaireForm";
 
 export default function CommentairesCreateFromFormationPage() {
@@ -23,60 +24,48 @@ export default function CommentairesCreateFromFormationPage() {
   }
 
   return (
-    <PageTemplate title="➕ Créer un commentaire" backButton onBack={() => window.history.back()}>
+    <PageTemplate
+      title="Créer un commentaire"
+      subtitle="Ajoutez un commentaire directement dans le contexte d’une formation."
+      maxWidth="xl"
+      backButton
+      onBack={() => window.history.back()}
+    >
       <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3}>
-        {/* 📝 Formulaire */}
         <Box flex={1}>
-          <CommentaireForm
-            formationId={formationId}
-            readonlyFormation={true}
-            onSubmit={(payload) => setPreviewHTML(payload.contenu)}
-          />
+          <PageSection>
+            <CommentaireForm
+              formationId={formationId}
+              readonlyFormation={true}
+              onSubmit={(payload) => setPreviewHTML(payload.contenu)}
+            />
+          </PageSection>
         </Box>
 
-        {/* 👁️ Aperçu du rendu */}
-        <Paper
-          variant="outlined"
-          sx={{
-            flex: 1,
-            p: 2,
-            maxHeight: "calc(100vh - 200px)",
-            overflowY: "auto",
-            bgcolor: "grey.50",
-            "& ul": {
-              listStyle: "disc",
-              paddingLeft: "1.5rem",
-              margin: "0.5rem 0",
-            },
-            "& ol": {
-              listStyle: "decimal",
-              paddingLeft: "1.5rem",
-              margin: "0.5rem 0",
-            },
-            "& li > p": { margin: 0 },
-          }}
-        >
-          <Typography variant="subtitle1" gutterBottom>
-            Aperçu du rendu :
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          {previewHTML ? (
-            <div
-              dangerouslySetInnerHTML={{ __html: previewHTML }}
-              style={{
-                all: "revert",
-                fontSize: "0.95rem",
-                lineHeight: 1.5,
-                wordBreak: "break-word",
-              }}
-            />
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Aucun contenu pour le moment.
+        <Box flex={1}>
+          <PageSection>
+            <Typography variant="subtitle1" gutterBottom>
+              Aperçu du rendu
             </Typography>
-          )}
-        </Paper>
+            <Divider sx={{ mb: 2 }} />
+
+            {previewHTML ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: previewHTML }}
+                style={{
+                  all: "revert",
+                  fontSize: "0.95rem",
+                  lineHeight: 1.5,
+                  wordBreak: "break-word",
+                }}
+              />
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Aucun contenu pour le moment.
+              </Typography>
+            )}
+          </PageSection>
+        </Box>
       </Box>
     </PageTemplate>
   );

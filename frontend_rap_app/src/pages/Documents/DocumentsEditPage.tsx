@@ -16,6 +16,7 @@ import api from "../../api/axios";
 import type { DocumentFormInitialValues } from "../../types/document";
 import ErrorState from "../../components/ui/ErrorState";
 import LoadingState from "../../components/ui/LoadingState";
+import PageSection from "../../components/PageSection";
 
 export default function DocumentsEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,9 +72,7 @@ export default function DocumentsEditPage() {
     return (
       <PageTemplate
         title="Modifier un document"
-        subtitle="Recuperation du document et des informations liees a la formation."
-        eyebrow="Documents"
-        hero
+        subtitle="Récupération du document et du contexte de formation."
         maxWidth="md"
         backButton
         onBack={() => navigate(returnToListUrl)}
@@ -87,9 +86,7 @@ export default function DocumentsEditPage() {
     return (
       <PageTemplate
         title="Modifier un document"
-        subtitle="Le contenu demande n'a pas pu etre prepare pour l'edition."
-        eyebrow="Documents"
-        hero
+        subtitle="Le contenu demandé n’a pas pu être préparé pour l’édition."
         maxWidth="md"
         backButton
         onBack={() => navigate(returnToListUrl)}
@@ -109,9 +106,7 @@ export default function DocumentsEditPage() {
   return (
     <PageTemplate
       title="Modifier un document"
-      subtitle="Mettez a jour le document tout en conservant le contexte de la formation associee."
-      eyebrow="Documents"
-      hero
+      subtitle="Mettez à jour le document sans perdre le contexte de la formation associée."
       maxWidth="md"
       backButton
       onBack={() => navigate(returnToListUrl)}
@@ -201,11 +196,13 @@ export default function DocumentsEditPage() {
       )}
 
       {/* 📄 Formulaire du document */}
-      <DocumentForm
-        initialValues={initialValues}
-        documentId={id}
-        formationId={formationIdFromUrl || undefined}
-      />
+      <PageSection>
+        <DocumentForm
+          initialValues={initialValues}
+          documentId={id}
+          formationId={formationIdFromUrl || undefined}
+        />
+      </PageSection>
     </PageTemplate>
   );
 }

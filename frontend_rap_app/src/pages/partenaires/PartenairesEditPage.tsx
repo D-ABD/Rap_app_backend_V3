@@ -19,6 +19,7 @@ import CandidatsSelectModal, {
   type CandidatPick,
 } from "../../components/modals/CandidatsSelectModal";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 /* ---------- Utilitaires ---------- */
 function normalize(values: Partial<Partenaire>): Partial<Partenaire> {
@@ -215,7 +216,9 @@ export default function PartenaireEditPage() {
   /* ---------- Rendu principal ---------- */
   return (
     <PageTemplate
-      title="✏️ Modifier le partenaire"
+      title="Modifier le partenaire"
+      subtitle="Mettez à jour le partenaire tout en gardant les actions métier à portée."
+      maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}
       actions={
@@ -242,15 +245,17 @@ export default function PartenaireEditPage() {
     >
       <Box>
         <Box id="edit-section">
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Modifier les informations
-          </Typography>
-          <PartenaireForm
-            initialValues={initialValues}
-            onSubmit={handleSubmit}
-            loading={loading}
-            choices={choices}
-          />
+          <PageSection>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Modifier les informations
+            </Typography>
+            <PartenaireForm
+              initialValues={initialValues}
+              onSubmit={handleSubmit}
+              loading={loading}
+              choices={choices}
+            />
+          </PageSection>
           {error && (
             <Typography color="error" mt={2}>
               Erreur : {error.message}

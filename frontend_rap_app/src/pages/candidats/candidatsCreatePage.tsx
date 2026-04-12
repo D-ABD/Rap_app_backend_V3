@@ -10,6 +10,7 @@ import type { CandidatFormData } from "../../types/candidat";
 
 import CandidatForm from "./CandidatForm";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import PostCreateChoiceModal from "../../components/modals/PostCreateChoiceModal";
 import { isCoreWriteRole } from "../../utils/roleGroups";
 
@@ -72,7 +73,14 @@ export default function CandidatCreatePage() {
   // ── Loading meta ────────────────────────────────
   if (loadingMeta) {
     return (
-      <PageTemplate title="Créer un candidat" backButton onBack={() => navigate(-1)} centered>
+      <PageTemplate
+        title="Créer un candidat"
+        subtitle="Chargement des métadonnées nécessaires."
+        maxWidth="xl"
+        backButton
+        onBack={() => navigate(-1)}
+        centered
+      >
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>⏳ Chargement…</Typography>
       </PageTemplate>
@@ -95,18 +103,26 @@ export default function CandidatCreatePage() {
     : `/appairages/create`;
 
   return (
-    <PageTemplate title="➕ Nouveau candidat" backButton onBack={() => navigate(-1)}>
-      <Box mt={2}>
-        <CandidatForm
-          initialValues={presetFormation ? ({ formation: presetFormation } as CandidatFormData) : undefined}
-          meta={meta}
-          currentUser={me}
-          canEditFormation={canEditFormation}
-          onSubmit={handleSubmit}
-          onCancel={() => navigate("/candidats")}
-          submitting={loading}
-        />
-      </Box>
+    <PageTemplate
+      title="Créer un candidat"
+      subtitle="Ajoutez un candidat avec une structure de page plus lisible et plus compacte."
+      maxWidth="xl"
+      backButton
+      onBack={() => navigate(-1)}
+    >
+      <PageSection>
+        <Box>
+          <CandidatForm
+            initialValues={presetFormation ? ({ formation: presetFormation } as CandidatFormData) : undefined}
+            meta={meta}
+            currentUser={me}
+            canEditFormation={canEditFormation}
+            onSubmit={handleSubmit}
+            onCancel={() => navigate("/candidats")}
+            submitting={loading}
+          />
+        </Box>
+      </PageSection>
 
       {/* 🔻 Modale post-création */}
       <PostCreateChoiceModal

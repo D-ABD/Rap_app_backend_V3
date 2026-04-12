@@ -17,6 +17,7 @@ import {
   DialogActions,
   useMediaQuery,
   useTheme,
+  Menu,
   TextField,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -130,6 +131,7 @@ export default function PartenairesPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showBulkTypeDialog, setShowBulkTypeDialog] = useState(false);
   const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
   const [bulkType, setBulkType] = useState("");
   const [bulkAction, setBulkAction] = useState("");
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
@@ -332,9 +334,18 @@ export default function PartenairesPage() {
 
   return (
     <PageTemplate
-      title="👥 Partenaires"
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <SearchInput
+          placeholder="Rechercher par nom, ville, secteur..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters({ ...filters, search: e.target.value });
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
@@ -347,17 +358,16 @@ export default function PartenairesPage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="Rechercher par nom, ville, secteur..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters({ ...filters, search: e.target.value });
-              setPage(1);
-            }}
-          />
-
           <Button variant="outlined" onClick={handleResetFilters}>
             Réinitialiser
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorImportExport(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Import / Export
           </Button>
 
           <Button
@@ -390,16 +400,6 @@ export default function PartenairesPage() {
             </Button>
           )}
 
-          <ExportButtonPartenaires
-            data={
-              selectedIds.length > 0
-                ? partenaires.filter((p) => selectedIds.includes(p.id))
-                : partenaires
-            }
-          />
-
-          <Lot1ExcelActions resource="partenaire" exportParams={partenaireIeParams} isMobile={isMobile} />
-
           <Select
             size="small"
             value={pageSize}
@@ -422,6 +422,45 @@ export default function PartenairesPage() {
           >
             ➕ Nouveau partenaire
           </Button>
+
+          <Menu
+            anchorEl={anchorImportExport}
+            open={Boolean(anchorImportExport)}
+            onClose={() => setAnchorImportExport(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Import / Export
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions d&apos;export et échanges Excel
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonPartenaires
+                data={
+                  selectedIds.length > 0
+                    ? partenaires.filter((p) => selectedIds.includes(p.id))
+                    : partenaires
+                }
+              />
+              <Lot1ExcelActions
+                resource="partenaire"
+                exportParams={partenaireIeParams}
+                isMobile={false}
+              />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

@@ -156,9 +156,18 @@ export default function CVThequeCandidatPage() {
   // -------------------------------
   return (
     <PageTemplate
-      title="📁 CVThèque"
       refreshButton
       onRefresh={() => reload()}
+      headerExtra={
+        <SearchInput
+          placeholder="Rechercher un titre, candidat, mot clé..."
+          value={filters.search || ""}
+          onChange={(e) => {
+            setFilters({ ...filters, search: e.target.value });
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           {/* Filtres */}
@@ -213,16 +222,6 @@ export default function CVThequeCandidatPage() {
               {filters.archives_seules ? "Voir tout" : "Archives seules"}
             </Button>
           )}
-
-          {/* Search */}
-          <SearchInput
-            placeholder="Rechercher un titre, candidat, mot clé..."
-            value={filters.search || ""}
-            onChange={(e) => {
-              setFilters({ ...filters, search: e.target.value });
-              setPage(1);
-            }}
-          />
 
           {/* Ajout */}
           <Button

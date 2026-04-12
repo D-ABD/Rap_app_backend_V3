@@ -1,5 +1,6 @@
 // src/components/PageWrapper.tsx
 import { Container, type SxProps, type Theme } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { ReactNode } from "react";
 
 type PageWrapperProps = {
@@ -25,7 +26,20 @@ export default function PageWrapper({
       maxWidth={fullWidth ? false : maxWidth}
       disableGutters={disableGutters}
       sx={{
-        py: { xs: 2, sm: 3 },
+        position: "relative",
+        py: { xs: 2.5, sm: 3.5, lg: 4 },
+        px: fullWidth ? { xs: 0, sm: 0 } : undefined,
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          borderRadius: { xs: 0, sm: 4 },
+          background: (theme) =>
+            fullWidth
+              ? "transparent"
+              : `linear-gradient(180deg, ${alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.015 : 0.04)} 0%, transparent 30%)`,
+        },
         ...sx,
       }}
     >

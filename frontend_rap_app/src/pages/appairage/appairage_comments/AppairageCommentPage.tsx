@@ -14,6 +14,7 @@ import {
   DialogTitle,
   Typography,
   Stack,
+  Menu,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -29,6 +30,7 @@ import AppairageCommentTable from "./AppairageCommentTable";
 import FiltresAppairageCommentsPanel from "../../../components/filters/FiltresAppairageCommentsPanel";
 import ExportButtonAppairageComment from "../../../components/export_buttons/ExportButtonAppairageComment";
 import PageTemplate from "../../../components/PageTemplate";
+import SearchInput from "../../../components/SearchInput";
 
 type ChoiceStr = { value: string; label: string };
 type NormalizedRole = "superadmin" | "admin" | "staff" | "stagiaire" | "candidat" | "autre";
@@ -85,6 +87,7 @@ export default function AppairageCommentPage() {
   }, [scopedAppairageId]);
 
   const [reloadKey, setReloadKey] = useState<number>(0);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   const { data, loading, error } = useListAppairageComments(params, reloadKey);
   const rows: AppairageCommentDTO[] = useMemo(() => (Array.isArray(data) ? data : []), [data]);
@@ -157,13 +160,27 @@ export default function AppairageCommentPage() {
 
   return (
     <PageTemplate
-      title="💬 Commentaires d'appairage"
       backButton
       onBack={() => navigate(-1)}
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un commentaire d'appairage..."
+          value={params.search ?? ""}
+          onChange={(e) =>
+            setParams((prev) => ({
+              ...prev,
+              search: e.target.value,
+            }))
+          }
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
           <Button
             variant="outlined"
             onClick={() =>
@@ -186,8 +203,6 @@ export default function AppairageCommentPage() {
           >
             {params.est_archive === true ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
-          <Chip label={`Rôle : ${role}`} color="primary" variant="outlined" />
-          <ExportButtonAppairageComment data={rows} selectedIds={[]} />
           <Button
             variant="contained"
             onClick={() =>
@@ -201,6 +216,35 @@ export default function AppairageCommentPage() {
           >
             ➕ Nouveau commentaire
           </Button>
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et informations de contexte
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Chip label={`Rôle : ${role}`} color="primary" variant="outlined" />
+              <ExportButtonAppairageComment data={rows} selectedIds={[]} />
+            </Stack>
+          </Menu>
         </Stack>
       }
       filters={

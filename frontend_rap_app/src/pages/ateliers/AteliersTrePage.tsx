@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Menu,
 } from "@mui/material";
 
 import usePagination from "../../hooks/usePagination";
@@ -34,6 +35,7 @@ import SearchInput from "../../components/SearchInput";
 
 export default function AteliersTrePage() {
   const navigate = useNavigate();
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   // filtres (hors page/page_size)
   const [filters, setFilters] = useState<AtelierTREFiltresValues>({
@@ -129,12 +131,21 @@ export default function AteliersTrePage() {
 
   return (
     <PageTemplate
-      title="Ateliers TRE"
       refreshButton
       onRefresh={() => {
         setPage((p) => p);
         setFilters((f) => ({ ...f }));
       }}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un atelier TRE..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
@@ -142,14 +153,9 @@ export default function AteliersTrePage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher un atelier TRE..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           <Select
             size="small"
@@ -170,8 +176,33 @@ export default function AteliersTrePage() {
             ➕ Nouvel atelier
           </Button>
 
-          {/* ✅ Bouton Export Excel */}
-          <ExportButtonAteliersTRE data={items} selectedIds={selectedIds} />
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonAteliersTRE data={items} selectedIds={selectedIds} />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

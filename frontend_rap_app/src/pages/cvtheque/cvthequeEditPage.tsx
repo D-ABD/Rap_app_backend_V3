@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import { CVThequePayload } from "src/types/cvtheque";
 import { useCVDetail, useUpdateCV } from "src/hooks/useCvtheque";
 import { toast } from "react-toastify";
+import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 export default function CVThequeEditPage() {
   const { id } = useParams();
@@ -37,15 +39,50 @@ export default function CVThequeEditPage() {
     }
   };
 
-  if (loading) return <CircularProgress />;
-  if (!cv) return <Typography>Document introuvable</Typography>;
+  if (loading) {
+    return (
+      <PageTemplate
+        title="Modifier un document"
+        subtitle="Chargement du document."
+        maxWidth="lg"
+        backButton
+        onBack={() => navigate(returnToListUrl)}
+        centered
+      >
+        <CircularProgress />
+      </PageTemplate>
+    );
+  }
+  if (!cv) {
+    return (
+      <PageTemplate
+        title="Modifier un document"
+        subtitle="Le document demandé est introuvable."
+        maxWidth="lg"
+        backButton
+        onBack={() => navigate(returnToListUrl)}
+      >
+        <Typography>Document introuvable</Typography>
+      </PageTemplate>
+    );
+  }
 
   return (
-    <CvThequeForm
-      defaultValues={cv}
-      onSubmit={handleSubmit}
-      loading={updating}
-      isEdit
-    />
+    <PageTemplate
+      title="Modifier un document"
+      subtitle="Mettez à jour le document CVThèque dans un shell plus compact."
+      maxWidth="lg"
+      backButton
+      onBack={() => navigate(returnToListUrl)}
+    >
+      <PageSection sx={{ maxWidth: 700, mx: "auto" }}>
+        <CvThequeForm
+          defaultValues={cv}
+          onSubmit={handleSubmit}
+          loading={updating}
+          isEdit
+        />
+      </PageSection>
+    </PageTemplate>
   );
 }

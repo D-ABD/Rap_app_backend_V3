@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { Box, CircularProgress } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import CVThequeForm from "./cvthequeForm";
 
 import { CVThequeDetail, CVThequePayload } from "src/types/cvtheque";
@@ -55,22 +56,25 @@ export default function CVThequeCreatePage() {
 
   return (
     <PageTemplate
-      title="➕ Ajouter un document"
-      subtitle="Déposer un fichier PDF / DOC / DOCX dans la CVThèque"
+      title="Ajouter un document"
+      subtitle="Déposez un fichier dans la CVThèque avec une page plus compacte."
+      maxWidth="lg"
       backButton
       onBack={() => navigate(returnToListUrl)}
     >
       {loadingChoices ? (
         <CircularProgress />
       ) : (
-        <Box maxWidth={700} mx="auto">
-          <CVThequeForm
-            onSubmit={handleCreate}
-            loading={creating}
-            isEdit={false}
-            defaultValues={defaultValues}
-          />
-        </Box>
+        <PageSection sx={{ maxWidth: 700, mx: "auto" }}>
+          <Box>
+            <CVThequeForm
+              onSubmit={handleCreate}
+              loading={creating}
+              isEdit={false}
+              defaultValues={defaultValues}
+            />
+          </Box>
+        </PageSection>
       )}
     </PageTemplate>
   );

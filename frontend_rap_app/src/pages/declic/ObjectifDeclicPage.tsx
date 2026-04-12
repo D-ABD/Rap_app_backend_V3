@@ -12,6 +12,7 @@ import {
   MenuItem,
   Pagination,
   Box,
+  Menu,
 } from "@mui/material";
 import { toast } from "react-toastify";
 
@@ -118,13 +119,22 @@ export default function ObjectifDeclicPage() {
   // 🧩 État du formulaire (modale)
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   return (
     <PageTemplate
-      title="Objectifs Déclic"
-      subtitle={`Suivi des objectifs ${filters.annee ?? new Date().getFullYear()}`}
       refreshButton
       onRefresh={() => refetch()}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un objectif Déclic..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       filters={
         showFilters && (
           <FiltresObjectifsDeclicPanel
@@ -138,22 +148,20 @@ export default function ObjectifDeclicPage() {
         )
       }
       showFilters={showFilters}
-      actionsRight={
+      actions={
         <Stack direction="row" spacing={1} flexWrap="wrap">
-          {/* 🔎 Bouton filtres */}
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} size="small">
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher un objectif Déclic..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
+            Options
+          </Button>
 
           {/* 📄 Taille page */}
           <Select
@@ -171,10 +179,6 @@ export default function ObjectifDeclicPage() {
             ))}
           </Select>
 
-          {/* 📤 Export Excel */}
-          <ExportButtonObjectifsDeclic data={objectifs} selectedIds={[]} />
-
-          {/* ➕ Création */}
           {canWriteDeclic && (
             <Button
               variant="contained"
@@ -187,6 +191,34 @@ export default function ObjectifDeclicPage() {
               + Ajouter un objectif
             </Button>
           )}
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonObjectifsDeclic data={objectifs} selectedIds={[]} />
+            </Stack>
+          </Menu>
         </Stack>
       }
       footer={

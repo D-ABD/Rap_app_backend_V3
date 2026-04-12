@@ -3,16 +3,15 @@ import { useNavigate } from "react-router-dom";
 import PageTemplate from "../../components/PageTemplate";
 import { Typography } from "@mui/material";
 import DocumentForm from "./DocumentForm";
+import PageSection from "../../components/PageSection";
 
 export default function DocumentsCreatePage() {
   const navigate = useNavigate();
 
   return (
     <PageTemplate
-      title="Creer un document"
-      subtitle="Ajoutez un document sans modifier le flux existant ni les informations attendues."
-      eyebrow="Documents"
-      hero
+      title="Créer un document"
+      subtitle="Ajoutez un document avec un shell de page plus clair et plus compact."
       maxWidth="md"
       backButton
       onBack={() => navigate(-1)}
@@ -22,7 +21,9 @@ export default function DocumentsCreatePage() {
         </Typography>
       }
     >
-      <DocumentForm />
+      <PageSection>
+        <DocumentForm />
+      </PageSection>
     </PageTemplate>
   );
 }

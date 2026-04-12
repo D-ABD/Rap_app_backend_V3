@@ -20,6 +20,7 @@ import {
   SelectChangeEvent,
   useMediaQuery,
   useTheme,
+  Menu,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -87,6 +88,7 @@ export const AppairagesPage: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -249,11 +251,20 @@ export const AppairagesPage: React.FC = () => {
 
   return (
     <PageTemplate
-      title="📊 Appairages"
       backButton
       onBack={() => navigate(-1)}
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un appairage..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
@@ -266,14 +277,9 @@ export const AppairagesPage: React.FC = () => {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher un appairage..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           <Button
             variant="outlined"
@@ -308,13 +314,6 @@ export const AppairagesPage: React.FC = () => {
             {filters.activite === "archive" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
-          <ExportButtonAppairage
-            selectedIds={selectedIds}
-            label="Exporter"
-            filenameBase="appairages"
-            endpointBase="/appairages"
-          />
-
           <Select
             size="small"
             value={pageSize}
@@ -337,6 +336,39 @@ export const AppairagesPage: React.FC = () => {
           >
             ➕ Nouvel appairage
           </Button>
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonAppairage
+                selectedIds={selectedIds}
+                label="Exporter"
+                filenameBase="appairages"
+                endpointBase="/appairages"
+              />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

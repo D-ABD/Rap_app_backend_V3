@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
 import { useDeleteParticipantDeclic, useDesarchiverParticipantDeclic, useExportParticipantsDeclic, useHardDeleteParticipantDeclic, useParticipantDeclicDetail, useParticipantsDeclicList, useParticipantsDeclicMeta } from "src/hooks/useParticipantsDeclic";
@@ -10,6 +10,7 @@ import ParticipantsDeclicTable from "./ParticipantsDeclicTable";
 import ParticipantsDeclicDetailModal from "./ParticipantsDeclicDetailModal";
 import { useAuth } from "src/hooks/useAuth";
 import { canWriteDeclicRole } from "src/utils/roleGroups";
+import SearchInput from "src/components/SearchInput";
 
 export default function ParticipantsDeclicPage() {
   const { user } = useAuth();
@@ -43,6 +44,18 @@ export default function ParticipantsDeclicPage() {
   const { data: detailData } = useParticipantDeclicDetail(detailId);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("participantsDeclic.showFilters");
+    return saved === "1";
+  });
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("participantsDeclic.showFilters", showFilters ? "1" : "0");
+    }
+  }, [showFilters]);
 
   const refresh = () => setFilters((prev) => ({ ...prev }));
 
@@ -80,30 +93,123 @@ export default function ParticipantsDeclicPage() {
     }
   };
 
+  const activeFiltersCount = useMemo(() => {
+    const ignored = new Set(["ordering", "page", "search"]);
+    return Object.entries(filters).filter(([key, value]) => {
+      if (ignored.has(key)) return false;
+      if (value == null) return false;
+      if (typeof value === "string") return value.trim() !== "";
+      return true;
+    }).length;
+  }, [filters]);
+
   return (
     <PageTemplate
-      title="Participants Déclic"
+      backButton
+      onBack={() => navigate(-1)}
       refreshButton
       onRefresh={refresh}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un participant Déclic..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
+      filters={
+        showFilters ? (
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} flexWrap="wrap">
+            <TextField
+              select
+              size="small"
+              label="Centre"
+              value={filters.centre ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, centre: e.target.value === "" ? undefined : Number(e.target.value) }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              {centres.map((centre) => (
+                <MenuItem key={centre.id} value={centre.id}>
+                  {centre.nom}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Type d'atelier"
+              value={filters.type_declic ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, type_declic: e.target.value === "" ? undefined : (e.target.value as any) }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              {types.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Présence"
+              value={filters.present ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, present: e.target.value === "" ? undefined : (e.target.value as "true" | "false") }));
+                setPage(1);
+              }}
+              sx={{ minWidth: 160 }}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              <MenuItem value="true">Présents</MenuItem>
+              <MenuItem value="false">Absents</MenuItem>
+            </TextField>
+            <TextField
+              size="small"
+              label="Année"
+              type="number"
+              value={filters.annee ?? ""}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, annee: e.target.value === "" ? undefined : Number(e.target.value) }));
+                setPage(1);
+              }}
+              sx={{ maxWidth: 130 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setFilters({ ordering: "nom", page: 1 });
+                setPage(1);
+              }}
+            >
+              Réinitialiser
+            </Button>
+          </Stack>
+        ) : undefined
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" onClick={() => navigate(-1)}>
-            Retour
+          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
+            {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
+            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
           </Button>
           {canWriteDeclic && (
             <Button variant="contained" onClick={() => navigate("/participants-declic/create")}>
               ➕ Nouveau participant
             </Button>
           )}
-          <Button variant="outlined" onClick={() => exportList()}>
-            ⬇️ Export liste
-          </Button>
-          <Button variant="outlined" onClick={() => exportPresence()}>
-            📋 Feuille de présence
-          </Button>
-          <Button variant="outlined" onClick={() => exportEmargement()}>
-            📝 Feuille d'émargement
-          </Button>
           <Button
             variant={filters.avec_archivees ? "contained" : "outlined"}
             onClick={() => {
@@ -146,6 +252,40 @@ export default function ParticipantsDeclicPage() {
               </MenuItem>
             ))}
           </TextField>
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Exports et documents liés aux participants
+              </Typography>
+            </Box>
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Button variant="outlined" onClick={() => exportList()}>
+                ⬇️ Export liste
+              </Button>
+              <Button variant="outlined" onClick={() => exportPresence()}>
+                📋 Feuille de présence
+              </Button>
+              <Button variant="outlined" onClick={() => exportEmargement()}>
+                📝 Feuille d&apos;émargement
+              </Button>
+            </Stack>
+          </Menu>
         </Stack>
       }
       footer={
@@ -159,91 +299,6 @@ export default function ParticipantsDeclicPage() {
         ) : undefined
       }
     >
-      <Box mt={2}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} flexWrap="wrap">
-          <TextField
-            size="small"
-            label="Recherche"
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
-          <TextField
-            select
-            size="small"
-            label="Centre"
-            value={filters.centre ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, centre: e.target.value === "" ? undefined : Number(e.target.value) }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            {centres.map((centre) => (
-              <MenuItem key={centre.id} value={centre.id}>
-                {centre.nom}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Type d'atelier"
-            value={filters.type_declic ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, type_declic: e.target.value === "" ? undefined : (e.target.value as any) }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            {types.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
-                {type.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Présence"
-            value={filters.present ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, present: e.target.value === "" ? undefined : (e.target.value as "true" | "false") }));
-              setPage(1);
-            }}
-            sx={{ minWidth: 160 }}
-          >
-            <MenuItem value="">Tous</MenuItem>
-            <MenuItem value="true">Présents</MenuItem>
-            <MenuItem value="false">Absents</MenuItem>
-          </TextField>
-          <TextField
-            size="small"
-            label="Année"
-            type="number"
-            value={filters.annee ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, annee: e.target.value === "" ? undefined : Number(e.target.value) }));
-              setPage(1);
-            }}
-            sx={{ maxWidth: 130 }}
-          />
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setFilters({ ordering: "nom", page: 1 });
-              setPage(1);
-            }}
-          >
-            Réinitialiser
-          </Button>
-        </Stack>
-      </Box>
-
       <Box mt={2}>
         {loading || loadingMeta ? (
           <CircularProgress />

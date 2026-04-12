@@ -14,6 +14,7 @@ import {
   Typography,
   Select,
   MenuItem,
+  Menu,
   Pagination,
   Dialog,
   DialogTitle,
@@ -82,6 +83,7 @@ export default function CommentairesPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   // 📄 pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
@@ -195,9 +197,22 @@ export default function CommentairesPage() {
   // ────────────────────────────── UI ──────────────────────────────
   return (
     <PageTemplate
-      title="💬 Commentaires"
       refreshButton
       onRefresh={fetchData}
+      headerExtra={
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap={{ xs: "wrap", md: "nowrap" }}>
+          <TextField
+            size="small"
+            fullWidth
+            placeholder="Rechercher un commentaire..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </Stack>
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} fullWidth={isMobile}>
@@ -242,25 +257,9 @@ export default function CommentairesPage() {
             {String(filters.statut_id || "") === "archive" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
-          <TextField
-            size="small"
-            placeholder="Rechercher un commentaire..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-
-          <ExportButtonCommentaires
-            data={commentaires.map((c) => ({
-              ...c,
-              created_at: c.created_at ?? "", // 🔧 fallback string
-            }))}
-            selectedIds={selectedIds}
-            requestParams={effectiveParams}
-            totalCount={count}
-          />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)} fullWidth={isMobile}>
+            Options
+          </Button>
 
           <Select
             size="small"
@@ -288,6 +287,41 @@ export default function CommentairesPage() {
           >
             ➕ Ajouter
           </Button>
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                p: 1.25,
+                borderRadius: 3,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions secondaires de la liste
+              </Typography>
+            </Box>
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonCommentaires
+                data={commentaires.map((c) => ({
+                  ...c,
+                  created_at: c.created_at ?? "",
+                }))}
+                selectedIds={selectedIds}
+                requestParams={effectiveParams}
+                totalCount={count}
+              />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

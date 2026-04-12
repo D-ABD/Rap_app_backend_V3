@@ -10,8 +10,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  useMediaQuery,
-  useTheme,
+  Menu,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -54,8 +53,6 @@ const defaultFilters: CVFilters = {};
 
 export default function CVThequePage() {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [searchParams] = useSearchParams();
   const scopedCandidateId = useMemo(() => {
     const raw = searchParams.get("candidat");
@@ -69,6 +66,7 @@ export default function CVThequePage() {
     candidat: scopedCandidateId,
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
 
   const [previewItem, setPreviewItem] = useState<CVThequeItem | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -217,9 +215,18 @@ export default function CVThequePage() {
   // -------------------------------
   return (
     <PageTemplate
-      title="📁 CVThèque"
       refreshButton
       onRefresh={() => reload()}
+      headerExtra={
+        <SearchInput
+          placeholder="Rechercher un titre, candidat, mot clé..."
+          value={filters.search || ""}
+          onChange={(e) => {
+            setFilters({ ...filters, search: e.target.value });
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           {/* Filtres */}
@@ -251,6 +258,13 @@ export default function CVThequePage() {
           )}
 
           <Button
+            variant="outlined"
+            onClick={(event) => setAnchorImportExport(event.currentTarget)}
+          >
+            Import / Export
+          </Button>
+
+          <Button
             variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
             onClick={() => {
               setFilters((prev) => ({
@@ -280,27 +294,42 @@ export default function CVThequePage() {
             </Button>
           )}
 
-          {/* Search */}
-          <SearchInput
-            placeholder="Rechercher un titre, candidat, mot clé..."
-            value={filters.search || ""}
-            onChange={(e) => {
-              setFilters({ ...filters, search: e.target.value });
-              setPage(1);
-            }}
-          />
-
-          <Lot1ExcelActions resource="cvtheque" exportParams={cvthequeIeParams} isMobile={isMobile} />
-
           {/* Ajout */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate("/cvtheque/create")}
-            
           >
             Ajouter un CV
           </Button>
+
+          <Menu
+            anchorEl={anchorImportExport}
+            open={Boolean(anchorImportExport)}
+            onClose={() => setAnchorImportExport(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Import / Export
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et échanges Excel
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Lot1ExcelActions resource="cvtheque" exportParams={cvthequeIeParams} isMobile={false} />
+            </Stack>
+          </Menu>
 
           {/* Archivage */}
           {selectedIds.length > 0 && (

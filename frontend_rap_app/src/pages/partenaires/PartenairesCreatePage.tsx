@@ -10,6 +10,7 @@ import PartenaireForm from "./PartenaireForm";
 import type { Partenaire, PartenaireChoicesResponse } from "../../types/partenaire";
 import PostCreateChoiceModal from "../../components/modals/PostCreateChoiceModal";
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 /* ---------- Utilitaire ---------- */
 function preparePayload(values: Partial<Partenaire>): Partial<Partenaire> {
@@ -123,17 +124,24 @@ export default function PartenaireCreatePage() {
   );
 
   return (
-    <PageTemplate title="➕ Créer un nouveau partenaire" backButton>
+    <PageTemplate
+      title="Créer un partenaire"
+      subtitle="Ajoutez un partenaire avec un shell de page plus lisible, sans changer le flux métier."
+      maxWidth="xl"
+      backButton
+    >
       {loading && <CircularProgress sx={{ mb: 2 }} />}
 
       <Box>
-        <PartenaireForm
-          initialValues={initialValues}
-          onSubmit={handleSubmit}
-          loading={loading}
-          choices={choices}
-          centreOptions={user?.centres?.map((c) => ({ value: c.id, label: c.nom })) ?? []}
-        />
+        <PageSection>
+          <PartenaireForm
+            initialValues={initialValues}
+            onSubmit={handleSubmit}
+            loading={loading}
+            choices={choices}
+            centreOptions={user?.centres?.map((c) => ({ value: c.id, label: c.nom })) ?? []}
+          />
+        </PageSection>
 
         {error && (
           <Typography color="error" mt={2}>

@@ -10,6 +10,8 @@ import {
   Select,
   MenuItem,
   Pagination,
+  Menu,
+  Box,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -44,6 +46,7 @@ export default function FormationsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
 
   // ── filtres
   const [filters, setFilters] = useState<FiltresFormationsValues>({
@@ -233,11 +236,39 @@ export default function FormationsPage() {
 
   return (
     <PageTemplate
-      title="📚 Formations"
       backButton
       onBack={() => navigate(-1)}
       refreshButton
       onRefresh={fetchData}
+      headerExtra={
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          flexWrap={{ xs: "wrap", md: "nowrap" }}
+        >
+          <TextField
+            type="search"
+            size="small"
+            fullWidth
+            value={filters.texte ?? ""}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="🔎 Recherche libre (nom, numeros, diplome, centre, CFA, type, statut, assistante…)"
+          />
+          {filters.texte && (
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setFilters((prev) => ({ ...prev, texte: "" }));
+                setPage(1);
+              }}
+            >
+              ✕
+            </Button>
+          )}
+        </Stack>
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
@@ -250,9 +281,13 @@ export default function FormationsPage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <FormationExportButton selectedIds={selectedIds} />
-
-          <Lot1ExcelActions resource="formation" exportParams={formationIeParams} isMobile={isMobile} />
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorImportExport(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Import / Export
+          </Button>
 
           <Button
             variant={filters.avec_archivees || filters.activite === "archivee" ? "contained" : "outlined"}
@@ -313,6 +348,35 @@ export default function FormationsPage() {
             </Button>
           )}
 
+          <Menu
+            anchorEl={anchorImportExport}
+            open={Boolean(anchorImportExport)}
+            onClose={() => setAnchorImportExport(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Import / Export
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions techniques et échanges Excel
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <FormationExportButton selectedIds={selectedIds} />
+              <Lot1ExcelActions resource="formation" exportParams={formationIeParams} isMobile={false} />
+            </Stack>
+          </Menu>
+
           {selectedIds.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap">
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
@@ -367,29 +431,6 @@ export default function FormationsPage() {
         )
       }
     >
-      <Stack direction="row" spacing={1} alignItems="center" mb={2} flexWrap={{ xs: "wrap", md: "nowrap" }}>
-        <TextField
-          type="search"
-          size="small"
-          fullWidth
-          value={filters.texte ?? ""}
-          onChange={handleSearchChange}
-          onKeyDown={handleSearchKeyDown}
-          placeholder="🔎 Recherche libre (nom, numeros, diplome, centre, CFA, type, statut, assistante…)"
-        />
-        {filters.texte && (
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setFilters((prev) => ({ ...prev, texte: "" }));
-              setPage(1);
-            }}
-          >
-            ✕
-          </Button>
-        )}
-      </Stack>
-
       {loading ? (
         <LoadingState label="Chargement des formations..." />
       ) : error ? (

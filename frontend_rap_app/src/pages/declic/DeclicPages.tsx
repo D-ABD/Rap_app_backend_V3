@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Menu,
 } from "@mui/material";
 
 import PageTemplate from "src/components/PageTemplate";
@@ -123,6 +124,7 @@ export default function DeclicPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -177,12 +179,21 @@ export default function DeclicPage() {
   // ───────────── Rendu principal ─────────────
   return (
     <PageTemplate
-      title="Séances Déclic"
       refreshButton
       onRefresh={() => {
         setPage((p) => p);
         setFilters((f) => ({ ...f }));
       }}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher une séance Déclic..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           {/* Affichage filtres */}
@@ -190,20 +201,15 @@ export default function DeclicPage() {
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher une séance Déclic..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
-
           {hasActiveFilters && (
             <Button variant="outlined" color="warning" onClick={resetAllFilters}>
               ♻️ Réinitialiser filtres
             </Button>
           )}
+
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           {/* Taille de page */}
           <Select
@@ -232,9 +238,6 @@ export default function DeclicPage() {
             👥 Gérer les participants
           </Button>
 
-          {/* ✅ Export Excel */}
-          <ExportButtonDeclic data={items} selectedIds={selectedIds} />
-
           <Button
             variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
             onClick={() =>
@@ -262,6 +265,34 @@ export default function DeclicPage() {
               {filters.archives_seules ? "Voir tout" : "Archives seules"}
             </Button>
           )}
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonDeclic data={items} selectedIds={selectedIds} />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

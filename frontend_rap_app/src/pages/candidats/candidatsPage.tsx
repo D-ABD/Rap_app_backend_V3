@@ -21,6 +21,7 @@ import {
   FormControl,
   InputLabel,
   Alert,
+  Menu,
 } from "@mui/material";
 
 import {
@@ -212,6 +213,8 @@ export default function CandidatsPage() {
   const selectAll = () => setSelectedIds(items.map((i) => i.id));
 
   const [showAtelierBulkDialog, setShowAtelierBulkDialog] = useState(false);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
+  const [anchorBulkActions, setAnchorBulkActions] = useState<null | HTMLElement>(null);
   const [atelierOptions, setAtelierOptions] = useState<AtelierTreOption[]>([]);
   const [loadingAteliers, setLoadingAteliers] = useState(false);
   const [selectedAtelierId, setSelectedAtelierId] = useState<number | "">("");
@@ -478,11 +481,20 @@ export default function CandidatsPage() {
 
   return (
     <PageTemplate
-      title="👥 Candidats"
       refreshButton
       onRefresh={() => {
         refreshList();
       }}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un candidat..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} fullWidth={isMobile}>
@@ -490,23 +502,13 @@ export default function CandidatsPage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher un candidat..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value }));
-              setPage(1);
-            }}
-          />
-
-          <ExportButtonCandidat
-            selectedIds={selectedIds}
-            label="⬇️ Exporter"
-            filenameBase="candidats"
-            endpointBase="/candidats"
-          />
-
-          <Lot1ExcelActions resource="candidat" exportParams={candidatIeParams} isMobile={isMobile} />
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorImportExport(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Import / Export
+          </Button>
 
           <Select
             size="small"
@@ -567,8 +569,78 @@ export default function CandidatsPage() {
 
           {selectedIds.length > 0 && (
             <>
+              <Button
+                variant="contained"
+                onClick={(event) => setAnchorBulkActions(event.currentTarget)}
+              >
+                Actions en lot ({selectedIds.length})
+              </Button>
+              <Button variant="outlined" onClick={clearSelection}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
+
+          <Menu
+            anchorEl={anchorImportExport}
+            open={Boolean(anchorImportExport)}
+            onClose={() => setAnchorImportExport(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Import / Export
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et échanges Excel
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonCandidat
+                selectedIds={selectedIds}
+                label="⬇️ Exporter"
+                filenameBase="candidats"
+                endpointBase="/candidats"
+              />
+              <Lot1ExcelActions resource="candidat" exportParams={candidatIeParams} isMobile={false} />
+            </Stack>
+          </Menu>
+
+          <Menu
+            anchorEl={anchorBulkActions}
+            open={Boolean(anchorBulkActions)}
+            onClose={() => setAnchorBulkActions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 360,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Actions en lot
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Opérations sur les candidats sélectionnés
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
               <Button variant="contained" onClick={handleBulkValidate} disabled={bulkLoading}>
-                Valider le parcours ({selectedIds.length})
+                Valider le parcours
               </Button>
               <Button variant="contained" onClick={handleBulkSetAdmissible} disabled={bulkLoading}>
                 Mettre admissible
@@ -597,11 +669,8 @@ export default function CandidatsPage() {
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout sélectionner
               </Button>
-              <Button variant="outlined" onClick={clearSelection}>
-                ❌ Annuler
-              </Button>
-            </>
-          )}
+            </Stack>
+          </Menu>
         </Stack>
       }
       filters={

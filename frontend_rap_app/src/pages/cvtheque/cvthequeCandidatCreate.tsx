@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { Box } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 import { CVThequePayload } from "src/types/cvtheque";
 import CVThequeFormCandidat from "./cvthequeFormCandidat";
@@ -27,17 +28,20 @@ export default function CVThequeCandidatCreatePage() {
 
   return (
     <PageTemplate
-      title="➕ Ajouter un document"
-      subtitle="Déposer un fichier PDF / DOC / DOCX dans la CVThèque"
+      title="Ajouter un document"
+      subtitle="Déposez un fichier dans la CVThèque candidat avec une page plus compacte."
+      maxWidth="lg"
       backButton
       onBack={() => navigate("/cvtheque/candidat")}
     >
-      <Box maxWidth={700} mx="auto">
-        <CVThequeFormCandidat
-          onSubmit={handleCreate}
-          loading={creating}
-        />
-      </Box>
+      <PageSection sx={{ maxWidth: 700, mx: "auto" }}>
+        <Box>
+          <CVThequeFormCandidat
+            onSubmit={handleCreate}
+            loading={creating}
+          />
+        </Box>
+      </PageSection>
     </PageTemplate>
   );
 }

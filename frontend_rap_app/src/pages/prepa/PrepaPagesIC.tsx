@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Menu,
 } from "@mui/material";
 
 import PageTemplate from "src/components/PageTemplate";
@@ -100,6 +101,7 @@ export default function PrepaPageIC() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -153,28 +155,29 @@ export default function PrepaPageIC() {
 
   return (
     <PageTemplate
-      title="Informations Collectives (IC)"
+      backButton
+      onBack={() => navigate(-1)}
       refreshButton
       onRefresh={() => setFilters({ ...filters })}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher une séance Prépa..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button variant="outlined" onClick={() => navigate(-1)} startIcon={<span>←</span>}>
-            Retour
-          </Button>
-
-          {/* Filtres */}
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
 
-          <SearchInput
-            placeholder="🔍 Rechercher une séance Prépa..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-              setPage(1);
-            }}
-          />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           {/* Page size */}
           <Select
@@ -198,9 +201,6 @@ export default function PrepaPageIC() {
               ➕ Nouvelle séance
             </Button>
           )}
-
-          {/* Export */}
-          <ExportButtonPrepa data={items} selectedIds={selectedIds} />
 
           <Button
             variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
@@ -229,6 +229,34 @@ export default function PrepaPageIC() {
               {filters.archives_seules ? "Voir tout" : "Archives seules"}
             </Button>
           )}
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonPrepa data={items} selectedIds={selectedIds} />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

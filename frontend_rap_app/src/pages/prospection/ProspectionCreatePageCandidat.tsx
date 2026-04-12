@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { Typography } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 import ProspectionFormCandidat from "./ProspectionFormCandidat";
 import api from "../../api/axios";
 import { useCreateProspection } from "../../hooks/useProspection";
@@ -130,20 +131,28 @@ export default function ProspectionCreatePageCandidat() {
   };
 
   return (
-    <PageTemplate title="➕ Nouvelle prospection" backButton onBack={() => navigate(-1)}>
+    <PageTemplate
+      title="Créer une prospection"
+      subtitle="Ajoutez une prospection côté candidat avec une mise en page plus claire."
+      maxWidth="xl"
+      backButton
+      onBack={() => navigate(-1)}
+    >
       {createError ? (
         <Typography color="error">❌ Impossible d’initialiser le formulaire.</Typography>
       ) : (
-        <ProspectionFormCandidat
-          key={["create-cand", presetPartenaire, partenaireNom, presetFormation, formationNom].join(
-            "-"
-          )}
-          mode="create"
-          initialValues={initialValues}
-          onSubmit={handleSubmit}
-          loading={creating}
-          fixedFormationId={presetFormation ?? undefined}
-        />
+        <PageSection>
+          <ProspectionFormCandidat
+            key={["create-cand", presetPartenaire, partenaireNom, presetFormation, formationNom].join(
+              "-"
+            )}
+            mode="create"
+            initialValues={initialValues}
+            onSubmit={handleSubmit}
+            loading={creating}
+            fixedFormationId={presetFormation ?? undefined}
+          />
+        </PageSection>
       )}
     </PageTemplate>
   );

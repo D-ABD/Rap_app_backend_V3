@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Box,
   Grid,
   Typography,
   Button,
@@ -17,6 +16,7 @@ import {
 import { toast } from "react-toastify";
 
 import PageTemplate from "../../components/PageTemplate";
+import PageSection from "../../components/PageSection";
 
 import type { ProspectionFormData } from "../../types/prospection";
 
@@ -145,7 +145,14 @@ export default function ProspectionEditCandidatPage() {
 
   if (!prospectionId) {
     return (
-      <PageTemplate title="Prospection — détail" backButton onBack={() => navigate(-1)} centered>
+      <PageTemplate
+        title="Prospection — détail"
+        subtitle="Identifiant invalide."
+        maxWidth="xl"
+        backButton
+        onBack={() => navigate(-1)}
+        centered
+      >
         <Typography color="error">❌ Identifiant invalide.</Typography>
       </PageTemplate>
     );
@@ -155,6 +162,8 @@ export default function ProspectionEditCandidatPage() {
     return (
       <PageTemplate
         title={`Prospection #${prospectionId}`}
+        subtitle="Chargement de la prospection."
+        maxWidth="xl"
         backButton
         onBack={() => navigate(-1)}
         centered
@@ -168,6 +177,8 @@ export default function ProspectionEditCandidatPage() {
     return (
       <PageTemplate
         title={`Prospection #${prospectionId}`}
+        subtitle="Le contenu n'a pas pu être chargé."
+        maxWidth="xl"
         backButton
         onBack={() => navigate(-1)}
         centered
@@ -181,6 +192,8 @@ export default function ProspectionEditCandidatPage() {
     return (
       <PageTemplate
         title={`Prospection #${prospectionId}`}
+        subtitle="Les données sont indisponibles."
+        maxWidth="xl"
         backButton
         onBack={() => navigate(-1)}
         centered
@@ -225,7 +238,9 @@ export default function ProspectionEditCandidatPage() {
 
   return (
     <PageTemplate
-      title={`Prospection #${prospectionId} — détail (éditable)`}
+      title={`Prospection #${prospectionId} — édition`}
+      subtitle="Consultez le résumé et modifiez la prospection dans un shell plus léger."
+      maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}
       actions={
@@ -248,7 +263,7 @@ export default function ProspectionEditCandidatPage() {
       />
 
       {/* Résumé */}
-      <Box mb={2} p={2} border={1} borderRadius={2}>
+      <PageSection sx={{ mb: 2 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={4}>
             <Typography variant="subtitle2">Partenaire</Typography>
@@ -286,7 +301,7 @@ export default function ProspectionEditCandidatPage() {
             </Typography>
           </Grid>
         </Grid>
-      </Box>
+      </PageSection>
 
       {/* Dernier commentaire */}
       <ProspectionLastCommentRow
@@ -295,12 +310,14 @@ export default function ProspectionEditCandidatPage() {
       />
 
       {/* Formulaire */}
-      <ProspectionFormCandidat
-        mode="edit"
-        initialValues={initialValues}
-        onSubmit={handleUpdate}
-        loading={saving}
-      />
+      <PageSection>
+        <ProspectionFormCandidat
+          mode="edit"
+          initialValues={initialValues}
+          onSubmit={handleUpdate}
+          loading={saving}
+        />
+      </PageSection>
 
       {/* Modal archivage */}
       <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>

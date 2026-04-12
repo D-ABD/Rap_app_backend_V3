@@ -11,9 +11,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Menu,
   MenuItem,
   Select,
   Stack,
+  TextField,
   Typography,
   useMediaQuery,
   useTheme,
@@ -42,6 +44,7 @@ export default function DocumentsPage() {
 
   const [previewDoc] = useState<Document | null>(null); // ✅ nouveau
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);
 
@@ -193,11 +196,25 @@ export default function DocumentsPage() {
 
   return (
     <PageTemplate
-      title="📄 Documents"
       backButton
       onRefresh={fetchData}
+      headerExtra={
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap={{ xs: "wrap", md: "nowrap" }}>
+          <TextField
+            type="search"
+            size="small"
+            fullWidth
+            placeholder="Rechercher un document..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        </Stack>
+      }
       actions={
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center" flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
@@ -233,18 +250,9 @@ export default function DocumentsPage() {
             </Button>
           )}
 
-          <input
-            type="text"
-            placeholder="Rechercher un document..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            style={{ padding: "6px 8px", borderRadius: 4, border: "1px solid #ccc" }}
-          />
-
-          <Lot1ExcelActions resource="document" exportParams={documentIeParams} isMobile={isMobile} />
+          <Button variant="outlined" onClick={(event) => setAnchorImportExport(event.currentTarget)}>
+            Import / Export
+          </Button>
 
           <Select
             size="small"
@@ -271,6 +279,33 @@ export default function DocumentsPage() {
           >
             ➕ Ajouter un document
           </Button>
+
+          <Menu
+            anchorEl={anchorImportExport}
+            open={Boolean(anchorImportExport)}
+            onClose={() => setAnchorImportExport(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 340,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Import / Export
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Actions techniques et échanges Excel
+              </Typography>
+            </Box>
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <Lot1ExcelActions resource="document" exportParams={documentIeParams} isMobile={false} />
+            </Stack>
+          </Menu>
         </Stack>
       }
     >

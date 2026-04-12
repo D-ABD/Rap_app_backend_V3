@@ -17,6 +17,7 @@ import {
   DialogActions,
   useMediaQuery,
   useTheme,
+  Menu,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -120,6 +121,7 @@ export default function PartenairesCandidatPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
@@ -206,9 +208,18 @@ export default function PartenairesCandidatPage() {
 
   return (
     <PageTemplate
-      title="👥 Partenaires"
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <SearchInput
+          placeholder="Rechercher par nom, ville, secteur..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters({ ...filters, search: e.target.value });
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
@@ -221,26 +232,13 @@ export default function PartenairesCandidatPage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <SearchInput
-            placeholder="Rechercher par nom, ville, secteur..."
-            value={filters.search ?? ""}
-            onChange={(e) => {
-              setFilters({ ...filters, search: e.target.value });
-              setPage(1);
-            }}
-          />
-
           <Button variant="outlined" onClick={handleResetFilters}>
             Réinitialiser
           </Button>
 
-          <ExportButtonPartenaires
-            data={
-              selectedIds.length > 0
-                ? partenaires.filter((p) => selectedIds.includes(p.id))
-                : partenaires
-            }
-          />
+          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+            Options
+          </Button>
 
           <Select
             size="small"
@@ -264,6 +262,40 @@ export default function PartenairesCandidatPage() {
           >
             ➕ Nouveau partenaire
           </Button>
+
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonPartenaires
+                data={
+                  selectedIds.length > 0
+                    ? partenaires.filter((p) => selectedIds.includes(p.id))
+                    : partenaires
+                }
+              />
+            </Stack>
+          </Menu>
 
           {selectedIds.length > 0 && (
             <>

@@ -331,7 +331,16 @@ export default function CerfaPage() {
 
   return (
     <PageTemplate
-      title="📑 Contrats CERFA"
+      headerExtra={
+        <SearchInput
+          placeholder="Rechercher par apprenti, employeur..."
+          value={filters.search}
+          onChange={(e) => {
+            setFilters((prev) => ({ ...prev, search: e.target.value }));
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
@@ -342,14 +351,6 @@ export default function CerfaPage() {
             {showFilters ? "Masquer filtres" : "Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
-          <SearchInput
-            placeholder="Rechercher par apprenti, employeur..."
-            value={filters.search}
-            onChange={(e) => {
-              setFilters((prev) => ({ ...prev, search: e.target.value }));
-              setPage(1);
-            }}
-          />
           <Button
             variant="contained"
             startIcon={<AddIcon />}
