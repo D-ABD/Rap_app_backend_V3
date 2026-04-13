@@ -105,7 +105,6 @@ export default function TypeOffresEditPage() {
   return (
     <PageTemplate
       title={libelle ? `Modifier le type : ${libelle}` : "Modifier un type d'offre"}
-      subtitle="Ajustez l'intitule ou la couleur sans changer le comportement du formulaire."
       eyebrow="Types d'offre"
       hero
       maxWidth="md"

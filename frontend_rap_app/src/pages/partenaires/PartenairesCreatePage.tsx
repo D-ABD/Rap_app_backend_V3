@@ -126,7 +126,7 @@ export default function PartenaireCreatePage() {
   return (
     <PageTemplate
       title="Créer un partenaire"
-      subtitle="Ajoutez un partenaire avec un shell de page plus lisible, sans changer le flux métier."
+      subtitle="Ajoutez un partenaire."
       maxWidth="xl"
       backButton
     >

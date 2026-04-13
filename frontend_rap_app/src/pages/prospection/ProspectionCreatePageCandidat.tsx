@@ -133,7 +133,7 @@ export default function ProspectionCreatePageCandidat() {
   return (
     <PageTemplate
       title="Créer une prospection"
-      subtitle="Ajoutez une prospection côté candidat avec une mise en page plus claire."
+      subtitle="Ajoutez une prospection côté candidat."
       maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}

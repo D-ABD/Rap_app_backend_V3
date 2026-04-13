@@ -17,7 +17,7 @@ export default function CommentairesCreatePage() {
   return (
     <PageTemplate
       title="Créer un commentaire"
-      subtitle="Ajoutez un commentaire avec un shell plus lisible, sans modifier le flux métier."
+      subtitle="Ajoutez un commentaire."
       maxWidth="xl"
       backButton
       onBack={() => window.history.back()}

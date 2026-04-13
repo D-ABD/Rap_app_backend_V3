@@ -41,7 +41,6 @@ except Exception:  # pragma: no cover
 from ....models.appairage import Appairage, AppairageStatut  # ← NEW
 from ....models.candidat import Candidat
 
-# ⚠️ Ajustez les imports selon votre arborescence réelle
 from ....models.formations import Formation
 
 GroupKey = Literal["formation", "centre", "departement", "type_offre", "statut"]

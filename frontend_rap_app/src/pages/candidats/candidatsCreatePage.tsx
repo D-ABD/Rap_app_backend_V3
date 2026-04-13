@@ -105,7 +105,7 @@ export default function CandidatCreatePage() {
   return (
     <PageTemplate
       title="Créer un candidat"
-      subtitle="Ajoutez un candidat avec une structure de page plus lisible et plus compacte."
+      subtitle="Ajoutez un candidat."
       maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}

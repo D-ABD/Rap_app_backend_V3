@@ -41,7 +41,6 @@ except Exception:  # pragma: no cover
             return qs
 
 
-# ⚠️ Ajustez les imports selon votre arborescence
 from ....models.prospection import Prospection, ProspectionChoices
 
 GroupKey = Literal[

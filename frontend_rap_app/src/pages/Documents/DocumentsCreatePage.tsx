@@ -11,7 +11,7 @@ export default function DocumentsCreatePage() {
   return (
     <PageTemplate
       title="Créer un document"
-      subtitle="Ajoutez un document avec un shell de page plus clair et plus compact."
+      subtitle="Ajoutez un document."
       maxWidth="md"
       backButton
       onBack={() => navigate(-1)}
