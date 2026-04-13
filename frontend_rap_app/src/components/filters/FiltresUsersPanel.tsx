@@ -1,6 +1,6 @@
 // src/components/users/FiltresUsersPanel.tsx
 import React, { useMemo, useCallback } from "react";
-import styled from "styled-components";
+import Box from "@mui/material/Box";
 import FilterTemplate, { type FieldConfig } from "./FilterTemplate";
 
 type Option = { value: string | number; label: string };
@@ -17,16 +17,6 @@ export interface FiltresUsersPanelProps<
   onRefresh?: () => void;
   labels?: Partial<Record<keyof T, string>>;
 }
-
-const LoadingBox = styled.div.attrs({ role: "status", "aria-live": "polite" })`
-  padding: 0.75rem 1rem;
-  border: 1px dashed ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.borderRadius.m};
-  color: ${({ theme }) => theme.colors.textSecondary};
-  background: ${({ theme }) => theme.colors.backgroundLight};
-  margin-bottom: 1rem;
-  text-align: center;
-`;
 
 // 🔹 Supprime les doublons d’options par value
 function uniqueById<T extends { value: string | number }>(arr: T[] = []): T[] {
@@ -93,7 +83,25 @@ export default function FiltresUsersPanel<
 
   return (
     <>
-      {loading && <LoadingBox>Chargement des filtres…</LoadingBox>}
+      {loading && (
+        <Box
+          role="status"
+          aria-live="polite"
+          sx={{
+            px: 2,
+            py: 1.5,
+            border: "1px dashed",
+            borderColor: "divider",
+            borderRadius: 2,
+            color: "text.secondary",
+            backgroundColor: "background.default",
+            mb: 2,
+            textAlign: "center",
+          }}
+        >
+          Chargement des filtres…
+        </Box>
+      )}
 
       <FilterTemplate<T>
         values={values}
