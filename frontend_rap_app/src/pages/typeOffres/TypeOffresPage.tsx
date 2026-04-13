@@ -62,6 +62,7 @@ export default function TypeOffresPage() {
 
   const navigate = useNavigate();
   const theme = useTheme<AppTheme>();
+  const colorFallback = theme.palette.grey[600];
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const { data, loading, error, fetchData } = useFetch<{
@@ -291,7 +292,7 @@ export default function TypeOffresPage() {
             const label = type.is_personnalise
               ? type.autre
               : choicesMap[type.nom]?.label || type.nom_display;
-            const color = type.couleur || choicesMap[type.nom]?.default_color || "#6c757d";
+            const color = type.couleur || choicesMap[type.nom]?.default_color || colorFallback;
 
             return (
               <Paper

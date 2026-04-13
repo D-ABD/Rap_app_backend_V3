@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Stack, Button, TextField, MenuItem, Paper } from "@mui/material";
+import { Box, Stack, Button, TextField, MenuItem, Paper, useTheme } from "@mui/material";
+import type { AppTheme } from "../../theme";
 
 import api from "../../api/axios";
 import useForm from "../../hooks/useForm";
@@ -15,6 +16,8 @@ type Choice = {
 
 export default function StatutsCreatePage() {
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const neutralFallback = theme.palette.grey[400];
   const [choices, setChoices] = useState<Choice[]>([]);
 
   const { values, handleChange, resetForm } = useForm({
@@ -31,7 +34,7 @@ export default function StatutsCreatePage() {
   }, []);
 
   const selectedChoice = choices.find((c) => c.value === values.nom);
-  const previewColor = values.couleur || selectedChoice?.default_color || "#d3d3d3";
+  const previewColor = values.couleur || selectedChoice?.default_color || neutralFallback;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

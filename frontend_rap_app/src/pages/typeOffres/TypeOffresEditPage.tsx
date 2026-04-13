@@ -10,7 +10,9 @@ import {
   Paper,
   Typography,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "../../theme";
 
 import api from "../../api/axios";
 import useForm from "../../hooks/useForm";
@@ -26,11 +28,13 @@ type Choice = {
 export default function TypeOffresEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const neutralFallback = theme.palette.grey[600];
 
   const [choices, setChoices] = useState<Choice[]>([]);
   const [loading, setLoading] = useState(true);
   const [libelle, setLibelle] = useState("");
-  const [initialColor, setInitialColor] = useState("#6c757d");
+  const [initialColor, setInitialColor] = useState(neutralFallback);
 
   const { values, handleChange, setValues } = useForm({
     nom: "",
@@ -53,7 +57,7 @@ export default function TypeOffresEditPage() {
       });
 
       setLibelle(offre.libelle || "");
-      setInitialColor(offre.couleur || "#6c757d");
+      setInitialColor(offre.couleur || neutralFallback);
 
       const rawChoices = choicesRes.data?.data?.results ?? choicesRes.data?.data;
       if (Array.isArray(rawChoices)) {
@@ -67,7 +71,7 @@ export default function TypeOffresEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, setValues]);
+  }, [id, navigate, setValues, neutralFallback]);
 
   useEffect(() => {
     fetchTypeOffre();
@@ -197,7 +201,8 @@ export default function TypeOffresEditPage() {
                     height: 32,
                     borderRadius: "50%",
                     bgcolor: color,
-                    border: values.couleur === color ? "3px solid black" : "1px solid #ccc",
+                    border: values.couleur === color ? "3px solid" : "1px solid",
+                    borderColor: values.couleur === color ? "text.primary" : "divider",
                     cursor: "pointer",
                     transition: "transform 0.2s",
                     "&:hover": { transform: "scale(1.1)" },

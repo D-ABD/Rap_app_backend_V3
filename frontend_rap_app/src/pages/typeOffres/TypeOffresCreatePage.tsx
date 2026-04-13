@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Stack, Button, TextField, MenuItem, Paper } from "@mui/material";
+import { Box, Stack, Button, TextField, MenuItem, Paper, useTheme } from "@mui/material";
+import type { AppTheme } from "../../theme";
 
 import useForm from "../../hooks/useForm";
 import api from "../../api/axios";
@@ -16,8 +17,10 @@ type Choice = {
 
 export default function TypeOffresCreatePage() {
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const neutralFallback = theme.palette.grey[600];
   const [choices, setChoices] = useState<Choice[]>([]);
-  const [previewColor, setPreviewColor] = useState("#6c757d");
+  const [previewColor, setPreviewColor] = useState(neutralFallback);
   const [loading, setLoading] = useState(true);
 
   const { values, errors, handleChange, resetForm, setErrors, setFieldValue } = useForm({
@@ -53,9 +56,9 @@ export default function TypeOffresCreatePage() {
     } else if (selected) {
       setPreviewColor(selected.default_color);
     } else {
-      setPreviewColor("#6c757d");
+      setPreviewColor(neutralFallback);
     }
-  }, [values.nom, values.couleur, choices, setFieldValue]);
+  }, [values.nom, values.couleur, choices, setFieldValue, neutralFallback]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

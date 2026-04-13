@@ -666,7 +666,7 @@ Chaque ligne = fichier traité et validé (`tsc` OK sur le frontend).
 - [x] `src/pages/prospection/prospectioncomments/ProspectionCommentForm.tsx` — idem.
 - [x] `src/pages/commentaires/CommentairesEditPage.tsx` — conteneur Quill : `Box` + `bgcolor: background.paper`.
 - [x] `src/pages/declic/ObjectifDeclicTable.tsx` — ombre conteneur : `theme.shadows[2]` ; colonnes sticky : `background.paper`.
-- [x] `src/pages/typeOffres/TypeOffresPage.tsx` — **relu sans changement** : seul fallback métier `#6c757d` si pas de couleur API (inchangé volontairement).
+- [x] `src/pages/typeOffres/TypeOffresPage.tsx` — fallback liste si pas de couleur API : `theme.palette.grey[600]`.
 - [x] `src/pages/prospection/prospectioncomments/ProspectionCommentTable.tsx` — `useTheme<AppTheme>()` (aucun hex dans le fichier).
 - [x] `src/pages/widgets/overviewDashboard/AteliersTREOverviewWidget.tsx` — `useTheme<AppTheme>()` (déjà branché sur `palette` pour les barres).
 - [x] `src/pages/cerfa/CerfaPage.tsx` — suppression du `useTheme` inutilisé (pas d’hex résiduel).
@@ -694,9 +694,23 @@ Chaque ligne = fichier traité et validé (`tsc` OK sur le frontend).
 - `src/pages/cerfa/CerfaPage.tsx`
 - `src/App.css`
 
+Complément **Statuts / TypeOffres** (même esprit Lot 9, exécuté après clôture Lot 9) :
+
+- `src/pages/typeOffres/TypeOffresCreatePage.tsx`
+- `src/pages/typeOffres/TypeOffresEditPage.tsx`
+- `src/pages/statuts/StatutsCreatePage.tsx`
+- `src/pages/statuts/StatutsEditPage.tsx`
+- (réalignement) `src/pages/typeOffres/TypeOffresPage.tsx`
+
 ### Relu sans changement fonctionnel
 
-- `src/pages/typeOffres/TypeOffresPage.tsx` — périmètre déjà conforme (couleurs = API / fallback métier `#6c757d`).
+- `src/pages/statuts/StatutsPage.tsx` — aucun hex résiduel hors `s.couleur` (déjà `divider` sur le swatch).
+
+### Note d’exécution — Statuts & TypeOffres (12 avril 2026)
+
+- **`TypeOffresPage.tsx`**, **`TypeOffresCreatePage.tsx`**, **`TypeOffresEditPage.tsx`** : fallbacks neutres `#6c757d` → `palette.grey[600]` ; pastilles édition : bordures `black` / `#ccc` → `text.primary` / `divider` ; `useTheme<AppTheme>()` sur create/edit.
+- **`StatutsCreatePage.tsx`**, **`StatutsEditPage.tsx`** : fallbacks `#d3d3d3` / `#cccccc` → `palette.grey[400]` ; bordures de pastilles : `text.primary` / `divider` (comme TypeOffres edit) ; `useTheme<AppTheme>()`.
+- **Couleurs métier conservées** : `type.couleur`, `s.couleur`, `choices[].default_color`, pastille `STATUT_COLORS` (constante métier).
 
 ### Corrections appliquées (résumé)
 
@@ -707,7 +721,7 @@ Chaque ligne = fichier traité et validé (`tsc` OK sur le frontend).
 ### Styles locaux restants (légitimes)
 
 - **`registerQuillFormats.ts`** : hex supplémentaires dans `colorOptions` (exception produit — grille riche pour l’utilisateur).
-- **`TypeOffresPage.tsx`** : `type.couleur` API et fallback `#6c757d`.
+- **`TypeOffresPage.tsx`** : `type.couleur` API ; fallback neutre résolu via `palette.grey[600]` (plus d’hex `#6c757d` en dur).
 - **Contenu HTML** Quill / **Recharts** : comportement inchangé hors libellés corrigés ci-dessus.
 
 ### Risques résiduels

@@ -10,7 +10,9 @@ import {
   Paper,
   Typography,
   CircularProgress,
+  useTheme,
 } from "@mui/material";
+import type { AppTheme } from "../../theme";
 
 import api from "../../api/axios";
 import useForm from "../../hooks/useForm";
@@ -26,10 +28,12 @@ type Choice = {
 export default function StatutsEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme<AppTheme>();
+  const neutralFallback = theme.palette.grey[400];
   const [loading, setLoading] = useState(true);
   const [choices, setChoices] = useState<Choice[]>([]);
   const [libelle, setLibelle] = useState("");
-  const [initialColor, setInitialColor] = useState("#cccccc");
+  const [initialColor, setInitialColor] = useState(neutralFallback);
 
   const { values, handleChange, setValues } = useForm({
     nom: "",
@@ -67,7 +71,7 @@ export default function StatutsEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, setValues]);
+  }, [id, navigate, setValues, neutralFallback]);
 
   useEffect(() => {
     fetchStatut();
@@ -188,7 +192,8 @@ export default function StatutsEditPage() {
                     height: 32,
                     borderRadius: "50%",
                     bgcolor: color,
-                    border: values.couleur === color ? "3px solid black" : "1px solid #ccc",
+                    border: values.couleur === color ? "3px solid" : "1px solid",
+                    borderColor: values.couleur === color ? "text.primary" : "divider",
                     cursor: "pointer",
                     transition: "transform 0.2s",
                     "&:hover": { transform: "scale(1.1)" },
