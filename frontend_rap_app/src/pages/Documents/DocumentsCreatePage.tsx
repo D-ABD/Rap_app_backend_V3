@@ -17,7 +17,6 @@ export default function DocumentsCreatePage() {
       onBack={() => navigate(-1)}
       headerExtra={
         <Typography variant="body2" color="text.secondary">
-          Le formulaire reste identique. Seul le shell de page est harmonise.
         </Typography>
       }
     >

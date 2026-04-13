@@ -158,7 +158,7 @@ export default function ProspectionCreatePage() {
   return (
     <PageTemplate
       title="Créer une prospection"
-      subtitle="Préparez une nouvelle prospection avec un shell de page plus compact."
+      subtitle="Préparez une nouvelle prospection."
       maxWidth="xl"
       backButton
       onBack={() => navigate(-1)}
