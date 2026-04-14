@@ -180,6 +180,17 @@ export default function FormationsDetailPage() {
             </Section>
           </Grid>
 
+          {/* ─────────── Contrôle GESPERS (lecture seule) ─────────── */}
+          <Grid item xs={12}>
+            <Section title="Contrôle GESPERS">
+              <Field label="Inscrits GESPERS CRIF" value={nn(formation.inscrits_crif_gespers)} />
+              <Field label="Inscrits GESPERS MP" value={nn(formation.inscrits_mp_gespers)} />
+              <Field label="Total inscrits GESPERS" value={nn(formation.total_inscrits_gespers)} />
+              <Field label="Écart saisie / GESPERS" value={nn(formation.ecart_inscrits)} />
+              <Field label="Saturation GESPERS" value={nn(formation.taux_saturation_gespers)} />
+            </Section>
+          </Grid>
+
           {/* ─────────── Statistiques & indicateurs ─────────── */}
           <Grid item xs={12}>
             <Section title="Statistiques et indicateurs">

@@ -70,13 +70,14 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
     Reporting agrégé sur les formations visibles par l'utilisateur courant.
 
     Les KPI distinguent explicitement :
-    - les inscrits saisis sur la formation ;
-    - les inscrits GESPERS recalculés depuis les candidats liés ;
+    - les inscrits saisis sur la formation (source de vérité) ;
+    - les inscrits GESPERS recalculés depuis les candidats liés (contrôle) ;
     - l'écart entre ces deux lectures.
 
-    Les deux ratios métier exposés par ce viewset sont :
-    - taux_saturation = inscrits GESPERS / places prévues ;
-    - taux_transformation = inscrits GESPERS / candidats liés à la formation.
+    Après Lot 4 (migration inscrits V3), les ratios métier par défaut sont :
+    - taux_saturation = inscrits saisis / places prévues ;
+    - taux_transformation = inscrits saisis / candidats liés à la formation.
+    Les variantes GESPERS restent disponibles via taux_*_gespers.
 
     Le queryset applique un scoping staff/admin-like, exclut les archives par
     défaut, puis accepte des filtres manuels sur les dates, le centre, le
@@ -350,30 +351,51 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         )
         return {k: int(v or 0) for k, v in cand_agg.items()}
 
-    def _base_metrics(self, qs):
+    def _lot2_additive_inscrits_kpis(self, qs, base: dict) -> dict:
+        """
+        Champs additifs Lot 2 (migration inscrits V3) : ratios *_reference et contrôle GESPERS
+        explicites, sans modifier la sémantique historique de `total_inscrits` (KPI global = GESPERS).
+
+        Les dénominateurs `taux_*_reference` utilisent `Coalesce(Sum("nombre_candidats"), 0)` sur le
+        queryset formation — jamais un Count ORM de candidats pour cette référence.
+        """
+        total_inscrits_saisis = int(base["total_inscrits_saisis"])
+        total_places = int(base["total_places"])
+        nombre_candidats_saisi = int(qs.aggregate(nc=Coalesce(Sum("nombre_candidats"), Value(0)))["nc"] or 0)
+        cand = base["candidats"]
+        nb_gespers = int(cand["nb_inscrits_gespers"])
+        inscrits_gespers_crif = Candidat.objects.filter(
+            formation__in=qs,
+            inscrit_gespers=True,
+            formation__type_offre__nom=TypeOffre.CRIF,
+        ).count()
+        inscrits_gespers_mp = (
+            Candidat.objects.filter(formation__in=qs, inscrit_gespers=True)
+            .exclude(formation__type_offre__nom=TypeOffre.CRIF)
+            .count()
+        )
+        return {
+            "inscrits_source_reference": "saisie",
+            "nombre_candidats_saisi": nombre_candidats_saisi,
+            "inscrits_gespers_crif": inscrits_gespers_crif,
+            "inscrits_gespers_mp": inscrits_gespers_mp,
+            "total_inscrits_gespers": nb_gespers,
+            "ecart_inscrits": total_inscrits_saisis - nb_gespers,
+            "taux_saturation_reference": self._pct(total_inscrits_saisis, total_places),
+            "taux_saturation_gespers": self._pct(nb_gespers, total_places),
+            "taux_transformation_reference": self._pct(total_inscrits_saisis, nombre_candidats_saisi),
+            "taux_transformation_gespers": self._pct(nb_gespers, int(cand["nb_candidats"])),
+        }
+
+    def _base_metrics(self, qs):  # noqa: F811 — redéfini plus bas, conservé pour référence
         """
         Agrège les KPI globaux sur le périmètre formation filtré.
 
-        Le dictionnaire retourné contient à la fois :
-        - les compteurs saisis côté formation (inscrits CRIF / MP, total_inscrits_saisis) ;
-        - les KPI candidats recalculés via `_candidate_metrics` ;
-        - les ratios métier calculés sur la base GESPERS :
-          * taux_saturation = nb_inscrits_gespers / total_places
-          * taux_transformation = nb_inscrits_gespers / nb_candidats
-
-        Point d'attention important :
-        - pendant l'agrégation SQL, `total_inscrits` représente d'abord la
-          somme saisie sur les formations (`inscrits_crif + inscrits_mp`) ;
-        - juste après, cette valeur brute est copiée dans
-          `total_inscrits_saisis` pour être conservée telle quelle ;
-        - enfin, `total_inscrits` est volontairement réaffecté au total
-          recalculé côté candidats (`nb_inscrits_gespers`), car c'est cette
-          base GESPERS qui doit alimenter les KPI métier affichés au front.
-
-        En conséquence :
-        - `total_inscrits_saisis` = ce qui a été saisi sur les fiches formation ;
-        - `total_inscrits` = le total GESPERS exposé à l'API ;
-        - `ecart_inscrits_vs_gespers` = `saisie formation - recalcul GESPERS`.
+        Après Lot 4 (migration inscrits V3) :
+        - `total_inscrits` = saisie (inscrits_crif + inscrits_mp) ;
+        - `total_inscrits_gespers` = recalcul GESPERS (contrôle) ;
+        - `taux_saturation` et `taux_transformation` : basés sur saisie ;
+        - `ecart_inscrits_vs_gespers` = saisie − GESPERS.
         """
         today = timezone.now().date()
         agg = qs.aggregate(
@@ -392,18 +414,17 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         )
         agg["total_disponibles"] = int(agg["total_dispo_crif"]) + int(agg["total_dispo_mp"])
         cand = self._candidate_metrics(qs)
-        agg["taux_saturation"] = self._pct(cand["nb_inscrits_gespers"], agg["total_places"])
-        agg["taux_transformation"] = self._pct(cand["nb_inscrits_gespers"], cand["nb_candidats"])
+        agg["total_inscrits_saisis"] = int(agg["total_inscrits"])
+        agg["total_inscrits"] = int(agg["total_inscrits"])
+        agg["total_inscrits_gespers"] = int(cand["nb_inscrits_gespers"])
+        agg["taux_saturation"] = self._pct(agg["total_inscrits"], agg["total_places"])
+        agg["taux_transformation"] = self._pct(agg["total_inscrits"], cand["nb_candidats"])
         agg["repartition_financeur"] = {
             "crif": int(agg["total_inscrits_crif"]),
             "mp": int(agg["total_inscrits_mp"]),
             "crif_pct": self._pct(agg["total_inscrits_crif"], agg["total_inscrits"]),
             "mp_pct": self._pct(agg["total_inscrits_mp"], agg["total_inscrits"]),
         }
-        # On fige d'abord la saisie brute formation avant de réutiliser
-        # `total_inscrits` comme alias exposé du total GESPERS.
-        agg["total_inscrits_saisis"] = int(agg["total_inscrits"])
-        agg["total_inscrits"] = int(cand["nb_inscrits_gespers"])
         agg["candidats"] = cand
         agg["ecart_inscrits_vs_gespers"] = int(agg["total_inscrits_saisis"]) - int(cand["nb_inscrits_gespers"])
         return agg
@@ -469,6 +490,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         """
         qs = self._apply_common_filters(self.get_queryset())
         base = self._base_metrics(qs)
+        lot2_kpis = self._lot2_additive_inscrits_kpis(qs, base)
 
         # Entrées formation (champ Formation)
         entree_total = qs.aggregate(x=Coalesce(Sum("entree_formation"), Value(0)))["x"]
@@ -521,6 +543,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                     for k, v in base.items()
                     if k not in {"repartition_financeur", "taux_saturation"}
                 },
+                **lot2_kpis,
                 "taux_saturation": base["taux_saturation"],
                 "repartition_financeur": base["repartition_financeur"],
                 "entrees_formation": int(entree_total or 0),
@@ -599,11 +622,22 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 total_dispo_crif=Coalesce(Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)),
                 total_dispo_mp=Coalesce(Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)),
                 entrees_formation=Coalesce(Sum("entree_formation"), Value(0)),
+                nombre_candidats_saisi=Coalesce(Sum("nombre_candidats"), Value(0)),
                 # ----- Candidats
                 nb_candidats=Count("candidats", distinct=True),
                 nb_entretien_ok=Count("candidats", filter=Q(candidats__entretien_done=True), distinct=True),
                 nb_test_ok=Count("candidats", filter=Q(candidats__test_is_ok=True), distinct=True),
                 nb_inscrits_gespers=Count("candidats", filter=Q(candidats__inscrit_gespers=True), distinct=True),
+                inscrits_gespers_crif=Count(
+                    "candidats",
+                    filter=Q(candidats__inscrit_gespers=True, type_offre__nom=TypeOffre.CRIF),
+                    distinct=True,
+                ),
+                inscrits_gespers_mp=Count(
+                    "candidats",
+                    filter=Q(candidats__inscrit_gespers=True) & ~Q(type_offre__nom=TypeOffre.CRIF),
+                    distinct=True,
+                ),
                 nb_candidats_non_admissibles=Count(
                     "candidats",
                     filter=_candidate_statut_metier_q(Candidat.StatutMetier.NON_ADMISSIBLE, "candidats__"),
@@ -704,8 +738,8 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
 
         for r in rows:
             r["total_disponibles"] = int(r["total_dispo_crif"]) + int(r["total_dispo_mp"])
-            r["taux_saturation"] = self._pct(r.get("nb_inscrits_gespers") or 0, r["total_places"])
-            r["taux_transformation"] = self._pct(r.get("nb_inscrits_gespers") or 0, r.get("nb_candidats") or 0)
+            r["taux_saturation"] = self._pct(r["total_inscrits"], r["total_places"])
+            r["taux_transformation"] = self._pct(r["total_inscrits"], r.get("nb_candidats") or 0)
             # Même convention que pour les KPI globaux :
             # - `total_inscrits` issu de l'annotate = saisie brute formation
             # - `total_inscrits_saisis` la conserve explicitement
@@ -718,6 +752,17 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 "crif_pct": self._pct(r["total_inscrits_crif"], r["total_inscrits"]),
                 "mp_pct": self._pct(r["total_inscrits_mp"], r["total_inscrits"]),
             }
+            tis = int(r["total_inscrits_saisis"])
+            tp = int(r["total_places"])
+            nc = int(r.get("nombre_candidats_saisi") or 0)
+            nb_g = int(r.get("nb_inscrits_gespers") or 0)
+            r["inscrits_source_reference"] = "saisie"
+            r["total_inscrits_gespers"] = nb_g
+            r["ecart_inscrits"] = tis - nb_g
+            r["taux_saturation_reference"] = self._pct(tis, tp)
+            r["taux_saturation_gespers"] = self._pct(nb_g, tp)
+            r["taux_transformation_reference"] = self._pct(tis, nc)
+            r["taux_transformation_gespers"] = self._pct(nb_g, int(r.get("nb_candidats") or 0))
 
         # Ajout du group_key/group_label selon le groupement utilisé
         if by == "formation":
@@ -830,20 +875,13 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         """
         Version interne utilisée par le viewset pour les KPI globaux.
 
-        Elle conserve les compteurs saisis sur les formations, puis les complète
-        avec les métriques candidats recalculées afin d'exposer :
-        - `total_inscrits_saisis` : somme des inscrits CRIF / MP stockés ;
-        - `total_inscrits` : total recalculé des inscrits GESPERS ;
-        - `ecart_inscrits_vs_gespers` : différence entre saisie et recalcul ;
-        - `taux_saturation` : inscrits GESPERS / places prévues ;
-        - `taux_transformation` : inscrits GESPERS / candidats liés.
-
-        Convention de lecture du code :
-        - le champ intermédiaire `total_inscrits` issu de `aggregate(...)`
-          contient d'abord la somme saisie sur les formations ;
-        - cette valeur est recopiée dans `total_inscrits_saisis` ;
-        - puis `total_inscrits` est réaffecté au total GESPERS pour coller au
-          contrat API historique consommé par le front.
+        Après Lot 4 (migration inscrits V3), les indicateurs principaux
+        reflètent la **saisie** :
+        - `total_inscrits` = `total_inscrits_saisis` = inscrits_crif + inscrits_mp ;
+        - `total_inscrits_gespers` = recalcul GESPERS (contrôle) ;
+        - `taux_saturation` = total_inscrits (saisie) / total_places ;
+        - `taux_transformation` = total_inscrits (saisie) / nb_candidats ;
+        - `ecart_inscrits_vs_gespers` = saisie − GESPERS.
         """
         today = timezone.now().date()
         agg = qs.aggregate(
@@ -868,18 +906,17 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         # --- Post-traitements ---
         agg["total_disponibles"] = int(agg["total_dispo_crif"]) + int(agg["total_dispo_mp"])
         cand = self._candidate_metrics(qs)
-        agg["taux_saturation"] = self._pct(cand["nb_inscrits_gespers"], agg["total_places"])
-        agg["taux_transformation"] = self._pct(cand["nb_inscrits_gespers"], cand["nb_candidats"])
+        agg["total_inscrits_saisis"] = int(agg["total_inscrits"])
+        agg["total_inscrits"] = int(agg["total_inscrits"])
+        agg["total_inscrits_gespers"] = int(cand["nb_inscrits_gespers"])
+        agg["taux_saturation"] = self._pct(agg["total_inscrits"], agg["total_places"])
+        agg["taux_transformation"] = self._pct(agg["total_inscrits"], cand["nb_candidats"])
         agg["repartition_financeur"] = {
             "crif": int(agg["total_inscrits_crif"]),
             "mp": int(agg["total_inscrits_mp"]),
             "crif_pct": self._pct(agg["total_inscrits_crif"], agg["total_inscrits"]),
             "mp_pct": self._pct(agg["total_inscrits_mp"], agg["total_inscrits"]),
         }
-        # `total_inscrits_saisis` garde la saisie brute, puis `total_inscrits`
-        # devient volontairement le total GESPERS exposé à l'API.
-        agg["total_inscrits_saisis"] = int(agg["total_inscrits"])
-        agg["total_inscrits"] = int(cand["nb_inscrits_gespers"])
         agg["candidats"] = cand
         agg["ecart_inscrits_vs_gespers"] = int(agg["total_inscrits_saisis"]) - int(cand["nb_inscrits_gespers"])
         return agg

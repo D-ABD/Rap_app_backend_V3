@@ -66,12 +66,27 @@ export type OverviewKpis = {
   total_inscrits_mp: number;
   total_inscrits_saisis: number;
   total_places: number;
+  /** Lot 4 — total_inscrits = saisie (inscrits_crif + inscrits_mp). */
   total_inscrits: number;
   total_dispo_crif: number;
   total_dispo_mp: number;
   total_disponibles: number;
+  /** Lot 4 — basé sur saisie (= taux_saturation_reference). */
   taux_saturation: number;
+  /** Lot 4 — basé sur saisie. */
   taux_transformation: number;
+  /** Lot 2 — migration inscrits V3 (additif) */
+  inscrits_source_reference?: "saisie";
+  nombre_candidats_saisi?: number;
+  inscrits_gespers_crif?: number;
+  inscrits_gespers_mp?: number;
+  /** Lot 4 — contrôle GESPERS (toujours présent). */
+  total_inscrits_gespers: number;
+  ecart_inscrits?: number;
+  taux_saturation_reference?: number;
+  taux_saturation_gespers?: number;
+  taux_transformation_reference?: number;
+  taux_transformation_gespers?: number;
   nb_evenements: number;
   nb_prospections: number;
   repartition_financeur: {
@@ -126,6 +141,7 @@ export type GroupRow = {
   total_places: number;
   total_places_crif: number;
   total_places_mp: number;
+  /** Lot 4 — total_inscrits = saisie. */
   total_inscrits: number;
   total_inscrits_saisis: number;
   total_inscrits_crif: number;
@@ -136,8 +152,22 @@ export type GroupRow = {
   entrees_formation: number;
   nb_evenements: number;
   nb_prospections: number;
+  /** Lot 4 — basé sur saisie (= taux_saturation_reference). */
   taux_saturation: number;
+  /** Lot 4 — basé sur saisie. */
   taux_transformation?: number;
+  /** Lot 2 — migration inscrits V3 (additif) */
+  nombre_candidats_saisi?: number;
+  inscrits_gespers_crif?: number;
+  inscrits_gespers_mp?: number;
+  inscrits_source_reference?: "saisie";
+  /** Lot 4 — contrôle GESPERS (toujours présent). */
+  total_inscrits_gespers: number;
+  ecart_inscrits?: number;
+  taux_saturation_reference?: number;
+  taux_saturation_gespers?: number;
+  taux_transformation_reference?: number;
+  taux_transformation_gespers?: number;
   repartition_financeur: {
     crif: number;
     mp: number;

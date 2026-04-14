@@ -125,10 +125,10 @@ export default function FormationsCommentairesPage() {
                   ` — 🧪 Sat. commentaire ${commentaire.saturation_formation}%`}
                 {commentaire.taux_saturation !== undefined &&
                   commentaire.taux_saturation !== null &&
-                  ` — 📈 Sat. actuelle (GESPERS) ${commentaire.taux_saturation}%`}
+                  ` — 📈 Sat. actuelle ${commentaire.taux_saturation}%`}
                 {commentaire.taux_transformation !== undefined &&
                   commentaire.taux_transformation !== null &&
-                  ` — 🔁 Transfo actuelle (GESPERS) ${commentaire.taux_transformation}%`}
+                  ` — 🔁 Transfo actuelle ${commentaire.taux_transformation}%`}
                 {commentaire.is_edited && " — ✏️ modifié"}
               </Typography>
 

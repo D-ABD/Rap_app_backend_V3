@@ -25,24 +25,21 @@ def _commentaire_candidate_counts(formation):
 
 
 def _commentaire_current_taux_saturation(formation):
-    """Calcule le taux de saturation courant à afficher avec le commentaire."""
+    """Taux de saturation courant basé sur la saisie (inscrits_crif + inscrits_mp) / places."""
     if not formation:
         return None
-    total_places = getattr(formation, "total_places", 0) or 0
-    if total_places <= 0:
-        return 0.0
-    _, nb_inscrits_gespers = _commentaire_candidate_counts(formation)
-    return round((nb_inscrits_gespers / total_places) * 100, 2)
+    return getattr(formation, "taux_saturation", 0.0) or 0.0
 
 
 def _commentaire_current_taux_transformation(formation):
-    """Calcule le taux de transformation courant à afficher avec le commentaire."""
+    """Taux de transformation courant basé sur la saisie / candidats liés."""
     if not formation:
         return None
-    nb_candidats, nb_inscrits_gespers = _commentaire_candidate_counts(formation)
+    total_inscrits = getattr(formation, "total_inscrits", 0) or 0
+    nb_candidats = formation.candidats.count() if formation else 0
     if nb_candidats <= 0:
         return 0.0
-    return round((nb_inscrits_gespers / nb_candidats) * 100, 2)
+    return round((total_inscrits / nb_candidats) * 100, 2)
 
 ALLOWED_TAGS = ["b", "i", "strike", "span", "p", "br"]
 ALLOWED_ATTRIBUTES = {"span": ["style"]}

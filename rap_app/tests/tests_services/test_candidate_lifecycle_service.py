@@ -204,7 +204,9 @@ class CandidateLifecycleServiceTests(TestCase):
         self.assertTrue(candidate.en_accompagnement_tre)
         self.assertEqual(candidate.statut, Candidat.StatutCandidat.EN_ACCOMPAGNEMENT)
 
-    def test_mark_gespers_increments_formation_inscrits_for_crif(self):
+    def test_mark_gespers_does_not_increment_counter_for_postulant(self):
+        """Lot 8 — Un candidat POSTULANT marqué GESPERS ne doit PAS
+        incrémenter inscrits_crif (GESPERS découplé des compteurs saisie)."""
         candidate = Candidat.objects.create(
             nom="Gespers",
             prenom="Crif",
@@ -219,15 +221,12 @@ class CandidateLifecycleServiceTests(TestCase):
         candidate.refresh_from_db()
         self.formation.refresh_from_db()
         self.assertTrue(candidate.inscrit_gespers)
-        self.assertEqual(self.formation.inscrits_crif, 1)
+        self.assertEqual(self.formation.inscrits_crif, 0)
         self.assertEqual(self.formation.inscrits_mp, 0)
 
-        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
-
-        self.formation.refresh_from_db()
-        self.assertEqual(self.formation.inscrits_crif, 1)
-
-    def test_clear_gespers_decrements_formation_inscrits_without_going_negative(self):
+    def test_clear_gespers_does_not_decrement_counter_for_postulant(self):
+        """Lot 8 — Un candidat POSTULANT avec clear-gespers ne doit PAS
+        décrémenter le compteur (GESPERS découplé)."""
         candidate = Candidat.objects.create(
             nom="Gespers",
             prenom="Reset",
@@ -245,14 +244,10 @@ class CandidateLifecycleServiceTests(TestCase):
         candidate.refresh_from_db()
         self.formation.refresh_from_db()
         self.assertFalse(candidate.inscrit_gespers)
-        self.assertEqual(self.formation.inscrits_crif, 0)
+        self.assertEqual(self.formation.inscrits_crif, 1)
 
-        CandidateLifecycleService.clear_gespers(candidate, actor=self.actor)
-
-        self.formation.refresh_from_db()
-        self.assertEqual(self.formation.inscrits_crif, 0)
-
-    def test_mark_gespers_increments_mp_for_non_crif_formations(self):
+    def test_mark_gespers_does_not_increment_mp_for_postulant_non_crif(self):
+        """Lot 8 — Idem pour formation MP : GESPERS seul ne compte pas."""
         type_offre_mp = TypeOffre.objects.create(nom=TypeOffre.POEI)
         formation_mp = Formation.objects.create(
             nom="Formation MP Lifecycle",
@@ -275,7 +270,7 @@ class CandidateLifecycleServiceTests(TestCase):
 
         formation_mp.refresh_from_db()
         self.assertEqual(formation_mp.inscrits_crif, 0)
-        self.assertEqual(formation_mp.inscrits_mp, 1)
+        self.assertEqual(formation_mp.inscrits_mp, 0)
 
     def test_mark_gespers_does_not_double_count_already_validated_candidate(self):
         candidate = Candidat.objects.create(
@@ -315,3 +310,161 @@ class CandidateLifecycleServiceTests(TestCase):
 
         self.formation.refresh_from_db()
         self.assertEqual(self.formation.inscrits_crif, 1)
+
+    # ================================================================
+    # Lot 8 — Tests de découplage GESPERS / compteurs saisie
+    # ================================================================
+
+    def test_lot8_gespers_only_postulant_not_counted(self):
+        """Un candidat POSTULANT avec uniquement inscrit_gespers=True
+        ne doit PAS être compté dans inscrits_crif."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="GespersOnly",
+            email="lot8.gespers.only@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertFalse(counted)
+
+    def test_lot8_validated_without_gespers_still_counted(self):
+        """Un candidat avec date_validation_inscription est compté
+        même sans inscrit_gespers."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="ValidatedNoGespers",
+            email="lot8.validated.nogespers@example.com",
+            formation=self.formation,
+            date_validation_inscription=timezone.now(),
+            parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertTrue(counted)
+
+    def test_lot8_stagiaire_with_gespers_still_counted(self):
+        """Un stagiaire en formation reste compté (via phase),
+        indépendamment de inscrit_gespers."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="StagiaireGespers",
+            email="lot8.stagiaire.gespers@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            parcours_phase=Candidat.ParcoursPhase.STAGIAIRE_EN_FORMATION,
+            date_validation_inscription=timezone.now(),
+            date_entree_formation_effective=timezone.now(),
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertTrue(counted)
+
+    def test_lot8_sorti_without_gespers_counted(self):
+        """Un candidat SORTI reste compté même sans GESPERS."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="SortiNoGespers",
+            email="lot8.sorti.nogespers@example.com",
+            formation=self.formation,
+            parcours_phase=Candidat.ParcoursPhase.SORTI,
+            date_validation_inscription=timezone.now(),
+            date_sortie_formation=timezone.now(),
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertTrue(counted)
+
+    def test_lot8_mark_gespers_on_validated_does_not_double_count(self):
+        """mark_gespers sur un candidat déjà INSCRIT_VALIDE ne doit
+        pas incrémenter le compteur (déjà compté par phase)."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="MarkOnValidated",
+            email="lot8.mark.validated@example.com",
+            formation=self.formation,
+            date_validation_inscription=timezone.now(),
+            parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        self.formation.inscrits_crif = 1
+        self.formation.save(user=self.actor, update_fields=["inscrits_crif"])
+
+        CandidateLifecycleService.mark_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)
+
+    def test_lot8_clear_gespers_on_validated_keeps_count(self):
+        """clear_gespers sur un candidat INSCRIT_VALIDE avec
+        date_validation_inscription ne doit PAS décrémenter."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="ClearOnValidated",
+            email="lot8.clear.validated@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            date_validation_inscription=timezone.now(),
+            parcours_phase=Candidat.ParcoursPhase.INSCRIT_VALIDE,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        self.formation.inscrits_crif = 1
+        self.formation.save(user=self.actor, update_fields=["inscrits_crif"])
+
+        CandidateLifecycleService.clear_gespers(candidate, actor=self.actor)
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.inscrits_crif, 1)
+
+    def test_lot8_no_formation_never_counted(self):
+        """Un candidat sans formation n'est jamais compté,
+        quels que soient ses flags."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="NoFormation",
+            email="lot8.no.formation@example.com",
+            inscrit_gespers=True,
+            date_validation_inscription=timezone.now(),
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertFalse(counted)
+
+    def test_lot8_date_entree_effective_alone_is_counted(self):
+        """date_entree_formation_effective seule suffit pour être compté."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="EntreeEffective",
+            email="lot8.entree.effective@example.com",
+            formation=self.formation,
+            date_entree_formation_effective=timezone.now(),
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertTrue(counted)
+
+    def test_lot8_abandon_with_gespers_only_not_counted(self):
+        """Un candidat en phase ABANDON avec uniquement inscrit_gespers
+        n'est PAS compté (ABANDON n'est pas dans les phases comptées,
+        et GESPERS seul ne suffit plus)."""
+        candidate = Candidat.objects.create(
+            nom="L8",
+            prenom="AbandonGespers",
+            email="lot8.abandon.gespers@example.com",
+            formation=self.formation,
+            inscrit_gespers=True,
+            parcours_phase=Candidat.ParcoursPhase.ABANDON,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        counted = CandidateLifecycleService._counts_in_formation_inscrits(candidate)
+        self.assertFalse(counted)

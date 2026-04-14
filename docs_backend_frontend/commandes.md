@@ -131,7 +131,7 @@ Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourr
 # Configuration initiale 
 git init
 git add .
-git commit -m "Lock partner write access and fix inactive user reactivation"
+git commit -m "add rapapp setup script"
 git push -u origin main
 
 
@@ -242,25 +242,30 @@ chmod +x .git/hooks/pre-commit
 ➡️ Chaque git commit exécutera automatiquement les vérifications avant validation.
 
 🚀 1️⃣3️⃣ AUTOMATISATION DU DÉPLOIEMENT
+🔹 Fichier scripts/deploy_front.sh
+#!/bin/bash
+set -e
+echo "🚀 Build & déploiement du frontend vers production..."
 
-Ancienne procedure frontend separee supprimee.
+npm run lint && npm run type-check
+npm run build
 
-Le deploiement production actuel est celui du monorepo front + back :
+ssh root@147.93.126.119 "rm -rf /srv/rap_app_front/*"
+scp -r dist/* root@147.93.126.119:/srv/rap_app_front/
+ssh root@147.93.126.119 "sudo systemctl reload nginx"
 
-- guide complet : `deploy/DEPLOY.md`
-- commandes pas a pas : `deploy/commandes_deploy.md`
-- script backend : `deploy/deploy_backend.sh`
-- script frontend : `deploy/deploy_frontend.sh`
-- racine VPS : `/srv/apps/rap_app/app`
-- build frontend : `/var/www/rap_app_front`
+echo "✅ Déploiement terminé avec succès !"
+
+🔹 Rendre exécutable
+chmod +x scripts/deploy_front.sh
 
 🧠 1️⃣4️⃣ BONNES PRATIQUES DE MAINTENANCE
 
 Toujours lancer npm run precommit avant tout commit important.
 
-Toujours exécuter la procédure `deploy/DEPLOY.md` / `deploy/commandes_deploy.md` pour publier en prod.
+Toujours exécuter npm run build && npm run deploy pour publier en prod.
 
-Ne jamais modifier manuellement le dossier `/var/www/rap_app_front` côté serveur.
+Ne jamais modifier manuellement le dossier /srv/rap_app_front côté serveur.
 
 Si un build échoue : vérifier le log de build local (vite build) avant de retenter le déploiement.
 
@@ -270,3 +275,135 @@ npm run preview
 
 
 → Cela simule exactement ce que Nginx servira en production.
+
+
+# --------------------------
+# VPS
+# --------------------------
+🔎 1. Vue globale rapide (le minimum vital)
+uname -a
+lsb_release -a
+uptime
+whoami
+
+👉 Donne :
+
+OS + kernel
+version Ubuntu
+uptime serveur
+utilisateur courant
+💻 2. CPU / RAM / performances
+htop
+
+(si pas installé 👇)
+
+sudo apt install htop
+
+Alternative rapide :
+
+top
+🧠 3. RAM + SWAP
+free -h
+
+👉 Tu l’as déjà utilisé 👍
+
+💾 4. Disques
+df -h
+lsblk
+
+👉 Donne :
+
+espace disque utilisé
+partitions
+montage
+🌐 5. Réseau
+ip a
+
+ou
+
+hostname -I
+🔥 6. Ports ouverts (TRÈS important)
+sudo ss -tulnp
+
+👉 Tu vois :
+
+ports ouverts
+services derrière (nginx, postgres, etc.)
+⚙️ 7. Services actifs (très utile pour debug)
+systemctl list-units --type=service --state=running
+📦 8. Packages installés
+dpkg -l
+🧱 9. Firewall (UFW)
+sudo ufw status verbose
+🧾 10. Logs système (debug prod)
+journalctl -xe
+🧠 11. Version Python + pip (important pour ton projet)
+python3 --version
+pip3 list
+🚀 BONUS — 1 seule commande pour résumé global
+
+Si tu veux un truc propre en 1 commande :
+
+sudo apt install neofetch
+neofetch
+
+👉 ça te donne :
+
+OS
+CPU
+RAM
+uptime
+disque
+IP
+etc.
+🧠 Niveau CTO (ce que tu devrais faire)
+
+Vu ton objectif (prod sérieuse RAP_APP), je te conseille :
+
+👉 créer un script d’audit :
+
+nano audit.sh
+
+Puis :
+
+#!/bin/bash
+
+echo "===== SYSTEM ====="
+uname -a
+lsb_release -a
+
+echo "===== CPU/RAM ====="
+free -h
+
+echo "===== DISK ====="
+df -h
+
+echo "===== PORTS ====="
+ss -tulnp
+
+echo "===== SERVICES ====="
+systemctl list-units --type=service --state=running
+
+Puis :
+
+chmod +x audit.sh
+./audit.sh
+⚠️ Important (prod)
+
+Quand ton app sera en prod, tu dois surveiller :
+
+CPU (htop)
+RAM (free -h)
+disque (df -h)
+services (systemctl)
+logs (journalctl)
+ports (ss)
+
+
+
+
+
+
+
+
+pytest rap_app/tests/ -v

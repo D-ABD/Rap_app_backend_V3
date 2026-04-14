@@ -112,13 +112,13 @@ export default function FormationStatsSummary({
       label: "Taux transformation",
       value: formatPercent(k.taux_transformation),
       color: theme.palette.info.main,
-      helper: "Inscrits GESPERS / candidats lies",
+      helper: "Inscrits saisis / candidats lies",
     },
     {
       label: "Taux saturation",
       value: formatPercent(k.taux_saturation),
       color: theme.palette.primary.dark,
-      helper: "Inscrits GESPERS / places prevues",
+      helper: "Inscrits saisis / places prevues",
     },
     {
       label: "Inscrits saisis",

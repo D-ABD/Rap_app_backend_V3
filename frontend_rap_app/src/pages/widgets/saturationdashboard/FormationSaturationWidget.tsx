@@ -213,7 +213,7 @@ export default function FormationSaturationWidget({
             </Typography>
             <ColoredProgressBar value={k.taux_saturation} />
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
-              Base de calcul : inscrits GESPERS / places prevues
+              Base de calcul : inscrits saisis / places prevues
             </Typography>
           </Box>
         </Box>

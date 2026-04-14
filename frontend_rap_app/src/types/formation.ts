@@ -97,6 +97,14 @@ export interface Formation {
   prevus_total?: number;
   places_restantes?: number | null;
 
+  // Lot 3 — contrôle GESPERS (lecture seule, additif)
+  inscrits_crif_gespers?: number;
+  inscrits_mp_gespers?: number;
+  total_inscrits_gespers?: number;
+  nombre_candidats_calc?: number;
+  taux_saturation_gespers?: number;
+  ecart_inscrits?: number;
+
   // badges/labels
   saturation_badge?: string | null;
   transformation_badge?: string | null;

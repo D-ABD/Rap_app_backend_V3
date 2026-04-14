@@ -56,8 +56,7 @@ class CandidateLifecycleService:
         return bool(
             candidate.formation_id
             and (
-                candidate.inscrit_gespers
-                or candidate.date_validation_inscription
+                candidate.date_validation_inscription
                 or candidate.date_entree_formation_effective
                 or candidate.parcours_phase
                 in {

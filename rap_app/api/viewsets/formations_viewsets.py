@@ -308,18 +308,18 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         return (
             self._build_base_queryset()
             .annotate(
-                counted_candidates=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
+                counted_candidates_gespers=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
                 nombre_candidats_calc=Count("candidats", distinct=True),
             )
             .annotate(
-                inscrits_crif_calc=Case(
-                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates")),
+                inscrits_crif_gespers=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates_gespers")),
                     default=Value(0),
                     output_field=IntegerField(),
                 ),
-                inscrits_mp_calc=Case(
+                inscrits_mp_gespers=Case(
                     When(type_offre__nom=TypeOffre.CRIF, then=Value(0)),
-                    default=F("counted_candidates"),
+                    default=F("counted_candidates_gespers"),
                     output_field=IntegerField(),
                 ),
             )
@@ -328,7 +328,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 places_disponibles_calc=ExpressionWrapper(
                     Greatest(
                         Value(0),
-                        F("total_places_calc") - (F("inscrits_crif_calc") + F("inscrits_mp_calc")),
+                        F("total_places_calc") - (F("inscrits_crif") + F("inscrits_mp")),
                     ),
                     output_field=IntegerField(),
                 ),
@@ -336,7 +336,18 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                     When(
                         total_places_calc__gt=0,
                         then=ExpressionWrapper(
-                            100.0 * (F("inscrits_crif_calc") + F("inscrits_mp_calc")) / F("total_places_calc"),
+                            100.0 * (F("inscrits_crif") + F("inscrits_mp")) / F("total_places_calc"),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(0.0),
+                    output_field=FloatField(),
+                ),
+                taux_saturation_gespers=Case(
+                    When(
+                        total_places_calc__gt=0,
+                        then=ExpressionWrapper(
+                            100.0 * (F("inscrits_crif_gespers") + F("inscrits_mp_gespers")) / F("total_places_calc"),
                             output_field=FloatField(),
                         ),
                     ),
@@ -359,18 +370,18 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         qs = (
             Formation.objects.all_including_archived()
             .annotate(
-                counted_candidates=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
+                counted_candidates_gespers=Count("candidats", filter=FORMATION_GESPERS_CANDIDATE_Q, distinct=True),
                 nombre_candidats_calc=Count("candidats", distinct=True),
             )
             .annotate(
-                inscrits_crif_calc=Case(
-                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates")),
+                inscrits_crif_gespers=Case(
+                    When(type_offre__nom=TypeOffre.CRIF, then=F("counted_candidates_gespers")),
                     default=Value(0),
                     output_field=IntegerField(),
                 ),
-                inscrits_mp_calc=Case(
+                inscrits_mp_gespers=Case(
                     When(type_offre__nom=TypeOffre.CRIF, then=Value(0)),
-                    default=F("counted_candidates"),
+                    default=F("counted_candidates_gespers"),
                     output_field=IntegerField(),
                 ),
             )
@@ -380,7 +391,18 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                     When(
                         total_places_calc__gt=0,
                         then=ExpressionWrapper(
-                            100.0 * (F("inscrits_crif_calc") + F("inscrits_mp_calc")) / F("total_places_calc"),
+                            100.0 * (F("inscrits_crif") + F("inscrits_mp")) / F("total_places_calc"),
+                            output_field=FloatField(),
+                        ),
+                    ),
+                    default=Value(0.0),
+                    output_field=FloatField(),
+                ),
+                taux_saturation_gespers=Case(
+                    When(
+                        total_places_calc__gt=0,
+                        then=ExpressionWrapper(
+                            100.0 * (F("inscrits_crif_gespers") + F("inscrits_mp_gespers")) / F("total_places_calc"),
                             output_field=FloatField(),
                         ),
                     ),
@@ -391,7 +413,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 places_disponibles_calc=ExpressionWrapper(
                     Greatest(
                         Value(0),
-                        F("total_places_calc") - (F("inscrits_crif_calc") + F("inscrits_mp_calc")),
+                        F("total_places_calc") - (F("inscrits_crif") + F("inscrits_mp")),
                     ),
                     output_field=IntegerField(),
                 ),
@@ -895,14 +917,19 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             "Places MP",
             "Places prévues (total)",
             "Capacité max",
-            "Inscrits CRIF",
-            "Inscrits MP",
-            "Inscrits (total)",
+            "Inscrits CRIF (saisie)",
+            "Inscrits MP (saisie)",
+            "Inscrits total (saisie)",
+            "Inscrits GESPERS CRIF",
+            "Inscrits GESPERS MP",
+            "Total inscrits GESPERS",
+            "Écart saisie / GESPERS",
             "Places dispo",
             "Places restantes CRIF",
             "Places restantes MP",
-            "Taux saturation (%)",
-            "Taux transformation (%)",
+            "Taux saturation saisie (%)",
+            "Taux saturation GESPERS (%)",
+            "Taux transformation saisie (%)",
             "Nombre de candidats",
             "Nombre d’entretiens",
             "Entrées en formation",
@@ -995,10 +1022,15 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 f.inscrits_crif or 0,
                 f.inscrits_mp or 0,
                 (f.inscrits_crif or 0) + (f.inscrits_mp or 0),
+                getattr(f, "inscrits_crif_gespers", 0) or 0,
+                getattr(f, "inscrits_mp_gespers", 0) or 0,
+                (getattr(f, "inscrits_crif_gespers", 0) or 0) + (getattr(f, "inscrits_mp_gespers", 0) or 0),
+                (f.inscrits_crif or 0) + (f.inscrits_mp or 0) - ((getattr(f, "inscrits_crif_gespers", 0) or 0) + (getattr(f, "inscrits_mp_gespers", 0) or 0)),
                 getattr(f, "places_disponibles", 0) or 0,
                 getattr(f, "places_restantes_crif", 0) or 0,
                 getattr(f, "places_restantes_mp", 0) or 0,
                 taux_pct,
+                getattr(f, "taux_saturation_gespers", 0) or 0,
                 taux_transfo,
                 f.nombre_candidats or 0,
                 f.nombre_entretiens or 0,

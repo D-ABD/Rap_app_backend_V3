@@ -30,13 +30,13 @@ logger = logging.getLogger("application.api.formation")
 
 
 def _resolved_inscrits_crif(obj) -> int:
-    """Retourne `inscrits_crif`, avec priorité à la valeur annotée si présente."""
-    return int(getattr(obj, "inscrits_crif_calc", getattr(obj, "inscrits_crif", 0)) or 0)
+    """Retourne `inscrits_crif` depuis la saisie DB (champ stocké)."""
+    return int(getattr(obj, "inscrits_crif", 0) or 0)
 
 
 def _resolved_inscrits_mp(obj) -> int:
-    """Retourne `inscrits_mp`, avec priorité à la valeur annotée si présente."""
-    return int(getattr(obj, "inscrits_mp_calc", getattr(obj, "inscrits_mp", 0)) or 0)
+    """Retourne `inscrits_mp` depuis la saisie DB (champ stocké)."""
+    return int(getattr(obj, "inscrits_mp", 0) or 0)
 
 
 def _resolved_total_inscrits(obj) -> int:
@@ -45,10 +45,7 @@ def _resolved_total_inscrits(obj) -> int:
 
 
 def _resolved_nombre_candidats(obj) -> int:
-    """Retourne le nombre de candidats avec fallback sur valeur annotée."""
-    annotated = getattr(obj, "nombre_candidats_calc", None)
-    if annotated is not None:
-        return int(annotated or 0)
+    """Retourne le nombre de candidats depuis le champ stocké Formation.nombre_candidats."""
     return int(getattr(obj, "nombre_candidats", 0) or 0)
 
 
@@ -76,10 +73,7 @@ def _resolved_places_disponibles(obj) -> int:
 
 
 def _resolved_taux_saturation(obj) -> float:
-    """Calcule le taux de saturation courant à partir des inscrits saisis."""
-    annotated = getattr(obj, "taux_saturation_calc", None)
-    if annotated is not None:
-        return round(float(annotated or 0.0), 2)
+    """Calcule le taux de saturation sur les inscrits saisis / total places."""
     total_places = _resolved_total_places(obj)
     if total_places <= 0:
         return 0.0
@@ -87,11 +81,26 @@ def _resolved_taux_saturation(obj) -> float:
 
 
 def _resolved_saturation(obj) -> float:
-    """Alias historique du taux de saturation courant."""
+    """Alias historique du taux de saturation (basé saisie)."""
     annotated = getattr(obj, "saturation_calc", None)
     if annotated is not None:
         return round(float(annotated or 0.0), 2)
     return _resolved_taux_saturation(obj)
+
+
+def _gespers_inscrits_crif(obj) -> int:
+    """Contrôle GESPERS : inscrits GESPERS côté CRIF (annotation viewset)."""
+    return int(getattr(obj, "inscrits_crif_gespers", 0) or 0)
+
+
+def _gespers_inscrits_mp(obj) -> int:
+    """Contrôle GESPERS : inscrits GESPERS côté MP (annotation viewset)."""
+    return int(getattr(obj, "inscrits_mp_gespers", 0) or 0)
+
+
+def _gespers_total_inscrits(obj) -> int:
+    """Contrôle GESPERS : total inscrits GESPERS."""
+    return _gespers_inscrits_crif(obj) + _gespers_inscrits_mp(obj)
 
 
 @extend_schema_serializer(
@@ -190,42 +199,46 @@ class FormationListSerializer(serializers.Serializer):
     places_restantes_mp = serializers.SerializerMethodField()
     taux_transformation = serializers.SerializerMethodField()
     transformation_badge = serializers.SerializerMethodField()
+    inscrits_crif_gespers = serializers.SerializerMethodField()
+    inscrits_mp_gespers = serializers.SerializerMethodField()
+    total_inscrits_gespers = serializers.SerializerMethodField()
+    nombre_candidats_calc = serializers.SerializerMethodField()
+    taux_saturation_gespers = serializers.SerializerMethodField()
+    ecart_inscrits = serializers.SerializerMethodField()
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_inscrits_crif(self, obj):
         return _resolved_inscrits_crif(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_inscrits_mp(self, obj):
         return _resolved_inscrits_mp(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_inscrits_total(self, obj):
-        """Somme inscrits_crif + inscrits_mp."""
         return _resolved_total_inscrits(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_prevus_total(self, obj):
-        """Somme prevus_crif + prevus_mp."""
         return (obj.prevus_crif or 0) + (obj.prevus_mp or 0)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_total_inscrits(self, obj):
         return _resolved_total_inscrits(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_places_disponibles(self, obj):
         return _resolved_places_disponibles(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_places_restantes(self, obj):
         return _resolved_places_disponibles(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_places_restantes_crif(self, obj):
         return _resolved_places_restantes_crif(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
     def get_places_restantes_mp(self, obj):
         return _resolved_places_restantes_mp(obj)
 
@@ -233,18 +246,16 @@ class FormationListSerializer(serializers.Serializer):
     def get_saturation(self, obj):
         return _resolved_saturation(obj)
 
-    @extend_schema_field(str)
+    @extend_schema_field(float)
     def get_taux_transformation(self, obj):
-        """Taux de transformation = inscrits retenus pour la formation / candidats liés, en %."""
         nombre_candidats = _resolved_nombre_candidats(obj)
         if nombre_candidats:
-            total_inscrits = self.get_inscrits_total(obj)
+            total_inscrits = _resolved_total_inscrits(obj)
             return round((total_inscrits / nombre_candidats) * 100)
         return None
 
     @extend_schema_field(str)
     def get_transformation_badge(self, obj):
-        """Classe badge selon taux de transformation (>=70 succès, >=40 warning, sinon danger)."""
         taux = self.get_taux_transformation(obj)
         if taux is None:
             return "default"
@@ -256,7 +267,6 @@ class FormationListSerializer(serializers.Serializer):
 
     @extend_schema_field(str)
     def get_saturation_badge(self, obj):
-        """Classe badge selon obj.saturation (mêmes seuils que transformation_badge)."""
         taux = _resolved_saturation(obj)
         if taux is None:
             return "default"
@@ -266,21 +276,42 @@ class FormationListSerializer(serializers.Serializer):
             return "badge-warning"
         return "badge-danger"
 
-    @extend_schema_field(str)
+    @extend_schema_field(int)
+    def get_inscrits_crif_gespers(self, obj):
+        return _gespers_inscrits_crif(obj)
+
+    @extend_schema_field(int)
+    def get_inscrits_mp_gespers(self, obj):
+        return _gespers_inscrits_mp(obj)
+
+    @extend_schema_field(int)
+    def get_total_inscrits_gespers(self, obj):
+        return _gespers_total_inscrits(obj)
+
+    @extend_schema_field(int)
+    def get_nombre_candidats_calc(self, obj):
+        return int(getattr(obj, "nombre_candidats_calc", 0) or 0)
+
+    @extend_schema_field(float)
+    def get_taux_saturation_gespers(self, obj):
+        return round(float(getattr(obj, "taux_saturation_gespers", 0) or 0.0), 2)
+
+    @extend_schema_field(int)
+    def get_ecart_inscrits(self, obj):
+        return _resolved_total_inscrits(obj) - _gespers_total_inscrits(obj)
+
+    @extend_schema_field(dict)
     def get_centre(self, obj):
-        """Dict {id, nom} du centre de la formation."""
         return {"id": obj.centre.id, "nom": obj.centre.nom} if obj.centre else None
 
     @extend_schema_field(str)
     def get_candidats_list_url(self, obj):
-        """URL prête à l'emploi vers la liste des candidats filtrée par formation."""
         path = f"{reverse('candidat-list')}?formation={obj.id}"
         request = self.context.get("request")
         return request.build_absolute_uri(path) if request else path
 
-    @extend_schema_field(str)
+    @extend_schema_field(dict)
     def get_statut(self, obj):
-        """Dict {id, nom, libelle, couleur} du statut de la formation."""
         if obj.statut:
             return {
                 "id": obj.statut.id,
@@ -290,9 +321,8 @@ class FormationListSerializer(serializers.Serializer):
             }
         return None
 
-    @extend_schema_field(str)
+    @extend_schema_field(dict)
     def get_type_offre(self, obj):
-        """Dict {id, nom, libelle, couleur} du type d'offre."""
         if obj.type_offre:
             return {
                 "id": obj.type_offre.id,
@@ -423,6 +453,12 @@ class FormationDetailSerializer(serializers.Serializer):
     taux_saturation = serializers.SerializerMethodField()
     taux_transformation = serializers.SerializerMethodField()
     transformation_badge = serializers.SerializerMethodField()
+    inscrits_crif_gespers = serializers.SerializerMethodField()
+    inscrits_mp_gespers = serializers.SerializerMethodField()
+    total_inscrits_gespers = serializers.SerializerMethodField()
+    nombre_candidats_calc = serializers.SerializerMethodField()
+    taux_saturation_gespers = serializers.SerializerMethodField()
+    ecart_inscrits = serializers.SerializerMethodField()
 
     intitule_diplome = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     diplome_vise_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -440,41 +476,39 @@ class FormationDetailSerializer(serializers.Serializer):
     partenaires = PartenaireSerializer(many=True, read_only=True)
     prospections = ProspectionSerializer(many=True, read_only=True)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_inscrits_crif(self, obj):
         return _resolved_inscrits_crif(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_inscrits_mp(self, obj):
         return _resolved_inscrits_mp(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_inscrits_total(self, obj):
-        """Somme inscrits_crif + inscrits_mp."""
         return _resolved_total_inscrits(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_prevus_total(self, obj):
-        """Somme prevus_crif + prevus_mp."""
         return (obj.prevus_crif or 0) + (obj.prevus_mp or 0)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_total_inscrits(self, obj):
         return _resolved_total_inscrits(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_places_disponibles(self, obj):
         return _resolved_places_disponibles(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_places_restantes(self, obj):
         return _resolved_places_disponibles(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_places_restantes_crif(self, obj):
         return _resolved_places_restantes_crif(obj)
 
-    @extend_schema_field(float)
+    @extend_schema_field(int)
     def get_places_restantes_mp(self, obj):
         return _resolved_places_restantes_mp(obj)
 
@@ -488,16 +522,14 @@ class FormationDetailSerializer(serializers.Serializer):
 
     @extend_schema_field(float)
     def get_taux_transformation(self, obj):
-        """Taux de transformation = inscrits retenus pour la formation / candidats liés, en %."""
         nombre_candidats = _resolved_nombre_candidats(obj)
         if nombre_candidats:
-            total_inscrits = self.get_inscrits_total(obj)
+            total_inscrits = _resolved_total_inscrits(obj)
             return round((total_inscrits / nombre_candidats) * 100)
         return None
 
     @extend_schema_field(str)
     def get_transformation_badge(self, obj):
-        """Classe badge selon taux de transformation (seuils 100, 70, 50, 20, >0)."""
         taux = self.get_taux_transformation(obj)
         if taux is None:
             return "default"
@@ -515,7 +547,6 @@ class FormationDetailSerializer(serializers.Serializer):
 
     @extend_schema_field(str)
     def get_saturation_badge(self, obj):
-        """Classe badge selon obj.saturation (mêmes seuils que get_transformation_badge)."""
         taux = _resolved_saturation(obj)
         if taux is None:
             return "default"
@@ -531,21 +562,42 @@ class FormationDetailSerializer(serializers.Serializer):
             return "badge-orange"
         return "badge-danger"
 
+    @extend_schema_field(int)
+    def get_inscrits_crif_gespers(self, obj):
+        return _gespers_inscrits_crif(obj)
+
+    @extend_schema_field(int)
+    def get_inscrits_mp_gespers(self, obj):
+        return _gespers_inscrits_mp(obj)
+
+    @extend_schema_field(int)
+    def get_total_inscrits_gespers(self, obj):
+        return _gespers_total_inscrits(obj)
+
+    @extend_schema_field(int)
+    def get_nombre_candidats_calc(self, obj):
+        return int(getattr(obj, "nombre_candidats_calc", 0) or 0)
+
+    @extend_schema_field(float)
+    def get_taux_saturation_gespers(self, obj):
+        return round(float(getattr(obj, "taux_saturation_gespers", 0) or 0.0), 2)
+
+    @extend_schema_field(int)
+    def get_ecart_inscrits(self, obj):
+        return _resolved_total_inscrits(obj) - _gespers_total_inscrits(obj)
+
     @extend_schema_field(dict)
     def get_centre(self, obj):
-        """Dict {id, nom} du centre."""
         return {"id": obj.centre.id, "nom": obj.centre.nom} if obj.centre else None
 
     @extend_schema_field(str)
     def get_candidats_list_url(self, obj):
-        """URL prête à l'emploi vers la liste des candidats filtrée par formation."""
         path = f"{reverse('candidat-list')}?formation={obj.id}"
         request = self.context.get("request")
         return request.build_absolute_uri(path) if request else path
 
     @extend_schema_field(dict)
     def get_statut(self, obj):
-        """Dict {id, nom, libelle, couleur} du statut."""
         if obj.statut:
             return {
                 "id": obj.statut.id,
@@ -557,7 +609,6 @@ class FormationDetailSerializer(serializers.Serializer):
 
     @extend_schema_field(dict)
     def get_type_offre(self, obj):
-        """Dict {id, nom, libelle, couleur} du type d'offre."""
         if obj.type_offre:
             return {
                 "id": obj.type_offre.id,
