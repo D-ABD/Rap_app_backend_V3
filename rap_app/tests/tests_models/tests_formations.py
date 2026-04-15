@@ -258,8 +258,88 @@ class FormationModelTest(BaseModelTestSetupMixin, TestCase):
         self.formation.refresh_from_db()
         self.assertEqual(self.formation.nombre_candidats, 0)
 
+    # ================================================================
+    # Tests nombre_candidats — protection écriture + recalcul
+    # ================================================================
+
+    def test_nombre_candidats_serializer_ignores_write(self):
+        """Le serializer write doit ignorer nombre_candidats (read_only)."""
+        from rap_app.api.serializers.formations_serializers import FormationUpdateSerializer
+
+        Candidat.objects.create(
+            nom="Serializer",
+            prenom="Test",
+            email="serializer.test@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 1)
+
+        from rest_framework.test import APIRequestFactory
+        factory = APIRequestFactory()
+        request = factory.patch("/fake/")
+        request.user = self.user
+
+        ser = FormationUpdateSerializer(
+            self.formation,
+            data={"nombre_candidats": 999},
+            partial=True,
+            context={"request": request},
+        )
+        ser.is_valid(raise_exception=True)
+        ser.save()
+
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 1)
+
+    def test_nombre_candidats_import_excel_skips_field(self):
+        """L'import Excel formation ne doit plus écraser nombre_candidats."""
+        from rap_app.services.imports.handlers_lot3 import FormationExcelHandler
+
+        handler = FormationExcelHandler()
+        raw = {
+            "nombre_candidats": 42,
+            "nom": "Imported",
+        }
+        payload = handler._raw_to_serializer_payload(raw)
+        self.assertNotIn("nombre_candidats", payload)
+
+    def test_nombre_candidats_manual_recalculation(self):
+        """Recalcul manuel via Count donne la bonne valeur."""
+        from django.db.models import Count
+
+        Candidat.objects.create(
+            nom="Recalc",
+            prenom="One",
+            email="recalc.one@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+        Candidat.objects.create(
+            nom="Recalc",
+            prenom="Two",
+            email="recalc.two@example.com",
+            formation=self.formation,
+            created_by=self.user,
+        )
+
+        Formation._base_manager.filter(pk=self.formation.pk).update(nombre_candidats=0)
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 0)
+
+        real = Candidat.objects.filter(formation_id=self.formation.pk).count()
+        Formation._base_manager.filter(pk=self.formation.pk).update(nombre_candidats=real)
+        self.formation.refresh_from_db()
+        self.assertEqual(self.formation.nombre_candidats, 2)
+
+    def test_nombre_candidats_admin_readonly(self):
+        """nombre_candidats est en readonly dans l'admin Formation."""
+        from rap_app.admin.formations_admin import FormationAdmin
+        self.assertIn("nombre_candidats", FormationAdmin.readonly_fields)
+
     def test_get_partenaires(self):
-        """✅ Vérifie que les partenaires sont correctement retournés via get_partenaires()."""
+        """Vérifie que les partenaires sont correctement retournés via get_partenaires()."""
         partenaire1 = self.create_instance(Partenaire, nom="Entreprise Y")
         partenaire2 = self.create_instance(Partenaire, nom="Entreprise Z")
 

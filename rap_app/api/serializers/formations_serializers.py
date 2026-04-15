@@ -632,6 +632,10 @@ class BaseFormationWriteSerializer(serializers.ModelSerializer):
     Le détail en lecture reste porté par `FormationDetailSerializer` tandis que
     les opérations create/update passent par ce contrat dédié pour éviter de
     mélanger champs read-only enrichis et payloads write.
+
+    ``nombre_candidats`` est maintenu automatiquement par le signal
+    ``formation_candidats_signals`` et ne doit jamais être écrit
+    directement par l'API ou les imports.
     """
 
     centre_id = serializers.PrimaryKeyRelatedField(
@@ -677,6 +681,7 @@ class BaseFormationWriteSerializer(serializers.ModelSerializer):
             "nombre_entretiens",
             "convocation_envoie",
         ]
+        read_only_fields = ["nombre_candidats"]
 
     def validate(self, data):
         start = data.get("start_date")

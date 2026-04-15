@@ -430,6 +430,8 @@ class FormationExcelHandler:
             if key == "convocation_envoie":
                 d[key] = cell_to_python(v, as_bool=True)
                 continue
+            if key == "nombre_candidats":
+                continue
             if key in (
                 "prevus_crif",
                 "prevus_mp",
@@ -437,7 +439,6 @@ class FormationExcelHandler:
                 "inscrits_mp",
                 "cap",
                 "entree_formation",
-                "nombre_candidats",
                 "nombre_entretiens",
                 "total_heures",
                 "heures_enseignements_generaux",

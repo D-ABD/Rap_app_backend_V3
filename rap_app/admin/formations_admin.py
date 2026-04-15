@@ -163,6 +163,7 @@ class FormationAdmin(admin.ModelAdmin):
         "places_disponibles_display",
         "taux_saturation_display",
         "status_temporel_display",
+        "nombre_candidats",
         "created_at",
         "updated_at",
     )

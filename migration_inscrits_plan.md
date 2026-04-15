@@ -194,7 +194,7 @@ Distinction **obligatoire** : hiérarchie visuelle et fonctionnelle différente 
 | 5 | **Terminé** | 2026-04-14 | `tops` déjà aligné saisie ; tests sémantiques ajoutés |
 | 6 | **Terminé** | 2026-04-14 | Labels dashboard corrigés (saisie) ; section GESPERS contrôle dans détail/modal |
 | 7 | **Terminé** | 2026-04-14 | Commentaires + PDF alignés saisie ; figement basé sur `Formation.taux_saturation` (saisie) |
-| 8 | **Terminé — GO Option B** | 2026-04-14 | Découplage `inscrit_gespers` du critère de comptage. Audit données exécuté : Q6=1 candidat impacté (formation #18, phase abandon). Patch minimal : 1 ligne retirée dans `_counts_in_formation_inscrits`. 3 tests adaptés, 9 tests ajoutés, 21/21 PASSED. |
+| 8 | **Terminé — GO Option B** | 2026-04-14 | Découplage `inscrit_gespers` du critère de comptage. Audit données exécuté : Q6=1 candidat impacté (formation #18, phase abandon). Patch minimal : 1 ligne retirée dans `_counts_in_formation_inscrits`. 4 tests adaptés, 9 tests ajoutés, 22/22 PASSED + 981/981 suite complète. |
 | 9 | **Terminé** | 2026-04-14 | Export XLSX : colonnes saisie/GESPERS explicites, taux saturation GESPERS ajouté |
 | 10 | **Terminé** | 2026-04-14 | Couverture Annexe A documentée ; tests consolidés ; matrice scénario → test |
 
@@ -553,13 +553,14 @@ Découpler `inscrit_gespers` du critère de comptage des inscrits saisie (`inscr
 **AVANT** : `candidate.inscrit_gespers or candidate.date_validation_inscription or …`
 **APRÈS** : `candidate.date_validation_inscription or …` (retrait de `candidate.inscrit_gespers`)
 
-### Tests (21/21 PASSED + 19/19 contrat JSON)
+### Tests (22/22 PASSED + 19/19 contrat JSON)
 
 | Type | Nom | Statut |
 |------|-----|--------|
 | Adapté | `test_mark_gespers_does_not_increment_counter_for_postulant` | PASS |
 | Adapté | `test_clear_gespers_does_not_decrement_counter_for_postulant` | PASS |
 | Adapté | `test_mark_gespers_does_not_increment_mp_for_postulant_non_crif` | PASS |
+| Adapté | `test_create_update_serializer_syncs_formation_inscrits_when_gespers_changes` | PASS |
 | Nouveau | `test_lot8_gespers_only_postulant_not_counted` | PASS |
 | Nouveau | `test_lot8_validated_without_gespers_still_counted` | PASS |
 | Nouveau | `test_lot8_stagiaire_with_gespers_still_counted` | PASS |
@@ -584,6 +585,7 @@ Réinsérer `candidate.inscrit_gespers or` dans `_counts_in_formation_inscrits` 
 ### Fichiers concernés
 - `rap_app/services/candidate_lifecycle_service.py` (1 ligne retirée)
 - `rap_app/tests/tests_services/test_candidate_lifecycle_service.py` (3 tests adaptés, 9 ajoutés)
+- `rap_app/tests/tests_serializers/tests_candidat_serializers.py` (1 test adapté)
 
 ### Recette
 **Annexe A** : **A13–A14**, **A15**.
@@ -1237,7 +1239,48 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE/api/commentaires/?formation={id
 | 2026-04-14 | 7 | Commentaires + PDF : helpers alignés saisie, labels GESPERS retirés, figement `saturation_formation` basé sur saisie. |
 | 2026-04-14 | 9 | Export XLSX : colonnes saisie/GESPERS explicites, données GESPERS ajoutées. |
 | 2026-04-14 | 10 | Couverture Annexe A documentée dans les tests. Matrice scénario → test formalisée. |
+| 2026-04-14 | 8 | GO Option B : retrait `inscrit_gespers` du critère de comptage lifecycle. 1 ligne retirée, **4 tests adaptés** (3 lifecycle + 1 serializer), 9 tests ajoutés. 981/981 PASSED. Impact : 1 candidat / 1 formation. |
+| 2026-04-14 | — | **Chantier séparé : fiabilisation `nombre_candidats`**. Diagnostic : import Excel + API écrasaient le compteur. Patch : `read_only_fields`, import skip, admin readonly. Script rattrapage : 69 formations corrigées (0→0…N). 4 tests ajoutés. |
 
 ---
 
 *Fin du document — Plan V3 pilotage migration inscrits + suivi d’exécution.*
+
+---
+
+## Chantier séparé : Fiabilisation `nombre_candidats`
+
+### Contexte
+Identifié lors du Lot 8 (Q5 de l’audit) : 69 formations avaient `nombre_candidats = 0` malgré des candidats liés en base.
+
+### Causes racines
+
+| Cause | Mécanisme | Impact |
+|-------|-----------|--------|
+| Import Excel Formation | La colonne `nombre_candidats` écrasait le champ avec la valeur Excel (souvent 0) | **Principal** |
+| API Formation PUT/PATCH | `nombre_candidats` était writable dans le serializer | Secondaire |
+| Admin Django | Champ éditable dans le fieldset | Faible |
+
+### Corrections appliquées
+
+| Action | Fichier |
+|--------|---------|
+| `nombre_candidats` → `read_only_fields` | `formations_serializers.py` |
+| Import Excel ignore `nombre_candidats` | `handlers_lot3.py` |
+| Admin : `nombre_candidats` en `readonly_fields` | `formations_admin.py` |
+
+### Rattrapage data (2026-04-14)
+
+- **69 formations** corrigées via `python manage.py fix_nombre_candidats --apply`
+- Toutes étaient `stocké=0`, corrigées vers le `Count()` réel (1 à 4 candidats)
+- Vérification post-apply : **0 divergence**
+- Historique tracé dans `HistoriqueFormation` pour chaque correction
+
+### Tests
+
+| Test | Vérifie |
+|------|---------|
+| `test_nombre_candidats_serializer_ignores_write` | PATCH avec nombre_candidats=999 → ignoré |
+| `test_nombre_candidats_import_excel_skips_field` | Import Excel → champ absent du payload |
+| `test_nombre_candidats_manual_recalculation` | Recalcul après écrasement direct → correct |
+| `test_nombre_candidats_admin_readonly` | Champ dans readonly_fields admin |

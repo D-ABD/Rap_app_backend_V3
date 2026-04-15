@@ -209,6 +209,8 @@ class CandidatSerializerTest(TestCase):
         self.assertEqual(candidat.code_postal, "75008")
 
     def test_create_update_serializer_syncs_formation_inscrits_when_gespers_changes(self):
+        """Lot 8 — GESPERS seul (candidat POSTULANT) ne modifie plus
+        les compteurs inscrits. Le compteur reste à 0."""
         candidat = Candidat.objects.create(
             nom="Counter",
             prenom="Tracked",
@@ -229,7 +231,7 @@ class CandidatSerializerTest(TestCase):
         serializer.save()
 
         self.formation.refresh_from_db()
-        self.assertEqual(self.formation.inscrits_crif, 1)
+        self.assertEqual(self.formation.inscrits_crif, 0)
 
         serializer = CandidatCreateUpdateSerializer(
             instance=candidat,
