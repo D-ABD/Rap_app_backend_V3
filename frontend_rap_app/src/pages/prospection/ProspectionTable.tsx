@@ -42,7 +42,8 @@ interface Props {
   prospections: ProspectionWithLast[];
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
-  onRowClick: (id: number) => void;
+  onRowClick: (id: number, prospection?: ProspectionWithLast) => void;
+  onRowHover?: (prospection: ProspectionWithLast) => void;
   onDeleteClick: (id: number) => void;
   onRestoreClick?: (id: number) => void;
   onHardDeleteClick?: (id: number) => void;
@@ -84,6 +85,7 @@ export default function ProspectionTable({
   selectedIds,
   onToggleSelect,
   onRowClick,
+  onRowHover,
   onDeleteClick,
   onRestoreClick,
   onHardDeleteClick,
@@ -425,7 +427,8 @@ export default function ProspectionTable({
           )}
         </Box>
       )}
-      onRowClick={(p) => onRowClick(p.id)}
+      onRowClick={(p) => onRowClick(p.id, p)}
+      onRowHover={onRowHover}
       rowSx={(row) =>
         row.activite === "archivee"
           ? {

@@ -7,6 +7,7 @@ import { Formation } from "../../types/formation";
 import { getFieldValue } from "../../utils/getFieldValue";
 import ResponsiveTableTemplate, { TableColumn } from "../../components/ResponsiveTableTemplate";
 import FormationDetailModal from "./FormationDetailModal";
+import { prefetchFormationDetail } from "../../hooks/useFormations";
 
 interface Props {
   formations: Formation[];
@@ -58,15 +59,34 @@ export default function FormationTable({
 
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedFormationId, setSelectedFormationId] = useState<number | null>(null);
+  const [selectedFormation, setSelectedFormation] = useState<Formation | null>(null);
 
-  const handleOpenDetail = (id: number) => {
+  const handleOpenDetail = (id: number, formation?: Formation) => {
+    const preview = formation ?? formations.find((row) => row.id === id) ?? null;
+    setSelectedFormation(preview);
     setSelectedFormationId(id);
     setOpenDetail(true);
+    if (preview) {
+      void prefetchFormationDetail(preview)
+        .then((detail) => {
+          setSelectedFormation((current) => (current?.id === detail.id || !current ? detail : current));
+        })
+        .catch(() => {
+          // Ignore prefetch failures here; the modal handles loading and fallback.
+        });
+    }
   };
 
   const handleCloseDetail = () => {
     setSelectedFormationId(null);
+    setSelectedFormation(null);
     setOpenDetail(false);
+  };
+
+  const handleHoverDetail = (formation: Formation) => {
+    void prefetchFormationDetail(formation).catch(() => {
+      // Ignore hover prefetch failures.
+    });
   };
 
   const sortedFormations = useMemo(() => {
@@ -461,7 +481,7 @@ export default function FormationTable({
               color="primary"
               onClick={(e) => {
                 e.stopPropagation();
-                handleOpenDetail(row.id);
+                handleOpenDetail(row.id, row);
               }}
             >
               Voir
@@ -505,7 +525,8 @@ export default function FormationTable({
             )}
           </Stack>
         )}
-        onRowClick={(row) => handleOpenDetail(row.id)}
+        onRowClick={(row) => handleOpenDetail(row.id, row)}
+        onRowHover={handleHoverDetail}
       />
 
       {selectedFormationId && (
@@ -513,6 +534,7 @@ export default function FormationTable({
           open={openDetail}
           onClose={handleCloseDetail}
           formationId={selectedFormationId}
+          formation={selectedFormation}
         />
       )}
     </>

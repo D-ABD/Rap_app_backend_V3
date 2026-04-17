@@ -23,6 +23,7 @@ import React from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import CommentaireContent from "../commentaires/CommentaireContent";
 import type { AppTheme } from "src/theme";
+import type { Prospection } from "../../types/prospection";
 
 /* ---------- Helpers ---------- */
 const useFormatters = () => {
@@ -60,11 +61,18 @@ type Props = {
   open: boolean;
   onClose: () => void;
   prospectionId: number | null;
+  prospection?: Prospection | null;
   onEdit?: (id: number) => void;
 };
 
 /* ---------- Component ---------- */
-export default function ProspectionDetailModal({ open, onClose, prospectionId, onEdit }: Props) {
+export default function ProspectionDetailModal({
+  open,
+  onClose,
+  prospectionId,
+  prospection: initialProspection,
+  onEdit,
+}: Props) {
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
   const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
@@ -73,6 +81,7 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
   const navigate = useNavigate();
   const { fmt, nn, yn } = useFormatters();
   const { data: prospection, loading } = useProspection(prospectionId ?? null);
+  const displayProspection = prospection ?? initialProspection ?? null;
 
   if (!open) return null;
 
@@ -102,19 +111,25 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
         <Typography component="div" variant="h6" fontWeight={700}>
           📞 Détail de la prospection
         </Typography>
-        <Button onClick={onClose} variant="outlined">
-          Fermer
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {loading && displayProspection ? <CircularProgress size={18} /> : null}
+          <Button onClick={onClose} variant="outlined">
+            Fermer
+          </Button>
+        </Box>
       </DialogTitle>
 
       <DialogContent dividers aria-busy={loading}>
-        {loading || !prospection ? (
+        {!displayProspection ? (
           <Box textAlign="center" py={4}>
             <CircularProgress />
           </Box>
         ) : (
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Grid container spacing={3}>
+          (() => {
+            const prospection = displayProspection;
+            return (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Grid container spacing={3}>
               {/* ───── Centre ───── */}
               <Grid item xs={12}>
                 <Section title="Centre">
@@ -352,38 +367,40 @@ export default function ProspectionDetailModal({ open, onClose, prospectionId, o
                   />
                 </Section>
               </Grid>
-            </Grid>
-          </Paper>
+                </Grid>
+              </Paper>
+            );
+          })()
         )}
       </DialogContent>
 
       {/* ---------- Actions ---------- */}
       <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, borderTop: modalTitleBorder }}>
         <Box display="flex" gap={1} flexWrap="wrap">
-          {prospection && onEdit && prospection.id != null && (
+          {displayProspection && onEdit && displayProspection.id != null && (
             <Button
               startIcon={<EditIcon />}
               variant="contained"
               color="primary"
-              onClick={() => onEdit(prospection.id)}
+              onClick={() => onEdit(displayProspection.id)}
             >
               Modifier
             </Button>
           )}
-          {prospection && prospection.id != null && (
+          {displayProspection && displayProspection.id != null && (
             <Button
               startIcon={<AddCommentIcon />}
               variant="outlined"
-              onClick={() => navigate(`/prospection-commentaires/create/${prospection.id}`)}
+              onClick={() => navigate(`/prospection-commentaires/create/${displayProspection.id}`)}
             >
               Ajouter un commentaire
             </Button>
           )}
-          {prospection && prospection.id != null && (
+          {displayProspection && displayProspection.id != null && (
             <Button
               startIcon={<LaunchIcon />}
               variant="outlined"
-              onClick={() => navigate(`/prospection-commentaires?prospection=${prospection.id}`)}
+              onClick={() => navigate(`/prospection-commentaires?prospection=${displayProspection.id}`)}
             >
               Voir les commentaires
             </Button>

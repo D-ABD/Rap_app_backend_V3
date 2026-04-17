@@ -24,7 +24,10 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import FiltresProspectionsPanel from "../../components/filters/FiltresProspectionsPanel";
 import usePagination from "../../hooks/usePagination";
-import useFiltresProspections, { useProspections } from "../../hooks/useProspection";
+import useFiltresProspections, {
+  prefetchProspectionDetail,
+  useProspections,
+} from "../../hooks/useProspection";
 import type { Prospection, ProspectionFiltresValues } from "../../types/prospection";
 import { useRedirectToCreateProspection } from "../../hooks/useRedirectToCreateProspection";
 import { useAuth } from "../../hooks/useAuth";
@@ -176,10 +179,25 @@ export default function ProspectionPage() {
   // ── modal de détail
   const [showDetail, setShowDetail] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [selectedProspection, setSelectedProspection] = useState<Prospection | null>(null);
 
-  const handleRowClick = (id: number) => {
+  const handleRowClick = (id: number, prospection?: Prospection) => {
+    setSelectedProspection(prospection ?? null);
     setDetailId(id);
     setShowDetail(true);
+    void prefetchProspectionDetail(id)
+      .then((detail) => {
+        setSelectedProspection((current) => (current?.id === id || !current ? detail : current));
+      })
+      .catch(() => {
+        // Ignore prefetch failures here; the modal manages loading/fallback.
+      });
+  };
+
+  const handleRowHover = (prospection: Prospection) => {
+    void prefetchProspectionDetail(prospection.id).catch(() => {
+      // Ignore hover prefetch failures.
+    });
   };
 
   const handleDeleteClick = (id: number) => {
@@ -427,6 +445,7 @@ export default function ProspectionPage() {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onRowClick={handleRowClick}
+            onRowHover={handleRowHover}
             onDeleteClick={handleDeleteClick}
             onRestoreClick={handleRestoreClick}
             onHardDeleteClick={(id) => setHardDeleteId(id)}
@@ -507,8 +526,12 @@ export default function ProspectionPage() {
       {/* ───────────── Détail prospection ───────────── */}
       <ProspectionDetailModal
         open={showDetail}
-        onClose={() => setShowDetail(false)}
+        onClose={() => {
+          setShowDetail(false);
+          setSelectedProspection(null);
+        }}
         prospectionId={detailId}
+        prospection={selectedProspection}
         onEdit={(id) => navigate(`/prospections/${id}/edit`)}
       />
     </PageTemplate>

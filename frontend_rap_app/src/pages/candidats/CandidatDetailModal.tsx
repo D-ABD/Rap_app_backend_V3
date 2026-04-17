@@ -579,14 +579,17 @@ export default function CandidatDetailModal({
         <Typography component="div" variant="h6" fontWeight={700}>
           👤 Détail du candidat
         </Typography>
-        <Button onClick={onClose} variant="outlined">
-          Fermer
-        </Button>
+        <Stack direction="row" spacing={1} alignItems="center">
+          {loading && candidat ? <CircularProgress size={18} /> : null}
+          <Button onClick={onClose} variant="outlined">
+            Fermer
+          </Button>
+        </Stack>
       </DialogTitle>
 
       {/* ────── Contenu ────── */}
       <DialogContent dividers>
-        {loading || !candidat ? (
+        {!candidat ? (
           <Box textAlign="center" py={4}>
             <CircularProgress />
           </Box>

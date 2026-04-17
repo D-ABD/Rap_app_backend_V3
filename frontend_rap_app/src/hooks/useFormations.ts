@@ -18,6 +18,9 @@ import type { Evenement } from "../types/evenement";
 import type { Prospection } from "../types/prospection";
 import type { HistoriqueFormation } from "../types/historique";
 
+const formationDetailCache = new Map<number, Formation>();
+const formationDetailRequests = new Map<number, Promise<Formation>>();
+
 // Type minimal d'écriture : uniquement les champs acceptés en POST
 export type FormationWritePayload = {
   nom?: string;
@@ -261,18 +264,64 @@ export function useFormation(id: number) {
   const [error, setError] = useState<AxiosError | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    api
-      .get<WrappedResponse<Formation>>(`/formations/${id}/`)
-      .then((res) => {
-        setData(res.data.data);
+    const cached = formationDetailCache.get(id) ?? null;
+    setData(cached);
+    setLoading(!cached);
+
+    const inFlight = formationDetailRequests.get(id);
+    const request =
+      inFlight ??
+      api
+        .get<WrappedResponse<Formation>>(`/formations/${id}/`)
+        .then((res) => {
+          formationDetailCache.set(id, res.data.data);
+          return res.data.data;
+        })
+        .finally(() => {
+          formationDetailRequests.delete(id);
+        });
+
+    if (!inFlight) {
+      formationDetailRequests.set(id, request);
+    }
+
+    request
+      .then((formation) => {
+        setData(formation);
         setError(null);
       })
-      .catch((err) => setError(err))
+      .catch((err) => {
+        setError(err);
+        setData((current) => current ?? null);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
   return { data, loading, error };
+}
+
+export function prefetchFormationDetail(formation: Formation) {
+  if (formation.id == null) return Promise.resolve(formation);
+
+  if (!formationDetailCache.has(formation.id)) {
+    formationDetailCache.set(formation.id, formation);
+  }
+
+  const inFlight = formationDetailRequests.get(formation.id);
+  if (inFlight) return inFlight;
+
+  const request = api
+    .get<WrappedResponse<Formation>>(`/formations/${formation.id}/`)
+    .then((res) => {
+      formationDetailCache.set(formation.id, res.data.data);
+      return res.data.data;
+    })
+    .finally(() => {
+      formationDetailRequests.delete(formation.id);
+    });
+
+  formationDetailRequests.set(formation.id, request);
+  return request;
 }
 
 // ✅ Création

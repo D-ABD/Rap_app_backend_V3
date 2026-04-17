@@ -255,7 +255,8 @@ type Props = {
   onDelete?: (id: number) => void;
   onRestore?: (id: number) => void;
   onHardDelete?: (id: number) => void;
-  onRowClick?: (id: number) => void | Promise<void>; // ✅ nouvelle prop optionnelle
+  onRowClick?: (id: number, candidate?: Candidat) => void | Promise<void>;
+  onRowHover?: (candidate: Candidat) => void;
   maxHeight?: string;
 };
 
@@ -266,7 +267,8 @@ export default function CandidatsTable({
   onDelete,
   onRestore,
   onHardDelete,
-  onRowClick, // ✅ ajoute ceci
+  onRowClick,
+  onRowHover,
   maxHeight = "65vh",
 }: Props) {
   const navigate = useNavigate();
@@ -415,9 +417,11 @@ export default function CandidatsTable({
                 hover
                 tabIndex={0}
                 onClick={() => {
-                  if (onRowClick) onRowClick(c.id);
-                  else goEdit(c.id); // fallback si onRowClick non fourni
+                  if (onRowClick) onRowClick(c.id, c);
+                  else goEdit(c.id);
                 }}
+                onMouseEnter={() => onRowHover?.(c)}
+                onFocus={() => onRowHover?.(c)}
                 sx={{
                   cursor: "pointer",
                   "&:nth-of-type(even)": { bgcolor: "grey.50" },

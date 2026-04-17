@@ -1,5 +1,5 @@
 // src/pages/candidats/CandidatsPage.tsx
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -434,15 +434,71 @@ export default function CandidatsPage() {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const detailCacheRef = useRef(new Map<number, Candidat>());
+  const detailRequestRef = useRef(new Map<number, Promise<Candidat>>());
 
-  const handleRowClick = async (id: number) => {
-    setLoadingDetail(true);
+  const normalizeCandidatePayload = useCallback((payload: unknown): Candidat => {
+    const raw = payload as { data?: Candidat };
+    return raw.data ?? (payload as Candidat);
+  }, []);
+
+  const fetchCandidateDetail = useCallback(
+    async (id: number) => {
+      const inFlight = detailRequestRef.current.get(id);
+      if (inFlight) return inFlight;
+
+      const request = api
+        .get<Candidat>(`/candidats/${id}/`)
+        .then(({ data }) => {
+          const candidat = normalizeCandidatePayload(data);
+          detailCacheRef.current.set(id, candidat);
+          return candidat;
+        })
+        .finally(() => {
+          detailRequestRef.current.delete(id);
+        });
+
+      detailRequestRef.current.set(id, request);
+      return request;
+    },
+    [normalizeCandidatePayload]
+  );
+
+  const prefetchCandidateDetail = useCallback(
+    (candidate: Candidat) => {
+      if (detailCacheRef.current.has(candidate.id) || detailRequestRef.current.has(candidate.id)) return;
+      detailCacheRef.current.set(candidate.id, candidate);
+      void fetchCandidateDetail(candidate.id).catch(() => {
+        // Ignore warmup failures: the click path still shows a toast on error.
+      });
+    },
+    [fetchCandidateDetail]
+  );
+
+  useEffect(() => {
+    for (const item of items) {
+      if (!detailCacheRef.current.has(item.id)) {
+        detailCacheRef.current.set(item.id, item);
+      }
+    }
+  }, [items]);
+
+  const handleRowClick = async (id: number, candidate?: Candidat) => {
+    const preview = candidate ?? items.find((item) => item.id === id) ?? detailCacheRef.current.get(id) ?? null;
+    if (preview) {
+      detailCacheRef.current.set(id, preview);
+      setSelectedCandidat(preview);
+    } else {
+      setSelectedCandidat(null);
+    }
     setShowDetail(true);
+
+    const hasPreview = !!preview;
+    setLoadingDetail(!hasPreview);
+
     try {
-      const api = (await import("../../api/axios")).default;
-      const { data } = await api.get<Candidat>(`/candidats/${id}/`);
-      const candidat = (data as { data?: Candidat }).data ?? data;
-      setSelectedCandidat(candidat);
+      const candidat = await fetchCandidateDetail(id);
+      setSelectedCandidat((current) => (current?.id === id || !current ? candidat : current));
     } catch {
       toast.error("Erreur lors du chargement du candidat");
       setShowDetail(false);
@@ -463,9 +519,7 @@ export default function CandidatsPage() {
 
     setLoadingDetail(true);
     try {
-      const api = (await import("../../api/axios")).default;
-      const { data } = await api.get<Candidat>(`/candidats/${selectedCandidat.id}/`);
-      const candidat = (data as { data?: Candidat }).data ?? data;
+      const candidat = await fetchCandidateDetail(selectedCandidat.id);
       setSelectedCandidat(candidat);
       refreshList();
     } catch {
@@ -474,7 +528,7 @@ export default function CandidatsPage() {
     } finally {
       setLoadingDetail(false);
     }
-  }, [refreshList, selectedCandidat?.id]);
+  }, [fetchCandidateDetail, refreshList, selectedCandidat?.id]);
 
   const handleEdit = (id: number) => {
     navigate(`/candidats/${id}/edit`);
@@ -734,7 +788,8 @@ export default function CandidatsPage() {
             setHardDeleteId(id);
             setShowHardDeleteConfirm(true);
           }}
-          onRowClick={handleRowClick} // ✅ clic → ouvre la modale
+          onRowClick={handleRowClick}
+          onRowHover={prefetchCandidateDetail}
         />
       )}
 

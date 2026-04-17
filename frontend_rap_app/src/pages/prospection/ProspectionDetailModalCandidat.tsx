@@ -19,6 +19,7 @@ import LaunchIcon from "@mui/icons-material/Launch";
 import { useProspection } from "../../hooks/useProspection";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import CommentaireContent from "../commentaires/CommentaireContent";
+import type { Prospection } from "../../types/prospection";
 
 /* ---------- Helpers ---------- */
 const dtfFR =
@@ -45,6 +46,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   prospectionId: number | null;
+  prospection?: Prospection | null;
 };
 
 /* ---------- Component ---------- */
@@ -52,8 +54,10 @@ export default function ProspectionDetailModalCandidat({
   open,
   onClose,
   prospectionId,
+  prospection: initialProspection,
 }: Props) {
   const { data: prospection, loading } = useProspection(prospectionId);
+  const displayProspection = prospection ?? initialProspection ?? null;
   const navigate = useNavigate();
 
   if (!open) return null;
@@ -77,19 +81,25 @@ export default function ProspectionDetailModalCandidat({
         <Typography component="div" variant="h6" fontWeight={700}>
           📞 Détail de la prospection
         </Typography>
-        <Button onClick={onClose} variant="outlined">
-          Fermer
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {loading && displayProspection ? <CircularProgress size={18} /> : null}
+          <Button onClick={onClose} variant="outlined">
+            Fermer
+          </Button>
+        </Box>
       </DialogTitle>
 
       <DialogContent dividers>
-        {loading || !prospection ? (
+        {!displayProspection ? (
           <Box textAlign="center" py={4}>
             <CircularProgress />
           </Box>
         ) : (
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Grid container spacing={3}>
+          (() => {
+            const prospection = displayProspection;
+            return (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Grid container spacing={3}>
               {/* ───── Centre ───── */}
               <Grid item xs={12}>
                 <Section title="Centre">
@@ -289,40 +299,42 @@ export default function ProspectionDetailModalCandidat({
                   />
                 </Section>
               </Grid>
-            </Grid>
-          </Paper>
+                </Grid>
+              </Paper>
+            );
+          })()
         )}
       </DialogContent>
 
       {/* ---------- Actions ---------- */}
       <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2 }}>
         <Box display="flex" gap={1} flexWrap="wrap">
-          {prospection && prospection.id != null && (
+          {displayProspection && displayProspection.id != null && (
             <Button
               startIcon={<EditIcon />}
               variant="contained"
               color="primary"
-              onClick={() => navigate(`/prospections/${prospection.id}/edit/candidat`)}
+              onClick={() => navigate(`/prospections/${displayProspection.id}/edit/candidat`)}
             >
               Modifier
             </Button>
           )}
 
-          {prospection && prospection.id != null && (
+          {displayProspection && displayProspection.id != null && (
             <Button
               startIcon={<AddCommentIcon />}
               variant="outlined"
-              onClick={() => navigate(`/prospection-commentaires/create/${prospection.id}`)}
+              onClick={() => navigate(`/prospection-commentaires/create/${displayProspection.id}`)}
             >
               Ajouter un commentaire
             </Button>
           )}
 
-          {prospection && prospection.id != null && (
+          {displayProspection && displayProspection.id != null && (
             <Button
               startIcon={<LaunchIcon />}
               variant="outlined"
-              onClick={() => navigate(`/prospection-commentaires?prospection=${prospection.id}`)}
+              onClick={() => navigate(`/prospection-commentaires?prospection=${displayProspection.id}`)}
             >
               Voir les commentaires
             </Button>

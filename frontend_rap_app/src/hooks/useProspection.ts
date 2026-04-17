@@ -18,6 +18,9 @@ import type {
   ProspectionChangeStatutPayload,
 } from "../types/prospection";
 
+const prospectionDetailCache = new Map<string, Prospection>();
+const prospectionDetailRequests = new Map<string, Promise<Prospection>>();
+
 /* ────────────────────────────────────────────────────────────────────────────
    Helpers de parsing sûrs (sans any) + logs
    ──────────────────────────────────────────────────────────────────────────── */
@@ -65,6 +68,30 @@ function toResultsArray<T>(v: unknown): T[] {
 function safeGetDetail<T>(payload: unknown, _tag: string): T {
   if (isDRFDetail<T>(payload)) return payload.data;
   return payload as T;
+}
+
+async function fetchProspectionDetail(id: number | string): Promise<Prospection> {
+  const key = String(id);
+  const inFlight = prospectionDetailRequests.get(key);
+  if (inFlight) return inFlight;
+
+  const request = api
+    .get<unknown>(`/prospections/${id}/`)
+    .then((res) => {
+      const detail = safeGetDetail<Prospection>(res.data, "fetchProspectionDetail");
+      prospectionDetailCache.set(key, detail);
+      return detail;
+    })
+    .finally(() => {
+      prospectionDetailRequests.delete(key);
+    });
+
+  prospectionDetailRequests.set(key, request);
+  return request;
+}
+
+export function prefetchProspectionDetail(id: number | string) {
+  return fetchProspectionDetail(id);
 }
 
 /** Liste paginée: accepte {data:{...}} ou {...} ou objet DRF classique */
@@ -208,21 +235,19 @@ export function useProspection(id: number | string | null) {
       return;
     }
 
-    setLoading(true);
+    const cached = prospectionDetailCache.get(String(id)) ?? null;
+    setData(cached);
+    setLoading(!cached);
     setError(null);
 
-    const url = `/prospections/${id}/`;
-
-    api
-      .get<unknown>(url)
-      .then((res) => {
-        const detail = safeGetDetail<Prospection>(res.data, "useProspection");
+    fetchProspectionDetail(id)
+      .then((detail) => {
         setData(detail);
       })
       .catch((err) => {
         logAxiosError("useProspection", err);
         setError(err as Error);
-        setData(null);
+        setData((current) => current ?? null);
       })
       .finally(() => setLoading(false));
   }, [id]);

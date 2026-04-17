@@ -36,6 +36,7 @@ interface Props<T> {
   actions?: (row: T) => ReactNode;
   cardTitle?: (row: T) => string;
   onRowClick?: (row: T) => void;
+  onRowHover?: (row: T) => void;
   rowSx?: (row: T) => object; // ✅ style conditionnel par ligne
   /** Composant du conteneur table (ex. `Paper` pour un fond carte). */
   tableContainerComponent?: ElementType;
@@ -52,6 +53,7 @@ export default function ResponsiveTableTemplate<T>({
   actions,
   cardTitle,
   onRowClick,
+  onRowHover,
   rowSx,
   tableContainerComponent,
   containerSx,
@@ -89,6 +91,8 @@ export default function ResponsiveTableTemplate<T>({
             key={getRowId(row)}
             variant="outlined"
             onClick={() => onRowClick?.(row)}
+            onMouseEnter={() => onRowHover?.(row)}
+            onFocus={() => onRowHover?.(row)}
             sx={{
               cursor: onRowClick ? "pointer" : "default",
               ...(rowSx ? rowSx(row) : {}),
@@ -183,6 +187,8 @@ export default function ResponsiveTableTemplate<T>({
               hover
               key={getRowId(row)}
               onClick={() => onRowClick?.(row)}
+              onMouseEnter={() => onRowHover?.(row)}
+              onFocus={() => onRowHover?.(row)}
               sx={{
                 cursor: onRowClick ? "pointer" : "default",
                 "&:hover": {

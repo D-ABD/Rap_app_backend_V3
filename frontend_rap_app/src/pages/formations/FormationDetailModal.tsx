@@ -24,12 +24,14 @@ import FormationCommentsModal from "../../components/modals/FormationCommentsMod
 import { Commentaire } from "src/types/commentaire";
 import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
 import type { AppTheme } from "src/theme";
+import type { Formation } from "../../types/formation";
 
 /* ---------- Types ---------- */
 type Props = {
   open: boolean;
   onClose: () => void;
   formationId: number;
+  formation?: Formation | null;
 };
 
 /* ---------- Helpers ---------- */
@@ -96,7 +98,12 @@ const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
 const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
 
 /* ---------- Composant principal ---------- */
-export default function FormationDetailModal({ open, onClose, formationId }: Props) {
+export default function FormationDetailModal({
+  open,
+  onClose,
+  formationId,
+  formation: initialFormation,
+}: Props) {
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
   const modalScrim = isLight
@@ -109,12 +116,13 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
   const { data: formation, loading, error } = useFormation(formationId);
+  const displayFormation = formation ?? initialFormation ?? null;
   const [openComments, setOpenComments] = useState(false);
   const navigate = useNavigate();
 
   if (!open) return null;
 
-  if (loading)
+  if (!displayFormation && loading)
     return (
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogContent sx={{ textAlign: "center", py: 5 }}>
@@ -123,7 +131,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
       </Dialog>
     );
 
-  if (error || !formation)
+  if (error || !displayFormation)
     return (
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogContent>
@@ -148,8 +156,9 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
       <DialogTitle sx={{ fontWeight: 700, pb: 1, backgroundColor: modalTitleBackground, borderBottom: modalTitleBorder }}>
         📘 Détail de la formation :{" "}
         <Typography component="span" color="primary" fontWeight={600}>
-          {formation.nom}
+          {displayFormation.nom}
         </Typography>
+        {loading && displayFormation ? <CircularProgress size={18} sx={{ ml: 1.5, verticalAlign: "middle" }} /> : null}
       </DialogTitle>
 
       <DialogContent dividers>
@@ -162,35 +171,35 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => navigate(`/candidats/create?formation=${formation.id}`)}
+                      onClick={() => navigate(`/candidats/create?formation=${displayFormation.id}`)}
                     >
                       Ajouter un candidat
                     </Button>
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => navigate(`/prospections/create?formation=${formation.id}`)}
+                      onClick={() => navigate(`/prospections/create?formation=${displayFormation.id}`)}
                     >
                       Ajouter une prospection
                     </Button>
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => navigate(`/appairages/create?formation=${formation.id}`)}
+                      onClick={() => navigate(`/appairages/create?formation=${displayFormation.id}`)}
                     >
                       Ajouter un appairage
                     </Button>
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => navigate(`/evenements/create?formation=${formation.id}`)}
+                      onClick={() => navigate(`/evenements/create?formation=${displayFormation.id}`)}
                     >
                       Ajouter un événement
                     </Button>
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => navigate(`/documents/create?formation_id=${formation.id}`)}
+                      onClick={() => navigate(`/documents/create?formation_id=${displayFormation.id}`)}
                     >
                       Ajouter un document
                     </Button>
@@ -202,17 +211,17 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
             {/* ─────────── Identité ─────────── */}
             <Grid item xs={12}>
               <Section title="Identité">
-                <Field label="Nom" value={nn(formation.nom)} />
-                <Field label="Centre" value={formation.centre?.nom ?? "—"} />
-                <Field label="Type d’offre" value={formation.type_offre?.libelle ?? "—"} />
-                <Field label="Statut" value={formation.statut?.libelle ?? "—"} />
-                <Field label="Est archivée" value={yn(formation.est_archivee)} />
+                <Field label="Nom" value={nn(displayFormation.nom)} />
+                <Field label="Centre" value={displayFormation.centre?.nom ?? "—"} />
+                <Field label="Type d’offre" value={displayFormation.type_offre?.libelle ?? "—"} />
+                <Field label="Statut" value={displayFormation.statut?.libelle ?? "—"} />
+                <Field label="Est archivée" value={yn(displayFormation.est_archivee)} />
                 <Field
                   label="Activité"
                   value={
-                    formation.activite === "archivee"
+                    displayFormation.activite === "archivee"
                       ? "Archivée"
-                      : formation.activite === "active"
+                      : displayFormation.activite === "active"
                         ? "Active"
                         : "—"
                   }
@@ -223,111 +232,111 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
             {/* ─────────── Dates ─────────── */}
             <Grid item xs={12}>
               <Section title="Dates">
-                <Field label="Date de début" value={fmt(formation.start_date)} />
-                <Field label="Date de fin" value={fmt(formation.end_date)} />
-                <Field label="Terminée" value={yn(formation.is_past)} />
-                <Field label="Créée le" value={fmt(formation.created_at)} />
-                <Field label="Mise à jour le" value={fmt(formation.updated_at)} />
+                <Field label="Date de début" value={fmt(displayFormation.start_date)} />
+                <Field label="Date de fin" value={fmt(displayFormation.end_date)} />
+                <Field label="Terminée" value={yn(displayFormation.is_past)} />
+                <Field label="Créée le" value={fmt(displayFormation.created_at)} />
+                <Field label="Mise à jour le" value={fmt(displayFormation.updated_at)} />
               </Section>
             </Grid>
 
             {/* ─────────── Références ─────────── */}
             <Grid item xs={12}>
               <Section title="Références administratives">
-                <Field label="N° Kairos" value={nn(formation.num_kairos)} />
-                <Field label="N° Offre" value={nn(formation.num_offre)} />
-                <Field label="N° Produit" value={nn(formation.num_produit)} />
-                <Field label="Assistante" value={nn(formation.assistante)} />
-                <Field label="Convocation envoyée" value={yn(formation.convocation_envoie)} />
+                <Field label="N° Kairos" value={nn(displayFormation.num_kairos)} />
+                <Field label="N° Offre" value={nn(displayFormation.num_offre)} />
+                <Field label="N° Produit" value={nn(displayFormation.num_produit)} />
+                <Field label="Assistante" value={nn(displayFormation.assistante)} />
+                <Field label="Convocation envoyée" value={yn(displayFormation.convocation_envoie)} />
               </Section>
             </Grid>
 
             {/* ─────────── Diplôme ─────────── */}
             <Grid item xs={12}>
               <Section title="Diplôme ou titre visé">
-                <Field label="Intitulé" value={nn(formation.intitule_diplome)} />
-                <Field label="Code diplôme CERFA" value={nn(formation.diplome_vise_code)} />
-                <Field label="Type qualification visée" value={qualificationLabel(formation.type_qualification_visee)} />
+                <Field label="Intitulé" value={nn(displayFormation.intitule_diplome)} />
+                <Field label="Code diplôme CERFA" value={nn(displayFormation.diplome_vise_code)} />
+                <Field label="Type qualification visée" value={qualificationLabel(displayFormation.type_qualification_visee)} />
                 <Field
                   label="Code NSF spécialité de formation"
-                  value={nsfSpecialiteLabel(formation.specialite_formation)}
+                  value={nsfSpecialiteLabel(displayFormation.specialite_formation)}
                 />
-                <Field label="Code diplôme" value={nn(formation.code_diplome)} />
-                <Field label="Code RNCP" value={nn(formation.code_rncp)} />
-                <Field label="Total heures" value={nn(formation.total_heures)} />
+                <Field label="Code diplôme" value={nn(displayFormation.code_diplome)} />
+                <Field label="Code RNCP" value={nn(displayFormation.code_rncp)} />
+                <Field label="Total heures" value={nn(displayFormation.total_heures)} />
                 <Field
                   label="Heures d'enseignements généraux"
-                  value={nn(formation.heures_enseignements_generaux)}
+                  value={nn(displayFormation.heures_enseignements_generaux)}
                 />
-                <Field label="Heures distanciel" value={nn(formation.heures_distanciel)} />
+                <Field label="Heures distanciel" value={nn(displayFormation.heures_distanciel)} />
               </Section>
             </Grid>
 
             {/* ─────────── Places & inscrits ─────────── */}
             <Grid item xs={12}>
               <Section title="Places et inscrits">
-                <Field label="Capacité" value={nn(formation.cap)} />
-                <Field label="Prévu CRIF" value={nn(formation.prevus_crif)} />
-                <Field label="Prévu MP" value={nn(formation.prevus_mp)} />
-                <Field label="Total places" value={nn(formation.total_places)} />
-                <Field label="Inscrits CRIF" value={nn(formation.inscrits_crif)} />
-                <Field label="Inscrits MP" value={nn(formation.inscrits_mp)} />
-                <Field label="Inscrits total" value={nn(formation.inscrits_total)} />
-                <Field label="Total inscrits" value={nn(formation.total_inscrits)} />
-                <Field label="Prévu total" value={nn(formation.prevus_total)} />
-                <Field label="Places restantes" value={nn(formation.places_restantes)} />
-                <Field label="Places disponibles" value={nn(formation.places_disponibles)} />
-                <Field label="Places restantes CRIF" value={nn(formation.places_restantes_crif)} />
-                <Field label="Places restantes MP" value={nn(formation.places_restantes_mp)} />
-                <Field label="À recruter (nb)" value={nn(formation.a_recruter)} />
+                <Field label="Capacité" value={nn(displayFormation.cap)} />
+                <Field label="Prévu CRIF" value={nn(displayFormation.prevus_crif)} />
+                <Field label="Prévu MP" value={nn(displayFormation.prevus_mp)} />
+                <Field label="Total places" value={nn(displayFormation.total_places)} />
+                <Field label="Inscrits CRIF" value={nn(displayFormation.inscrits_crif)} />
+                <Field label="Inscrits MP" value={nn(displayFormation.inscrits_mp)} />
+                <Field label="Inscrits total" value={nn(displayFormation.inscrits_total)} />
+                <Field label="Total inscrits" value={nn(displayFormation.total_inscrits)} />
+                <Field label="Prévu total" value={nn(displayFormation.prevus_total)} />
+                <Field label="Places restantes" value={nn(displayFormation.places_restantes)} />
+                <Field label="Places disponibles" value={nn(displayFormation.places_disponibles)} />
+                <Field label="Places restantes CRIF" value={nn(displayFormation.places_restantes_crif)} />
+                <Field label="Places restantes MP" value={nn(displayFormation.places_restantes_mp)} />
+                <Field label="À recruter (nb)" value={nn(displayFormation.a_recruter)} />
               </Section>
             </Grid>
 
             {/* ─────────── Contrôle GESPERS (lecture seule) ─────────── */}
             <Grid item xs={12}>
               <Section title="Contrôle GESPERS">
-                <Field label="Inscrits GESPERS CRIF" value={nn(formation.inscrits_crif_gespers)} />
-                <Field label="Inscrits GESPERS MP" value={nn(formation.inscrits_mp_gespers)} />
-                <Field label="Total inscrits GESPERS" value={nn(formation.total_inscrits_gespers)} />
-                <Field label="Écart saisie / GESPERS" value={nn(formation.ecart_inscrits)} />
-                <Field label="Saturation GESPERS" value={nn(formation.taux_saturation_gespers)} />
+                <Field label="Inscrits GESPERS CRIF" value={nn(displayFormation.inscrits_crif_gespers)} />
+                <Field label="Inscrits GESPERS MP" value={nn(displayFormation.inscrits_mp_gespers)} />
+                <Field label="Total inscrits GESPERS" value={nn(displayFormation.total_inscrits_gespers)} />
+                <Field label="Écart saisie / GESPERS" value={nn(displayFormation.ecart_inscrits)} />
+                <Field label="Saturation GESPERS" value={nn(displayFormation.taux_saturation_gespers)} />
               </Section>
             </Grid>
 
             {/* ─────────── Statistiques & indicateurs ─────────── */}
             <Grid item xs={12}>
               <Section title="Statistiques et indicateurs">
-                <Field label="Entrées en formation" value={nn(formation.entree_formation)} />
+                <Field label="Entrées en formation" value={nn(displayFormation.entree_formation)} />
                 <Field
                   label="Candidats"
                   value={
-                    <Button component={Link} to={buildCandidatesUrl(formation.id)} size="small">
-                      {nn(formation.nombre_candidats)}
+                    <Button component={Link} to={buildCandidatesUrl(displayFormation.id)} size="small">
+                      {nn(displayFormation.nombre_candidats)}
                     </Button>
                   }
                 />
                 <Field
                   label="Inscrits"
                   value={
-                    <Button component={Link} to={buildInscritsUrl(formation.id)} size="small">
-                      {nn(formation.inscrits_total)}
+                    <Button component={Link} to={buildInscritsUrl(displayFormation.id)} size="small">
+                      {nn(displayFormation.inscrits_total)}
                     </Button>
                   }
                 />
-                <Field label="Entretiens" value={nn(formation.nombre_entretiens)} />
+                <Field label="Entretiens" value={nn(displayFormation.nombre_entretiens)} />
                 <Field
                   label="Événements"
                   value={
-                    <Button component={Link} to={buildEvenementsUrl(formation.id)} size="small">
-                      {nn(formation.nombre_evenements)}
+                    <Button component={Link} to={buildEvenementsUrl(displayFormation.id)} size="small">
+                      {nn(displayFormation.nombre_evenements)}
                     </Button>
                   }
                 />
-                <Field label="Saturation" value={nn(formation.saturation)} />
-                <Field label="Taux saturation" value={nn(formation.taux_saturation)} />
-                <Field label="Taux de transformation" value={nn(formation.taux_transformation)} />
-                <Field label="Nombre prospections" value={nn(formation.nombre_prospections)} />
-                <Field label="Nombre appairages" value={nn(formation.nombre_appairages)} />
+                <Field label="Saturation" value={nn(displayFormation.saturation)} />
+                <Field label="Taux saturation" value={nn(displayFormation.taux_saturation)} />
+                <Field label="Taux de transformation" value={nn(displayFormation.taux_transformation)} />
+                <Field label="Nombre prospections" value={nn(displayFormation.nombre_prospections)} />
+                <Field label="Nombre appairages" value={nn(displayFormation.nombre_appairages)} />
               </Section>
             </Grid>
 
@@ -337,8 +346,8 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Partenaires"
                   value={
-                    formation.partenaires?.length
-                      ? formation.partenaires.map((p) => (
+                    displayFormation.partenaires?.length
+                      ? displayFormation.partenaires.map((p) => (
                           <span key={p.id}>
                             <Link to={`/partenaires/${p.id}/edit`}>{p.nom}</Link>{" "}
                           </span>
@@ -349,10 +358,10 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Prospections"
                   value={
-                    formation.prospections?.length
+                    displayFormation.prospections?.length
                       ? (
-                          <Button component={Link} to={buildProspectionsUrl(formation.id)} size="small">
-                            {formation.prospections.length} prospection(s)
+                          <Button component={Link} to={buildProspectionsUrl(displayFormation.id)} size="small">
+                            {displayFormation.prospections.length} prospection(s)
                           </Button>
                         )
                       : "—"
@@ -361,12 +370,12 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Appairages"
                   value={
-                    formation.appairages?.length ? (
-                      <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
-                        {formation.appairages.length} appairage(s)
+                    displayFormation.appairages?.length ? (
+                      <Button component={Link} to={buildAppairagesUrl(displayFormation.id)} size="small">
+                        {displayFormation.appairages.length} appairage(s)
                       </Button>
                     ) : (
-                      <Button component={Link} to={buildAppairagesUrl(formation.id)} size="small">
+                      <Button component={Link} to={buildAppairagesUrl(displayFormation.id)} size="small">
                         Voir les appairages liés
                       </Button>
                     )
@@ -375,7 +384,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Événements liés"
                   value={
-                    <Button component={Link} to={buildEvenementsUrl(formation.id)} size="small">
+                    <Button component={Link} to={buildEvenementsUrl(displayFormation.id)} size="small">
                       Voir les événements
                     </Button>
                   }
@@ -385,9 +394,9 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Grid item xs={12}>
                   <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                     <strong>Documents :</strong>{" "}
-                    {formation.documents?.length ? (
+                    {displayFormation.documents?.length ? (
                       <Box component="span" sx={{ color: "text.primary" }}>
-                        {formation.documents.map((doc, idx) => (
+                        {displayFormation.documents.map((doc, idx) => (
                           <span key={doc.id}>
                             <Box
                               component="a"
@@ -401,7 +410,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                             >
                               {doc.nom_fichier}
                             </Box>
-                            {idx < (formation.documents?.length ?? 0) - 1 ? ", " : ""}
+                            {idx < (displayFormation.documents?.length ?? 0) - 1 ? ", " : ""}
                           </span>
                         ))}
                       </Box>
@@ -422,7 +431,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                   {/* Bouton pour ajouter un document */}
                   <Box sx={{ mt: 1 }}>
                     <AddDocumentButton
-                      formationId={formation.id}
+                      formationId={displayFormation.id}
                       onCreated={() => {
                         toast.success("✅ Document ajouté !");
                         // 🔁 tu pourras rafraîchir la formation ici si besoin
@@ -432,9 +441,9 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 </Grid>
 
                 {/* 🗒️ Dernier commentaire (le plus récent selon date maj/création) */}
-                {formation.commentaires?.length
+                {displayFormation.commentaires?.length
                   ? (() => {
-                      const dernier = ([...formation.commentaires] as Commentaire[])
+                      const dernier = ([...displayFormation.commentaires] as Commentaire[])
                         .filter((c) => c.created_at || c.updated_at)
                         .sort((a, b) => {
                           const dateA = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
@@ -475,7 +484,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                             }}
                             dangerouslySetInnerHTML={{
                               __html: sanitizeHTML(
-                                dernier.contenu ?? formation.dernier_commentaire ?? ""
+                                dernier.contenu ?? displayFormation.dernier_commentaire ?? ""
                               ),
                             }}
                           />
@@ -500,7 +509,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Commentaires"
                   value={
-                    formation.commentaires?.length ? (
+                    displayFormation.commentaires?.length ? (
                       <Button
                         variant="outlined"
                         size="small"
@@ -511,7 +520,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                           // (optionnel) tu pourrais aussi ici stocker formation.id dans un état si tu gères plusieurs formations
                         }}
                       >
-                        Voir tous les commentaires ({formation.commentaires.length})
+                        Voir tous les commentaires ({displayFormation.commentaires.length})
                       </Button>
                     ) : (
                       <Button
@@ -530,8 +539,8 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
                 <Field
                   label="Historique"
                   value={
-                    formation.historique?.length
-                      ? `${formation.historique.length} entrée(s) d'historique`
+                    displayFormation.historique?.length
+                      ? `${displayFormation.historique.length} entrée(s) d'historique`
                       : "—"
                   }
                 />
@@ -551,7 +560,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
           color="primary"
           onClick={() => {
             onClose();
-            navigate(`/formations/${formation.id}/edit`);
+            navigate(`/formations/${displayFormation.id}/edit`);
           }}
         >
           Modifier
@@ -562,7 +571,7 @@ export default function FormationDetailModal({ open, onClose, formationId }: Pro
       <FormationCommentsModal
         open={openComments}
         onClose={() => setOpenComments(false)}
-        formationId={formation.id}
+        formationId={displayFormation.id}
       />
     </Dialog>
   );
