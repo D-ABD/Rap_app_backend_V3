@@ -866,52 +866,6 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         ws = wb.active
         ws.title = "Formations"
 
-        headers = [
-            # Colonnes prioritaires dans l’ordre métier demandé
-            "Centre",
-            "Formation",
-            "Type d’offre",
-            "Statut",
-            "Numéro produit",
-            "Numéro d’offre",
-            "Date début",
-            "Date fin",
-            "Places prévues (total)",
-            "Inscrits total (saisie)",
-            "Écart saisie / GESPERS",
-            "Places dispo",
-            "Taux saturation saisie (%)",
-            "Taux transformation saisie (%)",
-            "Dernier commentaire",
-            "Entrées en formation",
-            "Numéro Kairos",
-            "Assistante",
-            "Convocation envoyée",
-            # Colonnes conservées à la fin pour compatibilité
-            "ID",
-            "Activité",
-            "Statut temporel",
-            "Places prévues CRIF",
-            "Places prévues MP",
-            "Cap",
-            "Inscrits CRIF (saisie)",
-            "Inscrits MP (saisie)",
-            "Inscrits CRIF GESPERS",
-            "Inscrits MP GESPERS",
-            "Inscrits total GESPERS",
-            "Places restantes CRIF",
-            "Places restantes MP",
-            "Taux saturation GESPERS (%)",
-            "Nombre candidats",
-            "Nombre entretiens",
-            "Intitulé diplôme",
-            "Code diplôme",
-            "Code RNCP",
-            "Total heures",
-            "Heures distanciel",
-            "Est archivée",
-        ]
-
         try:
             logo_path = Path(settings.BASE_DIR) / "rap_app/static/images/logo.png"
             if logo_path.exists():
@@ -932,19 +886,14 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
         except Exception:
             pass
 
-        title_last_col = get_column_letter(len(headers))
-        ws.merge_cells(f"B1:{title_last_col}1")
+        ws.merge_cells("B1:Z1")
         ws["B1"] = "Export des formations — Rap_App"
         ws["B1"].font = Font(bold=True, size=14, color="004C99")
-        ws["B1"].alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
-
-        ws.merge_cells(f"B2:{title_last_col}2")
+        ws["B1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells("B2:Z2")
         ws["B2"] = f"Export réalisé le {now_fr.strftime('%d/%m/%Y à %H:%M (%Z)')}"
         ws["B2"].font = Font(italic=True, size=10, color="666666")
-        ws["B2"].alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
-
-        ws.row_dimensions[1].height = 24
-        ws.row_dimensions[2].height = 20
+        ws["B2"].alignment = Alignment(horizontal="center", vertical="center")
         ws.append([])
 
         if inclure_archivees:
@@ -952,25 +901,66 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             ws["A4"].font = Font(italic=True, color="FF0000")
             ws.append([])
 
+        headers = [
+            "ID",
+            "Centre",
+            "Formation",
+            "Activité",
+            "Type d’offre",
+            "Statut",
+            "Statut temporel",
+            "Numéro d’offre",
+            "Date début",
+            "Date fin",
+            "Assistante",
+            "Places CRIF",
+            "Places MP",
+            "Places prévues (total)",
+            "Capacité max",
+            "Inscrits CRIF (saisie)",
+            "Inscrits MP (saisie)",
+            "Inscrits total (saisie)",
+            "Inscrits GESPERS CRIF",
+            "Inscrits GESPERS MP",
+            "Total inscrits GESPERS",
+            "Écart saisie / GESPERS",
+            "Places dispo",
+            "Places restantes CRIF",
+            "Places restantes MP",
+            "Taux saturation saisie (%)",
+            "Taux saturation GESPERS (%)",
+            "Taux transformation saisie (%)",
+            "Nombre de candidats",
+            "Nombre d’entretiens",
+            "Entrées en formation",
+            "Dernier commentaire",
+            "Numéro produit",
+            "Numéro Kairos",
+            "Convocation envoyée",
+            "Intitulé du diplôme / titre visé",
+            "Code diplôme",
+            "Code RNCP",
+            "Durée totale (heures)",
+            "Heures à distance",
+            "Est archivée ?",
+        ]
         ws.append(headers)
         header_row = ws.max_row
         last_col_letter = get_column_letter(len(headers))
 
-        header_fill = PatternFill("solid", fgColor="D9EAD3")
-        thin_border = Border(
-            left=Side(style="thin", color="D9D9D9"),
-            right=Side(style="thin", color="D9D9D9"),
-            top=Side(style="thin", color="D9D9D9"),
-            bottom=Side(style="thin", color="D9D9D9"),
+        header_fill = PatternFill("solid", fgColor="B7DEE8")
+        border = Border(
+            left=Side(style="thin", color="CCCCCC"),
+            right=Side(style="thin", color="CCCCCC"),
+            top=Side(style="thin", color="CCCCCC"),
+            bottom=Side(style="thin", color="CCCCCC"),
         )
-
         for cell in ws[header_row]:
-            cell.font = Font(bold=True, color="1F1F1F")
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrapText=True)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.fill = header_fill
-            cell.border = thin_border
-
-        ws.row_dimensions[header_row].height = 42
+            cell.border = border
+        ws.row_dimensions[header_row].height = 28
 
         def _fmt(val):
             if val is None:
@@ -979,34 +969,9 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 return val.strftime("%d/%m/%Y")
             return val
 
-        even_fill = PatternFill("solid", fgColor="FFFFFF")
-        odd_fill = PatternFill("solid", fgColor="F3E5F5")
-
-        numeric_cols = [
-            9,   # Places prévues (total)
-            10,  # Inscrits total (saisie)
-            11,  # Écart saisie / GESPERS
-            12,  # Places dispo
-            13,  # Taux saturation saisie (%)
-            14,  # Taux transformation saisie (%)
-            16,  # Entrées en formation
-            20,  # ID
-            23,  # Places prévues CRIF
-            24,  # Places prévues MP
-            26,  # Inscrits CRIF (saisie)
-            27,  # Inscrits MP (saisie)
-            28,  # Inscrits CRIF GESPERS
-            29,  # Inscrits MP GESPERS
-            30,  # Inscrits total GESPERS
-            31,  # Places restantes CRIF
-            32,  # Places restantes MP
-            33,  # Taux saturation GESPERS (%)
-            34,  # Nombre candidats
-            35,  # Nombre entretiens
-            39,  # Total heures
-            40,  # Heures distanciel
-        ]
-        percentage_cols = [13, 14, 33]
+        even_fill = PatternFill("solid", fgColor="EEF3FF")
+        odd_fill = PatternFill("solid", fgColor="FAFBFD")
+        numeric_cols = list(range(10, 21)) + [23, 24, 25, 32, 33]
 
         for i, f in enumerate(qs, start=1):
             dernier_commentaire = ""
@@ -1018,7 +983,6 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                     last_comment = f.get_commentaires(limit=1).select_related("created_by").first()
                 else:
                     last_comment = None
-
                 if last_comment:
                     contenu_html = getattr(last_comment, "contenu", "") or getattr(last_comment, "body", "")
                     contenu_txt = strip_html_tags_pretty(contenu_html)
@@ -1040,48 +1004,41 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             is_archived = activite.lower() == "archivee"
 
             row = [
-                # Colonnes prioritaires dans TON ordre
+                f.id,
                 getattr(f.centre, "nom", ""),
                 f.nom,
+                activite_display,
                 getattr(f.type_offre, "nom", ""),
                 getattr(f.statut, "nom", ""),
-                f.num_produit or "",
+                getattr(f, "status_temporel", ""),
                 f.num_offre or "",
                 _fmt(f.start_date),
                 _fmt(f.end_date),
-                (f.prevus_crif or 0) + (f.prevus_mp or 0),
-                (f.inscrits_crif or 0) + (f.inscrits_mp or 0),
-                (f.inscrits_crif or 0) + (f.inscrits_mp or 0)
-                - (
-                    (getattr(f, "inscrits_crif_gespers", 0) or 0)
-                    + (getattr(f, "inscrits_mp_gespers", 0) or 0)
-                ),
-                getattr(f, "places_disponibles", 0) or 0,
-                taux_pct,
-                taux_transfo,
-                dernier_commentaire,
-                getattr(f, "entree_formation", 0) or 0,
-                f.num_kairos or "",
                 f.assistante or "",
-                "Oui" if f.convocation_envoie else "Non",
-
-                # Colonnes additionnelles conservées à la fin
-                f.id,
-                activite_display,
-                getattr(f, "status_temporel", ""),
                 f.prevus_crif or 0,
                 f.prevus_mp or 0,
+                (f.prevus_crif or 0) + (f.prevus_mp or 0),
                 f.cap or "",
                 f.inscrits_crif or 0,
                 f.inscrits_mp or 0,
+                (f.inscrits_crif or 0) + (f.inscrits_mp or 0),
                 getattr(f, "inscrits_crif_gespers", 0) or 0,
                 getattr(f, "inscrits_mp_gespers", 0) or 0,
                 (getattr(f, "inscrits_crif_gespers", 0) or 0) + (getattr(f, "inscrits_mp_gespers", 0) or 0),
+                (f.inscrits_crif or 0) + (f.inscrits_mp or 0) - ((getattr(f, "inscrits_crif_gespers", 0) or 0) + (getattr(f, "inscrits_mp_gespers", 0) or 0)),
+                getattr(f, "places_disponibles", 0) or 0,
                 getattr(f, "places_restantes_crif", 0) or 0,
                 getattr(f, "places_restantes_mp", 0) or 0,
+                taux_pct,
                 getattr(f, "taux_saturation_gespers", 0) or 0,
+                taux_transfo,
                 f.nombre_candidats or 0,
                 f.nombre_entretiens or 0,
+                getattr(f, "entree_formation", 0) or 0,
+                dernier_commentaire,
+                f.num_produit or "",
+                f.num_kairos or "",
+                "Oui" if f.convocation_envoie else "Non",
                 f.intitule_diplome or "",
                 f.code_diplome or "",
                 f.code_rncp or "",
@@ -1098,58 +1055,24 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
 
             for j, cell in enumerate(ws[ws.max_row], start=1):
                 cell.fill = fill
-                cell.border = thin_border
+                cell.border = border
                 cell.alignment = Alignment(vertical="top", wrapText=True)
-
                 if j in numeric_cols:
                     cell.number_format = "#,##0"
                     cell.font = Font(color="003366")
                     cell.alignment = Alignment(horizontal="right", vertical="center")
-
-                if j in percentage_cols:
-                    cell.number_format = "0.00"
-                    cell.font = Font(color="003366")
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-
             ws.row_dimensions[ws.max_row].height = 30
 
         end_row = ws.max_row
         if end_row > header_row:
             ws.auto_filter.ref = f"A{header_row}:{last_col_letter}{end_row}"
-
         ws.freeze_panes = f"A{header_row + 1}"
 
         for col in ws.columns:
             letter = get_column_letter(col[0].column)
             max_len = max((len(str(c.value)) for c in col if c.value is not None), default=0)
-            ws.column_dimensions[letter].width = min(max_len + 2, 28)
-
-        target_widths = {
-            "Centre": 16,
-            "Formation": 34,
-            "Type d’offre": 14,
-            "Statut": 14,
-            "Numéro produit": 12,
-            "Numéro d’offre": 12,
-            "Date début": 12,
-            "Date fin": 12,
-            "Places prévues (total)": 12,
-            "Inscrits total (saisie)": 12,
-            "Écart saisie / GESPERS": 12,
-            "Places dispo": 11,
-            "Taux saturation saisie (%)": 12,
-            "Taux transformation saisie (%)": 12,
-            "Dernier commentaire": 60,
-            "Entrées en formation": 12,
-            "Numéro Kairos": 12,
-            "Assistante": 18,
-            "Convocation envoyée": 14,
-        }
-
-        for idx, header in enumerate(headers, start=1):
-            if header in target_widths:
-                ws.column_dimensions[get_column_letter(idx)].width = target_widths[header]
-
+            ws.column_dimensions[letter].width = min(max_len + 3, 42)
+        ws.column_dimensions[get_column_letter(len(headers))].width = 80
         ws.oddFooter.center.text = f"© Rap_App — export du {now_fr.strftime('%d/%m/%Y %H:%M (%Z)')}"
 
         buffer = BytesIO()

@@ -72,7 +72,7 @@ Objectif
 
 
 
-
+prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI.....
  
 
 
@@ -612,11 +612,17 @@ Ne fais aucune modification supplémentaire.
 
 
 
+Je veux modifier la regle pour les inscrits MP. Les inscrits saisis manuellement deviennent la source de vérité des formations.
+Les inscrits issus de GESPERS restent visibles à titre de contrôle.
+Les écarts entre saisie manuelle et GESPERS sont calculés et affichés, mais ne pilotent plus les indicateurs principaux.
 
 
-
-
+les docstrings doivent etre du meme nib-veau que les autres et refleter le code actuel et ne pas indiquer u'il a changé. pour le front on garde la meme convention de code aui utilise theme....
 
 git add .
 git commit -m "UI pass debut lot8 migration plan "
 git push origin main
+
+
+python manage.py test rap_app -v 2
+

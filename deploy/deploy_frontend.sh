@@ -86,3 +86,17 @@ if [ "$SEND_DEPLOY_EMAIL" = "true" ] && [ -x "$APP_DIR/deploy/send_deploy_notifi
 fi
 
 echo "==> Frontend deploy done"
+
+
+
+-------------------------
+Workflow final correct
+-------------------------
+
+cd /srv/apps/rap_app/app
+git pull origin main
+bash deploy/deploy_backend.sh
+bash deploy/deploy_frontend.sh
+sudo systemctl restart gunicorn_rapapp
+sudo systemctl reload nginx
+curl -Ik https://rap.adserv.fr/health/
