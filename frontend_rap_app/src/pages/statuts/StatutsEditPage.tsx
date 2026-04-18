@@ -71,7 +71,7 @@ export default function StatutsEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, setValues, neutralFallback]);
+  }, [id, navigate, setValues]);
 
   useEffect(() => {
     fetchStatut();

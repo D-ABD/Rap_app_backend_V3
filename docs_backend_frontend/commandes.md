@@ -14,6 +14,15 @@ schéma telechargement
 http://localhost:8000/api/schema/ 
 
 
+
+python3 manage.py check
+python3 manage.py makemigrations --check --dry-run
+python3 manage.py migrate
+python3 manage.py runserver 0.0.0.0:8000
+
+
+
+
 python3 manage.py check     
 python3 manage.py makemigrations 
 python3 manage.py migrate 
@@ -406,4 +415,4 @@ ports (ss)
 
 
 
-pytest rap_app/tests/ -v
+pytest rap_app/tests/ -v 

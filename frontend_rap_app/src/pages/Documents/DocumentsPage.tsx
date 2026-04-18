@@ -39,7 +39,7 @@ import type { AppTheme } from "../../theme";
 
 export default function DocumentsPage() {
   const theme = useTheme<AppTheme>();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const _isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [search, setSearch] = useState("");
   const [searchParams] = useSearchParams();
 
