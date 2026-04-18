@@ -21,6 +21,7 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import api from "../../api/axios";
 
 import FiltresProspectionsPanel from "../../components/filters/FiltresProspectionsPanel";
 import usePagination from "../../hooks/usePagination";
@@ -160,7 +161,6 @@ export default function ProspectionPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
     try {
-      const api = (await import("../../api/axios")).default;
       await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/`)));
       toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
@@ -207,7 +207,6 @@ export default function ProspectionPage() {
 
   const handleRestoreClick = async (id: number) => {
     try {
-      const api = (await import("../../api/axios")).default;
       await api.post(`/prospections/${id}/desarchiver/`);
       toast.success("♻️ Prospection restaurée");
       setReloadKey((k) => k + 1);
@@ -219,7 +218,6 @@ export default function ProspectionPage() {
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
     try {
-      const api = (await import("../../api/axios")).default;
       await api.post(`/prospections/${hardDeleteId}/hard-delete/`);
       toast.success("🗑️ Prospection supprimée définitivement");
       setHardDeleteId(null);
@@ -237,7 +235,6 @@ export default function ProspectionPage() {
 
     setBulkStatusLoading(true);
     try {
-      const api = (await import("../../api/axios")).default;
       const results = await Promise.allSettled(
         selectedIds.map((id) => api.post(`/prospections/${id}/changer-statut/`, { statut: bulkStatus }))
       );

@@ -15,6 +15,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import api from "../../api/axios";
 
 import FormationTable from "./FormationTable";
 import FiltresFormationsPanel from "../../components/filters/FiltresFormationsPanel";
@@ -187,8 +188,7 @@ export default function FormationsPage() {
 
     setArchiveLoading(true);
     try {
-      const api = await import("../../api/axios");
-      await Promise.all(idsToDelete.map((id) => api.default.delete(`/formations/${id}/`)));
+      await Promise.all(idsToDelete.map((id) => api.delete(`/formations/${id}/`)));
       toast.success(`📦 ${idsToDelete.length} formation(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
@@ -206,12 +206,11 @@ export default function FormationsPage() {
   const handleToggleArchive = useCallback(
     async (row: Formation) => {
       try {
-        const api = await import("../../api/axios");
         if (row.activite === "archivee") {
-          await api.default.post(`/formations/${row.id}/desarchiver/`);
+          await api.post(`/formations/${row.id}/desarchiver/`);
           toast.success("Formation restaurée");
         } else {
-          await api.default.post(`/formations/${row.id}/archiver/`);
+          await api.post(`/formations/${row.id}/archiver/`);
           toast.success("Formation archivée");
         }
         fetchData();

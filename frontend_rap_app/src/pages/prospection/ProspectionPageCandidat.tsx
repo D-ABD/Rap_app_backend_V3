@@ -17,6 +17,7 @@ import {
   Menu,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import api from "../../api/axios";
 
 import FiltresProspectionsPanel from "../../components/filters/FiltresProspectionsPanel";
 import usePagination from "../../hooks/usePagination";
@@ -110,7 +111,6 @@ export default function ProspectionPageCandidat() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
     try {
-      const api = (await import("../../api/axios")).default;
       await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/candidat`)));
       toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
@@ -153,7 +153,6 @@ export default function ProspectionPageCandidat() {
 
   const handleRestoreClick = async (id: number) => {
     try {
-      const api = (await import("../../api/axios")).default;
       await api.post(`/prospections/${id}/desarchiver/`);
       toast.success("♻️ Prospection restaurée");
       setReloadKey((k) => k + 1);
