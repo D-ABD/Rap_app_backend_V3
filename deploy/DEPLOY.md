@@ -105,3 +105,17 @@ Lire :
 - `deploy/VPS_DEPLOY_REPORT.md` = realite du serveur
 - `deploy/commandes_deploy.md` = commandes utiles en prod
 
+## Emplacement Virtualenv
+/srv/apps/rap_app/venv 
+
+## Comment voir le fichier .env?
+cat .env
+
+## Comment se connecter à psql
+psql -U ABD -d rap_app_backend -h localhost -p 5432
+
+## Comment savoir qui est le user ?
+SELECT current_user;
+SELECT tablename, tableowner
+FROM pg_tables
+WHERE tablename = 'rap_app_formation';

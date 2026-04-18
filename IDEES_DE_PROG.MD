@@ -1,79 +1,62 @@
 - 📂 Documentation & Socle
 Finalisation du README.md : Rédiger la documentation technique et fonctionnelle complète du projet (installation, architecture des services, contrats d'API, et procédures de déploiement).
-
+--------------------------------------------------------------------
 
 
 Je souhaite aussi améliorer la qualité des données en intégrant un mécanisme de correction et de normalisation automatique des textes en français, afin de limiter les fautes de frappe, homogénéiser les saisies et améliorer la qualité globale des informations enregistrées.
-
-
+--------------------------------------------------------------------
 
 Comment organiser les futurs endpoints, statistiques, bulk actions et règles métier pour obtenir une application plus intelligente, plus robuste et plus simple à utiliser.
+--------------------------------------------------------------------
 
 Revoir les dates dans les form et certains form sont tres lents. et impossible de taper l'année
-
-revoir maj d'un candidat
-
-
-
-je veux un systeme de modal coherent apres une action. comme lorsque je cree un atelier tre ou un partenaire...
 --------------------------------------------------------------------
+
 je veux une explication de ce que fais chaque module et de ses relations, aussi de ce qui se declenche automatiquement comme les services, signals, ....donc ont lit tous les fichiers pour etre clair
 Créé un dossier DOC_APP et mets y les fichiers, par exemple :  Doc_formations, Doc_appairages....
-
------------
-
-
+--------------------------------------------------------------------
 
 Possible de recevoir la BDD par email tous les vendredi? pour sauvegarde
+--------------------------------------------------------------------
 
 Reprendre chaque module un à un et voir qui a le droit de faire quoi(permissions, roles, scope....)
+--------------------------------------------------------------------
 
  
 verifie que toutes les erreurs ont des messages .verifier que j'ai bien des messages clairs pour chaque erreur de validation dans l'app, pour aider l'utilisateur. Faire un audit
-
-
-
- 
-
-
-
-
-
-
-
+--------------------------------------------------------------------
 
 
 dans mon app, est il possible de creer un acces obsolete de 3 jours, pour qu'une entreprise puisse remplir une partie du cerfa en ligne depuis un form? et que l'acces se coupe automatiquement apres 3 jours?
-
-
-
-
-
-Refaire les form et les tables
-Verifier les scops
+--------------------------------------------------------------------
 
 
 
 verifier si je dois modifier les stats 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------
 
 
 Creer des sous dossiers pour les tests pour facilement les tester module par module. par exemple: test formation, ou je regroupe tous les tests liés à la formation:
+--------------------------------------------------------------------
 
-
-----------------------------------------------------------------------
 Pour les logs: ajouter plus tard une purge automatique, par exemple :
 conserver x mois
+--------------------------------------------------------------------
 
----------
+
+
 Intégration d’une IA très légère, locale et strictement limitée aux données de l’application
 Objectif
+--------------------------------------------------------------------
 
 
 
-
-prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI.....
+prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI..... 
+--------------------------------------------------------------------
  
+git add .
+git commit -m "Ajout presents en formation"
+git push origin main
 
 
 ----------------------------------------
@@ -611,14 +594,7 @@ Ne fais aucune modification supplémentaire.
 
 
 
-
-Je veux modifier la regle pour les inscrits MP. Les inscrits saisis manuellement deviennent la source de vérité des formations.
-Les inscrits issus de GESPERS restent visibles à titre de contrôle.
-Les écarts entre saisie manuelle et GESPERS sont calculés et affichés, mais ne pilotent plus les indicateurs principaux.
-
-
-les docstrings doivent etre du meme nib-veau que les autres et refleter le code actuel et ne pas indiquer u'il a changé. pour le front on garde la meme convention de code aui utilise theme....
-
+--------------------------------------------------------------------
 git add .
 git commit -m "UI pass debut lot8 migration plan "
 git push origin main

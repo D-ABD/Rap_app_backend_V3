@@ -22,6 +22,8 @@ class TypeOffre(BaseModel):
     POEC = "poec"
     POEI = "poei"
     TOSA = "tosa"
+    AFC = "afc"
+    MP = "mp"
     AUTRE = "autre"
     NON_DEFINI = "non_defini"
 
@@ -31,6 +33,8 @@ class TypeOffre(BaseModel):
         (POEC, "POEC"),
         (POEI, "POEI"),
         (TOSA, "TOSA"),
+        (AFC, "AFC"),
+        (MP, "MP"),
         (AUTRE, "Autre"),
         (NON_DEFINI, "Non défini"),
     ]
@@ -41,6 +45,8 @@ class TypeOffre(BaseModel):
         POEC: "#260a5b",
         POEI: "#0b4f04",
         TOSA: "#323435",
+        AFC: "#1565c0",
+        MP: "#2e7d32",
         AUTRE: "#ff6207",
         NON_DEFINI: "#000000",
     }
