@@ -136,6 +136,8 @@ def _gespers_total_inscrits(obj) -> int:
                 "nombre_candidats": 20,
                 "candidats_list_url": "/api/candidats/?formation=42",
                 "nombre_entretiens": 12,
+                "entree_formation": 2,
+                "presents_en_formation": 1,
             },
             response_only=True,
         )
@@ -176,6 +178,8 @@ class FormationListSerializer(serializers.Serializer):
     nombre_candidats = serializers.IntegerField()
     candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField()
+    entree_formation = serializers.IntegerField(required=False, default=0)
+    presents_en_formation = serializers.IntegerField(required=False, default=0)
     nombre_evenements = serializers.IntegerField(required=False, allow_null=True)
     nombre_prospections = serializers.IntegerField(required=False, read_only=True)
     nombre_appairages = serializers.IntegerField(required=False, read_only=True)
@@ -430,6 +434,7 @@ class FormationDetailSerializer(serializers.Serializer):
     cap = serializers.IntegerField(required=False, allow_null=True)
     convocation_envoie = serializers.BooleanField(default=False)
     entree_formation = serializers.IntegerField(required=False, default=0)
+    presents_en_formation = serializers.IntegerField(required=False, default=0)
     nombre_candidats = serializers.IntegerField(required=False, default=0)
     candidats_list_url = serializers.SerializerMethodField()
     nombre_entretiens = serializers.IntegerField(required=False, default=0)
@@ -677,6 +682,7 @@ class BaseFormationWriteSerializer(serializers.ModelSerializer):
             "cap",
             "assistante",
             "entree_formation",
+            "presents_en_formation",
             "nombre_candidats",
             "nombre_entretiens",
             "convocation_envoie",

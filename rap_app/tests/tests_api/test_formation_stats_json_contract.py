@@ -75,6 +75,8 @@ class FormationStatsJsonContractTests(APITestCase):
             "taux_transformation",
             "ecart_inscrits_vs_gespers",
             "repartition_financeur",
+            "entrees_formation",
+            "presents_en_formation",
             "candidats",
             "appairages",
         ):
@@ -145,6 +147,8 @@ class FormationStatsJsonContractTests(APITestCase):
                 "taux_saturation_gespers",
                 "taux_transformation_reference",
                 "taux_transformation_gespers",
+                "entrees_formation",
+                "presents_en_formation",
             ):
                 self.assertIn(key, row, msg=f"ligne groupée manque {key!r}")
 

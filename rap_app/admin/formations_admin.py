@@ -214,6 +214,7 @@ class FormationAdmin(admin.ModelAdmin):
                 "fields": (
                     "convocation_envoie",
                     "entree_formation",
+                    "presents_en_formation",
                     "nombre_candidats",
                     "nombre_entretiens",
                     "nombre_evenements",

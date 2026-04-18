@@ -50,6 +50,7 @@ const COLUMNS = [
   "Dispo",
   "Saturation (saisie)",
   "Entrées (formations)",
+  "Présents (formations)",
   "Événements",
   "Prospections",
   "Candidats",
@@ -128,6 +129,7 @@ export default function FormationGroupedWidget({
       totalDispo: sum("total_disponibles"),
       moyenneSaturation,
       totalEntrees: sum("entrees_formation"),
+      totalPresents: sum("presents_en_formation"),
       totalEvenements: sum("nb_evenements"),
       totalProspections: sum("nb_prospections"),
       totalCandidats: sum("nb_candidats"),
@@ -376,6 +378,7 @@ export default function FormationGroupedWidget({
                       {formatPercent(saturation)}
                     </TableCell>
                     <TableCell align="right">{toFixed0(r.entrees_formation)}</TableCell>
+                    <TableCell align="right">{toFixed0(r.presents_en_formation)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_evenements)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_prospections)}</TableCell>
                     <TableCell align="right">{toFixed0(r.nb_candidats)}</TableCell>
@@ -429,6 +432,7 @@ export default function FormationGroupedWidget({
                     {formatPercent(totals.moyenneSaturation)}
                   </TableCell>
                 <TableCell align="right">{toFixed0(totals.totalEntrees)}</TableCell>
+                <TableCell align="right">{toFixed0(totals.totalPresents)}</TableCell>
                 <TableCell align="right">{toFixed0(totals.totalEvenements)}</TableCell>
                 <TableCell align="right">{toFixed0(totals.totalProspections)}</TableCell>
                 <TableCell align="right">{toFixed0(totals.totalCandidats)}</TableCell>

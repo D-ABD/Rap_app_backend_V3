@@ -40,6 +40,7 @@ export type FormationWritePayload = {
   cap?: number | null;
   convocation_envoie?: boolean;
   entree_formation?: number | null;
+  presents_en_formation?: number | null;
   nombre_candidats?: number | null;
   nombre_entretiens?: number | null;
   intitule_diplome?: string | null;

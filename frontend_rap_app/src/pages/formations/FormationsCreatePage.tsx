@@ -38,6 +38,7 @@ export default function FormationsCreatePage() {
     cap: 0,
     convocation_envoie: false,
     entree_formation: 0,
+    presents_en_formation: 0,
     nombre_candidats: 0,
     nombre_entretiens: 0,
     intitule_diplome: "",

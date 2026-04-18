@@ -76,6 +76,7 @@ export interface Formation {
 
   cap?: number | null;
   entree_formation?: number;
+  presents_en_formation?: number;
   nombre_candidats?: number;
   nombre_entretiens?: number;
   nombre_evenements?: number;
@@ -181,6 +182,7 @@ export interface FormationFormData {
   convocation_envoie?: boolean;
 
   entree_formation?: number;
+  presents_en_formation?: number;
   nombre_candidats?: number;
   nombre_entretiens?: number;
   nombre_evenements?: number;

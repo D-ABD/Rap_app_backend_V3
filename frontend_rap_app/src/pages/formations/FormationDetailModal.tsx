@@ -307,6 +307,7 @@ export default function FormationDetailModal({
             <Grid item xs={12}>
               <Section title="Statistiques et indicateurs">
                 <Field label="Entrées en formation" value={nn(displayFormation.entree_formation)} />
+                <Field label="Présents en formation" value={nn(displayFormation.presents_en_formation)} />
                 <Field
                   label="Candidats"
                   value={

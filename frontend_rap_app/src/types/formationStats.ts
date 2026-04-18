@@ -96,6 +96,7 @@ export type OverviewKpis = {
     mp_pct: number;
   };
   entrees_formation: number;
+  presents_en_formation: number;
   candidats: CandidatKpis;
   ecart_inscrits_vs_gespers: number;
   appairages: AppairageKpis; // ← NEW
@@ -150,6 +151,7 @@ export type GroupRow = {
   total_dispo_mp: number;
   total_disponibles: number;
   entrees_formation: number;
+  presents_en_formation: number;
   nb_evenements: number;
   nb_prospections: number;
   /** Lot 4 — basé sur saisie (= taux_saturation_reference). */

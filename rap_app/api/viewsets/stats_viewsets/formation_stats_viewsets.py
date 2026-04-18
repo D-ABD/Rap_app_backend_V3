@@ -492,8 +492,9 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
         base = self._base_metrics(qs)
         lot2_kpis = self._lot2_additive_inscrits_kpis(qs, base)
 
-        # Entrées formation (champ Formation)
+        # Entrées / présents formation (champs Formation)
         entree_total = qs.aggregate(x=Coalesce(Sum("entree_formation"), Value(0)))["x"]
+        presents_total = qs.aggregate(x=Coalesce(Sum("presents_en_formation"), Value(0)))["x"]
 
         # ----- Candidats (scopés aux formations du qs)
         cand = dict(base["candidats"])
@@ -547,6 +548,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 "taux_saturation": base["taux_saturation"],
                 "repartition_financeur": base["repartition_financeur"],
                 "entrees_formation": int(entree_total or 0),
+                "presents_en_formation": int(presents_total or 0),
                 "nb_evenements": int(activite_qs.get("nb_evenements") or 0),
                 "nb_prospections": int(activite_qs.get("nb_prospections") or 0),
                 "candidats": cand,
@@ -622,6 +624,7 @@ class FormationStatsViewSet(RestrictToUserOwnedQueryset, GenericViewSet):
                 total_dispo_crif=Coalesce(Sum(Greatest(F("prevus_crif") - F("inscrits_crif"), Value(0))), Value(0)),
                 total_dispo_mp=Coalesce(Sum(Greatest(F("prevus_mp") - F("inscrits_mp"), Value(0))), Value(0)),
                 entrees_formation=Coalesce(Sum("entree_formation"), Value(0)),
+                presents_en_formation=Coalesce(Sum("presents_en_formation"), Value(0)),
                 nombre_candidats_saisi=Coalesce(Sum("nombre_candidats"), Value(0)),
                 # ----- Candidats
                 nb_candidats=Count("candidats", distinct=True),

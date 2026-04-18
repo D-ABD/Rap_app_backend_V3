@@ -542,6 +542,7 @@ class FormationExcelHandler:
                 "inscrits_crif",
                 "inscrits_mp",
                 "entree_formation",
+                "presents_en_formation",
                 "nombre_entretiens",
                 "total_heures",
                 "heures_enseignements_generaux",

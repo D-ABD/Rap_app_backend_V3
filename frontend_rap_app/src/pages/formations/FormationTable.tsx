@@ -268,6 +268,16 @@ export default function FormationTable({
     },
     { key: "nombre_entretiens", label: "Entretiens" },
     {
+      key: "entree_formation",
+      label: "Entrées form.",
+      render: (row) => row.entree_formation ?? 0,
+    },
+    {
+      key: "presents_en_formation",
+      label: "Présents form.",
+      render: (row) => row.presents_en_formation ?? 0,
+    },
+    {
       key: "nombre_evenements",
       label: "Événements",
       render: (row) => (

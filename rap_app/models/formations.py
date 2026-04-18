@@ -307,6 +307,7 @@ class Formation(BaseModel):
         "cap",
         "convocation_envoie",
         "entree_formation",
+        "presents_en_formation",
         "nombre_candidats",
         "nombre_entretiens",
         "dernier_commentaire",
@@ -484,6 +485,11 @@ class Formation(BaseModel):
     )
     entree_formation = models.PositiveIntegerField(
         default=0, verbose_name=_("Entrées en formation"), help_text=_("Nombre de personnes entrées en formation")
+    )
+    presents_en_formation = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Présents en formation"),
+        help_text=_("Nombre de personnes présentes en formation (saisie)"),
     )
     nombre_candidats = models.PositiveIntegerField(
         default=0, verbose_name=_("Nombre de candidats"), help_text=_("Nombre total de candidats pour cette formation")
@@ -760,6 +766,7 @@ class Formation(BaseModel):
                 "cap",
                 "convocation_envoie",
                 "entree_formation",
+                "presents_en_formation",
                 "nombre_candidats",
                 "nombre_entretiens",
                 "nombre_evenements",

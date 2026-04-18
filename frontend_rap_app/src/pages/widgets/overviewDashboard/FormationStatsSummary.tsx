@@ -135,6 +135,16 @@ export default function FormationStatsSummary({
       value: k.ecart_inscrits_vs_gespers ?? 0,
       color: theme.palette.error.main,
     },
+    {
+      label: "Entrées (formations)",
+      value: k.entrees_formation ?? 0,
+      color: theme.palette.primary.main,
+    },
+    {
+      label: "Présents (formations)",
+      value: k.presents_en_formation ?? 0,
+      color: theme.palette.info.dark,
+    },
     { label: "Événements", value: k.nb_evenements ?? 0, color: theme.palette.warning.main },
     { label: "Prospections", value: k.nb_prospections ?? 0, color: theme.palette.secondary.main },
     { label: "Annulées", value: k.nb_annulees ?? 0, color: theme.palette.error.main },

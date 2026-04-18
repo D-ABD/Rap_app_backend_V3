@@ -192,6 +192,7 @@ function FormationForm({
     cap: 0,
     convocation_envoie: false,
     entree_formation: 0,
+    presents_en_formation: 0,
     nombre_candidats: 0,
     nombre_entretiens: 0,
     intitule_diplome: "",
@@ -231,6 +232,7 @@ function FormationForm({
       cap: initialValues.cap ?? 0,
       convocation_envoie: initialValues.convocation_envoie ?? false,
       entree_formation: initialValues.entree_formation ?? 0,
+      presents_en_formation: initialValues.presents_en_formation ?? 0,
       nombre_candidats: initialValues.nombre_candidats ?? 0,
       nombre_entretiens: initialValues.nombre_entretiens ?? 0,
       intitule_diplome: initialValues.intitule_diplome ?? "",
@@ -596,7 +598,7 @@ function FormationForm({
 
       {/* Section 5 */}
       <Section icon={<TrendingUpIcon color="primary" />} title="Recrutement & statistiques">
-        {["entree_formation", "nombre_candidats", "nombre_entretiens"].map((field) => (
+        {["entree_formation", "presents_en_formation", "nombre_candidats", "nombre_entretiens"].map((field) => (
           <Input
             key={field}
             label={numericLabels[field] || field}

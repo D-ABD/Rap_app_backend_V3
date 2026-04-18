@@ -195,6 +195,7 @@ export default function FormationsDetailPage() {
           <Grid item xs={12}>
             <Section title="Statistiques et indicateurs">
               <Field label="Entrées en formation" value={nn(formation.entree_formation)} />
+              <Field label="Présents en formation" value={nn(formation.presents_en_formation)} />
               <Field
                 label="Candidats"
                 value={

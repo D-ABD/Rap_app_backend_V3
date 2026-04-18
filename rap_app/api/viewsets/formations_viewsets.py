@@ -884,6 +884,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             "Taux transformation saisie (%)",
             "Dernier commentaire",
             "Entrées en formation",
+            "Présents en formation",
             "Numéro Kairos",
             "Assistante",
             "Convocation envoyée",
@@ -990,23 +991,24 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             13,  # Taux saturation saisie (%)
             14,  # Taux transformation saisie (%)
             16,  # Entrées en formation
-            20,  # ID
-            23,  # Places prévues CRIF
-            24,  # Places prévues MP
-            26,  # Inscrits CRIF (saisie)
-            27,  # Inscrits MP (saisie)
-            28,  # Inscrits CRIF GESPERS
-            29,  # Inscrits MP GESPERS
-            30,  # Inscrits total GESPERS
-            31,  # Places restantes CRIF
-            32,  # Places restantes MP
-            33,  # Taux saturation GESPERS (%)
-            34,  # Nombre candidats
-            35,  # Nombre entretiens
-            39,  # Total heures
-            40,  # Heures distanciel
+            17,  # Présents en formation
+            21,  # ID
+            24,  # Places prévues CRIF
+            25,  # Places prévues MP
+            27,  # Inscrits CRIF (saisie)
+            28,  # Inscrits MP (saisie)
+            29,  # Inscrits CRIF GESPERS
+            30,  # Inscrits MP GESPERS
+            31,  # Inscrits total GESPERS
+            32,  # Places restantes CRIF
+            33,  # Places restantes MP
+            34,  # Taux saturation GESPERS (%)
+            35,  # Nombre candidats
+            36,  # Nombre entretiens
+            40,  # Total heures
+            41,  # Heures distanciel
         ]
-        percentage_cols = [13, 14, 33]
+        percentage_cols = [13, 14, 34]
 
         for i, f in enumerate(qs, start=1):
             dernier_commentaire = ""
@@ -1061,6 +1063,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
                 taux_transfo,
                 dernier_commentaire,
                 getattr(f, "entree_formation", 0) or 0,
+                getattr(f, "presents_en_formation", 0) or 0,
                 f.num_kairos or "",
                 f.assistante or "",
                 "Oui" if f.convocation_envoie else "Non",
@@ -1141,6 +1144,7 @@ class FormationViewSet(UserVisibilityScopeMixin, ScopedModelViewSet):
             "Taux transformation saisie (%)": 12,
             "Dernier commentaire": 60,
             "Entrées en formation": 12,
+            "Présents en formation": 12,
             "Numéro Kairos": 12,
             "Assistante": 18,
             "Convocation envoyée": 14,
