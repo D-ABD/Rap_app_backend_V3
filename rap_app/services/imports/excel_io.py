@@ -29,6 +29,8 @@ from .schemas import (
 SHEET_DATA = "Données"
 SHEET_META = "Meta"
 SHEET_AIDE = "Aide"
+# Export applicatif (liste formations) — même contenu métier, autre mise en page.
+SHEET_FORMATIONS_EXPORT = "Formations"
 
 # §2.11.2 — Aide V1 (texte court, pas de grosses tables FK).
 AIDE_V1_LINES: tuple[str, ...] = (
@@ -273,6 +275,112 @@ def read_lot1_workbook(
                 raise ValidationError(
                     {
                         "file": f"Trop de lignes de données dans la feuille « {SHEET_DATA} » (max. {max_data_rows})."
+                    }
+                )
+            d: dict[str, Any] = {}
+            for i, key in enumerate(headers):
+                if i < len(row):
+                    d[key] = row[i]
+                else:
+                    d[key] = None
+            d["_excel_row_number"] = excel_row_idx
+            data_rows.append(d)
+
+        meta: dict[str, Any] = {}
+        if SHEET_META in wb.sheetnames:
+            m = wb[SHEET_META]
+            for row in m.iter_rows(min_row=1, max_col=2, values_only=True):
+                _check_parse_deadline(parse_deadline)
+                k, v = row[0], row[1] if len(row) > 1 else None
+                if k is None:
+                    continue
+                meta[str(k).strip()] = v
+    finally:
+        wb.close()
+
+    return meta, headers, data_rows
+
+
+def _detect_formation_export_header_row(ws, *, max_scan: int = 15) -> int:
+    """Repère la ligne d’en-têtes sur une feuille type export « Formations »."""
+    mc = min(ws.max_column or 1, 45)
+    for r in range(1, max_scan + 1):
+        row = [ws.cell(row=r, column=c).value for c in range(1, mc + 1)]
+        joined = " ".join(str(x).lower() for x in row if x is not None)
+        if "centre" in joined and ("formation" in joined or "nom" in joined):
+            return r
+    return 4
+
+
+def read_formation_import_workbook(
+    file_obj,
+    *,
+    max_data_rows: int | None = None,
+) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
+    """
+    Lit un classeur pour l’import ``Formation`` :
+
+    - feuille « Données » (modèle Lot 1) si présente ;
+    - sinon feuille « Formations » (export Rap_App : titres au-dessus de la ligne d’en-têtes).
+
+    La feuille « Meta » est optionnelle : si absente ou incomplète, des valeurs par défaut
+    sont fournies pour ``assert_meta_matches`` (schema_version + resource ``formation``).
+    """
+    if max_data_rows is None:
+        max_data_rows = get_max_lot1_data_rows()
+    if hasattr(file_obj, "seek"):
+        try:
+            file_obj.seek(0)
+        except (OSError, AttributeError):
+            pass
+    try:
+        wb = load_workbook(file_obj, read_only=True, data_only=True)
+    except Exception as exc:
+        raise ValidationError(
+            {
+                "file": "Fichier corrompu ou non compatible (ouverture Excel impossible).",
+                "code": ERR_INVALID_FILE,
+            }
+        ) from exc
+
+    max_sec = get_max_parse_seconds()
+    parse_deadline = (time.monotonic() + max_sec) if max_sec > 0 else None
+
+    try:
+        if SHEET_DATA in wb.sheetnames:
+            ws = wb[SHEET_DATA]
+            header_row_idx = 1
+        elif SHEET_FORMATIONS_EXPORT in wb.sheetnames:
+            ws = wb[SHEET_FORMATIONS_EXPORT]
+            header_row_idx = _detect_formation_export_header_row(ws)
+        else:
+            raise ValidationError(
+                {
+                    "file": f"Feuille « {SHEET_DATA} » ou « {SHEET_FORMATIONS_EXPORT} » introuvable.",
+                }
+            )
+
+        rows_iter = ws.iter_rows(min_row=header_row_idx, values_only=True)
+        header_row = next(rows_iter, None)
+        if not header_row:
+            raise ValidationError({"file": "Feuille de données vide."})
+        headers = ["" if c is None else str(c).strip() for c in header_row]
+        while headers and headers[-1] == "":
+            headers.pop()
+        if not headers or not any(h for h in headers):
+            raise ValidationError({"file": "Ligne d'en-têtes invalide."})
+
+        data_rows: list[dict[str, Any]] = []
+        start_data_row = header_row_idx + 1
+        for offset, row in enumerate(rows_iter):
+            excel_row_idx = start_data_row + offset
+            _check_parse_deadline(parse_deadline)
+            if all(v is None or (isinstance(v, str) and not str(v).strip()) for v in row):
+                continue
+            if len(data_rows) >= max_data_rows:
+                raise ValidationError(
+                    {
+                        "file": f"Trop de lignes de données dans la feuille (max. {max_data_rows}).",
                     }
                 )
             d: dict[str, Any] = {}

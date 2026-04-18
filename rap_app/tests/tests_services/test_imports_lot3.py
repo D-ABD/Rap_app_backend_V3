@@ -4,8 +4,10 @@ import io
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from rap_app.models.centres import Centre
 from rap_app.models.custom_user import CustomUser
@@ -155,3 +157,41 @@ class FormationDocumentExcelTests(AuthenticatedTestCase):
 
         f1_ids = set(_ids_from_export(self.client.get(_doc_export_ie(), {"formation": f1.id})))
         self.assertEqual(f1_ids, {d1.id})
+
+    def test_formation_import_french_headers_export_sheet_without_meta_dry_run(self):
+        """Feuille « Formations », libellés FR, centre par nom + slugs type/statut sans feuille Meta."""
+        centre = Centre.objects.create(nom="CRIF Import FR", code_postal="75001", created_by=self.admin)
+        to = TypeOffre.objects.create(nom="crif", created_by=self.admin)
+        st = Statut.objects.create(nom="non_defini", couleur="#000000", created_by=self.admin)
+        self.assertIsNotNone(to.pk)
+        self.assertIsNotNone(st.pk)
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Formations"
+        headers = ["Centre", "Formation", "Type d'offre", "Statut", "Date début", "Date fin"]
+        for col, h in enumerate(headers, start=1):
+            ws.cell(row=4, column=col, value=h)
+        ws.cell(row=5, column=1, value=centre.nom)
+        ws.cell(row=5, column=2, value="Formation import FR pytest")
+        ws.cell(row=5, column=3, value="crif")
+        ws.cell(row=5, column=4, value="non_defini")
+        ws.cell(row=5, column=5, value="01/01/2026")
+        ws.cell(row=5, column=6, value="31/12/2026")
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        upload = SimpleUploadedFile(
+            "formations_export.xlsx",
+            buf.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        factory = APIRequestFactory()
+        django_request = factory.get("/api/import-export/formation/import-xlsx/")
+        force_authenticate(django_request, user=self.admin)
+        request = Request(django_request)
+
+        h = FormationExcelHandler()
+        out = h.import_upload(self.admin, upload, dry_run=True, request=request)
+        self.assertEqual(out.get("summary", {}).get("failed"), 0, out)
+        self.assertEqual(out.get("summary", {}).get("created"), 1)

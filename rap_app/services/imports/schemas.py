@@ -148,6 +148,77 @@ FORMATION_COLUMNS: Final[list[str]] = [
     "partenaire_ids",
 ]
 
+
+def _norm_formation_header_key(label: str) -> str:
+    """Normalise un libellé de colonne Excel pour l’index d’alias (import formations)."""
+    t = str(label).strip().lower()
+    for old, new in (
+        ("\u2019", "'"),
+        ("\u2018", "'"),
+        ("\u201c", '"'),
+        ("\u201d", '"'),
+    ):
+        t = t.replace(old, new)
+    t = t.replace("œ", "oe").replace("é", "e").replace("è", "e").replace("ê", "e")
+    # Garder les accents utiles pour différencier — en fait on mappe en clés sans accent pour les alias
+    return " ".join(t.split())
+
+
+#: Libellés Excel (export Rap_App, FR) ou variantes → nom de colonne `FORMATION_COLUMNS`.
+FORMATION_HEADER_ALIASES: Final[dict[str, str]] = {
+    _norm_formation_header_key("Centre"): "centre_id",
+    _norm_formation_header_key("Formation"): "nom",
+    _norm_formation_header_key("Type d'offre"): "type_offre_id",
+    _norm_formation_header_key("Type d’offre"): "type_offre_id",
+    _norm_formation_header_key("Statut"): "statut_id",
+    _norm_formation_header_key("Numéro produit"): "num_produit",
+    _norm_formation_header_key("Numéro d'offre"): "num_offre",
+    _norm_formation_header_key("Numéro d’offre"): "num_offre",
+    _norm_formation_header_key("Date début"): "start_date",
+    _norm_formation_header_key("Date fin"): "end_date",
+    _norm_formation_header_key("Date de début"): "start_date",
+    _norm_formation_header_key("Date de fin"): "end_date",
+    _norm_formation_header_key("Numéro Kairos"): "num_kairos",
+    _norm_formation_header_key("Assistante"): "assistante",
+    _norm_formation_header_key("Convocation envoyée"): "convocation_envoie",
+    _norm_formation_header_key("Entrées en formation"): "entree_formation",
+    _norm_formation_header_key("Intitulé diplôme"): "intitule_diplome",
+    _norm_formation_header_key("Code diplôme"): "code_diplome",
+    _norm_formation_header_key("Code RNCP"): "code_rncp",
+    _norm_formation_header_key("Total heures"): "total_heures",
+    _norm_formation_header_key("Heures distanciel"): "heures_distanciel",
+    _norm_formation_header_key("Nombre candidats"): "nombre_candidats",
+    _norm_formation_header_key("Nombre entretiens"): "nombre_entretiens",
+    _norm_formation_header_key("Places prévues CRIF"): "prevus_crif",
+    _norm_formation_header_key("Places prévues MP"): "prevus_mp",
+    _norm_formation_header_key("Inscrits CRIF (saisie)"): "inscrits_crif",
+    _norm_formation_header_key("Inscrits MP (saisie)"): "inscrits_mp",
+    _norm_formation_header_key("Activité"): "activite",
+    _norm_formation_header_key("ID"): "id",
+}
+
+
+def canonical_formation_column_name(header: str) -> str | None:
+    """
+    Retourne le nom de colonne canonique `FORMATION_COLUMNS`, ou None si colonne à ignorer.
+
+    Les colonnes déjà en snake_case sont reconnues ; les alias FR (export) sont traduits.
+    """
+    if header is None:
+        return None
+    s = str(header).strip()
+    if not s:
+        return None
+    if s in FORMATION_COLUMNS:
+        return s
+    key = _norm_formation_header_key(s)
+    if key in FORMATION_HEADER_ALIASES:
+        return FORMATION_HEADER_ALIASES[key]
+    # second pass sans normalisation agressive des accents
+    key2 = " ".join(str(header).strip().lower().split())
+    return FORMATION_HEADER_ALIASES.get(key2)
+
+
 # Métadonnées exportables / template Document (pas de binaire dans la feuille).
 DOCUMENT_COLUMNS: Final[list[str]] = [
     "id",

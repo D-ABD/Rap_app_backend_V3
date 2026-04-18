@@ -15,11 +15,19 @@ from rest_framework.serializers import ValidationError as DRFValidationError
 from rap_app.api.roles import can_write_formations, is_admin_like, staff_centre_ids
 from rap_app.api.serializers.formations_serializers import FormationCreateSerializer, FormationUpdateSerializer
 from rap_app.api.viewsets.formations_viewsets import FormationViewSet
+from rap_app.models.centres import Centre
 from rap_app.models.documents import Document
 from rap_app.models.formations import Activite, Formation
 from rap_app.models.partenaires import Partenaire
+from rap_app.models.statut import Statut
+from rap_app.models.types_offre import TypeOffre
 
-from .excel_io import assert_meta_matches, cell_to_python, read_lot1_workbook, write_lot1_workbook
+from .excel_io import (
+    assert_meta_matches,
+    cell_to_python,
+    read_formation_import_workbook,
+    write_lot1_workbook,
+)
 from .handlers_lot1 import (
     _build_import_payload,
     _drf_errors_to_row,
@@ -38,6 +46,7 @@ from .schemas import (
     RESOURCE_DOCUMENT,
     RESOURCE_FORMATION,
     SCHEMA_VERSION_LOT1,
+    canonical_formation_column_name,
 )
 from .validation import validate_xlsx_uploaded_file
 
@@ -69,7 +78,93 @@ def _norm_date(val: Any) -> datetime.date | None:
     try:
         return datetime.date.fromisoformat(s[:10])
     except ValueError:
+        pass
+    # JJ/MM/AAAA (export Excel FR)
+    t = s.strip().replace(".", "/")
+    if "/" in t:
+        parts = [p.strip() for p in t.split("/") if p.strip()]
+        if len(parts) == 3:
+            try:
+                d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+                if y < 100:
+                    y += 2000
+                return datetime.date(y, m, d)
+            except ValueError:
+                return None
+    return None
+
+
+def _resolve_centre_id_from_cell(val: Any) -> int | None:
+    """Entier (PK) ou libellé exact / match unique partiel sur ``Centre.nom``."""
+    nid = _norm_id(val)
+    if nid is not None:
+        return nid
+    s = _norm_optional_str(val)
+    if not s:
         return None
+    c = Centre.objects.filter(nom__iexact=s).first()
+    if c:
+        return c.pk
+    qs = Centre.objects.filter(nom__icontains=s)
+    if qs.count() == 1:
+        return qs.first().pk
+    return None
+
+
+def _resolve_type_offre_id_from_cell(val: Any) -> int | None:
+    """PK ou slug ``TypeOffre.nom`` (ex. ``poei``, ``crif``)."""
+    nid = _norm_id(val)
+    if nid is not None:
+        return nid
+    s = _norm_optional_str(val)
+    if not s:
+        return None
+    sl = s.strip().lower()
+    to = TypeOffre.objects.filter(nom__iexact=sl).first()
+    return to.pk if to else None
+
+
+def _resolve_statut_id_from_cell(val: Any) -> int | None:
+    """PK ou slug ``Statut.nom`` (ex. ``a_recruter``)."""
+    nid = _norm_id(val)
+    if nid is not None:
+        return nid
+    s = _norm_optional_str(val)
+    if not s:
+        return None
+    sl = s.strip().lower()
+    st = Statut.objects.filter(nom__iexact=sl).first()
+    return st.pk if st else None
+
+
+def _formation_import_meta_defaults(meta: dict[str, Any]) -> dict[str, Any]:
+    """Permet d’importer un export sans feuille Meta (schéma Lot 1 + resource)."""
+    m = dict(meta)
+    if m.get("schema_version") is None:
+        m["schema_version"] = SCHEMA_VERSION_LOT1
+    if m.get("resource") is None:
+        m["resource"] = RESOURCE_FORMATION
+    return m
+
+
+def _canonicalize_formation_data_rows(data_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Projette les en-têtes (snake_case ou export FR) vers les clés ``FORMATION_COLUMNS``."""
+    out: list[dict[str, Any]] = []
+    for raw in data_rows:
+        rn = raw.get("_excel_row_number", 0)
+        canon: dict[str, Any] = {"_excel_row_number": rn}
+        for orig_key, val in raw.items():
+            if orig_key == "_excel_row_number":
+                continue
+            cname = canonical_formation_column_name(str(orig_key))
+            if cname is None:
+                continue
+            canon[cname] = val
+        for col in FORMATION_COLUMNS:
+            if col not in canon:
+                canon[col] = None
+        out.append(canon)
+    return out
 
 
 def _norm_activite(val: Any) -> str | None:
@@ -181,10 +276,10 @@ class FormationExcelHandler:
 
     def import_upload(self, user, uploaded_file, *, dry_run: bool, request) -> dict[str, Any]:
         validate_xlsx_uploaded_file(uploaded_file)
-        meta, _headers, data_rows = read_lot1_workbook(
-            uploaded_file, expected_columns=set(FORMATION_COLUMNS)
-        )
+        meta, _headers, data_rows = read_formation_import_workbook(uploaded_file)
+        meta = _formation_import_meta_defaults(meta)
         assert_meta_matches(meta, expected_resource=self.resource)
+        data_rows = _canonicalize_formation_data_rows(data_rows)
 
         msg = _formation_write_denied_message(user)
         if msg:
@@ -421,8 +516,14 @@ class FormationExcelHandler:
             if key in ("id", "activite", "partenaire_ids"):
                 continue
             v = raw.get(key)
-            if key in ("centre_id", "type_offre_id", "statut_id"):
-                d[key] = _norm_id(v)
+            if key == "centre_id":
+                d[key] = _resolve_centre_id_from_cell(v)
+                continue
+            if key == "type_offre_id":
+                d[key] = _resolve_type_offre_id_from_cell(v)
+                continue
+            if key == "statut_id":
+                d[key] = _resolve_statut_id_from_cell(v)
                 continue
             if key in ("start_date", "end_date"):
                 d[key] = _norm_date(v)
@@ -432,19 +533,25 @@ class FormationExcelHandler:
                 continue
             if key == "nombre_candidats":
                 continue
+            if key == "cap":
+                d[key] = _norm_uint(v)
+                continue
             if key in (
                 "prevus_crif",
                 "prevus_mp",
                 "inscrits_crif",
                 "inscrits_mp",
-                "cap",
                 "entree_formation",
                 "nombre_entretiens",
                 "total_heures",
                 "heures_enseignements_generaux",
                 "heures_distanciel",
             ):
-                d[key] = _norm_uint(v)
+                u = _norm_uint(v)
+                if u is None and (v is None or v == "" or (isinstance(v, str) and not str(v).strip())):
+                    d[key] = 0
+                else:
+                    d[key] = u
                 continue
             if isinstance(v, str):
                 s = v.strip()

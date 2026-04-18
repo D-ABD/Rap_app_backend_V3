@@ -25,6 +25,7 @@ def get_default_color(statut_nom):
         "formation_a_annuler": "#FD570A",
         "formation_a_repousser": "#D6C424",
         "formation_annulee": "#922119",
+        "formation_terminee": "#546E7A",
         "pleine": "#00980F",
         "quasi_pleine": "#04758C",
         "autre": "#7B8386",
@@ -56,6 +57,7 @@ class Statut(BaseModel):
     FORMATION_A_ANNULER = "formation_a_annuler"
     FORMATION_A_REPOUSSER = "formation_a_repousser"
     FORMATION_ANNULEE = "formation_annulee"
+    FORMATION_TERMINEE = "formation_terminee"
     PLEINE = "pleine"
     QUASI_PLEINE = "quasi_pleine"
     AUTRE = "autre"
@@ -69,6 +71,7 @@ class Statut(BaseModel):
         (FORMATION_A_ANNULER, "Formation à annuler"),
         (FORMATION_A_REPOUSSER, "Formation à repousser"),
         (FORMATION_ANNULEE, "Formation annulée"),
+        (FORMATION_TERMINEE, "Formation terminée"),
         (PLEINE, "Pleine"),
         (QUASI_PLEINE, "Quasi-pleine"),
         (AUTRE, "Autre"),
