@@ -30,6 +30,7 @@ export type PageTemplateProps = {
   refreshButton?: boolean;
   onRefresh?: () => void;
   filters?: React.ReactNode;
+  filtersActions?: React.ReactNode;
   showFilters?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -62,6 +63,7 @@ function PageTemplate({
   refreshButton = false,
   onRefresh,
   filters,
+  filtersActions,
   showFilters = true,
   children,
   footer,
@@ -168,7 +170,10 @@ function PageTemplate({
                       "&:hover": {
                         borderColor: "primary.main",
                         backgroundColor: (theme) =>
-                          alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.06 : 0.14),
+                          alpha(
+                            theme.palette.primary.main,
+                            theme.palette.mode === "light" ? 0.06 : 0.14
+                          ),
                       },
                     }}
                   >
@@ -189,7 +194,10 @@ function PageTemplate({
                       "&:hover": {
                         borderColor: "primary.main",
                         backgroundColor: (theme) =>
-                          alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.06 : 0.14),
+                          alpha(
+                            theme.palette.primary.main,
+                            theme.palette.mode === "light" ? 0.06 : 0.14
+                          ),
                       },
                     }}
                   >
@@ -213,10 +221,16 @@ function PageTemplate({
                     letterSpacing: "0.08em",
                     mb: 0.45,
                     backgroundColor: (theme) =>
-                      alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.1 : 0.18),
+                      alpha(
+                        theme.palette.primary.main,
+                        theme.palette.mode === "light" ? 0.1 : 0.18
+                      ),
                     border: "1px solid",
                     borderColor: (theme) =>
-                      alpha(theme.palette.primary.main, theme.palette.mode === "light" ? 0.14 : 0.22),
+                      alpha(
+                        theme.palette.primary.main,
+                        theme.palette.mode === "light" ? 0.14 : 0.22
+                      ),
                   }}
                 >
                   {eyebrow}
@@ -288,9 +302,27 @@ function PageTemplate({
         </Box>
       </Stack>
 
-      {filters && (
+      {(filters || filtersActions) && (
         <Collapse in={showFilters} unmountOnExit>
-          <PageSection>{filters}</PageSection>
+          <PageSection>
+            <Stack spacing={1}>
+              {filtersActions && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 1,
+                  }}
+                >
+                  {filtersActions}
+                </Box>
+              )}
+
+              {filters ? <Box>{filters}</Box> : null}
+            </Stack>
+          </PageSection>
         </Collapse>
       )}
 
@@ -307,5 +339,4 @@ function PageTemplate({
   );
 }
 
-// ✅ Empêche les re-renders inutiles du layout
 export default React.memo(PageTemplate);

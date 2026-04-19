@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -19,6 +19,8 @@ import {
   FormControl,
   InputLabel,
   SelectChangeEvent,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import api from "../../api/axios";
@@ -38,6 +40,12 @@ import PageTemplate from "../../components/PageTemplate";
 import ExportButtonProspection from "../../components/export_buttons/ExportButtonProspection";
 import ProspectionDetailModal from "./ProspectionDetailModal";
 import { isAdminLikeRole, isCandidateLikeRole } from "../../utils/roleGroups";
+
+type ColumnVisibilityItem = {
+  key: string;
+  label: string;
+  hideable: boolean;
+};
 
 export default function ProspectionPage() {
   const navigate = useNavigate();
@@ -65,16 +73,26 @@ export default function ProspectionPage() {
       partenaire: toNum(searchParams.get("partenaire")),
       formation: toNum(searchParams.get("formation")),
       centre: toNum(searchParams.get("centre")),
-      statut: (searchParams.get("statut") as ProspectionFiltresValues["statut"]) || undefined,
-      activite: (searchParams.get("activite") as ProspectionFiltresValues["activite"]) || undefined,
-      objectif: (searchParams.get("objectif") as ProspectionFiltresValues["objectif"]) || undefined,
-      motif: (searchParams.get("motif") as ProspectionFiltresValues["motif"]) || undefined,
+      statut:
+        (searchParams.get("statut") as ProspectionFiltresValues["statut"]) ||
+        undefined,
+      activite:
+        (searchParams.get("activite") as ProspectionFiltresValues["activite"]) ||
+        undefined,
+      objectif:
+        (searchParams.get("objectif") as ProspectionFiltresValues["objectif"]) ||
+        undefined,
+      motif:
+        (searchParams.get("motif") as ProspectionFiltresValues["motif"]) ||
+        undefined,
       type_prospection:
-        (searchParams.get("type_prospection") as ProspectionFiltresValues["type_prospection"]) ||
-        undefined,
+        (searchParams.get(
+          "type_prospection"
+        ) as ProspectionFiltresValues["type_prospection"]) || undefined,
       moyen_contact:
-        (searchParams.get("moyen_contact") as ProspectionFiltresValues["moyen_contact"]) ||
-        undefined,
+        (searchParams.get(
+          "moyen_contact"
+        ) as ProspectionFiltresValues["moyen_contact"]) || undefined,
       date_min: searchParams.get("date_min") || undefined,
       date_max: searchParams.get("date_max") || undefined,
       avec_archivees: parseBool(searchParams.get("avec_archivees")),
@@ -82,23 +100,79 @@ export default function ProspectionPage() {
     [searchParams]
   );
 
-  // ── filtres
   const [filters, setFilters] = useState<ProspectionFiltresValues>(urlFilters);
   const [showFilters, setShowFilters] = useState(false);
 
-  // ── pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
+
+  const defaultVisibleColumnKeys = useMemo(
+    () => [
+      "select",
+      "owner",
+      "prospection_infos",
+      "activite",
+      "partenaire",
+      "formation_offre",
+      "session",
+      "last_comment",
+      "audit",
+      "comments_nav",
+    ],
+    []
+  );
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+    defaultVisibleColumnKeys
+  );
+  const [showActionsColumn, setShowActionsColumn] = useState(true);
+
+  const columnVisibilityItems = useMemo<ColumnVisibilityItem[]>(
+    () => [
+      { key: "select", label: "Sélection", hideable: false },
+      { key: "owner", label: "Candidat", hideable: false },
+      { key: "prospection_infos", label: "Prospection", hideable: true },
+      { key: "activite", label: "Activité", hideable: true },
+      { key: "partenaire", label: "Partenaire", hideable: true },
+      { key: "formation_offre", label: "Formation / Offre", hideable: true },
+      { key: "session", label: "Session", hideable: true },
+      { key: "last_comment", label: "Dernier commentaire", hideable: true },
+      { key: "audit", label: "Créateur", hideable: true },
+      { key: "comments_nav", label: "Commentaires", hideable: true },
+    ],
+    []
+  );
+
+  const toggleColumnVisibility = useCallback(
+    (key: string) => {
+      setVisibleColumnKeys((prev) => {
+        const item = columnVisibilityItems.find((col) => col.key === key);
+        if (!item || item.hideable === false) return prev;
+
+        const isVisible = prev.includes(key);
+        if (isVisible) {
+          const next = prev.filter((itemKey) => itemKey !== key);
+          return next.length > 0 ? next : prev;
+        }
+
+        return [...prev, key];
+      });
+    },
+    [columnVisibilityItems]
+  );
+
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   useEffect(() => {
     setFilters(urlFilters);
     setPage(1);
   }, [urlFilters, setPage]);
 
-  // ── filtres envoyés à l'API
   type EffectiveFilters = ProspectionFiltresValues & {
     page: number;
     page_size: number;
   };
+
   const effectiveFilters: EffectiveFilters = useMemo(() => {
     const base: EffectiveFilters = { ...filters, page, page_size: pageSize };
     const pairs = Object.entries(base).filter(([k, v]) => {
@@ -126,7 +200,10 @@ export default function ProspectionPage() {
 
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { pageData, loading, error } = useProspections(effectiveFilters, reloadKey);
+  const { pageData, loading, error } = useProspections(
+    effectiveFilters,
+    reloadKey
+  );
   const prospections: Prospection[] = useMemo(
     () => (pageData?.results ?? []) as Prospection[],
     [pageData]
@@ -136,7 +213,6 @@ export default function ProspectionPage() {
     setCount(pageData?.count ?? 0);
   }, [pageData, setCount]);
 
-  // ── sélection
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   useEffect(() => {
     const visible = new Set(prospections.map((p) => p.id));
@@ -144,11 +220,12 @@ export default function ProspectionPage() {
   }, [prospections]);
 
   const toggleSelect = (id: number) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   const clearSelection = () => setSelectedIds([]);
   const selectAll = () => setSelectedIds(prospections.map((p) => p.id));
 
-  // ── archivage logique via endpoint DELETE legacy
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
@@ -176,10 +253,11 @@ export default function ProspectionPage() {
     }
   };
 
-  // ── modal de détail
   const [showDetail, setShowDetail] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [selectedProspection, setSelectedProspection] = useState<Prospection | null>(null);
+  const [selectedProspection, setSelectedProspection] = useState<Prospection | null>(
+    null
+  );
 
   const handleRowClick = (id: number, prospection?: Prospection) => {
     setSelectedProspection(prospection ?? null);
@@ -187,7 +265,9 @@ export default function ProspectionPage() {
     setShowDetail(true);
     void prefetchProspectionDetail(id)
       .then((detail) => {
-        setSelectedProspection((current) => (current?.id === id || !current ? detail : current));
+        setSelectedProspection((current) =>
+          current?.id === id || !current ? detail : current
+        );
       })
       .catch(() => {
         // Ignore prefetch failures here; the modal manages loading/fallback.
@@ -236,10 +316,14 @@ export default function ProspectionPage() {
     setBulkStatusLoading(true);
     try {
       const results = await Promise.allSettled(
-        selectedIds.map((id) => api.post(`/prospections/${id}/changer-statut/`, { statut: bulkStatus }))
+        selectedIds.map((id) =>
+          api.post(`/prospections/${id}/changer-statut/`, { statut: bulkStatus })
+        )
       );
 
-      const succeeded = results.filter((result) => result.status === "fulfilled").length;
+      const succeeded = results.filter(
+        (result) => result.status === "fulfilled"
+      ).length;
       const failed = results.length - succeeded;
 
       if (failed === 0) {
@@ -247,7 +331,9 @@ export default function ProspectionPage() {
       } else if (succeeded === 0) {
         toast.error("Aucune prospection n'a pu être mise à jour.");
       } else {
-        toast.warning(`Statut mis à jour pour ${succeeded} prospection(s). ${failed} échec(s).`);
+        toast.warning(
+          `Statut mis à jour pour ${succeeded} prospection(s). ${failed} échec(s).`
+        );
       }
 
       setShowBulkStatusDialog(false);
@@ -286,11 +372,22 @@ export default function ProspectionPage() {
 
           <Button
             variant="outlined"
+            onClick={(event) => setAnchorColumns(event.currentTarget)}
+          >
+            Colonnes
+          </Button>
+
+          <Button
+            variant="outlined"
             onClick={() => {
               setFilters((prev) => {
                 const next = !prev.avec_archivees;
                 if (!next && prev.activite === "archivee") {
-                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                  return {
+                    ...prev,
+                    avec_archivees: undefined,
+                    activite: undefined,
+                  };
                 }
                 return { ...prev, avec_archivees: next ? true : undefined };
               });
@@ -315,7 +412,10 @@ export default function ProspectionPage() {
             {filters.activite === "archivee" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
@@ -337,6 +437,67 @@ export default function ProspectionPage() {
           <Button variant="contained" onClick={redirectToCreate}>
             ➕ Nouvelle prospection
           </Button>
+
+          <Menu
+            anchorEl={anchorColumns}
+            open={Boolean(anchorColumns)}
+            onClose={() => setAnchorColumns(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Colonnes visibles
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Afficher ou masquer les colonnes du tableau
+              </Typography>
+            </Box>
+
+            {columnVisibilityItems.map((item) => {
+              const checked = visibleColumnKeys.includes(item.key);
+
+              return (
+                <MenuItem
+                  key={item.key}
+                  onClick={() => {
+                    if (!item.hideable) return;
+                    toggleColumnVisibility(item.key);
+                  }}
+                  dense
+                  disabled={!item.hideable}
+                >
+                  <Checkbox checked={checked} size="small" disabled={!item.hideable} />
+                  <ListItemText
+                    primary={item.label}
+                    secondary={!item.hideable ? "Toujours affichée" : undefined}
+                  />
+                </MenuItem>
+              );
+            })}
+
+            <MenuItem dense onClick={() => setShowActionsColumn((prev) => !prev)}>
+              <Checkbox checked={showActionsColumn} size="small" />
+              <ListItemText primary="Actions" />
+            </MenuItem>
+
+            <MenuItem
+              dense
+              onClick={() => {
+                setVisibleColumnKeys(defaultVisibleColumnKeys);
+                setShowActionsColumn(true);
+              }}
+            >
+              <ListItemText primary="Réinitialiser" />
+            </MenuItem>
+          </Menu>
 
           <Menu
             anchorEl={anchorOptions}
@@ -447,11 +608,12 @@ export default function ProspectionPage() {
             onRestoreClick={handleRestoreClick}
             onHardDeleteClick={(id) => setHardDeleteId(id)}
             canHardDelete={canHardDelete}
+            visibleColumnKeys={visibleColumnKeys}
+            showActionsColumn={showActionsColumn}
           />
         </Box>
       )}
 
-      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -472,7 +634,12 @@ export default function ProspectionPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={hardDeleteId !== null}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="error" />
           Suppression définitive
@@ -490,11 +657,17 @@ export default function ProspectionPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={showBulkStatusDialog} onClose={() => setShowBulkStatusDialog(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={showBulkStatusDialog}
+        onClose={() => setShowBulkStatusDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Changer le statut des prospections sélectionnées</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Choisis le nouveau statut à appliquer aux {selectedIds.length} prospection(s) sélectionnée(s).
+            Choisis le nouveau statut à appliquer aux {selectedIds.length} prospection(s)
+            sélectionnée(s).
           </DialogContentText>
           <FormControl fullWidth>
             <InputLabel id="bulk-prospection-status-label">Nouveau statut</InputLabel>
@@ -514,13 +687,16 @@ export default function ProspectionPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkStatusDialog(false)}>Annuler</Button>
-          <Button variant="contained" onClick={handleBulkChangeStatus} disabled={bulkStatusLoading || !bulkStatus}>
+          <Button
+            variant="contained"
+            onClick={handleBulkChangeStatus}
+            disabled={bulkStatusLoading || !bulkStatus}
+          >
             {bulkStatusLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* ───────────── Détail prospection ───────────── */}
       <ProspectionDetailModal
         open={showDetail}
         onClose={() => {

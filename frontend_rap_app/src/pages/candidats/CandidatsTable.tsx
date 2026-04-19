@@ -28,22 +28,27 @@ import {
 } from "../../shared/utils/candidatStatus";
 
 /* ================= Helpers ================= */
-const dtfFR = typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
+const dtfFR =
+  typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
 const STICKY_COL_1_PX = 36;
+const STICKY_COL_2_LEFT_PX = 36;
 
 function fullName(c: Candidat): string {
   if (c.nom_complet && c.nom_complet.trim()) return c.nom_complet;
   return [c.nom, c.prenom].filter(Boolean).join(" ").trim() || "—";
 }
+
 function contratChip(value?: string | null) {
   if (!value) return <Typography color="text.disabled">—</Typography>;
-  const map: Record<string, { label: string; color: "default" | "warning" | "success" | "info" }> =
-    {
-      non: { label: "Non", color: "default" },
-      en_cours: { label: "En cours", color: "warning" },
-      signe: { label: "Signé", color: "info" },
-      valide: { label: "Validé", color: "success" },
-    };
+  const map: Record<
+    string,
+    { label: string; color: "default" | "warning" | "success" | "info" }
+  > = {
+    non: { label: "Non", color: "default" },
+    en_cours: { label: "En cours", color: "warning" },
+    signe: { label: "Signé", color: "info" },
+    valide: { label: "Validé", color: "success" },
+  };
   const { label, color } = map[value] ?? { label: value, color: "default" };
   return <Chip size="small" color={color} label={label} variant="outlined" />;
 }
@@ -54,8 +59,10 @@ function formatDateFR(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return dtfFR ? dtfFR.format(d) : d.toLocaleDateString("fr-FR");
 }
+
 function yesNoChip(v?: boolean) {
-  if (typeof v !== "boolean") return <Typography color="text.disabled">—</Typography>;
+  if (typeof v !== "boolean")
+    return <Typography color="text.disabled">—</Typography>;
   return (
     <Chip
       size="small"
@@ -65,27 +72,42 @@ function yesNoChip(v?: boolean) {
     />
   );
 }
+
 function stars(v?: number | null): string {
   return typeof v === "number" ? `${v} ★` : "—";
 }
+
 function labelOrId(name?: string | null, id?: number | null): string {
-  return name && name.trim() ? name : typeof id === "number" ? `#${id}` : "—";
+  return name && name.trim()
+    ? name
+    : typeof id === "number"
+      ? `#${id}`
+      : "—";
 }
+
 function formatFormation(c: Candidat): string {
   const f = c.formation_info;
   if (!f) return typeof c.formation === "number" ? `#${c.formation}` : "—";
   return (f.nom ?? "").trim() || "—";
 }
+
 function typeOffreLabel(c: Candidat): string {
   const to = c.formation_info?.type_offre;
   return to?.nom ?? to?.libelle ?? "—";
 }
+
 function getLinkedAccountId(c: Candidat): number | null {
   const account = c.compte_utilisateur;
   if (typeof account === "number") return account;
-  if (account && typeof account === "object" && typeof account.id === "number") return account.id;
+  if (
+    account &&
+    typeof account === "object" &&
+    typeof account.id === "number"
+  )
+    return account.id;
   return null;
 }
+
 function buildCandidateProspectionCreateUrl(c: Candidat): string | null {
   const ownerId = getLinkedAccountId(c);
   if (!ownerId) return null;
@@ -104,6 +126,7 @@ function buildCandidateProspectionCreateUrl(c: Candidat): string | null {
 
   return `/prospections/create?${params.toString()}`;
 }
+
 function buildCandidateAppairageCreateUrl(c: Candidat): string {
   const params = new URLSearchParams();
   params.set("candidat", String(c.id));
@@ -119,6 +142,7 @@ function buildCandidateAppairageCreateUrl(c: Candidat): string {
 
   return `/appairages/create?${params.toString()}`;
 }
+
 type AppairageLite = {
   partenaire_nom?: string | null;
   statut?: string | null;
@@ -127,17 +151,20 @@ type AppairageLite = {
   created_by_nom?: string | null;
   last_commentaire?: string | null;
 };
+
 function getLastAppairage(c: Candidat): AppairageLite | null {
   const obj = c as unknown as { last_appairage?: AppairageLite | null };
   return obj.last_appairage ?? null;
 }
+
 const CV_MAP: Record<string, string> = {
   oui: "Oui",
   en_cours: "En cours",
   a_modifier: "À modifier",
 };
+
 function cvChip(c: Candidat) {
-  const label = c.cv_statut_display ?? (c.cv_statut ? (CV_MAP[c.cv_statut] ?? c.cv_statut) : null);
+  const label = c.cv_statut_display ?? (c.cv_statut ? CV_MAP[c.cv_statut] ?? c.cv_statut : null);
   if (!label) return <Typography color="text.disabled">—</Typography>;
   let color: "default" | "success" | "warning" | "error" = "default";
   if (label === "Oui") color = "success";
@@ -171,6 +198,7 @@ type AtelierKey =
   | "atelier_6"
   | "atelier_7"
   | "autre";
+
 const AT_KEYS: AtelierKey[] = [
   "atelier_1",
   "atelier_2",
@@ -181,6 +209,7 @@ const AT_KEYS: AtelierKey[] = [
   "atelier_7",
   "autre",
 ];
+
 const AT_LABELS: Record<AtelierKey, string> = {
   atelier_1: "Atelier 1",
   atelier_2: "Atelier 2",
@@ -191,6 +220,7 @@ const AT_LABELS: Record<AtelierKey, string> = {
   atelier_7: "Atelier 7",
   autre: "Autre",
 };
+
 const AT_TOKENS: Record<AtelierKey, string> = {
   atelier_1: "A1",
   atelier_2: "A2",
@@ -201,6 +231,7 @@ const AT_TOKENS: Record<AtelierKey, string> = {
   atelier_7: "A7",
   autre: "Autre",
 };
+
 function readCount(obj: Record<string, unknown>, key: string): number {
   const v = obj[key];
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
@@ -210,6 +241,7 @@ function readCount(obj: Record<string, unknown>, key: string): number {
   }
   return 0;
 }
+
 function countsFromResume(text: string): Partial<Record<AtelierKey, number>> {
   const s = text.toLowerCase();
   const out: Partial<Record<AtelierKey, number>> = {};
@@ -222,6 +254,7 @@ function countsFromResume(text: string): Partial<Record<AtelierKey, number>> {
   if (mAutre && mAutre.length > 0) out.autre = mAutre.length;
   return out;
 }
+
 function extractAteliersCounts(c: Candidat): Partial<Record<AtelierKey, number>> {
   const obj = c as unknown as Record<string, unknown>;
   const out: Partial<Record<AtelierKey, number>> = {};
@@ -234,9 +267,15 @@ function extractAteliersCounts(c: Candidat): Partial<Record<AtelierKey, number>>
   if (resume.trim()) return countsFromResume(resume);
   return {};
 }
-function atelierCountsCompact(c: Candidat, limit = 3): { display: string; title: string } {
+
+function atelierCountsCompact(
+  c: Candidat,
+  limit = 3
+): { display: string; title: string } {
   const counts = extractAteliersCounts(c);
-  const pairs = AT_KEYS.map((k) => [k, counts[k] ?? 0] as const).filter(([, n]) => n > 0);
+  const pairs = AT_KEYS.map((k) => [k, counts[k] ?? 0] as const).filter(
+    ([, n]) => n > 0
+  );
   if (pairs.length === 0) return { display: "—", title: "" };
   const full = pairs.map(([k, n]) => `${AT_LABELS[k]}: ${n}`).join(", ");
   const short = pairs
@@ -247,7 +286,46 @@ function atelierCountsCompact(c: Candidat, limit = 3): { display: string; title:
   return { display: short + extra, title: full };
 }
 
-/* ================= Component ================= */
+/* ================= Column config ================= */
+type ColumnKey =
+  | "select"
+  | "candidat"
+  | "age"
+  | "contact"
+  | "localisation"
+  | "formation_complete"
+  | "periode"
+  | "contrat"
+  | "contrat_signe"
+  | "statut_metier"
+  | "cv"
+  | "disponibilite"
+  | "rqth"
+  | "permis_b"
+  | "admissible"
+  | "accompagnement_tre"
+  | "gespers"
+  | "communication"
+  | "experience"
+  | "csp"
+  | "entretien"
+  | "test"
+  | "inscription"
+  | "naissance"
+  | "appairages"
+  | "prospections"
+  | "partenaire"
+  | "statut_appairage"
+  | "date_appairage"
+  | "origine"
+  | "cree_par"
+  | "dernier_commentaire"
+  | "courrier_rentree"
+  | "date_rentree"
+  | "vu_par"
+  | "ateliers"
+  | "numero_osia";
+
 type Props = {
   items: Candidat[];
   selectedIds: number[];
@@ -258,6 +336,8 @@ type Props = {
   onRowClick?: (id: number, candidate?: Candidat) => void | Promise<void>;
   onRowHover?: (candidate: Candidat) => void;
   maxHeight?: string;
+  visibleColumnKeys?: string[];
+  showActionsColumn?: boolean;
 };
 
 export default function CandidatsTable({
@@ -270,18 +350,35 @@ export default function CandidatsTable({
   onRowClick,
   onRowHover,
   maxHeight = "65vh",
+  visibleColumnKeys,
+  showActionsColumn = true,
 }: Props) {
   const navigate = useNavigate();
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const pageIds = useMemo(() => items.map((i) => i.id), [items]);
-  const allChecked = pageIds.length > 0 && pageIds.every((id) => selectedSet.has(id));
+  const allChecked =
+    pageIds.length > 0 && pageIds.every((id) => selectedSet.has(id));
   const someChecked = pageIds.some((id) => selectedSet.has(id)) && !allChecked;
 
   const headerCbRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (headerCbRef.current) headerCbRef.current.indeterminate = someChecked;
   }, [someChecked]);
+
+  const visibleSet = useMemo(
+    () =>
+      visibleColumnKeys && visibleColumnKeys.length > 0
+        ? new Set(visibleColumnKeys)
+        : null,
+    [visibleColumnKeys]
+  );
+
+  const isColumnVisible = useCallback(
+    (key: ColumnKey) => !visibleSet || visibleSet.has(key),
+    [visibleSet]
+  );
 
   const toggleAllThisPage = useCallback(() => {
     if (allChecked) {
@@ -298,13 +395,17 @@ export default function CandidatsTable({
       if (checked) {
         if (!selectedSet.has(id)) onSelectionChange([...selectedIds, id]);
       } else {
-        if (selectedSet.has(id)) onSelectionChange(selectedIds.filter((x) => x !== id));
+        if (selectedSet.has(id))
+          onSelectionChange(selectedIds.filter((x) => x !== id));
       }
     },
     [onSelectionChange, selectedIds, selectedSet]
   );
 
-  const goEdit = useCallback((id: number) => navigate(`/candidats/${id}/edit`), [navigate]);
+  const goEdit = useCallback(
+    (id: number) => navigate(`/candidats/${id}/edit`),
+    [navigate]
+  );
   const goShow = useCallback((id: number) => navigate(`/candidats/${id}`), [navigate]);
   const goCandidateAppairages = useCallback(
     (id: number) => navigate(`/appairages?candidat=${id}`),
@@ -341,65 +442,101 @@ export default function CandidatsTable({
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            <TableCell
-              padding="checkbox"
-              sx={{
-                width: STICKY_COL_1_PX,
-                textAlign: "center",
-                left: 0,
-                zIndex: 5,
-                bgcolor: "grey.100",
-                position: "sticky",
-              }}
-            >
-              <Checkbox inputRef={headerCbRef} checked={allChecked} onChange={toggleAllThisPage} />
-            </TableCell>
-            <TableCell
-              sx={{
-                position: "sticky",
-                left: STICKY_COL_1_PX,
-                zIndex: 4,
-                bgcolor: "grey.100",
-              }}
-            >
-              👤 Candidat
-            </TableCell>
-            <TableCell>🎂 Âge</TableCell>
-            <TableCell>📧 Contact</TableCell>
-            <TableCell>📍 Localisation</TableCell>
-            <TableCell>🎓 Formation complète</TableCell>
-            <TableCell>📅 Période</TableCell>
-            <TableCell>📃 Contrat</TableCell>
-            <TableCell>✍️ Contrat signé</TableCell>
-            <TableCell>📌 Statut métier</TableCell>
-            <TableCell>📄 CV</TableCell>
-            <TableCell>⏳ Disp.</TableCell>
-            <TableCell>♿ RQTH</TableCell>
-            <TableCell>🚗 Permis B</TableCell>
-            <TableCell>🟢 Admissible</TableCell>
-            <TableCell>🤝 Accompagnement TRE</TableCell>
-            <TableCell>🗂️ GESPERS</TableCell>
-            <TableCell>💬 Com.</TableCell>
-            <TableCell>🛠 Exp.</TableCell>
-            <TableCell>⚖️ CSP</TableCell>
-            <TableCell>👥 Entretien</TableCell>
-            <TableCell>🧪 Test</TableCell>
-            <TableCell>📝 Inscription</TableCell>
-            <TableCell>🎂 Naissance</TableCell>
-            <TableCell>🔗 Appairages</TableCell>
-            <TableCell>📊 Prospections</TableCell>
-            <TableCell>🏢 Partenaire</TableCell>
-            <TableCell>📌 Statut app.</TableCell>
-            <TableCell>📅 Date app.</TableCell>
-            <TableCell>🌐 Origine</TableCell>
-            <TableCell>✍️ Créé par</TableCell>
-            <TableCell>💬 Dernier comm.</TableCell>
-            <TableCell>📨 Courrier rentrée</TableCell>
-            <TableCell>📅 Date rentrée</TableCell>
-            <TableCell>👀 Vu par</TableCell>
-            <TableCell>📚 Ateliers</TableCell>
-            <TableCell>🆔 OSIA</TableCell>
-            <TableCell>⚙️ Actions</TableCell>
+            {isColumnVisible("select") && (
+              <TableCell
+                padding="checkbox"
+                sx={{
+                  width: STICKY_COL_1_PX,
+                  textAlign: "center",
+                  left: 0,
+                  zIndex: 5,
+                  bgcolor: "grey.100",
+                  position: "sticky",
+                }}
+              >
+                <Checkbox
+                  inputRef={headerCbRef}
+                  checked={allChecked}
+                  onChange={toggleAllThisPage}
+                />
+              </TableCell>
+            )}
+
+            {isColumnVisible("candidat") && (
+              <TableCell
+                sx={{
+                  position: "sticky",
+                  left: isColumnVisible("select") ? STICKY_COL_1_PX : 0,
+                  zIndex: 4,
+                  bgcolor: "grey.100",
+                }}
+              >
+                👤 Candidat
+              </TableCell>
+            )}
+
+            {isColumnVisible("age") && <TableCell>🎂 Âge</TableCell>}
+            {isColumnVisible("contact") && <TableCell>📧 Contact</TableCell>}
+            {isColumnVisible("localisation") && (
+              <TableCell>📍 Localisation</TableCell>
+            )}
+            {isColumnVisible("formation_complete") && (
+              <TableCell>🎓 Formation complète</TableCell>
+            )}
+            {isColumnVisible("periode") && <TableCell>📅 Période</TableCell>}
+            {isColumnVisible("contrat") && <TableCell>📃 Contrat</TableCell>}
+            {isColumnVisible("contrat_signe") && (
+              <TableCell>✍️ Contrat signé</TableCell>
+            )}
+            {isColumnVisible("statut_metier") && (
+              <TableCell>📌 Statut métier</TableCell>
+            )}
+            {isColumnVisible("cv") && <TableCell>📄 CV</TableCell>}
+            {isColumnVisible("disponibilite") && <TableCell>⏳ Disp.</TableCell>}
+            {isColumnVisible("rqth") && <TableCell>♿ RQTH</TableCell>}
+            {isColumnVisible("permis_b") && <TableCell>🚗 Permis B</TableCell>}
+            {isColumnVisible("admissible") && (
+              <TableCell>🟢 Admissible</TableCell>
+            )}
+            {isColumnVisible("accompagnement_tre") && (
+              <TableCell>🤝 Accompagnement TRE</TableCell>
+            )}
+            {isColumnVisible("gespers") && <TableCell>🗂️ GESPERS</TableCell>}
+            {isColumnVisible("communication") && <TableCell>💬 Com.</TableCell>}
+            {isColumnVisible("experience") && <TableCell>🛠 Exp.</TableCell>}
+            {isColumnVisible("csp") && <TableCell>⚖️ CSP</TableCell>}
+            {isColumnVisible("entretien") && <TableCell>👥 Entretien</TableCell>}
+            {isColumnVisible("test") && <TableCell>🧪 Test</TableCell>}
+            {isColumnVisible("inscription") && (
+              <TableCell>📝 Inscription</TableCell>
+            )}
+            {isColumnVisible("naissance") && <TableCell>🎂 Naissance</TableCell>}
+            {isColumnVisible("appairages") && <TableCell>🔗 Appairages</TableCell>}
+            {isColumnVisible("prospections") && (
+              <TableCell>📊 Prospections</TableCell>
+            )}
+            {isColumnVisible("partenaire") && <TableCell>🏢 Partenaire</TableCell>}
+            {isColumnVisible("statut_appairage") && (
+              <TableCell>📌 Statut app.</TableCell>
+            )}
+            {isColumnVisible("date_appairage") && (
+              <TableCell>📅 Date app.</TableCell>
+            )}
+            {isColumnVisible("origine") && <TableCell>🌐 Origine</TableCell>}
+            {isColumnVisible("cree_par") && <TableCell>✍️ Créé par</TableCell>}
+            {isColumnVisible("dernier_commentaire") && (
+              <TableCell>💬 Dernier comm.</TableCell>
+            )}
+            {isColumnVisible("courrier_rentree") && (
+              <TableCell>📨 Courrier rentrée</TableCell>
+            )}
+            {isColumnVisible("date_rentree") && (
+              <TableCell>📅 Date rentrée</TableCell>
+            )}
+            {isColumnVisible("vu_par") && <TableCell>👀 Vu par</TableCell>}
+            {isColumnVisible("ateliers") && <TableCell>📚 Ateliers</TableCell>}
+            {isColumnVisible("numero_osia") && <TableCell>🆔 OSIA</TableCell>}
+            {showActionsColumn && <TableCell>⚙️ Actions</TableCell>}
           </TableRow>
         </TableHead>
 
@@ -408,8 +545,10 @@ export default function CandidatsTable({
             const name = fullName(c);
             const isChecked = selectedSet.has(c.id);
             const la = getLastAppairage(c);
-            const { display: ateliersDisplay, title: ateliersTitle } = atelierCountsCompact(c);
+            const { display: ateliersDisplay, title: ateliersTitle } =
+              atelierCountsCompact(c);
             const linkedAccountId = getLinkedAccountId(c);
+            const stickyNameLeft = isColumnVisible("select") ? STICKY_COL_2_LEFT_PX : 0;
 
             return (
               <TableRow
@@ -427,247 +566,336 @@ export default function CandidatsTable({
                   "&:nth-of-type(even)": { bgcolor: "grey.50" },
                 }}
               >
-                {/* Sélection */}
-                <TableCell
-                  sx={{
-                    width: STICKY_COL_1_PX,
-                    textAlign: "center",
-                    left: 0,
-                    position: "sticky",
-                    bgcolor: "background.paper",
-                    zIndex: 2,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={isChecked}
-                    onChange={(e) => toggleOne(c.id, e.target.checked)}
-                  />
-                </TableCell>
+                {isColumnVisible("select") && (
+                  <TableCell
+                    sx={{
+                      width: STICKY_COL_1_PX,
+                      textAlign: "center",
+                      left: 0,
+                      position: "sticky",
+                      bgcolor: "background.paper",
+                      zIndex: 2,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onChange={(e) => toggleOne(c.id, e.target.checked)}
+                    />
+                  </TableCell>
+                )}
 
-                {/* Candidat */}
-                <TableCell
-                  sx={{
-                    position: "sticky",
-                    left: STICKY_COL_1_PX,
-                    bgcolor: "background.paper",
-                    zIndex: 1,
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    {name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {c.nom} {c.prenom}
-                  </Typography>
-                </TableCell>
-
-                <TableCell>{typeof c.age === "number" ? c.age : "—"}</TableCell>
-
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {c.email ? (
-                    <Link href={`mailto:${c.email}`} display="block">
-                      {c.email}
-                    </Link>
-                  ) : (
-                    <Typography color="text.disabled">—</Typography>
-                  )}
-                  {c.telephone && (
-                    <Link
-                      href={`tel:${c.telephone}`}
-                      display="block"
-                      variant="body2"
-                      color="text.secondary"
-                    >
-                      {c.telephone}
-                    </Link>
-                  )}
-                </TableCell>
-
-                {/* Localisation (ville + CP) */}
-                <TableCell>
-                  {c.ville || c.code_postal
-                    ? `${c.ville ?? ""}${c.ville && c.code_postal ? " (" + c.code_postal + ")" : (c.code_postal ?? "")}`
-                    : "—"}
-                </TableCell>
-
-                {/* Formation complète */}
-                <TableCell>
-                  <Box>
-                    <Typography variant="body2" fontWeight={500}>
-                      {formatFormation(c)}
+                {isColumnVisible("candidat") && (
+                  <TableCell
+                    sx={{
+                      position: "sticky",
+                      left: stickyNameLeft,
+                      bgcolor: "background.paper",
+                      zIndex: 1,
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {[
-                        c.formation_info?.num_offre,
-                        c.formation_info?.centre?.nom,
-                        typeOffreLabel(c),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || "—"}
+                      {c.nom} {c.prenom}
                     </Typography>
-                  </Box>
-                </TableCell>
+                  </TableCell>
+                )}
 
-                {/* Période */}
-                <TableCell>
-                  {c.formation_info?.date_debut || c.formation_info?.date_fin ? (
-                    <Typography variant="body2">
-                      {[
-                        formatDateFR(c.formation_info?.date_debut),
-                        formatDateFR(c.formation_info?.date_fin),
-                      ]
-                        .filter(Boolean)
-                        .join(" → ")}
-                    </Typography>
-                  ) : (
-                    <Typography color="text.disabled">—</Typography>
-                  )}
-                </TableCell>
-                {/* Contrat */}
-                <TableCell>{c.type_contrat || "—"}</TableCell>
-                <TableCell>{contratChip(c.contrat_signe)}</TableCell>
-                {/* Statut */}
-                <TableCell>{phaseChip(c)}</TableCell>
+                {isColumnVisible("age") && (
+                  <TableCell>{typeof c.age === "number" ? c.age : "—"}</TableCell>
+                )}
 
-                <TableCell>{cvChip(c)}</TableCell>
-                <TableCell>{c.disponibilite || "—"}</TableCell>
-                <TableCell>{yesNoChip(c.rqth)}</TableCell>
-                <TableCell>{yesNoChip(c.permis_b)}</TableCell>
-                <TableCell>{yesNoChip(c.admissible)}</TableCell>
-                <TableCell>{yesNoChip(c.en_accompagnement_tre)}</TableCell>
-                <TableCell>{yesNoChip(c.inscrit_gespers)}</TableCell>
-                <TableCell>{stars(c.communication)}</TableCell>
-                <TableCell>{stars(c.experience)}</TableCell>
-                <TableCell>{stars(c.csp)}</TableCell>
-                <TableCell>{yesNoChip(c.entretien_done)}</TableCell>
-                <TableCell>{yesNoChip(c.test_is_ok)}</TableCell>
-                <TableCell>{formatDateFR(c.date_inscription)}</TableCell>
-                <TableCell>{formatDateFR(c.date_naissance)}</TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {typeof c.nb_appairages === "number" && c.nb_appairages > 0 ? (
-                    <Link
-                      component="button"
-                      type="button"
-                      underline="hover"
-                      onClick={() => goCandidateAppairages(c.id)}
-                    >
-                      {c.nb_appairages}
-                    </Link>
-                  ) : (
-                    c.nb_appairages ?? "—"
-                  )}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {typeof c.nb_prospections === "number" &&
-                  c.nb_prospections > 0 &&
-                  linkedAccountId ? (
-                    <Link
-                      component="button"
-                      type="button"
-                      underline="hover"
-                      onClick={() => goCandidateProspections(linkedAccountId)}
-                    >
-                      {c.nb_prospections}
-                    </Link>
-                  ) : (
-                    c.nb_prospections ?? "—"
-                  )}
-                </TableCell>
-                <TableCell>{la?.partenaire_nom ?? "—"}</TableCell>
-                <TableCell>{la?.statut_display ?? la?.statut ?? "—"}</TableCell>
-                <TableCell>{formatDateFR(la?.date_appairage)}</TableCell>
-                <TableCell>{c.origine_sourcing || "—"}</TableCell>
-                <TableCell>{la?.created_by_nom ?? "—"}</TableCell>
-
-                {/* Commentaire */}
-                <TableCell>
-                  {la?.last_commentaire ? (
-                    <Box
-                      sx={{
-                        backgroundColor: (theme) => theme.palette.action.hover,
-                        p: 0.6,
-                        borderRadius: 1,
-                        maxWidth: 260,
-                      }}
-                    >
-                      <Typography
+                {isColumnVisible("contact") && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {c.email ? (
+                      <Link href={`mailto:${c.email}`} display="block">
+                        {c.email}
+                      </Link>
+                    ) : (
+                      <Typography color="text.disabled">—</Typography>
+                    )}
+                    {c.telephone && (
+                      <Link
+                        href={`tel:${c.telephone}`}
+                        display="block"
                         variant="body2"
-                        sx={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
+                        color="text.secondary"
                       >
-                        {la.last_commentaire}
+                        {c.telephone}
+                      </Link>
+                    )}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("localisation") && (
+                  <TableCell>
+                    {c.ville || c.code_postal
+                      ? `${c.ville ?? ""}${c.ville && c.code_postal ? " (" + c.code_postal + ")" : (c.code_postal ?? "")}`
+                      : "—"}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("formation_complete") && (
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {formatFormation(c)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {[
+                          c.formation_info?.num_offre,
+                          c.formation_info?.centre?.nom,
+                          typeOffreLabel(c),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
                       </Typography>
                     </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.disabled">
-                      —
-                    </Typography>
-                  )}
-                </TableCell>
+                  </TableCell>
+                )}
 
-                <TableCell>{yesNoChip(c.courrier_rentree)}</TableCell>
-                <TableCell>{formatDateFR(c.date_rentree)}</TableCell>
-                <TableCell>{labelOrId(c.vu_par_nom, c.vu_par)}</TableCell>
-                <TableCell title={ateliersTitle}>{ateliersDisplay}</TableCell>
-                <TableCell>{c.numero_osia || "—"}</TableCell>
+                {isColumnVisible("periode") && (
+                  <TableCell>
+                    {c.formation_info?.date_debut || c.formation_info?.date_fin ? (
+                      <Typography variant="body2">
+                        {[
+                          formatDateFR(c.formation_info?.date_debut),
+                          formatDateFR(c.formation_info?.date_fin),
+                        ].join(" → ")}
+                      </Typography>
+                    ) : (
+                      <Typography color="text.disabled">—</Typography>
+                    )}
+                  </TableCell>
+                )}
 
-                {/* Actions */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Tooltip title="Voir">
-                    <IconButton size="small" onClick={() => goShow(c.id)}>
-                      <VisibilityIcon fontSize="inherit" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Éditer">
-                    <IconButton size="small" onClick={() => goEdit(c.id)}>
-                      <EditIcon fontSize="inherit" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Créer un appairage">
-                    <IconButton size="small" color="secondary" onClick={() => goCreateCandidateAppairage(c)}>
-                      <AddIcon fontSize="inherit" />
-                    </IconButton>
-                  </Tooltip>
-                  {getLinkedAccountId(c) && (
-                    <Tooltip title="Créer une prospection">
-                      <IconButton size="small" color="primary" onClick={() => goCreateCandidateProspection(c)}>
+                {isColumnVisible("contrat") && (
+                  <TableCell>{c.type_contrat || "—"}</TableCell>
+                )}
+
+                {isColumnVisible("contrat_signe") && (
+                  <TableCell>{contratChip(c.contrat_signe)}</TableCell>
+                )}
+
+                {isColumnVisible("statut_metier") && (
+                  <TableCell>{phaseChip(c)}</TableCell>
+                )}
+
+                {isColumnVisible("cv") && <TableCell>{cvChip(c)}</TableCell>}
+                {isColumnVisible("disponibilite") && (
+                  <TableCell>{c.disponibilite || "—"}</TableCell>
+                )}
+                {isColumnVisible("rqth") && <TableCell>{yesNoChip(c.rqth)}</TableCell>}
+                {isColumnVisible("permis_b") && (
+                  <TableCell>{yesNoChip(c.permis_b)}</TableCell>
+                )}
+                {isColumnVisible("admissible") && (
+                  <TableCell>{yesNoChip(c.admissible)}</TableCell>
+                )}
+                {isColumnVisible("accompagnement_tre") && (
+                  <TableCell>{yesNoChip(c.en_accompagnement_tre)}</TableCell>
+                )}
+                {isColumnVisible("gespers") && (
+                  <TableCell>{yesNoChip(c.inscrit_gespers)}</TableCell>
+                )}
+                {isColumnVisible("communication") && (
+                  <TableCell>{stars(c.communication)}</TableCell>
+                )}
+                {isColumnVisible("experience") && (
+                  <TableCell>{stars(c.experience)}</TableCell>
+                )}
+                {isColumnVisible("csp") && <TableCell>{stars(c.csp)}</TableCell>}
+                {isColumnVisible("entretien") && (
+                  <TableCell>{yesNoChip(c.entretien_done)}</TableCell>
+                )}
+                {isColumnVisible("test") && (
+                  <TableCell>{yesNoChip(c.test_is_ok)}</TableCell>
+                )}
+                {isColumnVisible("inscription") && (
+                  <TableCell>{formatDateFR(c.date_inscription)}</TableCell>
+                )}
+                {isColumnVisible("naissance") && (
+                  <TableCell>{formatDateFR(c.date_naissance)}</TableCell>
+                )}
+
+                {isColumnVisible("appairages") && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {typeof c.nb_appairages === "number" && c.nb_appairages > 0 ? (
+                      <Link
+                        component="button"
+                        type="button"
+                        underline="hover"
+                        onClick={() => goCandidateAppairages(c.id)}
+                      >
+                        {c.nb_appairages}
+                      </Link>
+                    ) : (
+                      c.nb_appairages ?? "—"
+                    )}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("prospections") && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {typeof c.nb_prospections === "number" &&
+                    c.nb_prospections > 0 &&
+                    linkedAccountId ? (
+                      <Link
+                        component="button"
+                        type="button"
+                        underline="hover"
+                        onClick={() => goCandidateProspections(linkedAccountId)}
+                      >
+                        {c.nb_prospections}
+                      </Link>
+                    ) : (
+                      c.nb_prospections ?? "—"
+                    )}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("partenaire") && (
+                  <TableCell>{la?.partenaire_nom ?? "—"}</TableCell>
+                )}
+                {isColumnVisible("statut_appairage") && (
+                  <TableCell>{la?.statut_display ?? la?.statut ?? "—"}</TableCell>
+                )}
+                {isColumnVisible("date_appairage") && (
+                  <TableCell>{formatDateFR(la?.date_appairage)}</TableCell>
+                )}
+                {isColumnVisible("origine") && (
+                  <TableCell>{c.origine_sourcing || "—"}</TableCell>
+                )}
+                {isColumnVisible("cree_par") && (
+                  <TableCell>{la?.created_by_nom ?? "—"}</TableCell>
+                )}
+
+                {isColumnVisible("dernier_commentaire") && (
+                  <TableCell>
+                    {la?.last_commentaire ? (
+                      <Box
+                        sx={{
+                          backgroundColor: (theme) => theme.palette.action.hover,
+                          p: 0.6,
+                          borderRadius: 1,
+                          maxWidth: 260,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {la.last_commentaire}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.disabled">
+                        —
+                      </Typography>
+                    )}
+                  </TableCell>
+                )}
+
+                {isColumnVisible("courrier_rentree") && (
+                  <TableCell>{yesNoChip(c.courrier_rentree)}</TableCell>
+                )}
+                {isColumnVisible("date_rentree") && (
+                  <TableCell>{formatDateFR(c.date_rentree)}</TableCell>
+                )}
+                {isColumnVisible("vu_par") && (
+                  <TableCell>{labelOrId(c.vu_par_nom, c.vu_par)}</TableCell>
+                )}
+                {isColumnVisible("ateliers") && (
+                  <TableCell title={ateliersTitle}>{ateliersDisplay}</TableCell>
+                )}
+                {isColumnVisible("numero_osia") && (
+                  <TableCell>{c.numero_osia || "—"}</TableCell>
+                )}
+
+                {showActionsColumn && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Voir">
+                      <IconButton size="small" onClick={() => goShow(c.id)}>
+                        <VisibilityIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Éditer">
+                      <IconButton size="small" onClick={() => goEdit(c.id)}>
+                        <EditIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Créer un appairage">
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => goCreateCandidateAppairage(c)}
+                      >
                         <AddIcon fontSize="inherit" />
                       </IconButton>
                     </Tooltip>
-                  )}
-                  {c.is_active !== false ? (
-                    onDelete && (
-                      <Tooltip title="Archiver">
-                        <IconButton size="small" color="error" onClick={() => onDelete(c.id)}>
-                          <DeleteIcon fontSize="inherit" />
+
+                    {getLinkedAccountId(c) && (
+                      <Tooltip title="Créer une prospection">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => goCreateCandidateProspection(c)}
+                        >
+                          <AddIcon fontSize="inherit" />
                         </IconButton>
                       </Tooltip>
-                    )
-                  ) : (
-                    <>
-                      {onRestore && (
-                        <Tooltip title="Restaurer">
-                          <IconButton size="small" color="success" onClick={() => onRestore(c.id)}>
-                            <VisibilityIcon fontSize="inherit" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {onHardDelete && (
-                        <Tooltip title="Supprimer définitivement">
-                          <IconButton size="small" color="error" onClick={() => onHardDelete(c.id)}>
+                    )}
+
+                    {c.is_active !== false ? (
+                      onDelete && (
+                        <Tooltip title="Archiver">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => onDelete(c.id)}
+                          >
                             <DeleteIcon fontSize="inherit" />
                           </IconButton>
                         </Tooltip>
-                      )}
-                    </>
-                  )}
-                </TableCell>
+                      )
+                    ) : (
+                      <>
+                        {onRestore && (
+                          <Tooltip title="Restaurer">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => onRestore(c.id)}
+                            >
+                              <VisibilityIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {onHardDelete && (
+                          <Tooltip title="Supprimer définitivement">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => onHardDelete(c.id)}
+                            >
+                              <DeleteIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

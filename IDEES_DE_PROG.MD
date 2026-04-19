@@ -596,9 +596,43 @@ Ne fais aucune modification supplémentaire.
 
 --------------------------------------------------------------------
 git add .
-git commit -m "UI pass debut lot8 migration plan "
+git commit -m "repair warnings (documentpage et statueditage) "
 git push origin main
 
 
 python manage.py test rap_app -v 2
+ 
 
+
+Objet : Refactorisation UI Haute Densité & Design Premium (Logic-Safe)
+
+"Agis en tant qu'Ingénieur Frontend Senior et Designer UI/UX spécialisé dans les interfaces SaaS de type 'High-Density Data' (style Linear, Vercel ou Raycast).
+
+CONTEXTE :
+Je vais te confier le code d'une page/composant de mon application Django/React qui est déjà en production. Le code est fonctionnel, mais l'UI manque de prestige, de modernité et d'optimisation d'espace.
+
+TES DIRECTIVES DE DESIGN :
+
+Économie de pixels : Réduis drastiquement les paddings/margins inutiles (notamment en haut et bas de page). Le contenu doit être le 'Roi'. Optimise la ligne de flottaison (above the fold).
+
+Typographie & Lecture : Utilise une hiérarchie typographique fine. Les données dans les tables doivent être denses mais parfaitement lisibles (penser aux polices mono pour les chiffres si nécessaire).
+
+Esthétique Premium : Favorise des bordures minimalistes (1px), des rayons de courbure cohérents, et des micro-interactions subtiles. Évite tout effet 'clunky' ou surchargé.
+
+TES CONTRAINTES DE DÉVELOPPEMENT :
+
+Zéro Hardcoding : Tu as l'interdiction d'utiliser des valeurs brutes (ex: padding: 20px). Tout doit passer par le système de tokens.
+
+Logic-Safe : Ne modifie absolument aucune logique métier, appel API, useEffect, ou gestion d'état. Ta mission est purement cosmétique et structurelle (DOM/CSS).
+
+Cohérence du Thème : Avant de modifier quoi que ce soit, analyse si tu as besoin de voir mon fichier theme.ts ou mes configurations Tailwind/Styled-components.
+
+PROCÉDURE :
+
+Analyse le code que je vais te donner.
+
+Identifie les composants qui pourraient être plus 'Premium' (Boutons, Inputs, Modales, Table Cells).
+
+STOP : Avant de proposer le code, liste-moi les fichiers de configuration dont tu as besoin (theme, icônes, types) pour garantir que le nouveau look sera globalement modifiable via le thème.
+
+VOICI LE CODE À REFACTORISER :

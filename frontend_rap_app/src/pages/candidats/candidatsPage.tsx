@@ -22,6 +22,8 @@ import {
   InputLabel,
   Alert,
   Menu,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 
 import {
@@ -53,6 +55,12 @@ type AtelierTreOption = {
   centre_detail?: { id: number; label: string } | null;
 };
 
+type ColumnVisibilityItem = {
+  key: string;
+  label: string;
+  hideable: boolean;
+};
+
 export default function CandidatsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -80,9 +88,15 @@ export default function CandidatsPage() {
       centre: toNum(searchParams.get("centre")),
       formation: toNum(searchParams.get("formation")),
       owner: toNum(searchParams.get("owner")),
-      parcours_phase: (searchParams.get("parcours_phase") as CandidatFiltresValues["parcours_phase"]) || undefined,
+      parcours_phase:
+        (searchParams.get(
+          "parcours_phase"
+        ) as CandidatFiltresValues["parcours_phase"]) || undefined,
       statut: searchParams.get("statut") || undefined,
-      cv_statut: (searchParams.get("cv_statut") as CandidatFiltresValues["cv_statut"]) || undefined,
+      cv_statut:
+        (searchParams.get(
+          "cv_statut"
+        ) as CandidatFiltresValues["cv_statut"]) || undefined,
       type_contrat: searchParams.get("type_contrat") || undefined,
       disponibilite: searchParams.get("disponibilite") || undefined,
       resultat_placement: searchParams.get("resultat_placement") || undefined,
@@ -90,7 +104,9 @@ export default function CandidatsPage() {
       responsable_placement: toNum(searchParams.get("responsable_placement")),
       admissible: parseBool(searchParams.get("admissible")),
       inscrit_gespers: parseBool(searchParams.get("inscrit_gespers")),
-      en_accompagnement_tre: parseBool(searchParams.get("en_accompagnement_tre")),
+      en_accompagnement_tre: parseBool(
+        searchParams.get("en_accompagnement_tre")
+      ),
       en_appairage: parseBool(searchParams.get("en_appairage")),
       rqth: parseBool(searchParams.get("rqth")),
       permis_b: parseBool(searchParams.get("permis_b")),
@@ -103,6 +119,7 @@ export default function CandidatsPage() {
   );
 
   const [refreshNonce, setRefreshNonce] = useState(0);
+
   // Filtres
   const [filters, setFilters] = useState<CandidatFiltresValues>(urlFilters);
 
@@ -111,8 +128,131 @@ export default function CandidatsPage() {
     return false;
   });
 
+  // Colonnes
+  const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
+
+  const defaultVisibleColumnKeys = useMemo(
+    () => [
+      "select",
+      "candidat",
+      "age",
+      "contact",
+      "localisation",
+      "formation_complete",
+      "periode",
+      "contrat",
+      "contrat_signe",
+      "statut_metier",
+      "cv",
+      "disponibilite",
+      "rqth",
+      "permis_b",
+      "admissible",
+      "accompagnement_tre",
+      "gespers",
+      "communication",
+      "experience",
+      "csp",
+      "entretien",
+      "test",
+      "inscription",
+      "naissance",
+      "appairages",
+      "prospections",
+      "partenaire",
+      "statut_appairage",
+      "date_appairage",
+      "origine",
+      "cree_par",
+      "dernier_commentaire",
+      "courrier_rentree",
+      "date_rentree",
+      "vu_par",
+      "ateliers",
+      "numero_osia",
+    ],
+    []
+  );
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+    defaultVisibleColumnKeys
+  );
+  const [showActionsColumn, setShowActionsColumn] = useState(true);
+
+  const columnVisibilityItems = useMemo<ColumnVisibilityItem[]>(
+    () => [
+      { key: "select", label: "Sélection", hideable: false },
+      { key: "candidat", label: "Candidat", hideable: false },
+      { key: "age", label: "Âge", hideable: true },
+      { key: "contact", label: "Contact", hideable: true },
+      { key: "localisation", label: "Localisation", hideable: true },
+      { key: "formation_complete", label: "Formation complète", hideable: true },
+      { key: "periode", label: "Période", hideable: true },
+      { key: "contrat", label: "Contrat", hideable: true },
+      { key: "contrat_signe", label: "Contrat signé", hideable: true },
+      { key: "statut_metier", label: "Statut métier", hideable: true },
+      { key: "cv", label: "CV", hideable: true },
+      { key: "disponibilite", label: "Disponibilité", hideable: true },
+      { key: "rqth", label: "RQTH", hideable: true },
+      { key: "permis_b", label: "Permis B", hideable: true },
+      { key: "admissible", label: "Admissible", hideable: true },
+      {
+        key: "accompagnement_tre",
+        label: "Accompagnement TRE",
+        hideable: true,
+      },
+      { key: "gespers", label: "GESPERS", hideable: true },
+      { key: "communication", label: "Communication", hideable: true },
+      { key: "experience", label: "Expérience", hideable: true },
+      { key: "csp", label: "CSP", hideable: true },
+      { key: "entretien", label: "Entretien", hideable: true },
+      { key: "test", label: "Test", hideable: true },
+      { key: "inscription", label: "Inscription", hideable: true },
+      { key: "naissance", label: "Naissance", hideable: true },
+      { key: "appairages", label: "Appairages", hideable: true },
+      { key: "prospections", label: "Prospections", hideable: true },
+      { key: "partenaire", label: "Partenaire", hideable: true },
+      { key: "statut_appairage", label: "Statut appairage", hideable: true },
+      { key: "date_appairage", label: "Date appairage", hideable: true },
+      { key: "origine", label: "Origine", hideable: true },
+      { key: "cree_par", label: "Créé par", hideable: true },
+      {
+        key: "dernier_commentaire",
+        label: "Dernier commentaire",
+        hideable: true,
+      },
+      {
+        key: "courrier_rentree",
+        label: "Courrier rentrée",
+        hideable: true,
+      },
+      { key: "date_rentree", label: "Date rentrée", hideable: true },
+      { key: "vu_par", label: "Vu par", hideable: true },
+      { key: "ateliers", label: "Ateliers", hideable: true },
+      { key: "numero_osia", label: "OSIA", hideable: true },
+    ],
+    []
+  );
+
+  const toggleColumnVisibility = useCallback((key: string) => {
+    setVisibleColumnKeys((prev) => {
+      const item = columnVisibilityItems.find((col) => col.key === key);
+      if (!item || item.hideable === false) return prev;
+
+      const isVisible = prev.includes(key);
+
+      if (isVisible) {
+        const next = prev.filter((itemKey) => itemKey !== key);
+        return next.length > 0 ? next : prev;
+      }
+
+      return [...prev, key];
+    });
+  }, [columnVisibilityItems]);
+
   // Pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -129,6 +269,7 @@ export default function CandidatsPage() {
     page: number;
     page_size: number;
   };
+
   const effectiveFilters: EffectiveFilters = useMemo(
     () => ({ ...filters, page, page_size: pageSize }),
     [filters, page, pageSize]
@@ -199,12 +340,14 @@ export default function CandidatsPage() {
   } = useCandidateBulkActions();
 
   const items: Candidat[] = useMemo(() => pageData?.results ?? [], [pageData]);
+
   useEffect(() => {
     setCount(pageData?.count ?? 0);
   }, [pageData, setCount]);
 
   // Sélection
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   useEffect(() => {
     const visible = new Set(items.map((i) => i.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
@@ -214,8 +357,10 @@ export default function CandidatsPage() {
   const selectAll = () => setSelectedIds(items.map((i) => i.id));
 
   const [showAtelierBulkDialog, setShowAtelierBulkDialog] = useState(false);
-  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
-  const [anchorBulkActions, setAnchorBulkActions] = useState<null | HTMLElement>(null);
+  const [anchorImportExport, setAnchorImportExport] =
+    useState<null | HTMLElement>(null);
+  const [anchorBulkActions, setAnchorBulkActions] =
+    useState<null | HTMLElement>(null);
   const [atelierOptions, setAtelierOptions] = useState<AtelierTreOption[]>([]);
   const [loadingAteliers, setLoadingAteliers] = useState(false);
   const [selectedAtelierId, setSelectedAtelierId] = useState<number | "">("");
@@ -236,12 +381,15 @@ export default function CandidatsPage() {
       }
 
       if (summary.succeeded === 0) {
-        const firstError = failed[0]?.error || "Aucune opération n'a pu être exécutée.";
+        const firstError =
+          failed[0]?.error || "Aucune opération n'a pu être exécutée.";
         toast.error(firstError);
         return;
       }
 
-      const firstError = failed[0]?.error ? ` Premier échec: ${failed[0].error}` : "";
+      const firstError = failed[0]?.error
+        ? ` Premier échec: ${failed[0].error}`
+        : "";
       toast.warning(
         `${successLabel} ${summary.succeeded} candidat(s). ${summary.failed} échec(s).${firstError}`
       );
@@ -258,13 +406,14 @@ export default function CandidatsPage() {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
       toast.success(`📦 ${idsToDelete.length} candidat(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
-      setPage((p) => p); // refresh soft
+      setPage((p) => p);
     } catch {
       toast.error("Erreur lors de l'archivage");
     }
@@ -282,6 +431,7 @@ export default function CandidatsPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       await hardDelete(hardDeleteId);
       toast.success("Candidat supprimé définitivement.");
@@ -297,11 +447,17 @@ export default function CandidatsPage() {
     if (!selectedIds.length) return;
     try {
       const result = await bulkValidateInscription(selectedIds);
-      summarizeBulkResult(result, "Entrée dans le parcours de recrutement validée pour");
+      summarizeBulkResult(
+        result,
+        "Entrée dans le parcours de recrutement validée pour"
+      );
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible de valider l'entrée dans le parcours de recrutement.");
+      toast.error(
+        error?.message ||
+          "Impossible de valider l'entrée dans le parcours de recrutement."
+      );
     }
   };
 
@@ -313,7 +469,10 @@ export default function CandidatsPage() {
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible d'enregistrer l'entrée en formation.");
+      toast.error(
+        error?.message ||
+          "Impossible d'enregistrer l'entrée en formation."
+      );
     }
   };
 
@@ -325,7 +484,10 @@ export default function CandidatsPage() {
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible de marquer ces candidats comme admissibles.");
+      toast.error(
+        error?.message ||
+          "Impossible de marquer ces candidats comme admissibles."
+      );
     }
   };
 
@@ -337,7 +499,9 @@ export default function CandidatsPage() {
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible de retirer le statut admissible.");
+      toast.error(
+        error?.message || "Impossible de retirer le statut admissible."
+      );
     }
   };
 
@@ -349,7 +513,10 @@ export default function CandidatsPage() {
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible d'inscrire ces candidats dans GESPERS.");
+      toast.error(
+        error?.message ||
+          "Impossible d'inscrire ces candidats dans GESPERS."
+      );
     }
   };
 
@@ -361,7 +528,10 @@ export default function CandidatsPage() {
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible d'annuler l'inscription GESPERS.");
+      toast.error(
+        error?.message ||
+          "Impossible d'annuler l'inscription GESPERS."
+      );
     }
   };
 
@@ -388,10 +558,12 @@ export default function CandidatsPage() {
       const response = await api.get("/ateliers-tre/", {
         params: { page_size: 200, ordering: "-date_atelier" },
       });
+
       const payload = response.data as {
         data?: { results?: AtelierTreOption[] };
         results?: AtelierTreOption[];
       };
+
       const results = payload.data?.results ?? payload.results ?? [];
       setAtelierOptions(results);
     } catch {
@@ -410,12 +582,18 @@ export default function CandidatsPage() {
 
     try {
       const result = await bulkAssignAtelierTre(selectedIds, selectedAtelierId);
-      summarizeBulkResult(result, "Affectation à l'atelier TRE réussie pour");
+      summarizeBulkResult(
+        result,
+        "Affectation à l'atelier TRE réussie pour"
+      );
       setShowAtelierBulkDialog(false);
       clearSelection();
       refreshList();
     } catch (error: any) {
-      toast.error(error?.message || "Impossible d'affecter les candidats à cet atelier TRE.");
+      toast.error(
+        error?.message ||
+          "Impossible d'affecter les candidats à cet atelier TRE."
+      );
     }
   };
 
@@ -430,9 +608,12 @@ export default function CandidatsPage() {
 
     return parts.join(" - ");
   }, []);
+
   // ── Détail du candidat ─────────────────────────────────────────────
   const [showDetail, setShowDetail] = useState(false);
-  const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(null);
+  const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(
+    null
+  );
   const [loadingDetail, setLoadingDetail] = useState(false);
   const detailCacheRef = useRef(new Map<number, Candidat>());
   const detailRequestRef = useRef(new Map<number, Promise<Candidat>>());
@@ -466,10 +647,16 @@ export default function CandidatsPage() {
 
   const prefetchCandidateDetail = useCallback(
     (candidate: Candidat) => {
-      if (detailCacheRef.current.has(candidate.id) || detailRequestRef.current.has(candidate.id)) return;
+      if (
+        detailCacheRef.current.has(candidate.id) ||
+        detailRequestRef.current.has(candidate.id)
+      ) {
+        return;
+      }
+
       detailCacheRef.current.set(candidate.id, candidate);
       void fetchCandidateDetail(candidate.id).catch(() => {
-        // Ignore warmup failures: the click path still shows a toast on error.
+        // warmup ignore
       });
     },
     [fetchCandidateDetail]
@@ -484,13 +671,19 @@ export default function CandidatsPage() {
   }, [items]);
 
   const handleRowClick = async (id: number, candidate?: Candidat) => {
-    const preview = candidate ?? items.find((item) => item.id === id) ?? detailCacheRef.current.get(id) ?? null;
+    const preview =
+      candidate ??
+      items.find((item) => item.id === id) ??
+      detailCacheRef.current.get(id) ??
+      null;
+
     if (preview) {
       detailCacheRef.current.set(id, preview);
       setSelectedCandidat(preview);
     } else {
       setSelectedCandidat(null);
     }
+
     setShowDetail(true);
 
     const hasPreview = !!preview;
@@ -498,7 +691,9 @@ export default function CandidatsPage() {
 
     try {
       const candidat = await fetchCandidateDetail(id);
-      setSelectedCandidat((current) => (current?.id === id || !current ? candidat : current));
+      setSelectedCandidat((current) =>
+        current?.id === id || !current ? candidat : current
+      );
     } catch {
       toast.error("Erreur lors du chargement du candidat");
       setShowDetail(false);
@@ -523,7 +718,9 @@ export default function CandidatsPage() {
       setSelectedCandidat(candidat);
       refreshList();
     } catch {
-      toast.error("Le candidat a été mis à jour, mais le rafraîchissement de l'affichage a échoué.");
+      toast.error(
+        "Le candidat a été mis à jour, mais le rafraîchissement de l'affichage a échoué."
+      );
       refreshList();
     } finally {
       setLoadingDetail(false);
@@ -551,10 +748,27 @@ export default function CandidatsPage() {
         />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} fullWidth={isMobile}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+        >
+          <Button
+            variant="outlined"
+            onClick={() => setShowFilters((v) => !v)}
+            fullWidth={isMobile}
+          >
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorColumns(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Colonnes
           </Button>
 
           <Button
@@ -602,7 +816,9 @@ export default function CandidatsPage() {
               setPage(1);
             }}
           >
-            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+            {filters.avec_archivees
+              ? "🗂️ Masquer archivés"
+              : "🗃️ Inclure archivés"}
           </Button>
 
           <Button
@@ -619,7 +835,9 @@ export default function CandidatsPage() {
               setPage(1);
             }}
           >
-            {filters.archives_seules ? "📂 Quitter archives seules" : "🗄️ Archives seules"}
+            {filters.archives_seules
+              ? "📂 Quitter archives seules"
+              : "🗄️ Archives seules"}
           </Button>
 
           {selectedIds.length > 0 && (
@@ -635,6 +853,80 @@ export default function CandidatsPage() {
               </Button>
             </>
           )}
+
+          <Menu
+            anchorEl={anchorColumns}
+            open={Boolean(anchorColumns)}
+            onClose={() => setAnchorColumns(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Colonnes affichées
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Choisissez les colonnes visibles dans le tableau
+              </Typography>
+            </Box>
+
+            <Stack spacing={0} sx={{ px: 1, pb: 1 }}>
+              {columnVisibilityItems.map((item) => {
+                const checked = visibleColumnKeys.includes(item.key);
+
+                return (
+                  <MenuItem
+                    key={item.key}
+                    onClick={() => {
+                      if (!item.hideable) return;
+                      toggleColumnVisibility(item.key);
+                    }}
+                    dense
+                    disabled={!item.hideable}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={checked}
+                      disabled={!item.hideable}
+                    />
+                    <ListItemText
+                      primary={item.label}
+                      secondary={!item.hideable ? "Toujours affichée" : undefined}
+                    />
+                  </MenuItem>
+                );
+              })}
+
+              <MenuItem
+                onClick={() => setShowActionsColumn((prev) => !prev)}
+                dense
+              >
+                <Checkbox size="small" checked={showActionsColumn} />
+                <ListItemText primary="Actions" />
+              </MenuItem>
+
+              <Box sx={{ pt: 1 }}>
+                <Button
+                  size="small"
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => {
+                    setVisibleColumnKeys(defaultVisibleColumnKeys);
+                    setShowActionsColumn(true);
+                  }}
+                >
+                  Réinitialiser
+                </Button>
+              </Box>
+            </Stack>
+          </Menu>
 
           <Menu
             anchorEl={anchorImportExport}
@@ -666,7 +958,11 @@ export default function CandidatsPage() {
                 filenameBase="candidats"
                 endpointBase="/candidats"
               />
-              <Lot1ExcelActions resource="candidat" exportParams={candidatIeParams} isMobile={false} />
+              <Lot1ExcelActions
+                resource="candidat"
+                exportParams={candidatIeParams}
+                isMobile={false}
+              />
             </Stack>
           </Menu>
 
@@ -694,31 +990,68 @@ export default function CandidatsPage() {
             </Box>
 
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <Button variant="contained" onClick={handleBulkValidate} disabled={bulkLoading}>
+              <Button
+                variant="contained"
+                onClick={handleBulkValidate}
+                disabled={bulkLoading}
+              >
                 Valider le parcours
               </Button>
-              <Button variant="contained" onClick={handleBulkSetAdmissible} disabled={bulkLoading}>
+              <Button
+                variant="contained"
+                onClick={handleBulkSetAdmissible}
+                disabled={bulkLoading}
+              >
                 Mettre admissible
               </Button>
-              <Button variant="outlined" onClick={handleBulkClearAdmissible} disabled={bulkLoading}>
+              <Button
+                variant="outlined"
+                onClick={handleBulkClearAdmissible}
+                disabled={bulkLoading}
+              >
                 Retirer admissible
               </Button>
-              <Button variant="contained" onClick={handleBulkSetGespers} disabled={bulkLoading}>
+              <Button
+                variant="contained"
+                onClick={handleBulkSetGespers}
+                disabled={bulkLoading}
+              >
                 Marquer GESPERS
               </Button>
-              <Button variant="outlined" onClick={handleBulkClearGespers} disabled={bulkLoading}>
+              <Button
+                variant="outlined"
+                onClick={handleBulkClearGespers}
+                disabled={bulkLoading}
+              >
                 Retirer GESPERS
               </Button>
-              <Button variant="contained" onClick={handleBulkStartFormation} disabled={bulkLoading}>
+              <Button
+                variant="contained"
+                onClick={handleBulkStartFormation}
+                disabled={bulkLoading}
+              >
                 Passer en formation
               </Button>
-              <Button variant="outlined" onClick={openBulkAssignAtelierDialog} disabled={bulkLoading}>
+              <Button
+                variant="outlined"
+                onClick={openBulkAssignAtelierDialog}
+                disabled={bulkLoading}
+              >
                 Affecter à un atelier TRE
               </Button>
-              <Button variant="outlined" color="warning" onClick={handleBulkAbandon} disabled={bulkLoading}>
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={handleBulkAbandon}
+                disabled={bulkLoading}
+              >
                 Enregistrer un abandon
               </Button>
-              <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
@@ -729,22 +1062,25 @@ export default function CandidatsPage() {
         </Stack>
       }
       filters={
-        showFilters &&
-        (loadingOptions ? (
-          <CircularProgress />
-        ) : options ? (
-          <FiltresCandidatsPanel
-            options={options}
-            values={effectiveFilters}
-            hideSearch
-            onChange={(v) => {
-              setFilters((f) => ({ ...f, ...v }));
-              setPage(1);
-            }}
-          />
-        ) : (
-          <Typography color="error">⚠️ Impossible de charger les filtres</Typography>
-        ))
+        showFilters ? (
+          loadingOptions ? (
+            <CircularProgress />
+          ) : options ? (
+            <FiltresCandidatsPanel
+              options={options}
+              values={effectiveFilters}
+              hideSearch
+              onChange={(v) => {
+                setFilters((f) => ({ ...f, ...v }));
+                setPage(1);
+              }}
+            />
+          ) : (
+            <Typography color="error">
+              ⚠️ Impossible de charger les filtres
+            </Typography>
+          )
+        ) : null
       }
       footer={
         count > 0 && (
@@ -790,11 +1126,17 @@ export default function CandidatsPage() {
           }}
           onRowClick={handleRowClick}
           onRowHover={prefetchCandidateDetail}
+          visibleColumnKeys={visibleColumnKeys}
+          showActionsColumn={showActionsColumn}
         />
       )}
 
-      {/* Confirmation dialog */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -810,6 +1152,7 @@ export default function CandidatsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
       <Dialog
         open={showHardDeleteConfirm}
         onClose={() => setShowHardDeleteConfirm(false)}
@@ -819,17 +1162,20 @@ export default function CandidatsPage() {
         <DialogTitle>Suppression définitive</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action supprime définitivement le candidat archivé. Elle est irréversible.
+            Cette action supprime définitivement le candidat archivé. Elle est
+            irréversible.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowHardDeleteConfirm(false)}>Annuler</Button>
+          <Button onClick={() => setShowHardDeleteConfirm(false)}>
+            Annuler
+          </Button>
           <Button color="error" variant="contained" onClick={handleHardDelete}>
             Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>
-      {/* ───────────── Détail du candidat ───────────── */}
+
       <CandidatDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
@@ -839,11 +1185,19 @@ export default function CandidatsPage() {
         onLifecycleSuccess={refreshSelectedCandidate}
       />
 
-      <Dialog open={showAtelierBulkDialog} onClose={() => setShowAtelierBulkDialog(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Affecter les candidats sélectionnés à un atelier TRE</DialogTitle>
+      <Dialog
+        open={showAtelierBulkDialog}
+        onClose={() => setShowAtelierBulkDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Affecter les candidats sélectionnés à un atelier TRE
+        </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Choisissez l'atelier TRE à utiliser pour les {selectedIds.length} candidat(s) sélectionné(s).
+            Choisissez l'atelier TRE à utiliser pour les {selectedIds.length}{" "}
+            candidat(s) sélectionné(s).
           </DialogContentText>
 
           {loadingAteliers ? (
@@ -851,17 +1205,23 @@ export default function CandidatsPage() {
               <CircularProgress />
             </Box>
           ) : !atelierOptions.length ? (
-            <Alert severity="warning">Aucun atelier TRE disponible pour cette affectation.</Alert>
+            <Alert severity="warning">
+              Aucun atelier TRE disponible pour cette affectation.
+            </Alert>
           ) : (
             <FormControl fullWidth sx={{ mt: 1 }}>
-              <InputLabel id="bulk-atelier-select-label">Atelier TRE</InputLabel>
+              <InputLabel id="bulk-atelier-select-label">
+                Atelier TRE
+              </InputLabel>
               <Select
                 labelId="bulk-atelier-select-label"
                 value={selectedAtelierId}
                 label="Atelier TRE"
                 onChange={(event) => {
                   const value = event.target.value;
-                  setSelectedAtelierId(typeof value === "number" ? value : Number(value));
+                  setSelectedAtelierId(
+                    typeof value === "number" ? value : Number(value)
+                  );
                 }}
               >
                 {atelierOptions.map((atelier) => (
@@ -874,7 +1234,9 @@ export default function CandidatsPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAtelierBulkDialog(false)}>Annuler</Button>
+          <Button onClick={() => setShowAtelierBulkDialog(false)}>
+            Annuler
+          </Button>
           <Button
             variant="contained"
             onClick={handleBulkAssignAtelier}

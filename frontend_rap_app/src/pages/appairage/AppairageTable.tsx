@@ -1,20 +1,10 @@
 // src/components/appairages/AppairageTable.tsx
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  Link,
-  Typography,
-  Stack,
-  Chip,
-  Box,
-} from "@mui/material";
+import { useMemo, useCallback } from "react";
+import { Checkbox, Link, Typography, Stack, Chip, Box } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
-import { useEffect, useMemo, useRef, useCallback } from "react";
+import ResponsiveTableTemplate, {
+  type TableColumn,
+} from "../../components/ResponsiveTableTemplate";
 import type { AppairageListItem, TypeOffreMini } from "../../types/appairage";
 
 export type FormationChoice = { value: number; label: string };
@@ -31,11 +21,12 @@ type Props = {
   onHistoryClick?: (id: number) => void;
   formationChoices?: FormationChoice[];
   maxHeight?: string;
+  visibleColumnKeys?: string[];
+  showActionsColumn?: boolean;
 };
 
-const STICKY_COL_1_PX = 36;
-
-const dtfFR = typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
+const dtfFR =
+  typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
 
 function formatDateFR(iso?: string | null): string {
   if (!iso) return "—";
@@ -44,7 +35,10 @@ function formatDateFR(iso?: string | null): string {
   return dtfFR ? dtfFR.format(d) : d.toLocaleDateString("fr-FR");
 }
 
-function resolveFormationLabel(r: AppairageListItem, formationMap: Map<number, string>): string {
+function resolveFormationLabel(
+  r: AppairageListItem,
+  formationMap: Map<number, string>
+): string {
   if (r.formation_nom) return r.formation_nom;
   const id = r.formation ?? null;
   if (id != null && formationMap.size) {
@@ -73,6 +67,8 @@ export default function AppairageTable({
   canHardDelete = false,
   formationChoices,
   maxHeight,
+  visibleColumnKeys,
+  showActionsColumn = true,
 }: Props) {
   const formationMap = useMemo(() => {
     const m = new Map<number, string>();
@@ -82,13 +78,10 @@ export default function AppairageTable({
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const pageIds = useMemo(() => items.map((i) => i.id), [items]);
-  const allChecked = pageIds.length > 0 && pageIds.every((id) => selectedSet.has(id));
-  const someChecked = pageIds.some((id) => selectedSet.has(id)) && !allChecked;
 
-  const headerCbRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    if (headerCbRef.current) headerCbRef.current.indeterminate = someChecked;
-  }, [someChecked]);
+  const allChecked =
+    pageIds.length > 0 && pageIds.every((id) => selectedSet.has(id));
+  const someChecked = pageIds.some((id) => selectedSet.has(id)) && !allChecked;
 
   const toggleAllThisPage = useCallback(() => {
     if (allChecked) {
@@ -103,377 +96,405 @@ export default function AppairageTable({
   const toggleOne = useCallback(
     (id: number, checked: boolean) => {
       if (checked) {
-        if (!selectedSet.has(id)) onSelectionChange([...selectedIds, id]);
-      } else {
-        if (selectedSet.has(id)) onSelectionChange(selectedIds.filter((x) => x !== id));
+        if (!selectedSet.has(id)) {
+          onSelectionChange([...selectedIds, id]);
+        }
+      } else if (selectedSet.has(id)) {
+        onSelectionChange(selectedIds.filter((x) => x !== id));
       }
     },
     [onSelectionChange, selectedIds, selectedSet]
   );
 
-  if (!items.length) {
-    return (
-      <Typography variant="body2" sx={{ p: 2, color: "text.secondary", textAlign: "center" }}>
-        Aucun appairage.
-      </Typography>
-    );
-  }
-
-  return (
-    <TableContainer
-      sx={{
-        maxHeight: maxHeight ?? "65vh",
-        borderRadius: 2,
-        bgcolor: "background.paper",
-      }}
-    >
-      <Table stickyHeader size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell
-              sx={{
-                width: STICKY_COL_1_PX,
-                textAlign: "center",
-                left: 0,
-                zIndex: 5,
-                bgcolor: "grey.100",
-                position: "sticky",
-              }}
-            >
+  const columns = useMemo<TableColumn<AppairageListItem>[]>(
+    () => [
+      {
+        key: "select",
+        label: "",
+        width: 60,
+        sticky: "left",
+        hideable: false,
+        headerRender: () => (
+          <Checkbox
+            checked={allChecked}
+            indeterminate={someChecked}
+            onChange={toggleAllThisPage}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+        render: (row) => {
+          const isChecked = selectedSet.has(row.id);
+          return (
+            <Box onClick={(e) => e.stopPropagation()}>
               <Checkbox
-                inputRef={headerCbRef}
-                checked={allChecked}
-                onChange={toggleAllThisPage}
-                onClick={(e) => e.stopPropagation()}
+                checked={isChecked}
+                onChange={(e) => toggleOne(row.id, e.target.checked)}
               />
-            </TableCell>
-            <TableCell
+            </Box>
+          );
+        },
+      },
+      {
+        key: "candidat_nom",
+        label: "👤 Candidat",
+        width: 220,
+        sticky: "left",
+        hideable: false,
+        render: (row) => (
+          <Box title={row.candidat_nom ?? ""}>
+            <Typography variant="body2" fontWeight={600} noWrap>
+              {row.candidat ? (
+                <Link
+                  component={RouterLink}
+                  to={`/candidats/${row.candidat}`}
+                  onClick={(e) => e.stopPropagation()}
+                  underline="hover"
+                >
+                  {row.candidat_nom ?? "—"}
+                </Link>
+              ) : (
+                row.candidat_nom ?? "—"
+              )}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        key: "appairage",
+        label: "📌 Appairage",
+        width: 160,
+        hideable: true,
+        render: (row) => (
+          <Box display="flex" flexDirection="column">
+            <Typography variant="body2">{formatDateFR(row.date_appairage)}</Typography>
+            {row.statut_display && (
+              <Chip
+                size="small"
+                color="info"
+                label={row.statut_display}
+                sx={{ mt: 0.3, maxWidth: "100%" }}
+              />
+            )}
+          </Box>
+        ),
+      },
+      {
+        key: "activite_display",
+        label: "🟢 Activité",
+        width: 140,
+        hideable: true,
+        render: (row) =>
+          row.activite_display ? (
+            <Chip
+              size="small"
+              label={row.activite_display}
+              color={
+                row.activite_display.toLowerCase().includes("archiv")
+                  ? "default"
+                  : "success"
+              }
               sx={{
-                position: "sticky",
-                left: STICKY_COL_1_PX,
-                zIndex: 4,
-                bgcolor: "grey.100",
+                fontWeight: 600,
+                textTransform: "capitalize",
+                bgcolor: row.activite_display.toLowerCase().includes("archiv")
+                  ? "grey.200"
+                  : "success.light",
+              }}
+            />
+          ) : (
+            <Typography variant="body2" color="text.disabled">
+              —
+            </Typography>
+          ),
+      },
+      {
+        key: "partenaire_nom",
+        label: "🏢 Partenaire",
+        width: 240,
+        hideable: true,
+        render: (row) => (
+          <Box sx={{ maxWidth: 220 }}>
+            <Typography variant="body2" fontWeight="bold" noWrap>
+              {row.partenaire ? (
+                <Link
+                  component={RouterLink}
+                  to={`/partenaires/${row.partenaire}/edit`}
+                  onClick={(e) => e.stopPropagation()}
+                  underline="hover"
+                >
+                  {row.partenaire_nom ?? "—"}
+                </Link>
+              ) : (
+                row.partenaire_nom ?? "—"
+              )}
+            </Typography>
+
+            {row.partenaire_contact_nom && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                👤 {row.partenaire_contact_nom}
+              </Typography>
+            )}
+
+            {row.partenaire_telephone && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                📞 {row.partenaire_telephone}
+              </Typography>
+            )}
+
+            {row.partenaire_email && (
+              <Link
+                href={`mailto:${row.partenaire_email}`}
+                onClick={(e) => e.stopPropagation()}
+                underline="hover"
+                sx={{ fontSize: "0.75rem" }}
+              >
+                ✉️ {row.partenaire_email}
+              </Link>
+            )}
+          </Box>
+        ),
+      },
+      {
+        key: "formation",
+        label: "🎓 Formation + Centre",
+        width: 260,
+        hideable: true,
+        render: (row) => {
+          const formationLib = resolveFormationLabel(row, formationMap);
+          const centreNom =
+            row.formation_bref?.centre_nom ?? row.formation_detail?.centre_nom ?? "—";
+
+          return (
+            <Box>
+              <Typography variant="body2" fontWeight="bold">
+                {row.formation ? (
+                  <Link
+                    component={RouterLink}
+                    to={`/formations/${row.formation}`}
+                    onClick={(e) => e.stopPropagation()}
+                    underline="hover"
+                  >
+                    {formationLib}
+                  </Link>
+                ) : (
+                  formationLib
+                )}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {centreNom}
+              </Typography>
+            </Box>
+          );
+        },
+      },
+      {
+        key: "offre",
+        label: "📑 Offre",
+        width: 180,
+        hideable: true,
+        render: (row) => {
+          const typeOffreLib = resolveTypeOffre(row);
+          const numOffre =
+            row.formation_bref?.num_offre ?? row.formation_detail?.num_offre ?? "—";
+          const statutFormation = row.formation_detail?.statut ?? "—";
+
+          return (
+            <Box>
+              <Typography variant="body2">{typeOffreLib}</Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                N° {numOffre} — {statutFormation}
+              </Typography>
+            </Box>
+          );
+        },
+      },
+      {
+        key: "dates",
+        label: "📅 Dates",
+        width: 150,
+        hideable: true,
+        render: (row) => {
+          const debut = formatDateFR(
+            row.formation_bref?.start_date ?? row.formation_detail?.start_date
+          );
+          const fin = formatDateFR(row.formation_detail?.end_date);
+
+          return (
+            <Box>
+              <Typography variant="body2">{debut}</Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                → {fin}
+              </Typography>
+            </Box>
+          );
+        },
+      },
+      {
+        key: "places",
+        label: "📊 Places",
+        width: 130,
+        hideable: true,
+        render: (row) => {
+          const placesDispo = row.formation_places_disponibles;
+          const placesTotal = row.formation_places_total;
+
+          return (
+            <Box>
+              {typeof placesTotal === "number" && (
+                <Typography variant="body2">Total: {placesTotal}</Typography>
+              )}
+              {typeof placesDispo === "number" ? (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color={placesDispo > 0 ? "success" : "error"}
+                  label={`${placesDispo} dispo`}
+                  sx={{ mt: 0.3 }}
+                />
+              ) : (
+                <Typography variant="caption" color="text.disabled">
+                  —
+                </Typography>
+              )}
+            </Box>
+          );
+        },
+      },
+      {
+        key: "last_commentaire",
+        label: "💬 Commentaire",
+        width: 260,
+        hideable: true,
+        render: (row) =>
+          row.last_commentaire ? (
+            <Box
+              sx={{
+                backgroundColor: (theme) => theme.palette.action.hover,
+                p: 0.6,
+                borderRadius: 1,
+                maxWidth: 260,
               }}
             >
-              👤 Candidat
-            </TableCell>
-            <TableCell>📌 Appairage</TableCell>
-            <TableCell>🟢 Activité</TableCell>
-            <TableCell>🏢 Partenaire</TableCell>
-            <TableCell>🎓 Formation + Centre</TableCell>
-            <TableCell>📑 Offre</TableCell>
-            <TableCell>📅 Dates</TableCell>
-            <TableCell>📊 Places</TableCell>
-            <TableCell>💬 Commentaire</TableCell>
-            <TableCell>Création</TableCell>
-            <TableCell>Mise à jour</TableCell>
-            <TableCell>⚙️ Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.map((r) => {
-            const isChecked = selectedSet.has(r.id);
-            const formationLib = resolveFormationLabel(r, formationMap);
-            const typeOffreLib = resolveTypeOffre(r);
-            const numOffre = r.formation_bref?.num_offre ?? r.formation_detail?.num_offre ?? "—";
-            const centreNom = r.formation_bref?.centre_nom ?? r.formation_detail?.centre_nom ?? "—";
-            const debut = formatDateFR(
-              r.formation_bref?.start_date ?? r.formation_detail?.start_date
-            );
-            const fin = formatDateFR(r.formation_detail?.end_date);
-            const statutFormation = r.formation_detail?.statut ?? "—";
-            const placesDispo = r.formation_places_disponibles;
-            const placesTotal = r.formation_places_total;
-
-            return (
-              <TableRow
-                key={r.id}
-                hover
-                tabIndex={0}
-                onClick={() => onRowClick(r.id)}
+              <Typography
+                variant="body2"
                 sx={{
-                  cursor: "pointer",
-                  "&:nth-of-type(even)": { bgcolor: "grey.50" },
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onRowClick(r.id);
-                  }
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
-                {/* ✅ Sélection */}
-                <TableCell
-                  sx={{
-                    width: STICKY_COL_1_PX,
-                    textAlign: "center",
-                    left: 0,
-                    position: "sticky",
-                    bgcolor: "background.paper",
-                    zIndex: 2,
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={isChecked}
-                    onChange={(e) => toggleOne(r.id, e.target.checked)}
-                  />
-                </TableCell>
+                {row.last_commentaire}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.disabled">
+              —
+            </Typography>
+          ),
+      },
+      {
+        key: "created_at",
+        label: "Création",
+        width: 160,
+        hideable: true,
+        render: (row) => (
+          <Box>
+            <Typography variant="body2">{row.created_by_nom ?? "—"}</Typography>
+            {row.created_at && (
+              <Typography variant="caption" color="text.secondary">
+                {formatDateFR(row.created_at)}
+              </Typography>
+            )}
+          </Box>
+        ),
+      },
+      {
+        key: "updated_at",
+        label: "Mise à jour",
+        width: 160,
+        hideable: true,
+        render: (row) => (
+          <Box>
+            <Typography variant="body2">{row.updated_by_nom ?? "—"}</Typography>
+            {row.updated_at && (
+              <Typography variant="caption" color="text.secondary">
+                {formatDateFR(row.updated_at)}
+              </Typography>
+            )}
+          </Box>
+        ),
+      },
+    ],
+    [
+      allChecked,
+      formationMap,
+      selectedSet,
+      someChecked,
+      toggleAllThisPage,
+      toggleOne,
+    ]
+  );
 
-                {/* ✅ Candidat */}
-                <TableCell
-                  sx={{
-                    position: "sticky",
-                    left: STICKY_COL_1_PX,
-                    bgcolor: "background.paper",
-                    zIndex: 1,
-                    whiteSpace: "nowrap",
-                  }}
-                  title={r.candidat_nom ?? ""}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    {r.candidat ? (
-                      <Link
-                        component={RouterLink}
-                        to={`/candidats/${r.candidat}`}
-                        onClick={(e) => e.stopPropagation()}
-                        underline="hover"
-                      >
-                        {r.candidat_nom ?? "—"}
-                      </Link>
-                    ) : (
-                      r.candidat_nom ?? "—"
-                    )}
-                  </Typography>
-                </TableCell>
+  const actions = useCallback(
+    (row: AppairageListItem) => (
+      <Stack direction="row" spacing={1} onClick={(e) => e.stopPropagation()}>
+        <Link component="button" color="primary" onClick={() => onRowClick(row.id)}>
+          Éditer
+        </Link>
 
-                {/* ✅ Date + statut appairage */}
-                <TableCell>
-                  <Box display="flex" flexDirection="column">
-                    <Typography variant="body2">{formatDateFR(r.date_appairage)}</Typography>
-                    {r.statut_display && (
-                      <Chip
-                        size="small"
-                        color="info"
-                        label={r.statut_display}
-                        sx={{ mt: 0.3, maxWidth: "100%" }}
-                      />
-                    )}
-                  </Box>
-                </TableCell>
+        <Link
+          component={RouterLink}
+          to={`/appairage-commentaires?appairage=${row.id}`}
+          underline="hover"
+        >
+          Commentaires
+        </Link>
 
-                {/* ✅ Activité */}
-                <TableCell>
-                  {r.activite_display ? (
-                    <Chip
-                      size="small"
-                      label={r.activite_display}
-                      color={
-                        r.activite_display.toLowerCase().includes("archiv") ? "default" : "success"
-                      }
-                      sx={{
-                        fontWeight: 600,
-                        textTransform: "capitalize",
-                        bgcolor: r.activite_display.toLowerCase().includes("archiv")
-                          ? "grey.200"
-                          : "success.light",
-                      }}
-                    />
-                  ) : (
-                    <Typography variant="body2" color="text.disabled">
-                      —
-                    </Typography>
-                  )}
-                </TableCell>
+        {onDeleteClick && (
+          <>
+            <Link
+              component="button"
+              color={row.activite === "archive" ? "success" : "error"}
+              onClick={() =>
+                row.activite === "archive"
+                  ? onRestoreClick?.(row.id)
+                  : onDeleteClick(row.id)
+              }
+            >
+              {row.activite === "archive" ? "Restaurer" : "Archiver"}
+            </Link>
 
-                {/* ✅ Partenaire */}
-                <TableCell sx={{ maxWidth: 220 }}>
-                  <Typography variant="body2" fontWeight="bold" noWrap>
-                    {r.partenaire ? (
-                      <Link
-                        component={RouterLink}
-                        to={`/partenaires/${r.partenaire}/edit`}
-                        onClick={(e) => e.stopPropagation()}
-                        underline="hover"
-                      >
-                        {r.partenaire_nom ?? "—"}
-                      </Link>
-                    ) : (
-                      r.partenaire_nom ?? "—"
-                    )}
-                  </Typography>
-                  {r.partenaire_contact_nom && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      👤 {r.partenaire_contact_nom}
-                    </Typography>
-                  )}
-                  {r.partenaire_telephone && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      📞 {r.partenaire_telephone}
-                    </Typography>
-                  )}
-                  {r.partenaire_email && (
-                    <Link
-                      href={`mailto:${r.partenaire_email}`}
-                      onClick={(e) => e.stopPropagation()}
-                      underline="hover"
-                      sx={{ fontSize: "0.75rem" }}
-                    >
-                      ✉️ {r.partenaire_email}
-                    </Link>
-                  )}
-                </TableCell>
+            {row.activite === "archive" && canHardDelete && onHardDeleteClick && (
+              <Link
+                component="button"
+                color="error"
+                onClick={() => onHardDeleteClick(row.id)}
+              >
+                Supprimer définitivement
+              </Link>
+            )}
+          </>
+        )}
+      </Stack>
+    ),
+    [canHardDelete, onDeleteClick, onHardDeleteClick, onRestoreClick, onRowClick]
+  );
 
-                {/* ✅ Formation */}
-                <TableCell>
-                  <Typography variant="body2" fontWeight="bold">
-                    {r.formation ? (
-                      <Link
-                        component={RouterLink}
-                        to={`/formations/${r.formation}`}
-                        onClick={(e) => e.stopPropagation()}
-                        underline="hover"
-                      >
-                        {formationLib}
-                      </Link>
-                    ) : (
-                      formationLib
-                    )}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {centreNom}
-                  </Typography>
-                </TableCell>
-
-                {/* ✅ Offre */}
-                <TableCell>
-                  <Typography variant="body2">{typeOffreLib}</Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    N° {numOffre} — {statutFormation}
-                  </Typography>
-                </TableCell>
-
-                {/* ✅ Dates */}
-                <TableCell>
-                  <Typography variant="body2">{debut}</Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    → {fin}
-                  </Typography>
-                </TableCell>
-
-                {/* ✅ Places */}
-                <TableCell>
-                  {typeof placesTotal === "number" && (
-                    <Typography variant="body2">Total: {placesTotal}</Typography>
-                  )}
-                  {typeof placesDispo === "number" ? (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      color={placesDispo > 0 ? "success" : "error"}
-                      label={`${placesDispo} dispo`}
-                      sx={{ mt: 0.3 }}
-                    />
-                  ) : (
-                    <Typography variant="caption" color="text.disabled">
-                      —
-                    </Typography>
-                  )}
-                </TableCell>
-
-                {/* ✅ Dernier commentaire */}
-                <TableCell>
-                  {r.last_commentaire ? (
-                    <Box
-                      sx={{
-                        backgroundColor: (theme) => theme.palette.action.hover,
-                        p: 0.6,
-                        borderRadius: 1,
-                        maxWidth: 260,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {r.last_commentaire}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.disabled">
-                      —
-                    </Typography>
-                  )}
-                </TableCell>
-
-                {/* ✅ Audit création */}
-                <TableCell>
-                  <Typography variant="body2">{r.created_by_nom ?? "—"}</Typography>
-                  {r.created_at && (
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDateFR(r.created_at)}
-                    </Typography>
-                  )}
-                </TableCell>
-
-                {/* ✅ Audit maj */}
-                <TableCell>
-                  <Typography variant="body2">{r.updated_by_nom ?? "—"}</Typography>
-                  {r.updated_at && (
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDateFR(r.updated_at)}
-                    </Typography>
-                  )}
-                </TableCell>
-
-                {/* ✅ Actions */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Stack direction="row" spacing={1}>
-                    <Link component="button" color="primary" onClick={() => onRowClick(r.id)}>
-                      Éditer
-                    </Link>
-                    <Link
-                      component={RouterLink}
-                      to={`/appairage-commentaires?appairage=${r.id}`}
-                      underline="hover"
-                    >
-                      Commentaires
-                    </Link>
-                    {onDeleteClick && (
-                      <>
-                        <Link
-                          component="button"
-                          color={r.activite === "archive" ? "success" : "error"}
-                          onClick={() =>
-                            r.activite === "archive" ? onRestoreClick?.(r.id) : onDeleteClick(r.id)
-                          }
-                        >
-                          {r.activite === "archive" ? "Restaurer" : "Archiver"}
-                        </Link>
-                        {r.activite === "archive" && canHardDelete && onHardDeleteClick && (
-                          <Link
-                            component="button"
-                            color="error"
-                            onClick={() => onHardDeleteClick(r.id)}
-                          >
-                            Supprimer définitivement
-                          </Link>
-                        )}
-                      </>
-                    )}
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+  return (
+    <ResponsiveTableTemplate<AppairageListItem>
+      columns={columns}
+      data={items}
+      getRowId={(row) => row.id}
+      actions={actions}
+      onRowClick={(row) => onRowClick(row.id)}
+      containerSx={{
+        maxHeight: maxHeight ?? "65vh",
+      }}
+      visibleColumnKeys={visibleColumnKeys}
+      showActionsColumn={showActionsColumn}
+      actionsAlign="left"
+    />
   );
 }

@@ -12,6 +12,8 @@ import {
   Pagination,
   Menu,
   Box,
+  Checkbox,
+  ListItemText,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -22,7 +24,11 @@ import FiltresFormationsPanel from "../../components/filters/FiltresFormationsPa
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useFiltresFormations from "../../hooks/useFiltresFormations";
-import type { Formation, FiltresFormationsValues, PaginatedResponse } from "../../types/formation";
+import type {
+  Formation,
+  FiltresFormationsValues,
+  PaginatedResponse,
+} from "../../types/formation";
 import { useAuth } from "../../hooks/useAuth";
 import { canWriteFormationsRole } from "../../utils/roleGroups";
 import PageTemplate from "../../components/PageTemplate";
@@ -48,13 +54,72 @@ export default function FormationsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
-  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
+  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(
+    null
+  );
+  const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
 
   // ── filtres
   const [filters, setFilters] = useState<FiltresFormationsValues>({
     texte: "",
   });
   const [showFilters, setShowFilters] = useState(false);
+
+  // ── colonnes visibles
+  const defaultVisibleColumnKeys = useMemo(
+    () => [
+      "select",
+      "nom",
+      "centre.nom",
+      "activite",
+      "type_offre",
+      "statut",
+      "num_offre",
+      "periode",
+      "saturation",
+      "inscrits_total",
+      "places_restantes_total",
+      "entrees_presents_formation",
+      "num_kairos",
+      "candidats_entretiens",
+      "prospections_appairages",
+      "nombre_evenements",
+      "taux_transformation",
+    ],
+    []
+  );
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+    defaultVisibleColumnKeys
+  );
+  const [showActionsColumn, setShowActionsColumn] = useState(true);
+
+  const columnVisibilityItems = useMemo(
+    () => [
+      { key: "select", label: "Sélection", hideable: false },
+      { key: "nom", label: "Formation", hideable: false },
+      { key: "centre.nom", label: "Centre", hideable: true },
+      { key: "activite", label: "Activité", hideable: true },
+      { key: "type_offre", label: "Type", hideable: true },
+      { key: "statut", label: "Statut", hideable: true },
+      { key: "num_offre", label: "N° Offre", hideable: true },
+      { key: "periode", label: "Période", hideable: true },
+      { key: "saturation", label: "Saturation", hideable: true },
+      { key: "inscrits_total", label: "Inscrits", hideable: true },
+      { key: "places_restantes_total", label: "Places restantes", hideable: true },
+      { key: "entrees_presents_formation", label: "En formation", hideable: true },
+      { key: "num_kairos", label: "N° Kairos", hideable: true },
+      { key: "candidats_entretiens", label: "Candidats / Entretiens", hideable: true },
+      {
+        key: "prospections_appairages",
+        label: "Prospections / Appairages",
+        hideable: true,
+      },
+      { key: "nombre_evenements", label: "Événements", hideable: true },
+      { key: "taux_transformation", label: "Transformation", hideable: true },
+    ],
+    []
+  );
 
   // 🔢 badge filtres actifs (ignore le champ "texte")
   const activeFiltersCount = useMemo(
@@ -70,7 +135,8 @@ export default function FormationsPage() {
   );
 
   // ── pagination
-  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
+  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } =
+    usePagination();
 
   // ── meta filtres
   const { filtres, loading: filtresLoading } = useFiltresFormations();
@@ -127,7 +193,7 @@ export default function FormationsPage() {
 
   const { data, loading, error, fetchData } = useFetch<PaginatedResponse<Formation>>(
     "/formations/",
-    apiFilters, // ⬅️ on envoie les filtres mappés à l’API
+    apiFilters,
     true
   );
 
@@ -151,7 +217,20 @@ export default function FormationsPage() {
   }, [formations]);
 
   const toggleSelect = useCallback((id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }, []);
+
+  const toggleColumnVisibility = useCallback((key: string) => {
+    setVisibleColumnKeys((prev) => {
+      const isVisible = prev.includes(key);
+      if (isVisible) {
+        const next = prev.filter((item) => item !== key);
+        return next.length > 0 ? next : prev;
+      }
+      return [...prev, key];
+    });
   }, []);
 
   const clearSelection = () => setSelectedIds([]);
@@ -283,6 +362,14 @@ export default function FormationsPage() {
 
           <Button
             variant="outlined"
+            onClick={(event) => setAnchorColumns(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Colonnes
+          </Button>
+
+          <Button
+            variant="outlined"
             onClick={(event) => setAnchorImportExport(event.currentTarget)}
             fullWidth={isMobile}
           >
@@ -290,7 +377,11 @@ export default function FormationsPage() {
           </Button>
 
           <Button
-            variant={filters.avec_archivees || filters.activite === "archivee" ? "contained" : "outlined"}
+            variant={
+              filters.avec_archivees || filters.activite === "archivee"
+                ? "contained"
+                : "outlined"
+            }
             onClick={() => {
               setFilters((prev) =>
                 prev.avec_archivees || prev.activite === "archivee"
@@ -349,6 +440,64 @@ export default function FormationsPage() {
           )}
 
           <Menu
+            anchorEl={anchorColumns}
+            open={Boolean(anchorColumns)}
+            onClose={() => setAnchorColumns(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Colonnes visibles
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Afficher ou masquer les colonnes du tableau
+              </Typography>
+            </Box>
+
+            {columnVisibilityItems.map((item) => {
+              const checked = visibleColumnKeys.includes(item.key);
+
+              return (
+                <MenuItem
+                  key={item.key}
+                  onClick={() => {
+                    if (!item.hideable) return;
+                    toggleColumnVisibility(item.key);
+                  }}
+                  dense
+                  disabled={!item.hideable}
+                >
+                  <Checkbox checked={checked} size="small" disabled={!item.hideable} />
+                  <ListItemText primary={item.label} />
+                </MenuItem>
+              );
+            })}
+
+            <MenuItem dense onClick={() => setShowActionsColumn((prev) => !prev)}>
+              <Checkbox checked={showActionsColumn} size="small" />
+              <ListItemText primary="Actions" />
+            </MenuItem>
+
+            <MenuItem
+              dense
+              onClick={() => {
+                setVisibleColumnKeys(defaultVisibleColumnKeys);
+                setShowActionsColumn(true);
+              }}
+            >
+              <ListItemText primary="Réinitialiser" />
+            </MenuItem>
+          </Menu>
+
+          <Menu
             anchorEl={anchorImportExport}
             open={Boolean(anchorImportExport)}
             onClose={() => setAnchorImportExport(null)}
@@ -373,7 +522,11 @@ export default function FormationsPage() {
 
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
               <FormationExportButton selectedIds={selectedIds} />
-              <Lot1ExcelActions resource="formation" exportParams={formationIeParams} isMobile={false} />
+              <Lot1ExcelActions
+                resource="formation"
+                exportParams={formationIeParams}
+                isMobile={false}
+              />
             </Stack>
           </Menu>
 
@@ -455,6 +608,8 @@ export default function FormationsPage() {
           onRowClick={handleRowClick}
           onToggleArchive={handleToggleArchive}
           onHardDelete={(row) => setHardDeleteId(row.id)}
+          visibleColumnKeys={visibleColumnKeys}
+          showActionsColumn={showActionsColumn}
         />
       )}
 

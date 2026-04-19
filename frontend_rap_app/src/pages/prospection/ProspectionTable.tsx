@@ -1,4 +1,12 @@
-import { Checkbox, Typography, Button, Box, Chip, Link, useTheme } from "@mui/material";
+import {
+  Checkbox,
+  Typography,
+  Button,
+  Box,
+  Chip,
+  Link,
+  useTheme,
+} from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import type { AppTheme } from "../../theme";
 import { Link as RouterLink } from "react-router-dom";
@@ -48,17 +56,23 @@ interface Props {
   onRestoreClick?: (id: number) => void;
   onHardDeleteClick?: (id: number) => void;
   canHardDelete?: boolean;
+  visibleColumnKeys?: string[];
+  showActionsColumn?: boolean;
 }
 
-const dtfFR = typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
+const dtfFR =
+  typeof Intl !== "undefined" ? new Intl.DateTimeFormat("fr-FR") : undefined;
 
 const fmt = (iso?: string | null): string => {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : dtfFR ? dtfFR.format(d) : d.toLocaleDateString("fr-FR");
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : dtfFR
+      ? dtfFR.format(d)
+      : d.toLocaleDateString("fr-FR");
 };
 
-// 🎨 Couleurs de statuts
 const statutColor = (s?: string | null) => {
   switch ((s || "").toLowerCase()) {
     case "à faire":
@@ -90,14 +104,18 @@ export default function ProspectionTable({
   onRestoreClick,
   onHardDeleteClick,
   canHardDelete = false,
+  visibleColumnKeys,
+  showActionsColumn = true,
 }: Props) {
   const theme = useTheme<AppTheme>();
+
   const columns: TableColumn<ProspectionWithLast>[] = [
     {
       key: "select",
       label: "#",
       sticky: "left",
       width: 40,
+      hideable: false,
       render: (row) => (
         <Checkbox
           checked={selectedIds.includes(row.id)}
@@ -112,6 +130,7 @@ export default function ProspectionTable({
       label: "👤 Candidat",
       sticky: "left",
       width: 160,
+      hideable: false,
       render: (row) => (
         <Box display="flex" flexDirection="column" gap={0.4}>
           <Typography variant="subtitle2" fontWeight={600} noWrap>
@@ -130,6 +149,7 @@ export default function ProspectionTable({
               </Typography>
             )}
           </Typography>
+
           {row.date_prospection ? (
             <Chip
               size="small"
@@ -161,15 +181,19 @@ export default function ProspectionTable({
               />
             )}
           </Box>
+
           <Typography variant="subtitle2" fontWeight={600} noWrap>
             {row.type_prospection_display || "—"}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             Motif : {row.motif_display || "—"}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             🎯 {row.objectif_display || "—"}
           </Typography>
+
           {row.relance_prevue && (
             <Chip
               size="small"
@@ -230,14 +254,17 @@ export default function ProspectionTable({
               "—"
             )}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             📍 {row.partenaire_ville || "—"}
           </Typography>
+
           {row.partenaire_tel && (
             <Typography variant="body2" color="text.secondary" noWrap>
               📞 {row.partenaire_tel}
             </Typography>
           )}
+
           {row.partenaire_email && (
             <Link
               href={`mailto:${row.partenaire_email}`}
@@ -271,12 +298,15 @@ export default function ProspectionTable({
               row.formation_nom || "—"
             )}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             {row.centre_nom || "—"}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             {row.type_offre_display || "—"}
           </Typography>
+
           <Typography variant="body2" color="text.secondary" noWrap>
             N° {row.num_offre || "—"}
           </Typography>
@@ -298,6 +328,7 @@ export default function ProspectionTable({
               —
             </Typography>
           )}
+
           {typeof row.places_disponibles === "number" ? (
             <Chip
               size="small"
@@ -320,7 +351,8 @@ export default function ProspectionTable({
       render: (row) => {
         const last = row.last_comment ?? row.commentaire;
         const lastAt = row.last_comment_at;
-        const count = typeof row.comments_count === "number" ? row.comments_count : null;
+        const count =
+          typeof row.comments_count === "number" ? row.comments_count : null;
 
         return last ? (
           <Box
@@ -343,9 +375,11 @@ export default function ProspectionTable({
             >
               {last}
             </Typography>
+
             {(lastAt || (count && count > 1)) && (
               <Typography variant="caption" color="text.secondary" noWrap>
-                {lastAt && `le ${fmt(lastAt)}`} {count && count > 1 && `• ${count} comm.`}
+                {lastAt && `le ${fmt(lastAt)}`}{" "}
+                {count && count > 1 && `• ${count} comm.`}
               </Typography>
             )}
           </Box>
@@ -395,6 +429,8 @@ export default function ProspectionTable({
       data={prospections}
       getRowId={(p) => p.id}
       cardTitle={(p) => p.partenaire_nom || "—"}
+      visibleColumnKeys={visibleColumnKeys}
+      showActionsColumn={showActionsColumn}
       actions={(p) => (
         <Box display="flex" gap={1} flexWrap="wrap">
           <Button
@@ -412,6 +448,7 @@ export default function ProspectionTable({
           >
             {p.activite === "archivee" ? "Restaurer" : "Archiver"}
           </Button>
+
           {p.activite === "archivee" && canHardDelete && onHardDeleteClick && (
             <Button
               size="small"

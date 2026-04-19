@@ -1,4 +1,5 @@
 // src/components/ResponsiveTableTemplate.tsx
+import { useMemo } from "react";
 import {
   Box,
   Table,
@@ -16,17 +17,20 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import type { ElementType, ReactNode } from "react";
 import type { AppTheme } from "../theme";
 
 export type TableColumn<T> = {
   key: keyof T | string;
-  label: ReactNode; // 👈 accepte string | JSX
+  label: ReactNode;
   sticky?: "left" | "right";
-  width?: number; // largeur minimale
-  flexGrow?: number; // 👈 optionnel, pour étendre une colonne
-  align?: "left" | "center" | "right"; // ✅ nouvelle propriété
+  width?: number;
+  flexGrow?: number;
+  align?: "left" | "center" | "right";
   render?: (row: T) => ReactNode;
+  headerRender?: () => ReactNode;
+  hideable?: boolean;
 };
 
 interface Props<T> {
@@ -37,13 +41,12 @@ interface Props<T> {
   cardTitle?: (row: T) => string;
   onRowClick?: (row: T) => void;
   onRowHover?: (row: T) => void;
-  rowSx?: (row: T) => object; // ✅ style conditionnel par ligne
-  /** Composant du conteneur table (ex. `Paper` pour un fond carte). */
+  rowSx?: (row: T) => object;
   tableContainerComponent?: ElementType;
-  /** Styles additionnels sur le `TableContainer`. */
   containerSx?: SxProps<Theme>;
-  /** Alignement de la colonne Actions (desktop). */
   actionsAlign?: "left" | "center" | "right";
+  visibleColumnKeys?: string[];
+  showActionsColumn?: boolean;
 }
 
 export default function ResponsiveTableTemplate<T>({
@@ -58,10 +61,13 @@ export default function ResponsiveTableTemplate<T>({
   tableContainerComponent,
   containerSx,
   actionsAlign = "center",
+  visibleColumnKeys,
+  showActionsColumn = true,
 }: Props<T>) {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isLight = theme.palette.mode === "light";
+
   const tableHeaderBackground = isLight
     ? theme.custom.table.header.background.light
     : theme.custom.table.header.background.dark;
@@ -74,15 +80,102 @@ export default function ResponsiveTableTemplate<T>({
   const tableCellBorder = isLight
     ? theme.custom.table.cell.borderBottom.light
     : theme.custom.table.cell.borderBottom.dark;
-  const actionCellSx = {
-    position: "sticky" as const,
+
+  const stickyColumnShadow = `inset -10px 0 12px -12px ${alpha(
+    theme.palette.common.black,
+    isLight ? 0.2 : 0.45
+  )}`;
+
+  const normalizedColumns = useMemo(
+    () =>
+      columns.map((col) => ({
+        ...col,
+        _columnKey: String(col.key),
+      })),
+    [columns]
+  );
+
+  const visibleColumns = useMemo(() => {
+    if (!visibleColumnKeys || visibleColumnKeys.length === 0) {
+      return normalizedColumns;
+    }
+
+    const visibleSet = new Set(visibleColumnKeys);
+    return normalizedColumns.filter((col) => visibleSet.has(col._columnKey));
+  }, [normalizedColumns, visibleColumnKeys]);
+
+  const actionsVisible = Boolean(actions) && showActionsColumn;
+
+  const actionContentSx: SxProps<Theme> = {
+    display: "flex",
+    justifyContent:
+      actionsAlign === "right"
+        ? "flex-end"
+        : actionsAlign === "left"
+          ? "flex-start"
+          : "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 0.5,
+    width: "100%",
+    maxWidth: 220,
+    ml: actionsAlign === "right" ? "auto" : 0,
+    mr: actionsAlign === "left" ? "auto" : 0,
+
+    "& .MuiStack-root": {
+      flexWrap: "wrap",
+      gap: theme.spacing(0.5),
+      justifyContent:
+        actionsAlign === "right"
+          ? "flex-end"
+          : actionsAlign === "left"
+            ? "flex-start"
+            : "center",
+    },
+
+    "& .MuiButton-root": {
+      minWidth: 0,
+      paddingLeft: theme.spacing(0.75),
+      paddingRight: theme.spacing(0.75),
+      whiteSpace: "nowrap",
+      flexShrink: 0,
+    },
+
+    "& .MuiIconButton-root": {
+      padding: theme.spacing(0.5),
+      flexShrink: 0,
+    },
+  };
+
+  const actionCellSx: SxProps<Theme> = {
+    position: "sticky",
     right: 0,
     backgroundColor: theme.palette.background.paper,
     zIndex: theme.zIndex.appBar - 1,
     borderBottom: tableCellBorder,
+    px: 1,
+    py: 0.75,
+    minWidth: 140,
+    maxWidth: 240,
+    width: 1,
+    verticalAlign: "top",
   };
 
-  /* 🔹 Vue mobile => affichage en cartes */
+  const actionHeaderCellSx: SxProps<Theme> = {
+    position: "sticky",
+    top: 0,
+    right: 0,
+    backgroundColor: tableHeaderBackground,
+    borderBottom: tableHeaderBorder,
+    fontWeight: "bold",
+    zIndex: theme.zIndex.appBar + 3,
+    px: 1,
+    minWidth: 140,
+    maxWidth: 240,
+    width: 1,
+    whiteSpace: "nowrap",
+  };
+
   if (isMobile) {
     return (
       <Stack spacing={2} sx={{ p: 2 }}>
@@ -105,8 +198,9 @@ export default function ResponsiveTableTemplate<T>({
                     {cardTitle(row)}
                   </Typography>
                 )}
-                {columns.map((col) => (
-                  <Box key={String(col.key)}>
+
+                {visibleColumns.map((col) => (
+                  <Box key={col._columnKey}>
                     <Typography variant="body2" color="text.secondary">
                       {col.label}
                     </Typography>
@@ -115,9 +209,10 @@ export default function ResponsiveTableTemplate<T>({
                     </Typography>
                   </Box>
                 ))}
-                {actions ? (
-                  <Box mt={1} onClick={(e) => e.stopPropagation()}>
-                    {actions(row)}
+
+                {actionsVisible ? (
+                  <Box mt={1} onClick={(e) => e.stopPropagation()} sx={actionContentSx}>
+                    {actions?.(row)}
                   </Box>
                 ) : null}
               </Stack>
@@ -128,53 +223,58 @@ export default function ResponsiveTableTemplate<T>({
     );
   }
 
-  /* 🔹 Vue desktop => affichage en table */
   return (
     <TableContainer
       {...(tableContainerComponent ? { component: tableContainerComponent } : {})}
       sx={[
         {
           maxHeight: "calc(100vh - 64px)",
+          overflow: "auto",
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
+          backgroundColor: theme.palette.background.paper,
         },
         ...(containerSx ? (Array.isArray(containerSx) ? containerSx : [containerSx]) : []),
       ]}
     >
-      <Table stickyHeader size="small">
+      <Table
+        stickyHeader
+        size="small"
+        sx={{
+          borderCollapse: "separate",
+          borderSpacing: 0,
+        }}
+      >
         <TableHead>
           <TableRow>
-            {columns.map((col) => (
-              <TableCell
-                key={String(col.key)}
-                align={col.align ?? "left"} // ✅ prise en compte du nouvel align
-                sx={{
-                  position: col.sticky ? "sticky" : "static",
-                  left: col.sticky === "left" ? 0 : undefined,
-                  right: col.sticky === "right" ? 0 : undefined,
-                  zIndex: col.sticky ? theme.zIndex.appBar : 1,
-                  minWidth: col.width,
-                  flexGrow: col.flexGrow ?? 0,
-                  backgroundColor: tableHeaderBackground,
-                  borderBottom: tableHeaderBorder,
-                  fontWeight: "bold",
-                }}
-              >
-                {col.label}
-              </TableCell>
-            ))}
-            {actions ? (
-              <TableCell
-                align={actionsAlign}
-                sx={{
-                  position: "sticky",
-                  right: 0,
-                  backgroundColor: tableHeaderBackground,
-                  borderBottom: tableHeaderBorder,
-                  fontWeight: "bold",
-                  zIndex: theme.zIndex.appBar,
-                }}
-              >
+            {visibleColumns.map((col, index) => {
+              const isStickyLeft = col.sticky === "left";
+              const isFirstStickyLeft = isStickyLeft && index === 0;
+
+              return (
+                <TableCell
+                  key={col._columnKey}
+                  align={col.align ?? "left"}
+                  sx={{
+                    position: "sticky",
+                    top: 0,
+                    left: isStickyLeft ? 0 : undefined,
+                    zIndex: isStickyLeft ? theme.zIndex.appBar + 4 : theme.zIndex.appBar + 2,
+                    minWidth: col.width,
+                    backgroundColor: tableHeaderBackground,
+                    borderBottom: tableHeaderBorder,
+                    fontWeight: "bold",
+                    whiteSpace: "nowrap",
+                    boxShadow: isFirstStickyLeft ? stickyColumnShadow : undefined,
+                  }}
+                >
+                  {col.headerRender ? col.headerRender() : col.label}
+                </TableCell>
+              );
+            })}
+
+            {actionsVisible ? (
+              <TableCell align={actionsAlign} sx={actionHeaderCellSx}>
                 Actions
               </TableCell>
             ) : null}
@@ -197,31 +297,39 @@ export default function ResponsiveTableTemplate<T>({
                 ...(rowSx ? rowSx(row) : {}),
               }}
             >
-              {columns.map((col) => (
-                <TableCell
-                  key={String(col.key)}
-                  align={col.align ?? "left"} // ✅ ajout align ici aussi
-                  sx={{
-                    position: col.sticky ? "sticky" : "static",
-                    left: col.sticky === "left" ? 0 : undefined,
-                    right: col.sticky === "right" ? 0 : undefined,
-                    zIndex: col.sticky ? theme.zIndex.appBar - 1 : 1,
-                    minWidth: col.width,
-                    flexGrow: col.flexGrow ?? 0,
-                    backgroundColor: theme.palette.background.paper,
-                    borderBottom: tableCellBorder,
-                  }}
-                >
-                  {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}
-                </TableCell>
-              ))}
-              {actions ? (
+              {visibleColumns.map((col, index) => {
+                const isStickyLeft = col.sticky === "left";
+                const isFirstStickyLeft = isStickyLeft && index === 0;
+
+                return (
+                  <TableCell
+                    key={col._columnKey}
+                    align={col.align ?? "left"}
+                    sx={{
+                      position: isStickyLeft ? "sticky" : "static",
+                      left: isStickyLeft ? 0 : undefined,
+                      zIndex: isStickyLeft ? theme.zIndex.appBar - 1 : 1,
+                      minWidth: col.width,
+                      backgroundColor: isStickyLeft
+                        ? theme.palette.background.paper
+                        : undefined,
+                      borderBottom: tableCellBorder,
+                      whiteSpace: "nowrap",
+                      boxShadow: isFirstStickyLeft ? stickyColumnShadow : undefined,
+                    }}
+                  >
+                    {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}
+                  </TableCell>
+                );
+              })}
+
+              {actionsVisible ? (
                 <TableCell
                   align={actionsAlign}
                   onClick={(e) => e.stopPropagation()}
                   sx={actionCellSx}
                 >
-                  {actions(row)}
+                  <Box sx={actionContentSx}>{actions?.(row)}</Box>
                 </TableCell>
               ) : null}
             </TableRow>

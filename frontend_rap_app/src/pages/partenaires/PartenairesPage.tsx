@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -19,6 +19,8 @@ import {
   useTheme,
   Menu,
   TextField,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import api from "../../api/axios";
@@ -59,6 +61,12 @@ const defaultFilters: PartenaireFilters = {
   created_by: undefined,
   has_appairages: "",
   has_prospections: "",
+};
+
+type ColumnVisibilityItem = {
+  key: string;
+  label: string;
+  hideable: boolean;
 };
 
 function isPaginatedPartenaires(d: unknown): d is { results: Partenaire[]; count: number } {
@@ -133,12 +141,82 @@ export default function PartenairesPage() {
   const [showBulkTypeDialog, setShowBulkTypeDialog] = useState(false);
   const [showBulkActionDialog, setShowBulkActionDialog] = useState(false);
   const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
+  const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
   const [bulkType, setBulkType] = useState("");
   const [bulkAction, setBulkAction] = useState("");
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const defaultVisibleColumnKeys = useMemo(
+    () => [
+      "select",
+      "nom",
+      "default_centre_nom",
+      "type_display",
+      "contact_nom",
+      "contact_email",
+      "contact_telephone",
+      "zip_code",
+      "city",
+      "secteur_activite",
+      "description",
+      "created_at",
+      "updated_at",
+      "appairages",
+      "prospections",
+      "formations",
+      "candidats",
+    ],
+    []
+  );
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+    defaultVisibleColumnKeys
+  );
+  const [showActionsColumn, setShowActionsColumn] = useState(true);
+
+  const columnVisibilityItems = useMemo<ColumnVisibilityItem[]>(
+    () => [
+      { key: "select", label: "Sélection", hideable: false },
+      { key: "nom", label: "Nom partenaire", hideable: false },
+      { key: "default_centre_nom", label: "Centre", hideable: true },
+      { key: "type_display", label: "Type", hideable: true },
+      { key: "contact_nom", label: "Contact", hideable: true },
+      { key: "contact_email", label: "Email", hideable: true },
+      { key: "contact_telephone", label: "Téléphone", hideable: true },
+      { key: "zip_code", label: "CP", hideable: true },
+      { key: "city", label: "Ville", hideable: true },
+      { key: "secteur_activite", label: "Secteur", hideable: true },
+      { key: "description", label: "Description", hideable: true },
+      { key: "created_at", label: "Création", hideable: true },
+      { key: "updated_at", label: "MAJ", hideable: true },
+      { key: "appairages", label: "Appairages", hideable: true },
+      { key: "prospections", label: "Prospections", hideable: true },
+      { key: "formations", label: "Formations", hideable: true },
+      { key: "candidats", label: "Candidats", hideable: true },
+    ],
+    []
+  );
+
+  const toggleColumnVisibility = useCallback(
+    (key: string) => {
+      setVisibleColumnKeys((prev) => {
+        const item = columnVisibilityItems.find((col) => col.key === key);
+        if (!item || item.hideable === false) return prev;
+
+        const isVisible = prev.includes(key);
+        if (isVisible) {
+          const next = prev.filter((itemKey) => itemKey !== key);
+          return next.length > 0 ? next : prev;
+        }
+        return [...prev, key];
+      });
+    },
+    [columnVisibilityItems]
+  );
+
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   const partenaireIeParams = useMemo(
     () =>
@@ -365,6 +443,14 @@ export default function PartenairesPage() {
 
           <Button
             variant="outlined"
+            onClick={(event) => setAnchorColumns(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Colonnes
+          </Button>
+
+          <Button
+            variant="outlined"
             onClick={(event) => setAnchorImportExport(event.currentTarget)}
             fullWidth={isMobile}
           >
@@ -382,7 +468,9 @@ export default function PartenairesPage() {
               setPage(1);
             }}
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+            {filters.avec_archivees || filters.archives_seules
+              ? "Masquer archivés"
+              : "Inclure archivés"}
           </Button>
 
           {(filters.avec_archivees || filters.archives_seules) && (
@@ -423,6 +511,67 @@ export default function PartenairesPage() {
           >
             ➕ Nouveau partenaire
           </Button>
+
+          <Menu
+            anchorEl={anchorColumns}
+            open={Boolean(anchorColumns)}
+            onClose={() => setAnchorColumns(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Colonnes visibles
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Afficher ou masquer les colonnes du tableau
+              </Typography>
+            </Box>
+
+            {columnVisibilityItems.map((item) => {
+              const checked = visibleColumnKeys.includes(item.key);
+
+              return (
+                <MenuItem
+                  key={item.key}
+                  onClick={() => {
+                    if (!item.hideable) return;
+                    toggleColumnVisibility(item.key);
+                  }}
+                  dense
+                  disabled={!item.hideable}
+                >
+                  <Checkbox checked={checked} size="small" disabled={!item.hideable} />
+                  <ListItemText
+                    primary={item.label}
+                    secondary={!item.hideable ? "Toujours affichée" : undefined}
+                  />
+                </MenuItem>
+              );
+            })}
+
+            <MenuItem dense onClick={() => setShowActionsColumn((prev) => !prev)}>
+              <Checkbox checked={showActionsColumn} size="small" />
+              <ListItemText primary="Actions" />
+            </MenuItem>
+
+            <MenuItem
+              dense
+              onClick={() => {
+                setVisibleColumnKeys(defaultVisibleColumnKeys);
+                setShowActionsColumn(true);
+              }}
+            >
+              <ListItemText primary="Réinitialiser" />
+            </MenuItem>
+          </Menu>
 
           <Menu
             anchorEl={anchorImportExport}
@@ -555,6 +704,8 @@ export default function PartenairesPage() {
             }}
             onRestoreClick={(id) => handleRestore(id)}
             onHardDeleteClick={(id) => setHardDeleteId(id)}
+            visibleColumnKeys={visibleColumnKeys}
+            showActionsColumn={showActionsColumn}
           />
         </Box>
       )}
@@ -586,7 +737,12 @@ export default function PartenairesPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Suppression définitive
@@ -631,7 +787,11 @@ export default function PartenairesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkTypeDialog(false)}>Annuler</Button>
-          <Button variant="contained" onClick={handleBulkTypeChange} disabled={bulkUpdateLoading || !bulkType}>
+          <Button
+            variant="contained"
+            onClick={handleBulkTypeChange}
+            disabled={bulkUpdateLoading || !bulkType}
+          >
             {bulkUpdateLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>
@@ -664,7 +824,11 @@ export default function PartenairesPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkActionDialog(false)}>Annuler</Button>
-          <Button variant="contained" onClick={handleBulkActionChange} disabled={bulkUpdateLoading || !bulkAction}>
+          <Button
+            variant="contained"
+            onClick={handleBulkActionChange}
+            disabled={bulkUpdateLoading || !bulkAction}
+          >
             {bulkUpdateLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>

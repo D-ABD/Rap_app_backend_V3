@@ -65,6 +65,9 @@ interface Props {
   onClickAppairages?: (partenaireId: number) => void;
   onClickFormations?: (partenaireId: number) => void;
   onClickCandidats?: (partenaireId: number) => void;
+
+  visibleColumnKeys?: string[];
+  showActionsColumn?: boolean;
 }
 
 export default function PartenairesTable({
@@ -83,18 +86,25 @@ export default function PartenairesTable({
   onClickAppairages,
   onClickFormations,
   onClickCandidats,
+  visibleColumnKeys,
+  showActionsColumn = true,
 }: Props) {
   type Kind = "prospections" | "appairages" | "formations" | "candidats";
 
-  const renderCountLink = (count: number | undefined, partenaireId: number, kind: Kind) => {
+  const renderCountLink = (
+    count: number | undefined,
+    partenaireId: number,
+    kind: Kind
+  ) => {
     if (typeof count !== "number") return "—";
 
-    const onClickMap: Partial<Record<Kind, ((id: number) => void) | undefined>> = {
-      prospections: onClickProspections,
-      appairages: onClickAppairages,
-      formations: onClickFormations,
-      candidats: onClickCandidats,
-    };
+    const onClickMap: Partial<Record<Kind, ((id: number) => void) | undefined>> =
+      {
+        prospections: onClickProspections,
+        appairages: onClickAppairages,
+        formations: onClickFormations,
+        candidats: onClickCandidats,
+      };
 
     const urlMap: Partial<Record<Kind, ((id: number) => string) | undefined>> = {
       prospections: buildProspectionsUrl,
@@ -150,6 +160,8 @@ export default function PartenairesTable({
       key: "select",
       label: "#",
       sticky: "left",
+      width: 50,
+      hideable: false,
       render: (p) => (
         <Checkbox
           checked={selectedIds.includes(p.id)}
@@ -158,16 +170,15 @@ export default function PartenairesTable({
           inputProps={{ "aria-label": `Sélectionner ${p.nom}` }}
         />
       ),
-      width: 50,
     },
     {
       key: "nom",
       label: "Nom Partenaire",
       sticky: "left",
       width: 260,
+      hideable: false,
       render: (p) => <strong>{p.nom || "—"}</strong>,
     },
-    // 🆕 Ajout du centre
     {
       key: "default_centre_nom",
       label: "Centre",
@@ -178,8 +189,16 @@ export default function PartenairesTable({
           "—"
         ),
     },
-    { key: "type_display", label: "Type" },
-    { key: "contact_nom", label: "Contact" },
+    {
+      key: "type_display",
+      label: "Type",
+      render: (p) => p.type_display || "—",
+    },
+    {
+      key: "contact_nom",
+      label: "Contact",
+      render: (p) => p.contact_nom || "—",
+    },
     {
       key: "contact_email",
       label: "Email",
@@ -208,10 +227,21 @@ export default function PartenairesTable({
           "—"
         ),
     },
-    { key: "zip_code", label: "CP" },
-    { key: "city", label: "Ville" },
-    { key: "secteur_activite", label: "Secteur" },
-
+    {
+      key: "zip_code",
+      label: "CP",
+      render: (p) => p.zip_code || "—",
+    },
+    {
+      key: "city",
+      label: "Ville",
+      render: (p) => p.city || "—",
+    },
+    {
+      key: "secteur_activite",
+      label: "Secteur",
+      render: (p) => p.secteur_activite || "—",
+    },
     {
       key: "description",
       label: "Description",
@@ -255,7 +285,9 @@ export default function PartenairesTable({
       render: (p) =>
         renderCountLink(
           getCount(p.appairages) ??
-            (typeof p.appairages_count === "number" ? p.appairages_count : undefined),
+            (typeof p.appairages_count === "number"
+              ? p.appairages_count
+              : undefined),
           p.id,
           "appairages"
         ),
@@ -266,7 +298,9 @@ export default function PartenairesTable({
       render: (p) =>
         renderCountLink(
           getCount(p.prospections) ??
-            (typeof p.prospections_count === "number" ? p.prospections_count : undefined),
+            (typeof p.prospections_count === "number"
+              ? p.prospections_count
+              : undefined),
           p.id,
           "prospections"
         ),
@@ -277,7 +311,9 @@ export default function PartenairesTable({
       render: (p) =>
         renderCountLink(
           getCount(p.formations) ??
-            (typeof p.formations_count === "number" ? p.formations_count : undefined),
+            (typeof p.formations_count === "number"
+              ? p.formations_count
+              : undefined),
           p.id,
           "formations"
         ),
@@ -301,6 +337,8 @@ export default function PartenairesTable({
       data={partenaires}
       getRowId={(p) => p.id}
       cardTitle={(p) => p.nom}
+      visibleColumnKeys={visibleColumnKeys}
+      showActionsColumn={showActionsColumn}
       actions={(p) => (
         <>
           {p.is_active ? (
@@ -315,6 +353,7 @@ export default function PartenairesTable({
               <DeleteIcon />
             </IconButton>
           ) : null}
+
           {!p.is_active && onRestoreClick ? (
             <IconButton
               color="success"
@@ -327,6 +366,7 @@ export default function PartenairesTable({
               <RestoreFromTrashIcon />
             </IconButton>
           ) : null}
+
           {!p.is_active && onHardDeleteClick ? (
             <IconButton
               color="error"
@@ -341,7 +381,7 @@ export default function PartenairesTable({
           ) : null}
         </>
       )}
-      onRowClick={(p) => onRowClick(p.id)} // ✅ clic ligne → callback
+      onRowClick={(p) => onRowClick(p.id)}
     />
   );
 }

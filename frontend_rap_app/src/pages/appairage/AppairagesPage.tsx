@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -21,6 +21,8 @@ import {
   useMediaQuery,
   useTheme,
   Menu,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -74,7 +76,8 @@ export const AppairagesPage: React.FC = () => {
       search: searchParams.get("search") || undefined,
       created_by: toNum(searchParams.get("created_by")),
       centre: toNum(searchParams.get("centre")),
-      activite: (searchParams.get("activite") as AppairageFiltresValues["activite"]) || undefined,
+      activite:
+        (searchParams.get("activite") as AppairageFiltresValues["activite"]) || undefined,
       avec_archivees: parseBool(searchParams.get("avec_archivees")),
       annee: toNum(searchParams.get("annee")),
       date_min: searchParams.get("date_min") || undefined,
@@ -90,9 +93,62 @@ export const AppairagesPage: React.FC = () => {
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
+  const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const defaultVisibleColumnKeys = useMemo(
+    () => [
+      "select",
+      "candidat_nom",
+      "appairage",
+      "activite_display",
+      "partenaire_nom",
+      "formation",
+      "offre",
+      "dates",
+      "places",
+      "last_commentaire",
+      "created_at",
+      "updated_at",
+    ],
+    []
+  );
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+    defaultVisibleColumnKeys
+  );
+  const [showActionsColumn, setShowActionsColumn] = useState(true);
+
+  const columnVisibilityItems = useMemo(
+    () => [
+      { key: "select", label: "Sélection", hideable: false },
+      { key: "candidat_nom", label: "Candidat", hideable: false },
+      { key: "appairage", label: "Appairage", hideable: true },
+      { key: "activite_display", label: "Activité", hideable: true },
+      { key: "partenaire_nom", label: "Partenaire", hideable: true },
+      { key: "formation", label: "Formation + Centre", hideable: true },
+      { key: "offre", label: "Offre", hideable: true },
+      { key: "dates", label: "Dates", hideable: true },
+      { key: "places", label: "Places", hideable: true },
+      { key: "last_commentaire", label: "Commentaire", hideable: true },
+      { key: "created_at", label: "Création", hideable: true },
+      { key: "updated_at", label: "Mise à jour", hideable: true },
+    ],
+    []
+  );
+
+  const toggleColumnVisibility = useCallback((key: string) => {
+    setVisibleColumnKeys((prev) => {
+      const isVisible = prev.includes(key);
+      if (isVisible) {
+        const next = prev.filter((item) => item !== key);
+        return next.length > 0 ? next : prev;
+      }
+      return [...prev, key];
+    });
+  }, []);
 
   // 🔹 Modale de détail
   const [showDetail, setShowDetail] = useState(false);
@@ -125,6 +181,7 @@ export const AppairagesPage: React.FC = () => {
     page: number;
     page_size: number;
   };
+
   const effectiveFilters: EffectiveFilters = useMemo(
     () => ({ ...filters, page, page_size: pageSize }),
     [filters, page, pageSize]
@@ -167,7 +224,6 @@ export const AppairagesPage: React.FC = () => {
     }
   };
 
-  // 🔹 Ouverture de la modale au clic sur une ligne
   const handleRowClick = (id: number) => {
     const a = appairages.find((x) => x.id === id);
     if (a) {
@@ -278,6 +334,14 @@ export const AppairagesPage: React.FC = () => {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorColumns(event.currentTarget)}
+            fullWidth={isMobile}
+          >
+            Colonnes
+          </Button>
+
           <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
             Options
           </Button>
@@ -337,6 +401,71 @@ export const AppairagesPage: React.FC = () => {
           >
             ➕ Nouvel appairage
           </Button>
+
+          <Menu
+            anchorEl={anchorColumns}
+            open={Boolean(anchorColumns)}
+            onClose={() => setAnchorColumns(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 300,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1,
+                borderRadius: 3,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Colonnes visibles
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Choisis les colonnes à afficher
+              </Typography>
+            </Box>
+
+            <Stack spacing={0.25} sx={{ px: 0.5 }}>
+              {columnVisibilityItems.map((item) => {
+                const checked = visibleColumnKeys.includes(item.key);
+                return (
+                  <MenuItem
+                    key={item.key}
+                    dense
+                    disabled={!item.hideable}
+                    onClick={() => {
+                      if (!item.hideable) return;
+                      toggleColumnVisibility(item.key);
+                    }}
+                  >
+                    <Checkbox checked={checked} disabled={!item.hideable} />
+                    <ListItemText primary={item.label} />
+                  </MenuItem>
+                );
+              })}
+
+              <MenuItem
+                dense
+                onClick={() => setShowActionsColumn((prev) => !prev)}
+              >
+                <Checkbox checked={showActionsColumn} />
+                <ListItemText primary="Actions" />
+              </MenuItem>
+
+              <MenuItem
+                dense
+                onClick={() => {
+                  setVisibleColumnKeys(defaultVisibleColumnKeys);
+                  setShowActionsColumn(true);
+                }}
+              >
+                <ListItemText
+                  primary="Réinitialiser"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </MenuItem>
+            </Stack>
+          </Menu>
 
           <Menu
             anchorEl={anchorOptions}
@@ -449,16 +578,17 @@ export const AppairagesPage: React.FC = () => {
           items={appairages}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
-          onRowClick={handleRowClick} // ✅ clic ligne → ouvre la modale
+          onRowClick={handleRowClick}
           onDeleteClick={handleDeleteClick}
           onRestoreClick={handleRestoreClick}
           onHardDeleteClick={(id) => setHardDeleteId(id)}
           canHardDelete={canHardDelete}
           onHistoryClick={handleHistoryClick}
+          visibleColumnKeys={visibleColumnKeys}
+          showActionsColumn={showActionsColumn}
         />
       )}
 
-      {/* ───────────── Modale de détail ───────────── */}
       <AppairageDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
@@ -466,7 +596,6 @@ export const AppairagesPage: React.FC = () => {
         onEdit={handleEdit}
       />
 
-      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
@@ -487,11 +616,17 @@ export const AppairagesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={showBulkStatusDialog} onClose={() => setShowBulkStatusDialog(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={showBulkStatusDialog}
+        onClose={() => setShowBulkStatusDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Changer le statut des appairages sélectionnés</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Choisis le nouveau statut à appliquer aux {selectedIds.length} appairage(s) sélectionné(s).
+            Choisis le nouveau statut à appliquer aux {selectedIds.length} appairage(s)
+            sélectionné(s).
           </DialogContentText>
           <FormControl fullWidth>
             <InputLabel id="bulk-appairage-status-label">Nouveau statut</InputLabel>
@@ -511,13 +646,22 @@ export const AppairagesPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBulkStatusDialog(false)}>Annuler</Button>
-          <Button variant="contained" onClick={handleBulkStatusChange} disabled={bulkStatusLoading || !bulkStatus}>
+          <Button
+            variant="contained"
+            onClick={handleBulkStatusChange}
+            disabled={bulkStatusLoading || !bulkStatus}
+          >
             {bulkStatusLoading ? "Mise à jour..." : "Appliquer"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={hardDeleteId !== null}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="error" />
           Suppression définitive
