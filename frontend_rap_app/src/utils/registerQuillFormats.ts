@@ -5,6 +5,7 @@
 // ======================================================
 
 import Quill from "quill";
+import DOMPurify from "dompurify";
 import { getTheme } from "../theme";
 
 /* ---------- Base Inline ---------- */
@@ -160,6 +161,22 @@ export const defaultFormats = [
 ];
 
 /* ---------- Expose patched Quill to react-quilljs ---------- */
+const quillPrototype = (Quill as any)?.prototype;
+if (quillPrototype && typeof quillPrototype.getSemanticHTML === "function") {
+  const originalGetSemanticHTML = quillPrototype.getSemanticHTML;
+
+  // Mitigation locale du CVE-2025-15056 tant qu'aucune version patchée de Quill
+  // n'est publiée: toute sortie HTML exportée par Quill est resanitisée avant retour.
+  quillPrototype.getSemanticHTML = function patchedGetSemanticHTML(...args: unknown[]) {
+    const html = originalGetSemanticHTML.apply(this, args);
+    return DOMPurify.sanitize(typeof html === "string" ? html : "", {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ["script", "style", "iframe", "object", "embed"],
+      FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+    });
+  };
+}
+
 if (typeof window !== "undefined") {
   (window as any).Quill = Quill;
 }
