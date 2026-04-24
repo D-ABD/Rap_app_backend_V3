@@ -337,21 +337,30 @@ export default function PrepaTableIC({
                   />
                 </TableCell>
 
-                {/* IC Adhésions */}
+                {/* IC Adhésions (effectif) — aligné sur l’en-tête et la ligne TOTAL */}
                 <TableCell>
                   <Chip
                     size="small"
-                    color={tauxAdhesion != null && tauxAdhesion >= 70 ? "success" : "warning"}
-                    label={fmt(tauxAdhesion)}
+                    color={(d.nb_adhesions ?? 0) > 0 ? "success" : "default"}
+                    label={d.nb_adhesions ?? 0}
                   />
                 </TableCell>
 
-                {/* IC Taux présence */}
+                {/* IC Taux présence (%) */}
                 <TableCell>
                   <Chip
                     size="small"
                     color={tauxPresence != null && tauxPresence >= 70 ? "success" : "warning"}
                     label={fmt(tauxPresence)}
+                  />
+                </TableCell>
+
+                {/* IC Taux adhésion (%) */}
+                <TableCell>
+                  <Chip
+                    size="small"
+                    color={tauxAdhesion != null && tauxAdhesion >= 70 ? "success" : "warning"}
+                    label={fmt(tauxAdhesion)}
                   />
                 </TableCell>
 
