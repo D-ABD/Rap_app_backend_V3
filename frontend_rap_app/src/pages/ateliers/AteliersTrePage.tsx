@@ -19,7 +19,10 @@ import {
 } from "@mui/material";
 
 import usePagination from "../../hooks/usePagination";
-import type { AtelierTRE, AtelierTREFiltresValues } from "../../types/ateliersTre";
+import type {
+  AtelierTRE,
+  AtelierTREFiltresValues,
+} from "../../types/ateliersTre";
 
 import AteliersTreTable from "./AteliersTRETable";
 import FiltresAteliersTREPanel from "../../components/filters/FiltresAteliersTREPanel";
@@ -37,36 +40,35 @@ export default function AteliersTrePage() {
   const navigate = useNavigate();
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
-  // filtres (hors page/page_size)
   const [filters, setFilters] = useState<AtelierTREFiltresValues>({
     ordering: "-date_atelier",
   });
 
-  // toggle filtres (persisté localStorage)
   const [showFilters, setShowFilters] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const saved = localStorage.getItem("ateliers.showFilters");
     return saved != null ? saved === "1" : false;
   });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("ateliers.showFilters", showFilters ? "1" : "0");
     }
   }, [showFilters]);
 
-  // pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   type EffectiveFilters = AtelierTREFiltresValues & {
     page: number;
     page_size: number;
   };
+
   const effectiveFilters: EffectiveFilters = useMemo(
     () => ({ ...filters, page, page_size: pageSize }),
     [filters, page, pageSize]
   );
 
-  // nombre de filtres actifs
   const activeFiltersCount = useMemo(() => {
     const ignored = new Set(["page", "page_size", "search", "ordering"]);
     return Object.entries(effectiveFilters).filter(([key, val]) => {
@@ -78,7 +80,6 @@ export default function AteliersTrePage() {
     }).length;
   }, [effectiveFilters]);
 
-  // data + meta
   const { data: pageData, loading, error } = useAteliersTRE(effectiveFilters);
   const { options, loading: loadingOptions } = useAtelierTREFiltresOptions();
   const { remove } = useDeleteAtelierTRE();
@@ -86,62 +87,70 @@ export default function AteliersTrePage() {
   const items: AtelierTRE[] = useMemo(() => pageData?.results ?? [], [pageData]);
 
   useEffect(() => {
-    const c = pageData?.count ?? 0;
-    setCount(c);
+    setCount(pageData?.count ?? 0);
   }, [pageData, setCount]);
 
-  // sélection multi
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   useEffect(() => {
-    const visible = new Set(items.map((i) => i.id));
+    const visible = new Set(items.map((item) => item.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [items]);
 
-  // archivage
+  const selectAllVisible = () => setSelectedIds(items.map((item) => item.id));
+  const clearSelection = () => setSelectedIds([]);
+
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
       toast.success(`📦 ${idsToDelete.length} atelier(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
-      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
-      setFilters((f) => ({ ...f })); // refresh soft
+      setPage((currentPage) =>
+        items.length - idsToDelete.length <= 0 && currentPage > 1
+          ? currentPage - 1
+          : currentPage
+      );
+      setFilters((currentFilters) => ({ ...currentFilters }));
     } catch {
       toast.error("Erreur lors de l'archivage");
     }
   };
 
-  // ─────── Détail ───────
   const [selectedAtelier, setSelectedAtelier] = useState<AtelierTRE | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   const handleRowClick = (id: number) => {
-    const atelier = items.find((i) => i.id === id);
-    if (atelier) {
-      setSelectedAtelier(atelier);
-      setShowDetail(true);
-    }
+    const atelier = items.find((item) => item.id === id);
+    if (!atelier) return;
+
+    setSelectedAtelier(atelier);
+    setShowDetail(true);
   };
 
   return (
     <PageTemplate
       refreshButton
       onRefresh={() => {
-        setPage((p) => p);
-        setFilters((f) => ({ ...f }));
+        setPage((currentPage) => currentPage);
+        setFilters((currentFilters) => ({ ...currentFilters }));
       }}
       headerExtra={
         <SearchInput
           placeholder="🔍 Rechercher un atelier TRE..."
           value={filters.search ?? ""}
           onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
             setPage(1);
           }}
         />
@@ -153,7 +162,10 @@ export default function AteliersTrePage() {
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
@@ -165,14 +177,17 @@ export default function AteliersTrePage() {
               setPage(1);
             }}
           >
-            {[10, 20, 50].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
+            {[10, 20, 50].map((size) => (
+              <MenuItem key={size} value={size}>
+                {size} / page
               </MenuItem>
             ))}
           </Select>
 
-          <Button variant="contained" onClick={() => navigate("/ateliers-tre/create")}>
+          <Button
+            variant="contained"
+            onClick={() => navigate("/ateliers-tre/create")}
+          >
             ➕ Nouvel atelier
           </Button>
 
@@ -206,13 +221,19 @@ export default function AteliersTrePage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
-              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+
+              <Button variant="outlined" onClick={selectAllVisible}>
                 ✅ Tout sélectionner
               </Button>
-              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+
+              <Button variant="outlined" onClick={clearSelection}>
                 ❌ Annuler
               </Button>
             </>
@@ -228,8 +249,8 @@ export default function AteliersTrePage() {
             options={options}
             values={effectiveFilters}
             hideSearch
-            onChange={(v) => {
-              setFilters((f) => ({ ...f, ...v }));
+            onChange={(values) => {
+              setFilters((current) => ({ ...current, ...values }));
               setPage(1);
             }}
           />
@@ -251,7 +272,7 @@ export default function AteliersTrePage() {
             <Pagination
               page={page}
               count={totalPages}
-              onChange={(_, val) => setPage(val)}
+              onChange={(_, value) => setPage(value)}
               color="primary"
             />
           </Stack>
@@ -262,8 +283,11 @@ export default function AteliersTrePage() {
         <CircularProgress />
       ) : error ? (
         <Typography color="error">⚠️ Erreur de chargement des ateliers.</Typography>
-      ) : !items.length ? (
+      ) : items.length === 0 ? (
         <Box textAlign="center" color="text.secondary" my={4}>
+          <Box fontSize={48} mb={1}>
+            📭
+          </Box>
           <Typography>Aucun atelier trouvé.</Typography>
         </Box>
       ) : (
@@ -279,7 +303,6 @@ export default function AteliersTrePage() {
         />
       )}
 
-      {/* ───────────── Modale de détail ───────────── */}
       <AtelierTREDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
@@ -287,7 +310,6 @@ export default function AteliersTrePage() {
         onEdit={(id) => navigate(`/ateliers-tre/${id}/edit`)}
       />
 
-      {/* Confirmation dialog */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>

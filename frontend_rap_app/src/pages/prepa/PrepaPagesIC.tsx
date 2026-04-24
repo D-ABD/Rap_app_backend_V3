@@ -59,12 +59,14 @@ export default function PrepaPageIC() {
     const saved = localStorage.getItem("prepa.showFilters");
     return saved === "1";
   });
+
   useEffect(() => {
     localStorage.setItem("prepa.showFilters", showFilters ? "1" : "0");
   }, [showFilters]);
 
   // Pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   // 🔵 Filtre automatique : IC uniquement
   const effectiveFilters = useMemo(() => {
@@ -106,6 +108,7 @@ export default function PrepaPageIC() {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
       toast.success(`📦 ${idsToDelete.length} séance(s) archivée(s)`);
@@ -131,6 +134,7 @@ export default function PrepaPageIC() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       await hardDelete(hardDeleteId);
       toast.success("Séance supprimée définitivement");
@@ -153,6 +157,12 @@ export default function PrepaPageIC() {
     }
   };
 
+  const hasArchiveFilter = Boolean(
+    filters.avec_archivees || filters.archives_seules
+  );
+
+  const hasResults = items.length > 0;
+
   return (
     <PageTemplate
       backButton
@@ -164,22 +174,42 @@ export default function PrepaPageIC() {
           placeholder="🔍 Rechercher une séance Prépa..."
           value={filters.search ?? ""}
           onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
             setPage(1);
           }}
         />
       }
+      filters={
+        showFilters && (
+          <FiltresPrepaPanel
+            options={loadingFilters ? undefined : filterOptions}
+            values={filters}
+            hideSearch
+            onChange={(next) => {
+              setFilters(next);
+              setPage(1);
+            }}
+            onRefresh={() => setFilters({ ...filters })}
+          />
+        )
+      }
+      showFilters={showFilters}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
-          {/* Page size */}
           <Select
             size="small"
             value={pageSize}
@@ -195,7 +225,6 @@ export default function PrepaPageIC() {
             ))}
           </Select>
 
-          {/* Nouveau */}
           {canWritePrepa && (
             <Button variant="contained" onClick={() => navigate("/prepa/create/ic")}>
               ➕ Nouvelle séance
@@ -203,26 +232,42 @@ export default function PrepaPageIC() {
           )}
 
           <Button
-            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            variant={hasArchiveFilter ? "contained" : "outlined"}
             onClick={() =>
               setFilters((prev) =>
                 prev.avec_archivees || prev.archives_seules
-                  ? { ...prev, avec_archivees: undefined, archives_seules: undefined }
-                  : { ...prev, avec_archivees: true, archives_seules: undefined }
+                  ? {
+                      ...prev,
+                      avec_archivees: undefined,
+                      archives_seules: undefined,
+                    }
+                  : {
+                      ...prev,
+                      avec_archivees: true,
+                      archives_seules: undefined,
+                    }
               )
             }
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivées" : "Inclure archivées"}
+            {hasArchiveFilter ? "Masquer archivées" : "Inclure archivées"}
           </Button>
 
-          {(filters.avec_archivees || filters.archives_seules) && (
+          {hasArchiveFilter && (
             <Button
               variant={filters.archives_seules ? "contained" : "outlined"}
               onClick={() =>
                 setFilters((prev) =>
                   prev.archives_seules
-                    ? { ...prev, archives_seules: undefined, avec_archivees: undefined }
-                    : { ...prev, archives_seules: true, avec_archivees: true }
+                    ? {
+                        ...prev,
+                        archives_seules: undefined,
+                        avec_archivees: undefined,
+                      }
+                    : {
+                        ...prev,
+                        archives_seules: true,
+                        avec_archivees: true,
+                      }
                 )
               }
             >
@@ -240,7 +285,6 @@ export default function PrepaPageIC() {
                 width: 320,
                 maxWidth: "calc(100vw - 32px)",
                 p: 1.25,
-                borderRadius: 3,
               },
             }}
           >
@@ -260,12 +304,21 @@ export default function PrepaPageIC() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
-              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedIds(items.map((i) => i.id))}
+              >
                 ✅ Tout sélectionner
               </Button>
+
               <Button variant="outlined" onClick={() => setSelectedIds([])}>
                 ❌ Annuler
               </Button>
@@ -274,63 +327,53 @@ export default function PrepaPageIC() {
         </Stack>
       }
       footer={
-        count > 0 && (
+        count > 0 ? (
           <Stack
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
             alignItems="center"
             spacing={1}
           >
-            <Typography>
+            <Typography variant="body2">
               Page {page} / {totalPages} ({count} résultats)
             </Typography>
 
-            <Pagination page={page} count={totalPages} onChange={(_, v) => setPage(v)} />
+            <Pagination
+              page={page}
+              count={totalPages}
+              onChange={(_, v) => setPage(v)}
+              color="primary"
+            />
           </Stack>
-        )
+        ) : null
       }
     >
-      {/* Filtres */}
-      {showFilters && (
-        <Box mt={2}>
-          <FiltresPrepaPanel
-            options={loadingFilters ? undefined : filterOptions}
-            values={filters}
-            hideSearch
-            onChange={(n) => {
-              setFilters(n);
-              setPage(1);
-            }}
-            onRefresh={() => setFilters({ ...filters })}
-          />
-        </Box>
-      )}
-
-      {/* TABLE IC */}
-      <Box mt={2}>
-        {loading ? (
+      {loading ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
           <CircularProgress />
-        ) : error ? (
+        </Stack>
+      ) : error ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
           <Typography color="error">⚠️ Erreur de chargement</Typography>
-        ) : !items.length ? (
-          <Typography textAlign="center" color="text.secondary" mt={4}>
-            Aucune séance trouvée.
-          </Typography>
-        ) : (
-          <PrepaTableIC
-            items={items}
-            selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            onDelete={(id) => {
-              setSelectedId(id);
-              setShowConfirm(true);
-            }}
-            onToggleArchive={(id) => handleRestore(id)}
-            onHardDelete={(id) => setHardDeleteId(id)}
-            onRowClick={handleRowClick}
-          />
-        )}
-      </Box>
+        </Box>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Typography>Aucune séance trouvée.</Typography>
+        </Box>
+      ) : (
+        <PrepaTableIC
+          items={items}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onDelete={(id) => {
+            setSelectedId(id);
+            setShowConfirm(true);
+          }}
+          onToggleArchive={(id) => handleRestore(id)}
+          onHardDelete={(id) => setHardDeleteId(id)}
+          onRowClick={handleRowClick}
+        />
+      )}
 
       {/* Modale Détail */}
       <PrepaDetailModal

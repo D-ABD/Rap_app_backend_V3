@@ -1,9 +1,23 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import axios from "axios";
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Link,
+  Stack,
+} from "@mui/material";
 import { useAuth } from "../../hooks/useAuth";
-import { Box, Paper, Typography, TextField, Button, Alert, Link } from "@mui/material";
-import { isCandidateLikeRole, isCoreStaffRole, normalizeRole } from "../../utils/roleGroups";
+import PageTemplate from "../../components/PageTemplate";
+import {
+  isCandidateLikeRole,
+  isCoreStaffRole,
+  normalizeRole,
+} from "../../utils/roleGroups";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -20,13 +34,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // ✅ Authentification
       const result = await login(email, password);
-
-      // ✅ Détermination du rôle
       const role = normalizeRole(result?.role);
 
-      // ✅ Redirection en fonction du rôle
       if (["declic_staff"].includes(role)) {
         navigate("/dashboard/declic", { replace: true });
       } else if (["prepa_staff"].includes(role)) {
@@ -36,18 +46,21 @@ export default function LoginPage() {
       } else if (isCandidateLikeRole(role)) {
         navigate("/dashboard/candidat", { replace: true });
       } else {
-        navigate("/dashboard", { replace: true }); // fallback
+        navigate("/dashboard", { replace: true });
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
-        const data = err.response?.data as { detail?: string; message?: string } | undefined;
+        const data = err.response?.data as
+          | { detail?: string; message?: string }
+          | undefined;
         const attemptedUrl = `${err.config?.baseURL ?? ""}${err.config?.url ?? ""}`;
 
         let msg = data?.detail || data?.message || "Connexion impossible.";
 
         if (!err.response) {
-          msg = "Impossible de joindre le backend. Vérifiez que Django est démarré.";
+          msg =
+            "Impossible de joindre le backend. Vérifiez que Django est démarré.";
         } else if (status === 400 || status === 401) {
           msg = data?.detail || data?.message || "Identifiants incorrects.";
         } else if (status === 404) {
@@ -68,83 +81,92 @@ export default function LoginPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        bgcolor: "background.default",
-        p: 2,
-      }}
-    >
+    <PageTemplate centered maxWidth="sm" hero={false}>
       <Paper
-        elevation={6}
+        elevation={0}
         sx={{
-          maxWidth: 400,
           width: "100%",
-          p: 4,
+          maxWidth: 400,
+          mx: "auto",
+          p: { xs: 2.5, sm: 4 },
         }}
       >
-        <Typography variant="h5" component="h1" gutterBottom align="center">
-          Se connecter
-        </Typography>
+        <Stack spacing={2.5}>
+          <Box>
+            <Typography
+              variant="h5"
+              component="h1"
+              align="center"
+              gutterBottom
+            >
+              Se connecter
+            </Typography>
 
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <TextField
-            label="Adresse email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            margin="normal"
-            fullWidth
-            required
-            autoFocus
-          />
+            <Typography variant="body2" color="text.secondary" align="center">
+              Accédez à votre espace en saisissant vos identifiants.
+            </Typography>
+          </Box>
 
-          <TextField
-            label="Mot de passe"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            margin="normal"
-            fullWidth
-            required
-          />
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Stack spacing={2}>
+              <TextField
+                label="Adresse email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                fullWidth
+                required
+                autoFocus
+              />
 
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
-            </Alert>
-          )}
+              <TextField
+                label="Mot de passe"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                fullWidth
+                required
+              />
 
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            fullWidth
-            sx={{ mt: 3 }}
-            disabled={loading}
+              {error && <Alert severity="error">{error}</Alert>}
+
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                disabled={loading}
+              >
+                {loading ? "Connexion..." : "Se connecter"}
+              </Button>
+            </Stack>
+          </Box>
+
+          <Typography variant="body2" align="center">
+            Pas encore de compte ?{" "}
+            <Link component={RouterLink} to="/register">
+              Créer un compte
+            </Link>
+          </Typography>
+
+          <Typography
+            variant="caption"
+            align="center"
+            display="block"
+            color="text.secondary"
           >
-            {loading ? "Connexion..." : "Se connecter"}
-          </Button>
-        </Box>
-
-        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-          Pas encore de compte ?{" "}
-          <Link component={RouterLink} to="/register">
-            Créer un compte
-          </Link>
-        </Typography>
-
-        <Typography variant="caption" align="center" display="block" sx={{ mt: 2 }}>
-          En vous connectant, vous acceptez nos{" "}
-          <Link component={RouterLink} to="/politique-confidentialite" target="_blank">
-            conditions de confidentialité
-          </Link>
-          .
-        </Typography>
+            En vous connectant, vous acceptez nos{" "}
+            <Link
+              component={RouterLink}
+              to="/politique-confidentialite"
+              target="_blank"
+            >
+              conditions de confidentialité
+            </Link>
+            .
+          </Typography>
+        </Stack>
       </Paper>
-    </Box>
+    </PageTemplate>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -62,12 +62,18 @@ export default function MainLayoutCandidat() {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const toggleDrawer = () => setOpen((prev) => !prev);
+  const openDrawer = () => setOpen(true);
+  const closeDrawer = () => setOpen(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  useEffect(() => {
+    closeDrawer();
+    setAnchorUser(null);
+  }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
@@ -166,7 +172,7 @@ export default function MainLayoutCandidat() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={toggleDrawer}
+            onClick={openDrawer}
             sx={{
               mr: 0.5,
               width: 42,
@@ -402,7 +408,7 @@ export default function MainLayoutCandidat() {
       <Drawer
         variant="temporary"
         open={open}
-        onClose={toggleDrawer}
+        onClose={closeDrawer}
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: "block", md: "none" },
@@ -481,7 +487,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/dashboard"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/dashboard")}
             sx={getDrawerItemSx(theme)}
           >
@@ -494,7 +500,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/prospections/candidat"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/prospections/candidat")}
             sx={getDrawerItemSx(theme)}
           >
@@ -507,7 +513,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/prospection-commentaires"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/prospection-commentaires")}
             sx={getDrawerItemSx(theme)}
           >
@@ -520,7 +526,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/partenaires/candidat"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/partenaires/candidat")}
             sx={getDrawerItemSx(theme)}
           >
@@ -533,7 +539,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/cvtheque/candidat"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/cvtheque/candidat")}
             sx={getDrawerItemSx(theme)}
           >
@@ -546,7 +552,7 @@ export default function MainLayoutCandidat() {
           <ListItemButton
             component={Link}
             to="/about"
-            onClick={toggleDrawer}
+            onClick={closeDrawer}
             selected={isActive("/about")}
             sx={getDrawerItemSx(theme)}
           >

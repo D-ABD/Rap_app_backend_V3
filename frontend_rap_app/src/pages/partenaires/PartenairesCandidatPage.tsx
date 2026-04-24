@@ -55,7 +55,9 @@ const defaultFilters: PartenaireFilters = {
   has_prospections: "",
 };
 
-function isPaginatedPartenaires(d: unknown): d is { results: Partenaire[]; count: number } {
+function isPaginatedPartenaires(
+  d: unknown
+): d is { results: Partenaire[]; count: number } {
   if (typeof d !== "object" || d === null) return false;
   const obj = d as Record<string, unknown>;
   return Array.isArray(obj.results) && typeof obj.count === "number";
@@ -102,6 +104,7 @@ export default function PartenairesCandidatPage() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("partenaires.showFilters") === "1";
   });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("partenaires.showFilters", showFilters ? "1" : "0");
@@ -125,7 +128,15 @@ export default function PartenairesCandidatPage() {
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const {
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    count,
+    setCount,
+    totalPages,
+  } = usePagination();
 
   const queryParams = useMemo(() => {
     const base: Record<string, string | number | boolean> = {
@@ -134,12 +145,14 @@ export default function PartenairesCandidatPage() {
       page_size: pageSize,
       reloadKey,
     };
+
     if (isStaff && filters.created_by) base.created_by = filters.created_by as number;
     if (filters.city) base.city = filters.city;
     if (filters.secteur_activite) base.secteur_activite = filters.secteur_activite;
     if (filters.type) base.type = filters.type;
     if (filters.has_appairages) base.has_appairages = filters.has_appairages;
     if (filters.has_prospections) base.has_prospections = filters.has_prospections;
+
     return base;
   }, [filters, page, pageSize, reloadKey, isStaff]);
 
@@ -163,6 +176,7 @@ export default function PartenairesCandidatPage() {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
       toast.success(`📦 ${idsToDelete.length} partenaire(s) archivé(s)`);
@@ -180,7 +194,10 @@ export default function PartenairesCandidatPage() {
     setPage(1);
   };
 
-  const userOptions = useMemo(() => dedupeById(filterOptions?.users ?? []), [filterOptions]);
+  const userOptions = useMemo(
+    () => dedupeById(filterOptions?.users ?? []),
+    [filterOptions]
+  );
   const cityOptions = useMemo(
     () => dedupeByValueLabel(filterOptions?.cities ?? []),
     [filterOptions]
@@ -190,9 +207,15 @@ export default function PartenairesCandidatPage() {
     [filterOptions]
   );
 
+  const hasSelection = selectedIds.length > 0;
+  const hasResettableFilters =
+    Boolean(filters.search?.trim()) || activeFiltersCount > 0;
+
   // 🔹 Gestion de la modale de détail
   const [showDetail, setShowDetail] = useState(false);
-  const [selectedPartenaire, setSelectedPartenaire] = useState<Partenaire | null>(null);
+  const [selectedPartenaire, setSelectedPartenaire] = useState<Partenaire | null>(
+    null
+  );
 
   const handleRowClick = (id: number) => {
     const partenaire = partenaires.find((p) => p.id === id);
@@ -206,6 +229,34 @@ export default function PartenairesCandidatPage() {
     setShowDetail(false);
     navigate(`/partenaires/${id}/edit/candidat`);
   };
+
+  const footer =
+    count > 0 ? (
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        spacing={1}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Page {page} / {totalPages} ({count} résultats)
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: { xs: "center", sm: "flex-end" },
+          }}
+        >
+          <Pagination
+            page={page}
+            count={totalPages}
+            onChange={(_, val) => setPage(val)}
+            color="primary"
+            size={isMobile ? "small" : "medium"}
+          />
+        </Box>
+      </Stack>
+    ) : undefined;
 
   return (
     <PageTemplate
@@ -222,22 +273,34 @@ export default function PartenairesCandidatPage() {
         />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+          alignItems={{ xs: "stretch", sm: "center" }}
+        >
           <Button
             variant="outlined"
             onClick={() => setShowFilters((v) => !v)}
             startIcon={<span>{showFilters ? "🫣" : "🔎"}</span>}
-            fullWidth={isMobile}
           >
             {showFilters ? "Masquer filtres" : "Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
-          <Button variant="outlined" onClick={handleResetFilters}>
+          <Button
+            variant="outlined"
+            onClick={handleResetFilters}
+            disabled={!hasResettableFilters}
+          >
             Réinitialiser
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
@@ -259,7 +322,6 @@ export default function PartenairesCandidatPage() {
           <Button
             variant="contained"
             onClick={() => navigate("/partenaires/create/candidat")}
-            fullWidth={isMobile}
           >
             ➕ Nouveau partenaire
           </Button>
@@ -290,7 +352,7 @@ export default function PartenairesCandidatPage() {
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
               <ExportButtonPartenaires
                 data={
-                  selectedIds.length > 0
+                  hasSelection
                     ? partenaires.filter((p) => selectedIds.includes(p.id))
                     : partenaires
                 }
@@ -298,7 +360,7 @@ export default function PartenairesCandidatPage() {
             </Stack>
           </Menu>
 
-          {selectedIds.length > 0 && (
+          {hasSelection && (
             <>
               <Button color="error" onClick={() => setShowConfirm(true)}>
                 Archiver ({selectedIds.length})
@@ -333,36 +395,57 @@ export default function PartenairesCandidatPage() {
           />
         )
       }
-      footer={
-        count > 0 && (
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-            alignItems="center"
-            spacing={1}
-          >
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
-            </Typography>
-            <Pagination
-              page={page}
-              count={totalPages}
-              onChange={(_, val) => setPage(val)}
-              color="primary"
-              size={isMobile ? "small" : "medium"}
-            />
-          </Stack>
-        )
-      }
+      footer={footer}
     >
       {userLoading || loading ? (
-        <CircularProgress />
+        <Box
+          sx={{
+            minHeight: 240,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
       ) : userError ? (
-        <Typography color="error">Erreur utilisateur.</Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          <Typography color="error">Erreur utilisateur.</Typography>
+        </Box>
       ) : error ? (
-        <Typography color="error">Erreur lors du chargement des partenaires.</Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          <Typography color="error">
+            Erreur lors du chargement des partenaires.
+          </Typography>
+        </Box>
       ) : partenaires.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            color: "text.secondary",
+          }}
+        >
           <Box fontSize={48} mb={1}>
             📭
           </Box>
@@ -373,14 +456,20 @@ export default function PartenairesCandidatPage() {
           <PartenairesTable
             partenaires={partenaires}
             selectedIds={selectedIds}
-            buildProspectionsUrl={(partenaireId) => `/prospections?partenaire=${partenaireId}`}
-            buildAppairagesUrl={(partenaireId) => `/appairages?partenaire=${partenaireId}`}
+            buildProspectionsUrl={(partenaireId) =>
+              `/prospections?partenaire=${partenaireId}`
+            }
+            buildAppairagesUrl={(partenaireId) =>
+              `/appairages?partenaire=${partenaireId}`
+            }
             onToggleSelect={(id) =>
               setSelectedIds((prev) =>
-                prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+                prev.includes(id)
+                  ? prev.filter((i) => i !== id)
+                  : [...prev, id]
               )
             }
-            onRowClick={handleRowClick} // ✅ clic ligne → modale
+            onRowClick={handleRowClick}
             onDeleteClick={(id) => {
               setSelectedId(id);
               setShowConfirm(true);
@@ -389,7 +478,6 @@ export default function PartenairesCandidatPage() {
         </Box>
       )}
 
-      {/* ───────────── Détail du partenaire (modale) ───────────── */}
       <PartenaireCandidatDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
@@ -397,8 +485,12 @@ export default function PartenairesCandidatPage() {
         onEdit={handleEdit}
       />
 
-      {/* ───────────── Confirmation archivage ───────────── */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Confirmation

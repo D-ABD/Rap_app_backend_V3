@@ -1,20 +1,22 @@
 // ======================================================
 // src/pages/commentaires/CommentaireForm.tsx
 // Formulaire de création / édition de commentaire
-// (version finale fluide : plus de reset du curseur,
-//  édition naturelle + TS safe + accessibilité)
+// (refactor LOT 7 : structure visuelle harmonisée,
+// logique métier inchangée)
 // ======================================================
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Stack, Typography, Paper } from "@mui/material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useQuill } from "react-quilljs";
 import "quill/dist/quill.snow.css";
 
 import { colorOptions } from "../../utils/registerQuillFormats";
 import FormationSelectModal from "../../components/modals/FormationSelectModal";
 import EntityPickerField from "../../components/forms/fields/EntityPickerField";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 import useForm from "../../hooks/useForm";
 import api from "../../api/axios";
 
@@ -50,11 +52,18 @@ export default function CommentaireForm({
   const [searchParams] = useSearchParams();
 
   const scopedFormationId = useMemo(() => {
-    return formationId || searchParams.get("formation_id") || searchParams.get("formation") || "";
+    return (
+      formationId ||
+      searchParams.get("formation_id") ||
+      searchParams.get("formation") ||
+      ""
+    );
   }, [formationId, searchParams]);
 
   const returnToListUrl = useMemo(() => {
-    return scopedFormationId ? `/commentaires?formation=${scopedFormationId}` : "/commentaires";
+    return scopedFormationId
+      ? `/commentaires?formation=${scopedFormationId}`
+      : "/commentaires";
   }, [scopedFormationId]);
 
   const [formationNom, setFormationNom] = useState<string | null>(null);
@@ -82,13 +91,13 @@ export default function CommentaireForm({
   useEffect(() => {
     if (!quill) return;
 
-    // ⚙️ Injecte le contenu initial une seule fois
-    const isEmpty = quill.root.innerHTML === "<p><br></p>" || quill.getText().trim() === "";
+    const isEmpty =
+      quill.root.innerHTML === "<p><br></p>" || quill.getText().trim() === "";
+
     if (contenuInitial && isEmpty) {
       quill.clipboard.dangerouslyPasteHTML(contenuInitial);
     }
 
-    // 🔒 Lecture seule si nécessaire
     if (readonlyFormation) {
       quill.disable();
     }
@@ -103,7 +112,11 @@ export default function CommentaireForm({
 
   /* ---------- Chargement du nom de la formation ---------- */
   useEffect(() => {
-    if (!scopedFormationId) return;
+    if (!scopedFormationId) {
+      setLoading(false);
+      return;
+    }
+
     api
       .get(`/formations/${scopedFormationId}/`)
       .then((res) => setFormationNom(res.data?.data?.nom ?? res.data?.nom))
@@ -138,12 +151,15 @@ export default function CommentaireForm({
     try {
       await api.post("/commentaires/", payload);
       toast.success("Commentaire créé avec succès.");
-      if (onSubmit) onSubmit(payload);
+      if (onSubmit) {
+        await onSubmit(payload);
+      }
       navigate(returnToListUrl);
     } catch (err: unknown) {
       const axiosError = err as {
         response?: { data?: Record<string, string[]> };
       };
+
       if (axiosError.response?.data) {
         const formattedErrors: Partial<Record<keyof CommentaireFormData, string>> = {};
         for (const key in axiosError.response.data) {
@@ -162,39 +178,50 @@ export default function CommentaireForm({
     }
   };
 
-  /* ---------- Rendu ---------- */
-  return (
-    <Paper sx={{ p: 3 }}>
-      {loading ? (
-        <Box display="flex" flexDirection="column" alignItems="center" gap={2} py={4}>
+  /* ---------- Chargement ---------- */
+  if (loading) {
+    return (
+      <FormSectionCard title="Chargement">
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2} py={2}>
           <CircularProgress />
           <Typography>Chargement de la formation...</Typography>
         </Box>
-      ) : (
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* --- Sélecteur de formation --- */}
-          {!readonlyFormation && (
-            <>
-              <Box sx={{ mb: 2 }}>
-                <EntityPickerField
-                  label="Formation"
-                  displayValue={formationNom ?? ""}
-                  placeholder="Cliquez pour rechercher une formation…"
-                  onOpen={() => setShowModal(true)}
-                  helperText={
-                    formationNom ? (
-                      <Typography component="span" variant="body2" color="text.secondary">
-                        📚 Formation sélectionnée :{" "}
-                        <Typography component="strong" variant="body2" sx={{ color: "success.main" }}>
-                          {formationNom}
-                        </Typography>
+      </FormSectionCard>
+    );
+  }
+
+  /* ---------- Rendu ---------- */
+  return (
+    <Box component="form" onSubmit={handleSubmit}>
+      <Stack spacing={3}>
+        {!readonlyFormation && (
+          <FormSectionCard
+            title="Formation"
+            subtitle="Choisissez la formation concernée par le commentaire."
+          >
+            <Stack spacing={2}>
+              <EntityPickerField
+                label="Formation"
+                displayValue={formationNom ?? ""}
+                placeholder="Cliquez pour rechercher une formation…"
+                onOpen={() => setShowModal(true)}
+                helperText={
+                  formationNom ? (
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      📚 Formation sélectionnée :{" "}
+                      <Typography
+                        component="strong"
+                        variant="body2"
+                        sx={{ color: "success.main" }}
+                      >
+                        {formationNom}
                       </Typography>
-                    ) : (
-                      "Choisissez la formation concernée par le commentaire."
-                    )
-                  }
-                />
-              </Box>
+                    </Typography>
+                  ) : (
+                    "Choisissez la formation concernée par le commentaire."
+                  )
+                }
+              />
 
               <FormationSelectModal
                 show={showModal}
@@ -208,25 +235,36 @@ export default function CommentaireForm({
                   setShowModal(false);
                 }}
               />
-            </>
-          )}
+            </Stack>
+          </FormSectionCard>
+        )}
 
-          {/* --- Zone contenu --- */}
-          <Box sx={{ mb: 2 }}>
-            <Typography id="commentaire-label" variant="subtitle2" gutterBottom>
+        <FormSectionCard
+          title="Contenu"
+          subtitle="Rédigez le commentaire associé à la formation."
+        >
+          <Stack spacing={1.5}>
+            <Typography id="commentaire-label" variant="subtitle2">
               Contenu
             </Typography>
 
             <Box
               sx={{
+                "& .ql-toolbar": {
+                  borderTopLeftRadius: 1,
+                  borderTopRightRadius: 1,
+                },
+                "& .ql-container": {
+                  borderBottomLeftRadius: 1,
+                  borderBottomRightRadius: 1,
+                },
                 "& .ql-editor": {
-                  minHeight: 200,
+                  minHeight: 220,
                   overflowY: "auto",
                   backgroundColor: "background.paper",
-                  borderRadius: 1,
-                  padding: "0.5rem",
+                  padding: "0.75rem",
                   fontSize: "0.95rem",
-                  lineHeight: 1.5,
+                  lineHeight: 1.6,
                 },
               }}
             >
@@ -243,30 +281,34 @@ export default function CommentaireForm({
                 {errors.contenu}
               </Typography>
             )}
-          </Box>
+          </Stack>
+        </FormSectionCard>
 
-          {/* --- Actions --- */}
-          {!readonlyFormation && (
-            <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
-              <Button type="submit" variant="contained" color="success" disabled={submitting}>
-                {submitting ? <CircularProgress size={20} color="inherit" /> : "💾 Enregistrer"}
-              </Button>
+        {!readonlyFormation && (
+          <FormActionsBar>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={() => {
+                if (!submitting && window.confirm("Annuler les modifications ?")) {
+                  navigate(returnToListUrl);
+                }
+              }}
+            >
+              Annuler
+            </Button>
 
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={() => {
-                  if (!submitting && window.confirm("Annuler les modifications ?")) {
-                    navigate(returnToListUrl);
-                  }
-                }}
-              >
-                Annuler
-              </Button>
-            </Stack>
-          )}
-        </Box>
-      )}
-    </Paper>
+            <Button
+              type="submit"
+              variant="contained"
+              color="success"
+              disabled={submitting}
+            >
+              {submitting ? <CircularProgress size={20} color="inherit" /> : "💾 Enregistrer"}
+            </Button>
+          </FormActionsBar>
+        )}
+      </Stack>
+    </Box>
   );
 }

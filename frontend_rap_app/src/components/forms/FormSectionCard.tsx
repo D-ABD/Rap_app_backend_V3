@@ -1,50 +1,84 @@
-import { Card, CardContent, CardHeader, Typography, type CardProps, useTheme } from "@mui/material";
+// src/components/forms/FormSectionCard.tsx
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  type CardProps,
+  useTheme,
+  Box,
+  Stack,
+} from "@mui/material";
 import type { ReactNode } from "react";
 import type { AppTheme } from "../../theme";
 
 export type FormSectionCardProps = {
-  /** Titre de section (texte ou nœud, ex. icône + libellé). */
   title: ReactNode;
   subtitle?: ReactNode;
   children: ReactNode;
 } & Omit<CardProps, "title">;
 
-/**
- * Bloc de formulaire avec titre (carte bordée, contenu aéré).
- */
-export default function FormSectionCard({ title, subtitle, children, ...cardProps }: FormSectionCardProps) {
+export default function FormSectionCard({
+  title,
+  subtitle,
+  children,
+  ...cardProps
+}: FormSectionCardProps) {
   const theme = useTheme<AppTheme>();
+  const tokens = theme.custom.form.sectionCard;
+  const isLight = theme.palette.mode === "light";
+
+  const background = isLight ? tokens.background.light : tokens.background.dark;
+  const border = isLight ? tokens.border.light : tokens.border.dark;
+
   const titleNode =
     typeof title === "string" ? (
-      <Typography component="h2" variant="subtitle1" fontWeight={600}>
+      <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
     ) : (
       title
     );
+
+  const subtitleNode =
+    typeof subtitle === "string" ? (
+      <Typography component="div" variant="body2" color="text.secondary">
+        {subtitle}
+      </Typography>
+    ) : (
+      subtitle
+    );
+
   return (
     <Card
       variant="outlined"
       sx={{
-        backgroundColor:
-          theme.palette.mode === "light"
-            ? theme.custom.form.section.paperBackground.light
-            : theme.custom.form.section.paperBackground.dark,
+        borderRadius: tokens.borderRadius,
+        background,
+        border,
+        p: tokens.padding,
       }}
       {...cardProps}
     >
-      <CardHeader
-        title={titleNode}
-        subheader={subtitle}
-        sx={{
-          pb: 0,
-          backgroundColor:
-            theme.palette.mode === "light"
-              ? theme.custom.form.section.accentHeaderBackground.light
-              : theme.custom.form.section.accentHeaderBackground.dark,
-        }}
-      />
-      <CardContent sx={{ pt: 1 }}>{children}</CardContent>
+      <Stack spacing={tokens.titleGap}>
+        <CardHeader
+          title={titleNode}
+          subheader={subtitleNode}
+          sx={{ p: 0 }}
+        />
+
+        <CardContent sx={{ p: 0 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: theme.spacing(tokens.contentGap),
+            }}
+          >
+            {children}
+          </Box>
+        </CardContent>
+      </Stack>
     </Card>
   );
 }

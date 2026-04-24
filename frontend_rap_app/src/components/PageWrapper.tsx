@@ -1,6 +1,5 @@
 // src/components/PageWrapper.tsx
 import { Container } from "@mui/material";
-import { alpha } from "@mui/material/styles";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { ReactNode } from "react";
 import type { AppTheme } from "../theme";
@@ -9,10 +8,12 @@ type PageWrapperProps = {
   children: ReactNode;
   /** largeur max, par défaut "lg". Mettre false pour 100% */
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
-  /** padding vertical, par défaut { xs: 2, sm: 3 } */
+  /** conserve le comportement natif MUI des gutters */
   disableGutters?: boolean;
   /** si true -> prend toute la largeur */
   fullWidth?: boolean;
+  /** densité visuelle de la page */
+  density?: "default" | "compact";
   sx?: SxProps<Theme>;
 };
 
@@ -21,28 +22,33 @@ export default function PageWrapper({
   maxWidth = "lg",
   disableGutters = false,
   fullWidth = false,
+  density = "default",
   sx,
 }: PageWrapperProps) {
-  const baseSx: SxProps<Theme> = {
-    position: "relative",
-    py: { xs: 2.5, sm: 3.5, lg: 4 },
-    px: fullWidth ? { xs: 0, sm: 0 } : undefined,
-    "&::before": {
-      content: '""',
-      position: "absolute",
-      inset: 0,
-      pointerEvents: "none",
-      borderRadius: { xs: 0, sm: 4 },
-      background: (theme: Theme) => {
-        if (fullWidth) return "transparent";
-        const appTheme = theme as AppTheme;
-        return `linear-gradient(180deg, ${
-          appTheme.palette.mode === "light"
-            ? alpha(appTheme.custom.surface.muted.background.light, 0.9)
-            : alpha(appTheme.custom.surface.muted.background.dark, 0.9)
-        } 0%, transparent 30%)`;
+  const baseSx: SxProps<Theme> = (theme) => {
+    const appTheme = theme as AppTheme;
+    const wrapperTokens = appTheme.custom.page.wrapper;
+    const isCompact = density === "compact";
+
+    const overlayBackground =
+      appTheme.palette.mode === "light"
+        ? wrapperTokens.overlay.background.light
+        : wrapperTokens.overlay.background.dark;
+
+    return {
+      position: "relative",
+      py: isCompact ? wrapperTokens.paddingY.compact : wrapperTokens.paddingY.default,
+      px: fullWidth ? wrapperTokens.paddingX.fullWidth : wrapperTokens.paddingX.default,
+
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        borderRadius: wrapperTokens.overlay.borderRadius,
+        background: fullWidth ? "transparent" : overlayBackground,
       },
-    },
+    };
   };
 
   return (

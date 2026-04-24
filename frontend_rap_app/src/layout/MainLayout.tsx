@@ -88,7 +88,8 @@ export default function MainLayout() {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const toggleDrawer = () => setOpen((prev) => !prev);
+  const openDrawer = () => setOpen(true);
+  const closeDrawer = () => setOpen(false);
   const toggleSubmenu = (label: string) => {
     setSubmenuOpen((prev) => ({ ...prev, [label]: !prev[label] }));
   };
@@ -119,6 +120,16 @@ export default function MainLayout() {
       return { ...prev, ...newState };
     });
   }, [location.pathname, isActive, sidebarItems]);
+
+  useEffect(() => {
+    closeDrawer();
+    setAnchorCrm(null);
+    setAnchorRevue(null);
+    setAnchorDeclic(null);
+    setAnchorPrepa(null);
+    setAnchorUser(null);
+    setAnchorCvtheque(null);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -205,7 +216,7 @@ export default function MainLayout() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={toggleDrawer}
+            onClick={openDrawer}
             sx={{
               mr: 0.5,
               width: 42,
@@ -579,7 +590,7 @@ export default function MainLayout() {
       <Drawer
         variant="temporary"
         open={open}
-        onClose={toggleDrawer}
+        onClose={closeDrawer}
         ModalProps={{ keepMounted: true }}
         sx={{
           "& .MuiDrawer-paper": {
@@ -643,7 +654,7 @@ export default function MainLayout() {
                 selected={isActive(item.path)}
                 onClick={() => {
                   if (item.children) toggleSubmenu(item.label);
-                  if (item.path) toggleDrawer();
+                  if (item.path) closeDrawer();
                 }}
                 sx={getDrawerItemSx(theme)}
               >
@@ -662,7 +673,7 @@ export default function MainLayout() {
                         component={Link}
                         to={child.path || ""}
                         selected={isActive(child.path)}
-                        onClick={toggleDrawer}
+                        onClick={closeDrawer}
                       >
                         <ListItemIcon>{child.icon}</ListItemIcon>
                         <ListItemText primary={child.label} />

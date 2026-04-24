@@ -19,7 +19,6 @@ import {
   useTheme,
   useMediaQuery,
   Paper,
-  TextField,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -28,6 +27,7 @@ import usePagination from "../../hooks/usePagination";
 import { buildLot1ExportQueryParams } from "../../api/lot1ImportExport";
 import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import PageTemplate from "../../components/PageTemplate";
+import SearchInput from "../../components/SearchInput";
 import type { AppTheme } from "../../theme";
 
 type Centre = {
@@ -47,7 +47,8 @@ export default function CentresPage() {
   const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination(1, 5);
+  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } =
+    usePagination(1, 5);
 
   const navigate = useNavigate();
   const theme = useTheme<AppTheme>();
@@ -87,11 +88,13 @@ export default function CentresPage() {
   }, [data?.count, setCount]);
 
   const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   };
 
   const clearSelection = () => setSelectedIds([]);
-  const selectAll = () => setSelectedIds(centres.map((c) => c.id));
+  const selectAll = () => setSelectedIds(centres.map((centre) => centre.id));
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -125,6 +128,7 @@ export default function CentresPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -144,6 +148,16 @@ export default function CentresPage() {
       onBack={() => navigate(-1)}
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher un centre..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Select
@@ -154,14 +168,18 @@ export default function CentresPage() {
               setPage(1);
             }}
           >
-            {[5, 10, 20, 50].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
+            {[5, 10, 20, 50].map((size) => (
+              <MenuItem key={size} value={size}>
+                {size} / page
               </MenuItem>
             ))}
           </Select>
 
-          <Lot1ExcelActions resource="centre" exportParams={lot1ExportParams} isMobile={isMobile} />
+          <Lot1ExcelActions
+            resource="centre"
+            exportParams={lot1ExportParams}
+            isMobile={isMobile}
+          />
 
           <Button
             variant="contained"
@@ -183,7 +201,9 @@ export default function CentresPage() {
               setPage(1);
             }}
           >
-            {includeArchived || archivesOnly ? "Masquer archivés" : "Inclure archivés"}
+            {includeArchived || archivesOnly
+              ? "Masquer archivés"
+              : "Inclure archivés"}
           </Button>
 
           {(includeArchived || archivesOnly) && (
@@ -206,7 +226,11 @@ export default function CentresPage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
@@ -218,18 +242,6 @@ export default function CentresPage() {
             </>
           )}
         </Stack>
-      }
-      filters={
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Rechercher un centre..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
       }
       footer={
         count > 0 && (
@@ -338,8 +350,12 @@ export default function CentresPage() {
         </Stack>
       )}
 
-      {/* Confirmation dialog */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Confirmation
@@ -359,14 +375,20 @@ export default function CentresPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Suppression définitive
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. Supprimer définitivement ce centre archivé ?
+            Cette action est irréversible. Supprimer définitivement ce centre
+            archivé ?
           </DialogContentText>
         </DialogContent>
         <DialogActions>

@@ -6,11 +6,14 @@ import {
   MenuItem,
   Stack,
   InputLabel,
+  Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
 import { CVThequeDetail, CVThequePayload, DocumentType } from "src/types/cvtheque";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 
 type Props = {
   defaultValues?: Partial<CVThequeDetail>;
@@ -24,6 +27,7 @@ export default function CVThequeFormCandidat({
   loading = false,
 }: Props) {
   const navigate = useNavigate();
+
   const [form, setForm] = useState<{
     titre: string;
     document_type: DocumentType;
@@ -35,6 +39,7 @@ export default function CVThequeFormCandidat({
     mots_cles: defaultValues.mots_cles || "",
     fichier: null,
   });
+
   const isEdit = Boolean(defaultValues.id);
 
   const handleChange = (field: keyof typeof form, value: any) => {
@@ -63,73 +68,91 @@ export default function CVThequeFormCandidat({
 
     await onSubmit({
       ...form,
-      est_public: true, // 🔥 le backend accepte ça
+      est_public: true,
     });
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: "auto" }}>
-      <TextField
-        fullWidth
-        label="Titre"
-        sx={{ mb: 3 }}
-        value={form.titre}
-        onChange={(e) => handleChange("titre", e.target.value)}
-      />
-
-      <TextField
-        fullWidth
-        select
-        label="Type de document"
-        sx={{ mb: 3 }}
-        value={form.document_type}
-        onChange={(e) => handleChange("document_type", e.target.value as DocumentType)}
-      >
-        {DOCUMENT_TYPES.map((t) => (
-          <MenuItem key={t.value} value={t.value}>
-            {t.label}
-          </MenuItem>
-        ))}
-      </TextField>
-
-      <TextField
-        fullWidth
-        label="Mots-clés (optionnel)"
-        multiline
-        minRows={2}
-        sx={{ mb: 3 }}
-        value={form.mots_cles}
-        onChange={(e) => handleChange("mots_cles", e.target.value)}
-      />
-
-      <Box sx={{ mb: 3 }}>
-        <InputLabel>Fichier (PDF/DOC)</InputLabel>
-
-        <Button
-          component="label"
-          variant="outlined"
-          fullWidth
-          startIcon={<UploadFileIcon />}
-          sx={{ mt: 1 }}
+    <Box component="form" onSubmit={handleSubmit}>
+      <Stack spacing={3} sx={{ maxWidth: 640, mx: "auto" }}>
+        <FormSectionCard
+          title="Informations du document"
+          subtitle="Renseignez le titre, le type et les mots-clés du document."
         >
-          {form.fichier ? form.fichier.name : "Choisir un fichier"}
-          <input type="file" hidden accept=".pdf,.doc,.docx" onChange={handleFile} />
-        </Button>
+          <Stack spacing={3}>
+            <TextField
+              fullWidth
+              label="Titre"
+              value={form.titre}
+              onChange={(e) => handleChange("titre", e.target.value)}
+            />
 
-        {isEdit && !form.fichier && (
-          <Box mt={1} color="text.secondary">
-            Le fichier actuel sera conservé si vous n'en sélectionnez pas un nouveau.
-          </Box>
-        )}
-      </Box>
+            <TextField
+              fullWidth
+              select
+              label="Type de document"
+              value={form.document_type}
+              onChange={(e) =>
+                handleChange("document_type", e.target.value as DocumentType)
+              }
+            >
+              {DOCUMENT_TYPES.map((t) => (
+                <MenuItem key={t.value} value={t.value}>
+                  {t.label}
+                </MenuItem>
+              ))}
+            </TextField>
 
-      <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
-        <Button type="button" onClick={() => navigate("/cvtheque/candidat")}>
-          Annuler
-        </Button>
-        <Button type="submit" variant="contained" disabled={loading}>
-          {loading ? "Envoi..." : "Déposer"}
-        </Button>
+            <TextField
+              fullWidth
+              label="Mots-clés (optionnel)"
+              multiline
+              minRows={2}
+              value={form.mots_cles}
+              onChange={(e) => handleChange("mots_cles", e.target.value)}
+            />
+          </Stack>
+        </FormSectionCard>
+
+        <FormSectionCard
+          title="Fichier"
+          subtitle={
+            isEdit
+              ? "Remplacez le fichier si nécessaire, sinon le document actuel sera conservé."
+              : "Ajoutez le fichier à déposer dans la CVthèque."
+          }
+        >
+          <Stack spacing={2}>
+            <InputLabel>Fichier (PDF / DOC / DOCX)</InputLabel>
+
+            <Button
+              component="label"
+              variant="outlined"
+              fullWidth
+              startIcon={<UploadFileIcon />}
+              sx={{ textTransform: "none" }}
+            >
+              {form.fichier ? form.fichier.name : "Choisir un fichier"}
+              <input type="file" hidden accept=".pdf,.doc,.docx" onChange={handleFile} />
+            </Button>
+
+            {isEdit && !form.fichier && (
+              <Typography variant="body2" color="text.secondary">
+                Le fichier actuel sera conservé si vous n'en sélectionnez pas un nouveau.
+              </Typography>
+            )}
+          </Stack>
+        </FormSectionCard>
+
+        <FormActionsBar>
+          <Button type="button" variant="outlined" onClick={() => navigate("/cvtheque/candidat")}>
+            Annuler
+          </Button>
+
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? "Envoi..." : "Déposer"}
+          </Button>
+        </FormActionsBar>
       </Stack>
     </Box>
   );

@@ -77,7 +77,8 @@ export const AppairagesPage: React.FC = () => {
       created_by: toNum(searchParams.get("created_by")),
       centre: toNum(searchParams.get("centre")),
       activite:
-        (searchParams.get("activite") as AppairageFiltresValues["activite"]) || undefined,
+        (searchParams.get("activite") as AppairageFiltresValues["activite"]) ||
+        undefined,
       avec_archivees: parseBool(searchParams.get("avec_archivees")),
       annee: toNum(searchParams.get("annee")),
       date_min: searchParams.get("date_min") || undefined,
@@ -139,25 +140,32 @@ export const AppairagesPage: React.FC = () => {
     []
   );
 
-  const toggleColumnVisibility = useCallback((key: string) => {
-    setVisibleColumnKeys((prev) => {
-      const isVisible = prev.includes(key);
-      if (isVisible) {
-        const next = prev.filter((item) => item !== key);
-        return next.length > 0 ? next : prev;
-      }
-      return [...prev, key];
-    });
-  }, []);
+  const toggleColumnVisibility = useCallback(
+    (key: string) => {
+      setVisibleColumnKeys((prev) => {
+        const item = columnVisibilityItems.find((col) => col.key === key);
+        if (!item || item.hideable === false) return prev;
 
-  // 🔹 Modale de détail
+        const isVisible = prev.includes(key);
+        if (isVisible) {
+          const next = prev.filter((itemKey) => itemKey !== key);
+          return next.length > 0 ? next : prev;
+        }
+
+        return [...prev, key];
+      });
+    },
+    [columnVisibilityItems]
+  );
+
   const [showDetail, setShowDetail] = useState(false);
-  const [selectedAppairage, setSelectedAppairage] = useState<AppairageListItem | null>(null);
+  const [selectedAppairage, setSelectedAppairage] =
+    useState<AppairageListItem | null>(null);
 
-  // 🔹 Masqué par défaut
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   useEffect(() => {
     setFilters(urlFilters);
@@ -187,7 +195,10 @@ export const AppairagesPage: React.FC = () => {
     [filters, page, pageSize]
   );
 
-  const { data: pageData, loading, error } = useListAppairages(effectiveFilters, reloadKey);
+  const { data: pageData, loading, error } = useListAppairages(
+    effectiveFilters,
+    reloadKey
+  );
 
   const appairages: AppairageListItem[] = useMemo(
     () => (pageData as { results?: AppairageListItem[] } | null)?.results ?? [],
@@ -210,10 +221,12 @@ export const AppairagesPage: React.FC = () => {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
       await Promise.all(idsToDelete.map((id) => api.delete(`/appairages/${id}/`)));
+
       toast.success(`📦 ${idsToDelete.length} appairage(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
@@ -225,11 +238,11 @@ export const AppairagesPage: React.FC = () => {
   };
 
   const handleRowClick = (id: number) => {
-    const a = appairages.find((x) => x.id === id);
-    if (a) {
-      setSelectedAppairage(a);
-      setShowDetail(true);
-    }
+    const appairage = appairages.find((item) => item.id === id);
+    if (!appairage) return;
+
+    setSelectedAppairage(appairage);
+    setShowDetail(true);
   };
 
   const handleDeleteClick = (id: number) => {
@@ -251,6 +264,7 @@ export const AppairagesPage: React.FC = () => {
 
   const handleHardDeleteClick = async () => {
     if (!hardDeleteId) return;
+
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
@@ -273,11 +287,14 @@ export const AppairagesPage: React.FC = () => {
     try {
       const mod = await import("../../api/axios");
       const api = mod.default as import("axios").AxiosInstance;
+
       const results = await Promise.allSettled(
         selectedIds.map((id) => api.patch(`/appairages/${id}/`, { statut: bulkStatus }))
       );
 
-      const succeeded = results.filter((result) => result.status === "fulfilled").length;
+      const succeeded = results.filter(
+        (result) => result.status === "fulfilled"
+      ).length;
       const failed = results.length - succeeded;
 
       if (failed === 0) {
@@ -285,7 +302,9 @@ export const AppairagesPage: React.FC = () => {
       } else if (succeeded === 0) {
         toast.error("Aucun appairage n'a pu être mis à jour.");
       } else {
-        toast.warning(`Statut mis à jour pour ${succeeded} appairage(s). ${failed} échec(s).`);
+        toast.warning(
+          `Statut mis à jour pour ${succeeded} appairage(s). ${failed} échec(s).`
+        );
       }
 
       setShowBulkStatusDialog(false);
@@ -299,7 +318,9 @@ export const AppairagesPage: React.FC = () => {
     }
   };
 
-  const handleHistoryClick = (id: number) => navigate(`/appairages/${id}/historiques`);
+  const handleHistoryClick = (id: number) => {
+    navigate(`/appairages/${id}/historiques`);
+  };
 
   const handleEdit = (id: number) => {
     setShowDetail(false);
@@ -342,7 +363,11 @@ export const AppairagesPage: React.FC = () => {
             Colonnes
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+            fullWidth={isMobile}
+          >
             Options
           </Button>
 
@@ -353,7 +378,11 @@ export const AppairagesPage: React.FC = () => {
               setFilters((prev) => {
                 const next = !prev.avec_archivees;
                 if (!next && prev.activite === "archive") {
-                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                  return {
+                    ...prev,
+                    avec_archivees: undefined,
+                    activite: undefined,
+                  };
                 }
                 return { ...prev, avec_archivees: next ? true : undefined };
               });
@@ -428,6 +457,7 @@ export const AppairagesPage: React.FC = () => {
             <Stack spacing={0.25} sx={{ px: 0.5 }}>
               {columnVisibilityItems.map((item) => {
                 const checked = visibleColumnKeys.includes(item.key);
+
                 return (
                   <MenuItem
                     key={item.key}
@@ -444,10 +474,7 @@ export const AppairagesPage: React.FC = () => {
                 );
               })}
 
-              <MenuItem
-                dense
-                onClick={() => setShowActionsColumn((prev) => !prev)}
-              >
+              <MenuItem dense onClick={() => setShowActionsColumn((prev) => !prev)}>
                 <Checkbox checked={showActionsColumn} />
                 <ListItemText primary="Actions" />
               </MenuItem>
@@ -519,26 +546,23 @@ export const AppairagesPage: React.FC = () => {
         </Stack>
       }
       filters={
-        showFilters && (
-          <>
-            {loadingMeta ? (
-              <CircularProgress />
-            ) : (meta as AppairageMeta | undefined)?.statut_choices ? (
-              <AppairageFilters
-                meta={meta as AppairageMeta}
-                values={filters}
-                hideSearch
-                onChange={(newValues: AppairageFiltresValues) => {
-                  setFilters(newValues);
-                  setPage(1);
-                }}
-                loading={loadingMeta}
-              />
-            ) : (
-              <Typography color="error">⚠️ Impossible de charger les filtres</Typography>
-            )}
-          </>
-        )
+        showFilters &&
+        (loadingMeta ? (
+          <CircularProgress />
+        ) : (meta as AppairageMeta | undefined)?.statut_choices ? (
+          <AppairageFilters
+            meta={meta as AppairageMeta}
+            values={filters}
+            hideSearch
+            onChange={(newValues: AppairageFiltresValues) => {
+              setFilters(newValues);
+              setPage(1);
+            }}
+            loading={loadingMeta}
+          />
+        ) : (
+          <Typography color="error">⚠️ Impossible de charger les filtres</Typography>
+        ))
       }
       footer={
         count > 0 && (

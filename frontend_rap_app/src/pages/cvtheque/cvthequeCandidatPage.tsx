@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Box,
   Button,
   Stack,
   Typography,
@@ -22,7 +23,11 @@ import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 
 import { CVThequeItem } from "src/types/cvtheque";
-import { useCVThequeList, useDeleteCV, useRestoreCV } from "src/hooks/useCvtheque";
+import {
+  useCVThequeList,
+  useDeleteCV,
+  useRestoreCV,
+} from "src/hooks/useCvtheque";
 import CVThequeFiltresPanel from "../../components/filters/CVThequeFiltresPanel";
 import { toast } from "react-toastify";
 import CVThequeTableCandidat from "./cvthequeTableCandidat";
@@ -150,10 +155,40 @@ export default function CVThequeCandidatPage() {
     navigate(`/cvtheque/${id}/edit/candidat`);
   };
 
+  const archivesVisible = Boolean(
+    filters.avec_archivees || filters.archives_seules
+  );
 
-  // -------------------------------
-  // RENDER
-  // -------------------------------
+  const footer = (
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      justifyContent="space-between"
+      alignItems={{ xs: "stretch", sm: "center" }}
+      spacing={1.5}
+    >
+      <Typography color="text.secondary">
+        Page {page} / {totalPages} ({data?.count || 0} résultats)
+      </Typography>
+
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+      >
+        {hasPrev && (
+          <Button variant="outlined" onClick={() => setPage(page - 1)}>
+            ← Précédent
+          </Button>
+        )}
+        {hasNext && (
+          <Button variant="outlined" onClick={() => setPage(page + 1)}>
+            Suivant →
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
+
   return (
     <PageTemplate
       refreshButton
@@ -169,8 +204,12 @@ export default function CVThequeCandidatPage() {
         />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          {/* Filtres */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+        >
           <Button
             variant="outlined"
             startIcon={<FilterAltIcon />}
@@ -185,7 +224,11 @@ export default function CVThequeCandidatPage() {
               variant="outlined"
               startIcon={<ReplayIcon />}
               onClick={() => {
-                setFilters({ ...defaultFilters, avec_archivees: false, archives_seules: false });
+                setFilters({
+                  ...defaultFilters,
+                  avec_archivees: false,
+                  archives_seules: false,
+                });
                 setPage(1);
               }}
             >
@@ -194,7 +237,7 @@ export default function CVThequeCandidatPage() {
           )}
 
           <Button
-            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            variant={archivesVisible ? "contained" : "outlined"}
             onClick={() => {
               setFilters((prev) => ({
                 ...prev,
@@ -204,10 +247,10 @@ export default function CVThequeCandidatPage() {
               setPage(1);
             }}
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+            {archivesVisible ? "Masquer archivés" : "Inclure archivés"}
           </Button>
 
-          {(filters.avec_archivees || filters.archives_seules) && (
+          {archivesVisible && (
             <Button
               variant={filters.archives_seules ? "contained" : "outlined"}
               onClick={() => {
@@ -223,7 +266,6 @@ export default function CVThequeCandidatPage() {
             </Button>
           )}
 
-          {/* Ajout */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -232,7 +274,6 @@ export default function CVThequeCandidatPage() {
             Ajouter un CV
           </Button>
 
-          {/* Archivage */}
           {selectedIds.length > 0 && (
             <Button
               color="error"
@@ -255,10 +296,18 @@ export default function CVThequeCandidatPage() {
                 search: filters.search,
                 ville: filters.ville,
                 document_type: values.document_type || undefined,
-                centre_id: values.centre_id ? Number(values.centre_id) : undefined,
-                formation_id: values.formation_id ? Number(values.formation_id) : undefined,
-                type_offre_id: values.type_offre_id ? Number(values.type_offre_id) : undefined,
-                statut_formation: values.statut_formation ? Number(values.statut_formation) : undefined,
+                centre_id: values.centre_id
+                  ? Number(values.centre_id)
+                  : undefined,
+                formation_id: values.formation_id
+                  ? Number(values.formation_id)
+                  : undefined,
+                type_offre_id: values.type_offre_id
+                  ? Number(values.type_offre_id)
+                  : undefined,
+                statut_formation: values.statut_formation
+                  ? Number(values.statut_formation)
+                  : undefined,
               };
               setFilters(clean);
               setPage(1);
@@ -266,52 +315,50 @@ export default function CVThequeCandidatPage() {
           />
         )
       }
+      footer={footer}
     >
-      {/* CONTENU */}
       {loading ? (
-        <CircularProgress />
+        <Box
+          sx={{
+            minHeight: 240,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
       ) : items.length === 0 ? (
-        <Typography textAlign="center" color="text.secondary">
-          Aucun document trouvé.
-        </Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Typography textAlign="center" color="text.secondary">
+            Aucun document trouvé.
+          </Typography>
+        </Box>
       ) : (
-<CVThequeTableCandidat
-  rows={items}
-  selectedIds={selectedIds}
-  onToggleSelect={(id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }}
-  onPreview={handlePreview}
-  onEdit={handleEdit}   // ✅ CORRECTION ICI
-  onDelete={handleDeleteOne}
-  onRestore={handleRestoreOne}
-/>
-
+        <CVThequeTableCandidat
+          rows={items}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => {
+            setSelectedIds((prev) =>
+              prev.includes(id)
+                ? prev.filter((x) => x !== id)
+                : [...prev, id]
+            );
+          }}
+          onPreview={handlePreview}
+          onEdit={handleEdit}
+          onDelete={handleDeleteOne}
+          onRestore={handleRestoreOne}
+        />
       )}
 
-      {/* PAGINATION */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mt={3}>
-        <Typography>
-          Page {page} / {totalPages} ({data?.count || 0} résultats)
-        </Typography>
-
-        <Stack direction="row" spacing={1}>
-          {hasPrev && (
-            <Button variant="outlined" onClick={() => setPage(page - 1)}>
-              ← Précédent
-            </Button>
-          )}
-          {hasNext && (
-            <Button variant="outlined" onClick={() => setPage(page + 1)}>
-              Suivant →
-            </Button>
-          )}
-        </Stack>
-      </Stack>
-
-      {/* CONFIRM ARCHIVE MULTIPLE */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
@@ -321,13 +368,16 @@ export default function CVThequeCandidatPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDeleteMultiple}>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteMultiple}
+          >
             Archiver
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* PREVIEW */}
       {previewItem && (
         <CVThequePreviewCandidat
           item={previewItem}

@@ -6,11 +6,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
   Typography,
   type DialogProps,
+  useTheme,
 } from "@mui/material";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../theme";
+import SearchInput from "../SearchInput";
 
 export type EntityPickerSearchProps = {
   value: string;
@@ -55,39 +57,84 @@ export default function EntityPickerDialog({
   emptyMessage = "Aucun résultat.",
   children,
 }: EntityPickerDialogProps) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
   const showSearch = Boolean(search && (showSearchWhenLoading || !loading));
+
+  const dialogSectionTokens = theme.custom.dialog.section;
+  const sectionBackground = isLight
+    ? dialogSectionTokens.background.light
+    : dialogSectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? dialogSectionTokens.border.light
+    : dialogSectionTokens.border.dark;
+
+  const sectionTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const sectionTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth={maxWidth}>
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent dividers>
-        {showSearch && search ? (
-          <TextField
-            fullWidth
-            margin="normal"
-            type={search.type ?? "text"}
-            placeholder={search.placeholder}
-            value={search.value}
-            onChange={(e) => search.onChange(e.target.value)}
-          />
-        ) : null}
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress />
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {showSearch && search ? (
+            <SearchInput
+              fullWidth
+              type={search.type ?? "text"}
+              placeholder={search.placeholder}
+              value={search.value}
+              onChange={(e) => search.onChange(e.target.value)}
+            />
+          ) : null}
+
+          <Box
+            sx={{
+              border: sectionBorder,
+              borderRadius: dialogSectionTokens.borderRadius,
+              background: sectionBackground,
+              overflow: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                px: dialogSectionTokens.padding,
+                py: 1,
+                background: sectionTitleBackground,
+                borderBottom: sectionTitleBorder,
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={700}>
+                Résultats
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Typography color="error">{error}</Typography>
+              ) : empty ? (
+                typeof emptyMessage === "string" || typeof emptyMessage === "number" ? (
+                  <Typography color="text.secondary">{emptyMessage}</Typography>
+                ) : (
+                  emptyMessage
+                )
+              ) : (
+                children
+              )}
+            </Box>
           </Box>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
-        ) : empty ? (
-          typeof emptyMessage === "string" || typeof emptyMessage === "number" ? (
-            <Typography>{emptyMessage}</Typography>
-          ) : (
-            emptyMessage
-          )
-        ) : (
-          children
-        )}
+        </Box>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose} color="secondary">
           {closeLabel}

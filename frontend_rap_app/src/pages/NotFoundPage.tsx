@@ -1,32 +1,25 @@
 // src/pages/NotFoundPage.tsx
-import { Box, Typography, Button } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Typography, Button, Stack } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
+import PageTemplate from "../components/PageTemplate";
 
 export default function NotFoundPage() {
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        textAlign: "center",
-        p: 3,
-      }}
+    <PageTemplate
+      title="404"
+      subtitle="Oups ! La page que vous cherchez n’existe pas."
+      centered
+      maxWidth="sm"
     >
-      <Typography variant="h2" color="primary" gutterBottom>
-        404
-      </Typography>
-      <Typography variant="h5" gutterBottom>
-        Oups ! La page que vous cherchez n’existe pas.
-      </Typography>
-      <Typography variant="body1" sx={{ mb: 3 }}>
-        Vérifiez l’URL ou retournez à l’accueil.
-      </Typography>
-      <Button variant="contained" color="primary" component={Link} to="/">
-        Retour à l’accueil
-      </Button>
-    </Box>
+      <Stack spacing={2} alignItems="center" textAlign="center">
+        <Typography variant="body1" color="text.secondary">
+          Vérifiez l’URL ou retournez à l’accueil.
+        </Typography>
+
+        <Button variant="contained" color="primary" component={RouterLink} to="/">
+          Retour à l’accueil
+        </Button>
+      </Stack>
+    </PageTemplate>
   );
 }

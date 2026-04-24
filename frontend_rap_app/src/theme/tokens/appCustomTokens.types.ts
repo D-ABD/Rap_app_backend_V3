@@ -18,6 +18,13 @@ export interface LightDark<T> {
 export interface CustomLayoutShellTokens {
   /** Dégradés de fond derrière le contenu (valeurs CSS complètes) */
   backgroundGradient: LightDark<string>;
+  /** Blur global du shell */
+  backdropBlur: string;
+}
+
+export interface CustomLayoutAppBarTokens {
+  /** Blur normalisé de l’AppBar */
+  backdropBlur: string;
 }
 
 export interface CustomLayoutMainContentTokens {
@@ -36,14 +43,13 @@ export interface CustomLayoutMainContentTokens {
 
 export interface CustomLayoutTokens {
   shell: CustomLayoutShellTokens;
+  appBar: CustomLayoutAppBarTokens;
   main: CustomLayoutMainContentTokens;
 }
 
 /** --- Navigation : item de tiroir (liste latérale) --- */
 export interface NavDrawerItemSizingTokens {
-  /** Hauteur min. item racine vs item imbriqué (px implicites via sx spacing si besoin) */
   minHeightSx: { root: number; branch: number };
-  /** Rayon de bordure (échelle MUI sx, ex. 2 = 16px si 8px base) */
   borderRadiusSx: { root: number; branch: number };
 }
 
@@ -56,7 +62,6 @@ export interface NavDrawerItemSpacingTokens {
 
 export interface NavDrawerItemIconTokens {
   minWidthPx: number;
-  /** Translation à l’état sélectionné (px) */
   translateXSelectedPx: number;
 }
 
@@ -80,15 +85,12 @@ export interface NavDrawerItemInteractionTokens {
 }
 
 export interface NavDrawerItemTokens {
-  /** Durée des transitions UI (ms) */
   transitionDurationMs: number;
-  /** Courbe CSS */
   easing: string;
   sizing: NavDrawerItemSizingTokens;
   spacing: NavDrawerItemSpacingTokens;
   icon: NavDrawerItemIconTokens;
   label: NavDrawerItemLabelTokens;
-  /** Alphas appliqués via `alpha(theme.palette.*.main|text, …)` */
   interaction: NavDrawerItemInteractionTokens;
 }
 
@@ -102,7 +104,6 @@ export interface NavTopButtonTypographyTokens {
 export interface NavTopButtonShapeTokens {
   minHeightPx: number;
   paddingXSx: number;
- /** 999 = pilule */
   borderRadiusPill: number;
 }
 
@@ -114,7 +115,6 @@ export interface NavTopButtonBorderTokens {
 export interface NavTopButtonActiveTokens {
   borderWhiteAlpha: LightDark<number>;
   backgroundWhiteAlpha: LightDark<number>;
-  /** Ombre interne basse (chaîne CSS complète) */
   insetBottomShadow: string;
 }
 
@@ -157,17 +157,14 @@ export interface CustomFooterBorderTokens {
 }
 
 export interface CustomFooterBackgroundTokens {
-  /** Dégradé complet par mode */
   gradient: LightDark<string>;
 }
 
 export interface CustomFooterElevationTokens {
-  /** Ombre portée vers le haut (chaîne CSS) */
   boxShadow: LightDark<string>;
 }
 
 export interface CustomFooterOverlayTokens {
-  /** Couche `::before` (dégradé d’accent) */
   gradient: LightDark<string>;
   opacity: number;
 }
@@ -184,7 +181,13 @@ export interface CustomFooterTokens {
   backdrop: CustomFooterBackdropTokens;
 }
 
-/** --- Surfaces de page --- */
+/** --- Surfaces --- */
+export interface CustomSurfaceGlassTokens {
+  blur: string;
+  background: LightDark<string>;
+  border: LightDark<string>;
+}
+
 export interface CustomSurfacePageHeaderOuterTokens {
   paddingX: { xs: number; sm: number };
   paddingY: { xs: number; sm: number };
@@ -193,12 +196,10 @@ export interface CustomSurfacePageHeaderOuterTokens {
 export interface CustomSurfacePageHeaderInnerBorderTokens {
   width: string;
   style: string;
-  /** Référence sémantique MUI */
   color: "divider";
 }
 
 export interface CustomSurfacePageHeaderInnerShapeTokens {
-  /** Valeur `sx` (multiple du thème spacing) */
   borderRadiusSx: number;
 }
 
@@ -207,7 +208,6 @@ export interface CustomSurfacePageHeaderInnerTokens {
   paddingY: { xs: number; sm: number };
   border: CustomSurfacePageHeaderInnerBorderTokens;
   shape: CustomSurfacePageHeaderInnerShapeTokens;
-  /** Prête pour `box-shadow` (calculée avec le thème) */
   boxShadow: string;
 }
 
@@ -217,18 +217,16 @@ export interface CustomSurfacePageHeaderTokens {
 }
 
 export interface CustomSurfaceElevatedTokens {
-  /** Ombre « carte » générique (repos) */
   boxShadowRest: string;
-  /** Ombre au survol */
   boxShadowHover: string;
 }
 
 export interface CustomSurfaceMutedTokens {
-  /** Fond discret sections secondaires (ex. accordéons) */
   background: LightDark<string>;
 }
 
 export interface CustomSurfaceTokens {
+  glass: CustomSurfaceGlassTokens;
   pageHeader: CustomSurfacePageHeaderTokens;
   elevated: CustomSurfaceElevatedTokens;
   muted: CustomSurfaceMutedTokens;
@@ -236,7 +234,6 @@ export interface CustomSurfaceTokens {
 
 /** --- KPI / tuiles stats --- */
 export interface CustomKpiCardBackgroundTokens {
-  /** Référence MUI ou rgba — chaîne résolue */
   rest: LightDark<string>;
 }
 
@@ -246,9 +243,7 @@ export interface CustomKpiCardElevationTokens {
 }
 
 export interface CustomKpiHighlightTokens {
-  /** Épaisseur contour mise en avant (px) */
   outlineWidthPx: number;
-  /** Style de ligne */
   outlineStyle: string;
 }
 
@@ -256,6 +251,118 @@ export interface CustomKpiTokens {
   cardBackground: CustomKpiCardBackgroundTokens;
   elevation: CustomKpiCardElevationTokens;
   highlight: CustomKpiHighlightTokens;
+}
+
+/** --- Page wrapper / section / template --- */
+export interface CustomPageWrapperPaddingYTokens {
+  default: { xs: number; sm: number; lg: number };
+  compact: { xs: number; sm: number; lg: number };
+}
+
+export interface CustomPageWrapperPaddingXTokens {
+  default: { xs: number; sm: number };
+  fullWidth: { xs: number; sm: number };
+}
+
+export interface CustomPageWrapperOverlayTokens {
+  background: LightDark<string>;
+  borderRadius: { xs: number; sm: number };
+}
+
+export interface CustomPageWrapperTokens {
+  paddingY: CustomPageWrapperPaddingYTokens;
+  paddingX: CustomPageWrapperPaddingXTokens;
+  overlay: CustomPageWrapperOverlayTokens;
+}
+
+export interface CustomPageSectionVariantTokens {
+  padding: {
+    xs: number;
+    sm: number;
+    lg: number;
+  };
+  marginBottom: number;
+  borderRadius: { xs: number; sm: number };
+  overflow: "visible" | "hidden";
+  overlayAlpha: { light: number; dark: number };
+  overlayStop: string;
+  boxShadowRest: string;
+  boxShadowHover: string;
+}
+
+export interface CustomPageSectionTokens {
+  default: CustomPageSectionVariantTokens;
+  compact: CustomPageSectionVariantTokens;
+}
+
+export interface CustomPageTemplateHeaderControlsTokens {
+  minHeight: { default: number; compact: number };
+  minSize: { default: number; compact: number };
+  radiusMultiplier: number;
+  hoverAlpha: { light: number; dark: number };
+}
+
+export interface CustomPageTemplateHeaderHeroTokens {
+  outerPaddingX: {
+    default: { xs: number; sm: number; lg: number };
+    compact: { xs: number; sm: number; lg: number };
+  };
+  outerPaddingY: {
+    default: { xs: number; sm: number; lg: number };
+    compact: { xs: number; sm: number; lg: number };
+  };
+  innerPaddingX: {
+    default: { xs: number; sm: number; lg: number };
+    compact: { xs: number; sm: number; lg: number };
+  };
+  innerPaddingY: {
+    default: { xs: number; sm: number; lg: number };
+    compact: { xs: number; sm: number; lg: number };
+  };
+  background: LightDark<string>;
+}
+
+export interface CustomPageTemplateHeaderTitleTokens {
+  lineHeight: { default: number; compact: number };
+  fontSize: {
+    default: { xs: string | number; sm: string | number; md: string | number };
+    compact: { xs: string | number; sm: string | number; md: string | number };
+  };
+  maxWidth: { xs: string; md: string };
+}
+
+export interface CustomPageTemplateHeaderSubtitleTokens {
+  variant: { default: "body1"; compact: "body2" };
+  lineHeight: { default: number; compact: number };
+  marginTop: { default: number; compact: number };
+  maxWidth: { xs: string; md: string };
+}
+
+export interface CustomPageTemplateHeaderActionsTokens {
+  minWidth: { default: number; compact: number };
+  gap: { default: number; compact: number };
+}
+
+export interface CustomPageTemplateCenteredTokens {
+  minHeight: string;
+  gap: number;
+}
+
+export interface CustomPageTemplateTokens {
+  header: {
+    controls: CustomPageTemplateHeaderControlsTokens;
+    hero: CustomPageTemplateHeaderHeroTokens;
+    title: CustomPageTemplateHeaderTitleTokens;
+    subtitle: CustomPageTemplateHeaderSubtitleTokens;
+    actions: CustomPageTemplateHeaderActionsTokens;
+  };
+  centered: CustomPageTemplateCenteredTokens;
+}
+
+export interface CustomPageTokens {
+  wrapper: CustomPageWrapperTokens;
+  section: CustomPageSectionTokens;
+  template: CustomPageTemplateTokens;
 }
 
 /** --- Tables --- */
@@ -274,10 +381,79 @@ export interface CustomTableCellTokens {
   borderBottom: LightDark<string>;
 }
 
+export interface CustomTableDensityTypographyTokens {
+  primaryVariant?: "body1" | "body2";
+  secondaryVariant?: "body2" | "caption";
+  metaVariant?: "caption";
+}
+
+export interface CustomTableDensitySpacingTokens {
+  cellPaddingX?: number;
+  cellPaddingY?: number;
+  headerPaddingX?: number;
+  headerPaddingY?: number;
+  inlineGap?: number;
+  stackGap?: number;
+  metaGap?: number;
+}
+
+export interface CustomTableDensitySizingTokens {
+  rowMinHeight?: number;
+  actionSize?: number;
+  checkboxSize?: number;
+  chipHeight?: number;
+  progressHeight?: number;
+}
+
+export interface CustomTableDensityRadiusTokens {
+  controlSx?: number;
+  chipSx?: number;
+}
+
+export interface CustomTableDensityTokens {
+  spacing?: CustomTableDensitySpacingTokens;
+  sizing?: CustomTableDensitySizingTokens;
+  radius?: CustomTableDensityRadiusTokens;
+  typography?: CustomTableDensityTypographyTokens;
+}
+
+export interface CustomTableDensitiesTokens {
+  default?: CustomTableDensityTokens;
+  compact?: CustomTableDensityTokens;
+}
+
+export interface CustomTableContainerTokens {
+  maxHeight: string;
+  borderRadius: number;
+  background: LightDark<string>;
+  border: LightDark<string>;
+}
+
+export interface CustomTableActionsColumnTokens {
+  minWidth: number;
+  maxWidth: number;
+}
+
+export interface CustomTableStickyTokens {
+  shadow: LightDark<string>;
+}
+
+export interface CustomTableMobileCardTokens {
+  borderRadius: number;
+  padding: number;
+  titleVariant: "body2" | "caption";
+  labelVariant: "caption";
+}
+
 export interface CustomTableTokens {
   header: CustomTableHeaderTokens;
   row: CustomTableRowTokens;
   cell: CustomTableCellTokens;
+  densities?: CustomTableDensitiesTokens;
+  container: CustomTableContainerTokens;
+  actionsColumn: CustomTableActionsColumnTokens;
+  sticky: CustomTableStickyTokens;
+  mobileCard: CustomTableMobileCardTokens;
 }
 
 /** --- Formulaires --- */
@@ -291,9 +467,43 @@ export interface CustomFormDividerTokens {
   dashedWidth: string;
 }
 
+export interface CustomFormSectionCardTokens {
+  borderRadius: number;
+  padding: { xs: number; sm: number };
+  titleGap: number;
+  contentGap: number;
+  background: LightDark<string>;
+  border: LightDark<string>;
+}
+
+export interface CustomFormInlineBlockTokens {
+  gap: number;
+  minHeight: number;
+}
+
+export interface CustomFormHelperAreaTokens {
+  minHeight: number;
+  paddingTop: number;
+}
+
 export interface CustomFormTokens {
   section: CustomFormSectionTokens;
   divider: CustomFormDividerTokens;
+  sectionCard: CustomFormSectionCardTokens;
+  inlineBlock: CustomFormInlineBlockTokens;
+  helperArea: CustomFormHelperAreaTokens;
+}
+
+/** --- Input search --- */
+export interface CustomInputSearchTokens {
+  width: string;
+  mobileWidth: string;
+  focusRing: LightDark<string>;
+  placeholderOpacity: number;
+}
+
+export interface CustomInputTokens {
+  search: CustomInputSearchTokens;
 }
 
 /** --- Overlays --- */
@@ -309,6 +519,60 @@ export interface CustomModalSectionTitleTokens {
 export interface CustomOverlayTokens {
   scrim: CustomOverlayScrimTokens;
   modalSectionTitle: CustomModalSectionTitleTokens;
+}
+
+/** --- Dialogs --- */
+export interface CustomDialogSurfaceTokens {
+  borderRadius: number;
+  border: LightDark<string>;
+  background: LightDark<string>;
+  boxShadow: LightDark<string>;
+}
+
+export interface CustomDialogTitleTokens {
+  paddingX: number;
+  paddingY: number;
+  minHeight: number;
+  borderBottom: LightDark<string>;
+}
+
+export interface CustomDialogContentTokens {
+  paddingX: number;
+  paddingY: number;
+}
+
+export interface CustomDialogActionsTokens {
+  paddingX: number;
+  paddingY: number;
+  gap: number;
+  borderTop: LightDark<string>;
+}
+
+export interface CustomDialogSectionTokens {
+  borderRadius: number;
+  padding: number;
+  background: LightDark<string>;
+  border: LightDark<string>;
+}
+
+export interface CustomDialogTokens {
+  surface: CustomDialogSurfaceTokens;
+  title: CustomDialogTitleTokens;
+  content: CustomDialogContentTokens;
+  actions: CustomDialogActionsTokens;
+  section: CustomDialogSectionTokens;
+}
+
+/** --- Feedback / états d'interface --- */
+export interface CustomFeedbackErrorStateTokens {
+  borderRadius: number;
+  padding: number;
+  gap: number;
+  iconSize?: number;
+}
+
+export interface CustomFeedbackTokens {
+  errorState: CustomFeedbackErrorStateTokens;
 }
 
 /** --- Typographie (compléments au thème MUI) --- */
@@ -341,6 +605,43 @@ export interface CustomStatusTokens {
   chip: CustomStatusChipTokens;
 }
 
+/** --- Badges --- */
+export interface CustomBadgeEtatTokens {
+  borderRadius: number;
+  fontWeight: number;
+  minHeight: number;
+  paddingX: number;
+  border: LightDark<string>;
+}
+
+export interface CustomBadgeTokens {
+  etat: CustomBadgeEtatTokens;
+}
+
+/** --- Dashboard --- */
+export interface CustomDashboardStatCardTokens {
+  borderRadius: number;
+  minHeight: number;
+  padding: { xs: number; sm: number };
+  gap: number;
+  boxShadowRest: string;
+  boxShadowHover: string;
+}
+
+export interface CustomDashboardChartCardTokens {
+  borderRadius: number;
+  minHeight: number;
+  padding: { xs: number; sm: number };
+  gap: number;
+  boxShadowRest: string;
+  boxShadowHover: string;
+}
+
+export interface CustomDashboardTokens {
+  statCard: CustomDashboardStatCardTokens;
+  chartCard: CustomDashboardChartCardTokens;
+}
+
 /** --- Graphiques (Recharts, etc.) --- */
 export interface CustomChartAxisTokens {
   stroke: LightDark<string>;
@@ -356,7 +657,6 @@ export interface CustomChartTooltipTokens {
 }
 
 export interface CustomChartSeriesTokens {
-  /** Ordre stable pour séries empilées / multi-lignes */
   ordered: readonly string[];
 }
 
@@ -385,7 +685,6 @@ export interface CustomEditorTokens {
 
 /** --- Dataviz / palette statuts (sélecteurs) --- */
 export interface CustomDatavizStatutPaletteTokens {
-  /** Liste exhaustive des couleurs sélectionnables (réf. `constants/colors`) */
   pickableHex: readonly string[];
 }
 
@@ -399,12 +698,18 @@ export interface AppCustomTokens {
   nav: CustomNavTokens;
   footer: CustomFooterTokens;
   surface: CustomSurfaceTokens;
+  page: CustomPageTokens;
   kpi: CustomKpiTokens;
   table: CustomTableTokens;
   form: CustomFormTokens;
+  input: CustomInputTokens;
   overlay: CustomOverlayTokens;
+  dialog: CustomDialogTokens;
+  feedback: CustomFeedbackTokens;
   typographyComplements: CustomTypographyComplementsTokens;
   status: CustomStatusTokens;
+  badge: CustomBadgeTokens;
+  dashboard: CustomDashboardTokens;
   chart: CustomChartTokens;
   editor: CustomEditorTokens;
   dataviz: CustomDatavizTokens;
@@ -413,13 +718,9 @@ export interface AppCustomTokens {
 /**
  * Thème résolu de l’application : `custom` est toujours défini pour le retour de `getTheme`.
  * Dans les composants : `const theme = useTheme<AppTheme>();` puis `theme.custom` sans `?.`.
- *
- * On ne rend pas `Theme.custom` obligatoire dans l’augmentation globale : le premier
- * `createTheme({ ... })` interne ne fournit pas encore `custom`, ce qui ferait échouer le typage.
  */
 export type AppTheme = Omit<MuiTheme, "custom"> & { custom: AppCustomTokens };
 
-// Augmentation MUI — `custom` reste optionnel sur `Theme` pour compatibilité avec `createTheme`
 declare module "@mui/material/styles" {
   interface Theme {
     custom?: AppCustomTokens;

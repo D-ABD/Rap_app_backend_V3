@@ -16,47 +16,39 @@ interface Props {
 }
 
 export default function EtatBadge({ label, variant = "default" }: Props) {
-  const { color, customSx } = mapVariantToStyle(variant);
+  const color = mapVariantToColor(variant);
 
   return (
     <Chip
       label={label}
       color={color}
       size="small"
-      sx={{
-        fontWeight: 600,
-        fontSize: "0.75rem",
-        ...customSx,
-      }}
     />
   );
 }
 
-// 🎨 mapping custom
-function mapVariantToStyle(variant: BadgeVariant): {
-  color: "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning";
-  customSx?: object;
-} {
+// 🔁 mapping FONCTIONNEL uniquement (pas visuel)
+function mapVariantToColor(
+  variant: BadgeVariant
+): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" {
   switch (variant) {
     case "success":
-      return { color: "success" };
+      return "success";
     case "warning":
-      return { color: "warning" };
+      return "warning";
     case "danger":
-      return { color: "error" };
+      return "error";
     case "info":
-      return { color: "info" };
-    case "dark":
-      return {
-        color: "default",
-        customSx: { bgcolor: "grey.900", color: "common.white" },
-      };
+      return "info";
+
+    // fallback vers couleurs existantes MUI
     case "orange":
-      return {
-        color: "default",
-        customSx: { bgcolor: "warning.main", color: "common.white" },
-      };
+      return "warning";
+
+    case "dark":
+      return "default";
+
     default:
-      return { color: "default" };
+      return "default";
   }
 }

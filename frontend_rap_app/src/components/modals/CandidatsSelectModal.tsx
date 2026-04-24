@@ -20,9 +20,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Stack,
+  Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
+import type { AppTheme } from "../../theme";
 
 /* ---------- Types ---------- */
 type RoleCode =
@@ -165,6 +169,7 @@ interface Props {
 
 /* ---------- Helpers ---------- */
 const candidateRoles = new Set<RoleCode>(["candidat", "stagiaire", "candidatuser"]);
+const DEFAULT_SELECTED_IDS: number[] = [];
 const _nn = (v?: string | null): string => (v ?? "").trim();
 
 function asPaginated<T>(data: DRFEnvelope<T>): DRFPaginated<T> {
@@ -268,6 +273,15 @@ function normalizeCandidat(x: CandidatApi): CandidatPick {
   };
 }
 
+function areSameNumberArrays(a: number[], b: number[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 /* ---------- Component ---------- */
 export default function CandidatsSelectModal({
   show,
@@ -280,9 +294,28 @@ export default function CandidatsSelectModal({
   onCreate,
   prospectionId,
   multiple = false,
-  selectedIds = [],
+  selectedIds = DEFAULT_SELECTED_IDS,
   allowClear = true,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
+  const dialogSection = theme.custom.dialog.section;
+  const dialogSectionBackground = isLight
+    ? dialogSection.background.light
+    : dialogSection.background.dark;
+  const dialogSectionBorder = isLight
+    ? dialogSection.border.light
+    : dialogSection.border.dark;
+
+  const sectionTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+
+  const sectionTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+
   const [search, setSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +358,7 @@ export default function CandidatsSelectModal({
       }
     };
 
-    fetchPage();
+    void fetchPage();
     return () => {
       cancelled = true;
     };
@@ -333,7 +366,7 @@ export default function CandidatsSelectModal({
 
   useEffect(() => {
     if (!show) return;
-    setLocalSelectedIds(selectedIds);
+    setLocalSelectedIds((prev) => (areSameNumberArrays(prev, selectedIds) ? prev : selectedIds));
   }, [selectedIds, show]);
 
   const filtered = useMemo<CandidatPick[]>(() => {
@@ -455,177 +488,301 @@ export default function CandidatsSelectModal({
     }
   };
 
+  const renderRowSecondary = (c: CandidatPick) => {
+    const contrat = formatTypeContratLabel(c.type_contrat, c.type_contrat_code);
+    const departement = deriveDepartementLabel(c.code_postal);
+
+    return (
+      <Stack spacing={0.35} sx={{ mt: 0.375 }}>
+        <Typography variant="caption" color="text.secondary" component="div">
+          {[
+            c.formation_nom,
+            c.formation_num_offre ? `Offre ${c.formation_num_offre}` : null,
+            c.formation_type_offre,
+            c.centre_nom ? `Centre: ${c.centre_nom}` : null,
+          ]
+            .filter(Boolean)
+            .join(" • ")}
+        </Typography>
+
+        <Typography variant="caption" color="text.secondary" component="div">
+          {[
+            contrat ? `Contrat: ${contrat}` : null,
+            c.ville ? `Ville: ${c.ville}` : null,
+            departement ? `Département: ${departement}` : null,
+          ]
+            .filter(Boolean)
+            .join(" • ")}
+        </Typography>
+      </Stack>
+    );
+  };
+
   return (
     <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        {multiple ? "Sélectionner plusieurs candidats / stagiaires" : "Sélectionner un candidat / stagiaire"}
+        {multiple
+          ? "Sélectionner plusieurs candidats / stagiaires"
+          : "Sélectionner un candidat / stagiaire"}
       </DialogTitle>
-      <DialogContent dividers>
-        <TextField
-          fullWidth
-          type="search"
-          placeholder="🔍 Rechercher un candidat (nom, email, formation, centre)…"
-          value={search}
-          onChange={(ev) => setSearch(ev.currentTarget.value)}
-          margin="normal"
-        />
 
-        <FormControl fullWidth margin="normal" size="small">
-          <InputLabel id="candidats-select-formation-label">Formation</InputLabel>
-          <Select
-            labelId="candidats-select-formation-label"
-            label="Formation"
-            value={formationFilter}
-            onChange={(ev) => setFormationFilter(String(ev.target.value))}
+      <DialogContent>
+        <Stack spacing={2}>
+          <Box
+            sx={{
+              borderRadius: dialogSection.borderRadius,
+              border: `1px solid ${dialogSectionBorder}`,
+              background: dialogSectionBackground,
+              overflow: "hidden",
+            }}
           >
-            <MenuItem value="">Toutes les formations</MenuItem>
-            {formationOptions.map((option) => (
-              <MenuItem key={option.id} value={String(option.id)}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <Box
+              sx={{
+                px: dialogSection.padding,
+                py: 1,
+                background: sectionTitleBackground,
+                borderBottom: sectionTitleBorder,
+              }}
+            >
+              <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 700 }}>
+                Recherche et filtres
+              </Typography>
+            </Box>
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error">❌ {error}</Typography>
-        ) : (
-          <List>
-            {/* 🟢 Option spéciale pour désélectionner le candidat */}
-            {!multiple && allowClear && (
-              <ListItem disablePadding>
-                <ListItemButton
-                  onClick={() => {
-                    onSelect({
-                      id: 0,
-                      nom: "",
-                      prenom: "",
-                      nom_complet: "— Aucun candidat —",
-                      email: null,
-                      ville: null,
-                      code_postal: null,
-                      formation: null,
-                    });
-                    onClose();
-                  }}
-                  sx={{
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    backgroundColor: "background.default",
-                    "&:hover": { backgroundColor: "action.hover" },
-                  }}
+            <Stack sx={{ p: dialogSection.padding }} spacing={1.5}>
+              <TextField
+                fullWidth
+                type="search"
+                placeholder="Rechercher un candidat (nom, email, formation, centre)…"
+                value={search}
+                onChange={(ev) => setSearch(ev.currentTarget.value)}
+              />
+
+              <FormControl fullWidth size="small">
+                <InputLabel id="candidats-select-formation-label">Formation</InputLabel>
+                <Select
+                  labelId="candidats-select-formation-label"
+                  label="Formation"
+                  value={formationFilter}
+                  onChange={(ev) => setFormationFilter(String(ev.target.value))}
                 >
-                  <ListItemText
-                    primary={<strong>❌ Aucun candidat (retirer l’attribution)</strong>}
-                    secondary="Cette prospection ne sera liée à aucun candidat."
-                  />
-                </ListItemButton>
-              </ListItem>
+                  <MenuItem value="">Toutes les formations</MenuItem>
+                  {formationOptions.map((option) => (
+                    <MenuItem key={option.id} value={String(option.id)}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </Box>
+
+          <Box
+            sx={{
+              borderRadius: dialogSection.borderRadius,
+              border: `1px solid ${dialogSectionBorder}`,
+              background: dialogSectionBackground,
+              overflow: "hidden",
+              minHeight: theme.spacing(18),
+            }}
+          >
+            {loading ? (
+              <Box
+                sx={{
+                  minHeight: theme.spacing(18),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CircularProgress size={28} />
+              </Box>
+            ) : error ? (
+              <Box sx={{ p: dialogSection.padding }}>
+                <Typography color="error" variant="body2">
+                  {error}
+                </Typography>
+              </Box>
+            ) : (
+              <List disablePadding>
+                {!multiple && allowClear && (
+                  <>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => {
+                          onSelect({
+                            id: 0,
+                            nom: "",
+                            prenom: "",
+                            nom_complet: "— Aucun candidat —",
+                            email: null,
+                            ville: null,
+                            code_postal: null,
+                            formation: null,
+                          });
+                          onClose();
+                        }}
+                        sx={{
+                          alignItems: "flex-start",
+                          py: 1.25,
+                          px: 1.5,
+                        }}
+                      >
+                        <ListItemText
+                          primary={
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              Aucun candidat
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography variant="caption" color="text.secondary">
+                              Retirer l’attribution actuelle.
+                            </Typography>
+                          }
+                          primaryTypographyProps={{ component: "div" }}
+                          secondaryTypographyProps={{ component: "div" }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                    <Divider />
+                  </>
+                )}
+
+                {filtered.map((c, index) => (
+                  <Box key={c.id}>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={() => {
+                          if (multiple) {
+                            toggleCandidate(c.id);
+                            return;
+                          }
+                          onSelect(c);
+                          onClose();
+                        }}
+                        sx={{
+                          alignItems: "flex-start",
+                          py: 1.25,
+                          px: 1.5,
+                        }}
+                      >
+                        {multiple && (
+                          <Checkbox
+                            edge="start"
+                            checked={localSelectedIds.includes(c.id)}
+                            tabIndex={-1}
+                            disableRipple
+                            sx={{ mt: 0.125, mr: 0.5 }}
+                          />
+                        )}
+
+                        <ListItemText
+                          primary={
+                            <Stack
+                              direction={{ xs: "column", sm: "row" }}
+                              spacing={{ xs: 0.25, sm: 0.75 }}
+                              alignItems={{ xs: "flex-start", sm: "baseline" }}
+                              useFlexGap
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                {c.nom_complet}
+                              </Typography>
+                              {c.email ? (
+                                <Typography variant="caption" color="text.secondary">
+                                  {c.email}
+                                </Typography>
+                              ) : null}
+                            </Stack>
+                          }
+                          secondary={renderRowSecondary(c)}
+                          primaryTypographyProps={{ component: "div" }}
+                          secondaryTypographyProps={{ component: "div" }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+
+                    {index < filtered.length - 1 && <Divider component="li" />}
+                  </Box>
+                ))}
+
+                {filtered.length === 0 && (
+                  <Box sx={{ p: dialogSection.padding }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Aucun candidat trouvé.
+                    </Typography>
+                  </Box>
+                )}
+              </List>
             )}
-
-            {/* Liste normale des candidats */}
-            {filtered.map((c) => (
-              <ListItem key={c.id} disablePadding>
-                <ListItemButton
-                  onClick={() => {
-                    if (multiple) {
-                      toggleCandidate(c.id);
-                      return;
-                    }
-                    onSelect(c);
-                    onClose();
-                  }}
-                  sx={{ borderBottom: "1px solid", borderColor: "divider" }}
-                >
-                  {multiple && (
-                    <Checkbox
-                      edge="start"
-                      checked={localSelectedIds.includes(c.id)}
-                      tabIndex={-1}
-                      disableRipple
-                    />
-                  )}
-                  <ListItemText
-                    primary={
-                      <>
-                        <strong>{c.nom_complet}</strong>
-                        {c.email && <span style={{ color: "var(--mui-palette-text-secondary)" }}> ({c.email})</span>}
-                      </>
-                    }
-                    secondary={
-                      <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.35, mt: 0.25 }}>
-                        <Box component="span">
-                          {c.formation_nom && `🎓 ${c.formation_nom}`}
-                          {c.formation_num_offre && ` • Offre ${c.formation_num_offre}`}
-                          {c.formation_type_offre && ` • ${c.formation_type_offre}`}
-                          {c.centre_nom && ` • Centre: ${c.centre_nom}`}
-                        </Box>
-                        <Box component="span">
-                          {formatTypeContratLabel(c.type_contrat, c.type_contrat_code) &&
-                            `📝 Contrat: ${formatTypeContratLabel(c.type_contrat, c.type_contrat_code)}`}
-                          {c.ville && ` • Ville: ${c.ville}`}
-                          {deriveDepartementLabel(c.code_postal) &&
-                            ` • Département: ${deriveDepartementLabel(c.code_postal)}`}
-                        </Box>
-                      </Box>
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-
-            {filtered.length === 0 && <Typography sx={{ p: 1 }}>Aucun candidat trouvé.</Typography>}
-          </List>
-        )}
-
-        {canCreate && (
-          <Box sx={{ mt: 2, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Créer et lier un candidat
-            </Typography>
-            <Grid container spacing={1}>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Prénom *"
-                  value={prenom}
-                  onChange={(ev) => setPrenom(ev.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Nom *"
-                  value={nom}
-                  onChange={(ev) => setNom(ev.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Email"
-                  value={email}
-                  onChange={(ev) => setEmail(ev.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Téléphone"
-                  value={telephone}
-                  onChange={(ev) => setTelephone(ev.target.value)}
-                />
-              </Grid>
-            </Grid>
-            <Button onClick={handleCreate} disabled={createDisabled} sx={{ mt: 1 }}>
-              {creating ? "Création…" : "Créer et sélectionner"}
-            </Button>
           </Box>
-        )}
+
+          {canCreate && (
+            <Box
+              sx={{
+                borderRadius: dialogSection.borderRadius,
+                border: `1px solid ${dialogSectionBorder}`,
+                background: dialogSectionBackground,
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  px: dialogSection.padding,
+                  py: 1,
+                  background: sectionTitleBackground,
+                  borderBottom: sectionTitleBorder,
+                }}
+              >
+                <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 700 }}>
+                  Créer et lier un candidat
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: dialogSection.padding }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      placeholder="Prénom *"
+                      value={prenom}
+                      onChange={(ev) => setPrenom(ev.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      placeholder="Nom *"
+                      value={nom}
+                      onChange={(ev) => setNom(ev.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      placeholder="Email"
+                      value={email}
+                      onChange={(ev) => setEmail(ev.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      placeholder="Téléphone"
+                      value={telephone}
+                      onChange={(ev) => setTelephone(ev.target.value)}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 1.5, display: "flex", justifyContent: "flex-start" }}>
+                  <Button onClick={handleCreate} disabled={createDisabled}>
+                    {creating ? "Création…" : "Créer et sélectionner"}
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Stack>
       </DialogContent>
 
       <DialogActions>
@@ -639,7 +796,7 @@ export default function CandidatsSelectModal({
           </Button>
         )}
         <Button onClick={onClose} color="secondary">
-          ❌ Fermer
+          Fermer
         </Button>
       </DialogActions>
     </Dialog>

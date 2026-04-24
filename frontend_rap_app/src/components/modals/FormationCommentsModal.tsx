@@ -18,12 +18,16 @@ import {
   ListItemText,
   Chip,
   CircularProgress,
-  Paper,
+  Stack,
+  Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { useQuill } from "react-quilljs";
 import "quill/dist/quill.snow.css";
 
 import type { Commentaire } from "../../types/commentaire";
+import type { AppTheme } from "../../theme";
+import SearchInput from "../SearchInput";
 import api from "../../api/axios";
 import {
   useCommentaires,
@@ -64,14 +68,19 @@ export default function FormationCommentsModal({
   formationId,
   onCommentAdded,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
   const [meta, setMeta] = useState<{ nom: string; num_offre?: string } | null>(null);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // --- Hooks métier ---
-  const { commentaires, loading, error, refetch } = useCommentaires(open ? formationId : undefined);
+  const { commentaires, loading, error, refetch } = useCommentaires(
+    open ? formationId : undefined
+  );
   const { createCommentaire, loading: creating } = useCreateCommentaire();
-  const { deleteCommentaire } = useDeleteCommentaire(); // ✅ nouvelle version du hook (sans id)
+  const { deleteCommentaire } = useDeleteCommentaire();
   const { dernier, loading: loadingDernier } = useDernierCommentaire(
     open ? formationId : undefined
   );
@@ -90,7 +99,7 @@ export default function FormationCommentsModal({
   });
 
   useEffect(() => {
-    if (quill) quill.setText(""); // réinitialise à chaque ouverture
+    if (quill) quill.setText("");
   }, [quill, open]);
 
   // --- Charge les métadonnées de la formation ---
@@ -134,7 +143,7 @@ export default function FormationCommentsModal({
     if (!confirm(`Archiver le commentaire #${id} ?`)) return;
     try {
       setDeletingId(id);
-      await deleteCommentaire(id); // ✅ version dynamique
+      await deleteCommentaire(id);
       refetch();
     } catch (err) {
       if (import.meta.env.MODE !== "production") {
@@ -161,150 +170,261 @@ export default function FormationCommentsModal({
 
   const getSat = (c: Commentaire) => c.saturation_formation ?? c.saturation ?? null;
 
+  const dialogSectionTokens = theme.custom.dialog.section;
+  const sectionBackground = isLight
+    ? dialogSectionTokens.background.light
+    : dialogSectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? dialogSectionTokens.border.light
+    : dialogSectionTokens.border.dark;
+
+  const sectionTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const sectionTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+
+  const sectionContainerSx = {
+    border: sectionBorder,
+    borderRadius: dialogSectionTokens.borderRadius,
+    background: sectionBackground,
+    overflow: "hidden",
+  } as const;
+
+  const sectionHeaderSx = {
+    px: dialogSectionTokens.padding,
+    py: 1,
+    background: sectionTitleBackground,
+    borderBottom: sectionTitleBorder,
+  } as const;
+
   /* ---------- Rendu ---------- */
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>💬 Commentaires de la formation {meta ? `"${meta.nom}"` : ""}</DialogTitle>
+      <DialogTitle>Commentaires de la formation</DialogTitle>
 
-      {meta && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ px: 3, mt: -1, mb: 1 }}>
-          {meta.nom} {meta.num_offre && <>— {meta.num_offre}</>}
-        </Typography>
-      )}
-
-      <DialogContent dividers>
-        {/* ─── Dernier commentaire ─── */}
-        <Box mb={3}>
-          <Typography variant="subtitle2" gutterBottom>
-            🕓 Dernier commentaire :
-          </Typography>
-
-          {loadingDernier ? (
-            <Box display="flex" justifyContent="center" py={2}>
-              <CircularProgress size={20} />
-            </Box>
-          ) : !dernier ? (
-            <Typography color="text.secondary">Aucun commentaire enregistré.</Typography>
-          ) : (
-            <Paper variant="outlined" sx={{ p: 2, backgroundColor: "action.hover" }}>
-              <Typography variant="body2" sx={{ mb: 0.5 }}>
-                <strong>{dernier.auteur}</strong> —{" "}
-                {fmtDate(dernier.updated_at || dernier.created_at)}
-                {getSat(dernier) != null && (
-                  <Chip
-                    size="small"
-                    label={`Sat. ${getSat(dernier)}%`}
-                    sx={{ ml: 1 }}
-                    color={
-                      getSat(dernier)! >= 70
-                        ? "success"
-                        : getSat(dernier)! >= 40
-                          ? "warning"
-                          : "error"
-                    }
-                  />
-                )}
+      <DialogContent>
+        <Stack spacing={2}>
+          {meta ? (
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                {meta.nom}
+                {meta.num_offre ? ` — ${meta.num_offre}` : ""}
               </Typography>
-              <CommentaireContent html={dernier.contenu || "<em>—</em>"} />
-            </Paper>
-          )}
-        </Box>
+            </Box>
+          ) : null}
 
-        {/* ─── Ajout d’un commentaire enrichi ─── */}
-        <Box mb={2}>
-          <Typography variant="subtitle2" gutterBottom>
-            Ajouter un commentaire :
-          </Typography>
-          <div ref={quillRef} style={{ height: 150, marginBottom: "0.5rem" }} />
-          <Button
-            variant="contained"
-            color="primary"
-            disabled={creating}
-            onClick={handleAdd}
-            sx={{ mt: 1 }}
-          >
-            {creating ? "⏳" : "Publier"}
-          </Button>
-        </Box>
+          {/* ─── Dernier commentaire ─── */}
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Dernier commentaire
+              </Typography>
+            </Box>
 
-        {/* ─── Recherche ─── */}
-        <Box mb={2}>
-          <input
-            type="text"
-            placeholder="Rechercher…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "6px 10px",
-              borderRadius: 4,
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          />
-        </Box>
-
-        {/* ─── Liste des commentaires ─── */}
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={3}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : error ? (
-          <Typography color="error">{String(error.message)}</Typography>
-        ) : filteredRows.length === 0 ? (
-          <Typography>Aucun commentaire trouvé.</Typography>
-        ) : (
-          <List>
-            {filteredRows.map((c) => (
-              <ListItem
-                key={c.id}
-                alignItems="flex-start"
-                secondaryAction={
-                  <Button
-                    onClick={() => handleDelete(c.id)}
-                    disabled={deletingId === c.id}
-                    size="small"
-                    color="error"
-                  >
-                    {deletingId === c.id ? "⏳" : "🗑️"}
-                  </Button>
-                }
-              >
-                <ListItemText
-                  primary={
-                    <>
-                      <strong>{c.auteur}</strong> • {fmtDate(c.updated_at || c.created_at)}
-                      {getSat(c) != null && (
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              {loadingDernier ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    py: 2,
+                  }}
+                >
+                  <CircularProgress size={20} />
+                </Box>
+              ) : !dernier ? (
+                <Typography color="text.secondary">
+                  Aucun commentaire enregistré.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  <Box>
+                    <Typography variant="body2">
+                      <Box component="span" sx={{ fontWeight: 700 }}>
+                        {dernier.auteur}
+                      </Box>
+                      {" — "}
+                      {fmtDate(dernier.updated_at || dernier.created_at)}
+                      {getSat(dernier) != null && (
                         <Chip
                           size="small"
-                          label={`Sat. ${getSat(c)}%`}
+                          label={`Sat. ${getSat(dernier)}%`}
                           sx={{ ml: 1 }}
                           color={
-                            getSat(c)! >= 70 ? "success" : getSat(c)! >= 40 ? "warning" : "error"
+                            getSat(dernier)! >= 70
+                              ? "success"
+                              : getSat(dernier)! >= 40
+                                ? "warning"
+                                : "error"
                           }
                         />
                       )}
-                    </>
-                  }
-                  secondary={
-                    <Box
-                      sx={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 4,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        color: "text.secondary",
-                      }}
-                    >
-                      <CommentaireContent html={c.contenu || "<em>—</em>"} />
+                    </Typography>
+                  </Box>
+
+                  <Box color="text.secondary">
+                    <CommentaireContent html={dernier.contenu || "<em>—</em>"} />
+                  </Box>
+                </Stack>
+              )}
+            </Box>
+          </Box>
+
+          {/* ─── Ajout d’un commentaire enrichi ─── */}
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Ajouter un commentaire
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              <Stack spacing={1.5}>
+                <Box
+                  sx={{
+                    "& .ql-toolbar": {
+                      borderTopLeftRadius: theme.shape.borderRadius,
+                      borderTopRightRadius: theme.shape.borderRadius,
+                      borderColor: "divider",
+                      backgroundColor: "background.paper",
+                    },
+                    "& .ql-container": {
+                      minHeight: 150,
+                      borderBottomLeftRadius: theme.shape.borderRadius,
+                      borderBottomRightRadius: theme.shape.borderRadius,
+                      borderColor: "divider",
+                      backgroundColor: "background.paper",
+                      color: "text.primary",
+                    },
+                    "& .ql-editor": {
+                      minHeight: 110,
+                    },
+                  }}
+                >
+                  <div ref={quillRef} />
+                </Box>
+
+                <Box>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={creating}
+                    onClick={handleAdd}
+                  >
+                    {creating ? "Publication…" : "Publier"}
+                  </Button>
+                </Box>
+              </Stack>
+            </Box>
+          </Box>
+
+          {/* ─── Recherche ─── */}
+          <SearchInput
+            placeholder="Rechercher un commentaire…"
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+            fullWidth
+          />
+
+          {/* ─── Liste des commentaires ─── */}
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Historique des commentaires
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              {loading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    py: 3,
+                  }}
+                >
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Typography color="error">{String(error.message)}</Typography>
+              ) : filteredRows.length === 0 ? (
+                <Typography color="text.secondary">
+                  Aucun commentaire trouvé.
+                </Typography>
+              ) : (
+                <List disablePadding>
+                  {filteredRows.map((c, index) => (
+                    <Box key={c.id}>
+                      <ListItem
+                        alignItems="flex-start"
+                        disableGutters
+                        secondaryAction={
+                          <Button
+                            onClick={() => handleDelete(c.id)}
+                            disabled={deletingId === c.id}
+                            size="small"
+                            color="error"
+                          >
+                            {deletingId === c.id ? "Archivage…" : "Archiver"}
+                          </Button>
+                        }
+                        sx={{
+                          py: 1.25,
+                          pr: 10,
+                        }}
+                      >
+                        <ListItemText
+                          primary={
+                            <Typography variant="body2">
+                              <Box component="span" sx={{ fontWeight: 700 }}>
+                                {c.auteur}
+                              </Box>
+                              {" • "}
+                              {fmtDate(c.updated_at || c.created_at)}
+                              {getSat(c) != null && (
+                                <Chip
+                                  size="small"
+                                  label={`Sat. ${getSat(c)}%`}
+                                  sx={{ ml: 1 }}
+                                  color={
+                                    getSat(c)! >= 70
+                                      ? "success"
+                                      : getSat(c)! >= 40
+                                        ? "warning"
+                                        : "error"
+                                  }
+                                />
+                              )}
+                            </Typography>
+                          }
+                          secondary={
+                            <Box
+                              sx={{
+                                mt: 0.5,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 4,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                color: "text.secondary",
+                              }}
+                            >
+                              <CommentaireContent html={c.contenu || "<em>—</em>"} />
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+
+                      {index < filteredRows.length - 1 ? <Divider /> : null}
                     </Box>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
+                  ))}
+                </List>
+              )}
+            </Box>
+          </Box>
+        </Stack>
       </DialogContent>
 
       <DialogActions>

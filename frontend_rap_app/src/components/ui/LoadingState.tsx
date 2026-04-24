@@ -1,5 +1,6 @@
-import { Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { Box, CircularProgress, Paper, Stack, Typography, useTheme } from "@mui/material";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../theme";
 
 type LoadingStateProps = {
   label?: ReactNode;
@@ -12,11 +13,18 @@ export default function LoadingState({
   minHeight = 220,
   inline = false,
 }: LoadingStateProps) {
+  const theme = useTheme<AppTheme>();
+  const elevatedTokens = theme.custom.surface.elevated;
+  const mutedBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.surface.muted.background.light
+      : theme.custom.surface.muted.background.dark;
+
   const content = (
     <Stack spacing={2} alignItems="center" justifyContent="center">
       <CircularProgress />
       {label ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" textAlign="center">
           {label}
         </Typography>
       ) : null}
@@ -25,7 +33,15 @@ export default function LoadingState({
 
   if (inline) {
     return (
-      <Box sx={{ py: 3, display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <Box
+        sx={{
+          py: { xs: 2.5, sm: 3 },
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
         {content}
       </Box>
     );
@@ -36,11 +52,13 @@ export default function LoadingState({
       variant="outlined"
       sx={{
         minHeight,
-        borderRadius: 3,
+        borderRadius: theme.custom.page.section.default.borderRadius,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        p: 3,
+        p: theme.custom.page.section.default.padding,
+        backgroundColor: mutedBackground,
+        boxShadow: elevatedTokens.boxShadowRest,
       }}
     >
       {content}

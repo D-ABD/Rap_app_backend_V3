@@ -20,8 +20,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
-import PageWrapper from "../components/PageWrapper";
-import BackNavButton from "../components/BackNavButton";
+import PageTemplate from "../components/PageTemplate";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
 import type { AppTheme } from "../theme";
 
@@ -57,7 +56,13 @@ import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
 import DeclicGroupedWidget from "./widgets/groupeddashboard/DeclicGroupedWidget";
 import PrepaGroupedWidget from "./widgets/groupeddashboard/PrepaGroupedWidget";
 
-type PaletteColorKey = "primary" | "secondary" | "success" | "warning" | "info" | "error";
+type PaletteColorKey =
+  | "primary"
+  | "secondary"
+  | "success"
+  | "warning"
+  | "info"
+  | "error";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -71,7 +76,12 @@ export default function DashboardPage() {
   ----------------------------*/
   const styledAccordion = useMemo(
     () =>
-      (children: React.ReactNode, title: string, color: PaletteColorKey, expanded = false) => (
+      (
+        children: React.ReactNode,
+        title: string,
+        color: PaletteColorKey,
+        expanded = false
+      ) => (
         <Accordion
           defaultExpanded={expanded}
           disableGutters
@@ -119,180 +129,167 @@ export default function DashboardPage() {
   );
 
   return (
-    <PageWrapper maxWidth="xl">
-      <Box display="flex" flexDirection="column">
-        <Box mb={2}>
-          <BackNavButton />
-        </Box>
-
-        {/* ================================================ */}
-        {/* 🏁 HERO SECTION */}
-        {/* ================================================ */}
-        <Box mb={4}>
-          <Typography variant="h4" fontWeight="bold">
-            Tableau de bord général
-          </Typography>
-
-          <Typography variant="h6" mt={1}>
+    <PageTemplate
+      title="Tableau de bord général"
+      subtitle="Suivez vos formations, candidats, prospections, ateliers et vos dispositifs Prepa / Declic."
+      backButton
+      maxWidth="xl"
+      headerExtra={
+        <Stack spacing={0.5}>
+          <Typography variant="h6">
             Bonjour, {user?.first_name || user?.email || "👋"}
           </Typography>
+        </Stack>
+      }
+      actions={
+        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+          <Button variant="contained" component={RouterLink} to="/formations">
+            Formations
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/candidats">
+            Candidats
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/prospections">
+            Prospections
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/appairages">
+            Appairages
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/evenements">
+            Événements
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/cvtheque">
+            CVtheque
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/cerfa">
+            CERFA
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/prepa">
+            Prepa
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/declic">
+            Declic
+          </Button>
+          <Button variant="contained" component={RouterLink} to="/parametres">
+            Parametres
+          </Button>
+        </Stack>
+      }
+    >
+      <Divider sx={{ mb: 4 }} />
 
-          <Typography variant="body1" color="text.secondary" mt={0.5}>
-            Suivez vos formations, candidats, prospections, ateliers et vos dispositifs Prepa /
-            Declic.
-          </Typography>
+      {/* ===================================================== */}
+      {/* 🎯 WIDGETS STRATÉGIQUES — VERSION CARRÉE (4 BLOCS) */}
+      {/* ===================================================== */}
+      <DashboardGrid sx={{ mb: 10 }}>
+        <Grid item xs={8} md={6} lg={4}>
+          <DeclicStatsSummary title="Declic - Synthese" />
+        </Grid>
 
-          <Stack direction="row" spacing={2} mt={3} flexWrap="wrap">
-            <Button variant="contained" component={RouterLink} to="/formations">
-              Formations
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/candidats">
-              Candidats
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/prospections">
-              Prospections
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/appairages">
-              Appairages
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/evenements">
-              Événements
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/cvtheque">
-              CVtheque
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/cerfa">
-              CERFA
-            </Button>
+        <Grid item xs={8} md={6} lg={4}>
+          <PrepaStatsSummary title="Prepa - Synthese" />
+        </Grid>
 
-            <Button variant="contained" component={RouterLink} to="/prepa">
-              Prepa
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/declic">
-              Declic
-            </Button>
-            <Button variant="contained" component={RouterLink} to="/parametres">
-              Parametres
-            </Button>
-          </Stack>
-        </Box>
+        <Grid item xs={8} md={6} lg={4}>
+          <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
+        </Grid>
+      </DashboardGrid>
 
-        <Divider sx={{ mb: 4 }} />
+      {/* ================================================ */}
+      {/* 📦 ACCORDÉONS */}
+      {/* ================================================ */}
 
-        {/* ===================================================== */}
-        {/* 🎯 WIDGETS STRATÉGIQUES — VERSION CARRÉE (4 BLOCS) */}
-        {/* ===================================================== */}
-
-        <DashboardGrid sx={{ mb: 10 }}>
-          <Grid item xs={8} md={6} lg={4}>
-            <DeclicStatsSummary title="Declic - Synthese" />
+      {/* INDICATEURS CLÉS */}
+      {styledAccordion(
+        <DashboardGrid>
+          <Grid item xs={12}>
+            <FormationStatsSummary title="Formations - Synthese" />
           </Grid>
 
-          <Grid item xs={8} md={6} lg={4}>
-            <PrepaStatsSummary title="Prepa - Synthese" />
+          <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
+            <FormationSaturationWidget title="Saturation Formations" />
           </Grid>
-
-          <Grid item xs={8} md={6} lg={4}>
-            <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
+          <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
+            <ProspectionConversionKpi title="Taux de transformation Prospections" />
           </Grid>
-        </DashboardGrid>
+          <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
+            <AppairageConversionKpi title="Taux de transformation Appairages" />
+          </Grid>
+        </DashboardGrid>,
+        "Indicateurs clés",
+        "primary",
+        true
+      )}
 
-        {/* ================================================ */}
-        {/* 📦 ACCORDÉONS */}
-        {/* ================================================ */}
+      {/* STATS FORMATIONS */}
+      {styledAccordion(
+        <DashboardGrid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormationOverviewWidget title="Répartition formations" />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormationFinanceursOverviewWidget title="Types d’offres" />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormationPlacesWidget title="Places disponibles" />
+          </Grid>
+        </DashboardGrid>,
+        "Stats Formations",
+        "success"
+      )}
 
-        {/* INDICATEURS CLÉS */}
-        {styledAccordion(
-          <DashboardGrid>
-            <Grid item xs={12}>
-              <FormationStatsSummary title="Formations - Synthese" />
-            </Grid>
+      {/* STATS CANDIDATS */}
+      {styledAccordion(
+        <DashboardGrid>
+          <Grid item xs={12} sm={6}>
+            <CandidatOverviewWidget title="Statuts candidats" />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <CandidatContratOverviewWidget title="Répartition contrats" />
+          </Grid>
+        </DashboardGrid>,
+        "Stats Candidats",
+        "warning"
+      )}
 
-            <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
-              <FormationSaturationWidget title="Saturation Formations" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
-              <ProspectionConversionKpi title="Taux de transformation Prospections" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
-              <AppairageConversionKpi title="Taux de transformation Appairages" />
-            </Grid>
-          </DashboardGrid>,
-          "Indicateurs clés",
-          "primary",
-          true
-        )}
+      {/* SUIVI PROSPECTION / APPAIRAGE / TRE / ÉVÉNEMENTS */}
+      {styledAccordion(
+        <DashboardGrid>
+          <Grid item xs={12} sm={6} md={4}>
+            <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <AppairageOverviewWidget />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <AteliersTREOverviewWidget />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <EvenementOverviewWidget title="Vue d'ensemble Evenements" />
+          </Grid>
+          <Grid item xs={12}>
+            <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
+          </Grid>
+        </DashboardGrid>,
+        "Suivi Prospection / Appairage / TRE / Evenements",
+        "info"
+      )}
 
-        {/* STATS FORMATIONS */}
-        {styledAccordion(
-          <DashboardGrid>
-            <Grid item xs={12} sm={6} md={4}>
-              <FormationOverviewWidget title="Répartition formations" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <FormationFinanceursOverviewWidget title="Types d’offres" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <FormationPlacesWidget title="Places disponibles" />
-            </Grid>
-          </DashboardGrid>,
-          "Stats Formations",
-          "success"
-        )}
-
-        {/* STATS CANDIDATS */}
-        {styledAccordion(
-          <DashboardGrid>
-            <Grid item xs={12} sm={6}>
-              <CandidatOverviewWidget title="Statuts candidats" />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <CandidatContratOverviewWidget title="Répartition contrats" />
-            </Grid>
-          </DashboardGrid>,
-          "Stats Candidats",
-          "warning"
-        )}
-
-        {/* SUIVI PROSPECTION / APPAIRAGE / TRE / ÉVÉNEMENTS */}
-        {styledAccordion(
-          <DashboardGrid>
-            <Grid item xs={12} sm={6} md={4}>
-              <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <AppairageOverviewWidget />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <AteliersTREOverviewWidget />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <EvenementOverviewWidget title="Vue d'ensemble Evenements" />
-            </Grid>
-            <Grid item xs={12}>
-              <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
-            </Grid>
-          </DashboardGrid>,
-          "Suivi Prospection / Appairage / TRE / Evenements",
-          "info"
-        )}
-
-        {/* ANALYSE GROUPEE */}
-        {styledAccordion(
-          <Box display="flex" flexDirection="column" gap={2}>
-            <FormationGroupedWidget />
-            <CandidatGroupedTableWidget />
-            <AppairageGroupedTableWidget />
-            <ProspectionGroupedWidget />
-            <EvenementGroupedWidget />
-            <AteliersTREGroupedWidget />
-            <PrepaGroupedWidget />
-            <DeclicGroupedWidget />
-          </Box>,
-          "Analyse groupée",
-          "secondary"
-        )}
-      </Box>
-    </PageWrapper>
+      {/* ANALYSE GROUPEE */}
+      {styledAccordion(
+        <Box display="flex" flexDirection="column" gap={2}>
+          <FormationGroupedWidget />
+          <CandidatGroupedTableWidget />
+          <AppairageGroupedTableWidget />
+          <ProspectionGroupedWidget />
+          <EvenementGroupedWidget />
+          <AteliersTREGroupedWidget />
+          <PrepaGroupedWidget />
+          <DeclicGroupedWidget />
+        </Box>,
+        "Analyse groupée",
+        "secondary"
+      )}
+    </PageTemplate>
   );
 }

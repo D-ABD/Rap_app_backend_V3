@@ -1,13 +1,24 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Stack, Button, TextField, MenuItem, Paper, useTheme } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Button,
+  TextField,
+  MenuItem,
+  Grid,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import type { AppTheme } from "../../theme";
 
 import useForm from "../../hooks/useForm";
 import api from "../../api/axios";
 import PageTemplate from "../../components/PageTemplate";
 import LoadingState from "../../components/ui/LoadingState";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 
 type Choice = {
   value: string;
@@ -29,7 +40,6 @@ export default function TypeOffresCreatePage() {
     autre: "",
   });
 
-  // 📥 Charge les choix
   useEffect(() => {
     api
       .get("/typeoffres/choices/")
@@ -43,7 +53,6 @@ export default function TypeOffresCreatePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 🎨 Couleur par défaut / preview
   useEffect(() => {
     const selected = choices.find((c) => c.value === values.nom);
 
@@ -115,84 +124,100 @@ export default function TypeOffresCreatePage() {
       {loading ? (
         <LoadingState label="Chargement des types disponibles..." />
       ) : (
-        <Paper sx={{ p: 3 }}>
-          <form onSubmit={handleSubmit}>
-            {/* Select nom */}
-            <TextField
-              select
-              fullWidth
-              margin="normal"
-              id="nom"
-              name="nom"
-              label="Type d'offre"
-              value={values.nom}
-              onChange={handleChange}
-              required
-              error={Boolean(errors.nom)}
-              helperText={errors.nom}
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={2}>
+            <FormSectionCard
+              title="Informations principales"
+              subtitle="Sélectionnez un type d'offre, ajustez sa couleur et ajoutez une description si nécessaire."
             >
-              {choices.map((c) => (
-                <MenuItem key={c.value} value={c.value}>
-                  {c.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    select
+                    fullWidth
+                    id="nom"
+                    name="nom"
+                    label="Type d'offre"
+                    value={values.nom}
+                    onChange={handleChange}
+                    required
+                    error={Boolean(errors.nom)}
+                    helperText={errors.nom || "Choisissez un type d'offre parmi les options disponibles."}
+                  >
+                    {choices.map((c) => (
+                      <MenuItem key={c.value} value={c.value}>
+                        {c.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
 
-            {/* Couleur */}
-            <TextField
-              fullWidth
-              margin="normal"
-              id="couleur"
-              name="couleur"
-              label="Couleur (#RRGGBB)"
-              value={values.couleur}
-              onChange={handleChange}
-              error={Boolean(errors.couleur)}
-              helperText={errors.couleur}
-            />
+                <Grid item xs={12} md={8}>
+                  <TextField
+                    fullWidth
+                    id="couleur"
+                    name="couleur"
+                    label="Couleur (#RRGGBB)"
+                    value={values.couleur}
+                    onChange={handleChange}
+                    error={Boolean(errors.couleur)}
+                    helperText={
+                      errors.couleur || "Laissez la couleur proposée ou renseignez un code hexadécimal."
+                    }
+                  />
+                </Grid>
 
-            {/* Autre si nécessaire */}
-            {values.nom === "autre" && (
-              <TextField
-                fullWidth
-                margin="normal"
-                id="autre"
-                name="autre"
-                label="Description personnalisée"
-                value={values.autre}
-                onChange={handleChange}
-                required
-                error={Boolean(errors.autre)}
-                helperText={errors.autre}
-              />
-            )}
+                <Grid item xs={12} md={4}>
+                  <Stack spacing={1}>
+                    <Typography variant="body2" color="text.secondary">
+                      Aperçu couleur
+                    </Typography>
+                    <Box
+                      role="img"
+                      aria-label={`Aperçu couleur ${previewColor}`}
+                      sx={{
+                        width: "100%",
+                        minHeight: 56,
+                        borderRadius: 2,
+                        bgcolor: previewColor,
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      {previewColor}
+                    </Typography>
+                  </Stack>
+                </Grid>
 
-            {/* Preview */}
-            <Box
-              role="img"
-              aria-label={`Aperçu couleur ${previewColor}`}
-              sx={{
-                mt: 2,
-                width: 24,
-                height: 24,
-                borderRadius: 1,
-                bgcolor: previewColor,
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            />
+                {values.nom === "autre" ? (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      id="autre"
+                      name="autre"
+                      label="Description personnalisée"
+                      value={values.autre}
+                      onChange={handleChange}
+                      required
+                      error={Boolean(errors.autre)}
+                      helperText={errors.autre || "Décrivez le type personnalisé à créer."}
+                    />
+                  </Grid>
+                ) : null}
+              </Grid>
+            </FormSectionCard>
 
-            {/* Actions */}
-            <Stack direction="row" spacing={2} mt={3}>
-              <Button type="submit" variant="contained" color="primary">
-                💾 Créer
-              </Button>
+            <FormActionsBar sx={{ mt: 1 }}>
               <Button type="button" variant="outlined" onClick={() => navigate("/typeoffres")}>
                 Annuler
               </Button>
-            </Stack>
-          </form>
-        </Paper>
+              <Button type="submit" variant="contained" color="primary">
+                💾 Créer
+              </Button>
+            </FormActionsBar>
+          </Stack>
+        </Box>
       )}
     </PageTemplate>
   );

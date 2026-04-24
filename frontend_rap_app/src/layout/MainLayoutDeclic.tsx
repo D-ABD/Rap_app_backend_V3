@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -58,12 +58,18 @@ export default function MainLayoutDeclic() {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const toggleDrawer = () => setOpen((prev) => !prev);
+  const openDrawer = () => setOpen(true);
+  const closeDrawer = () => setOpen(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  useEffect(() => {
+    closeDrawer();
+    setAnchorUser(null);
+  }, [location.pathname]);
 
   const menuItems = [
     { label: "Tableau de bord", path: "/dashboard/declic", icon: <BarChartRoundedIcon /> },
@@ -169,7 +175,7 @@ export default function MainLayoutDeclic() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={toggleDrawer}
+            onClick={openDrawer}
             sx={{
               mr: 0.5,
               width: 42,
@@ -361,7 +367,7 @@ export default function MainLayoutDeclic() {
       <Drawer
         variant="temporary"
         open={open}
-        onClose={toggleDrawer}
+        onClose={closeDrawer}
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: "block", md: "none" },
@@ -442,7 +448,7 @@ export default function MainLayoutDeclic() {
               component={Link}
               to={item.path}
               selected={isActive(item.path)}
-              onClick={toggleDrawer}
+              onClick={closeDrawer}
               sx={getDrawerItemSx(theme)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>

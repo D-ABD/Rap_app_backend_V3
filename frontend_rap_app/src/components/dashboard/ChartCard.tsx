@@ -1,4 +1,13 @@
-import { Box, Card, Divider, LinearProgress, Typography, useTheme } from "@mui/material";
+// src/components/dashboard/ChartCard.tsx
+import {
+  Box,
+  Card,
+  Divider,
+  LinearProgress,
+  Typography,
+  useTheme,
+  Stack,
+} from "@mui/material";
 import type { SxProps, Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import type { AppTheme } from "../../theme";
@@ -6,22 +15,16 @@ import type { AppTheme } from "../../theme";
 export type ChartCardProps = {
   title: string;
   subtitle?: ReactNode;
-  /** Zone à droite du titre (filtres, icônes) */
   headerActions?: ReactNode;
   children: ReactNode;
   loading?: boolean;
   error?: string | null;
   isFetching?: boolean;
-  /** Couleur du titre (token MUI ou CSS) */
   titleColor?: string;
   minHeight?: number | string;
   sx?: SxProps<Theme>;
 };
 
-/**
- * Carte « zone graphique / indicateur » pour dashboards : en-tête + séparateur + contenu.
- * Les états loading / error sont purement présentatifs (données fournies par le parent).
- */
 export default function ChartCard({
   title,
   subtitle,
@@ -35,54 +38,56 @@ export default function ChartCard({
   sx,
 }: ChartCardProps) {
   const theme = useTheme<AppTheme>();
+  const tokens = theme.custom.dashboard.chartCard;
 
   return (
     <Card
-      elevation={3}
+      elevation={0}
       sx={{
-        p: 2,
-        borderRadius: 3,
+        borderRadius: tokens.borderRadius,
+        p: tokens.padding,
         display: "flex",
         flexDirection: "column",
-        gap: 2,
+        gap: theme.spacing(tokens.gap),
         height: "100%",
-        boxShadow: theme.custom.surface.elevated.boxShadowRest,
-        bgcolor:
-          theme.palette.mode === "light"
-            ? theme.custom.surface.muted.background.light
-            : theme.custom.surface.muted.background.dark,
-        transition: "box-shadow 180ms ease, transform 180ms ease",
+        minHeight: tokens.minHeight,
+        boxShadow: tokens.boxShadowRest,
+        transition: theme.transitions.create(["box-shadow"], {
+          duration: theme.transitions.duration.shorter,
+        }),
         "&:hover": {
-          boxShadow: theme.custom.surface.elevated.boxShadowHover,
+          boxShadow: tokens.boxShadowHover,
         },
         ...sx,
       }}
     >
-      {isFetching ? <LinearProgress sx={{ borderRadius: 1 }} /> : null}
+      {isFetching ? <LinearProgress /> : null}
 
-      <Box
-        display="flex"
+      <Stack
+        direction="row"
         justifyContent="space-between"
         alignItems="center"
         flexWrap="wrap"
         gap={1}
       >
         <Box>
-          <Typography variant="subtitle1" fontWeight="bold" color={titleColor}>
+          <Typography variant="subtitle1" color={titleColor}>
             {title}
           </Typography>
-          {subtitle ? (
-            <Typography variant="caption" color="text.secondary" display="block">
+
+          {subtitle && (
+            <Typography variant="caption" color="text.secondary">
               {subtitle}
             </Typography>
-          ) : null}
+          )}
         </Box>
-        {headerActions ? (
+
+        {headerActions && (
           <Box display="flex" gap={1} flexWrap="wrap">
             {headerActions}
           </Box>
-        ) : null}
-      </Box>
+        )}
+      </Stack>
 
       <Divider />
 

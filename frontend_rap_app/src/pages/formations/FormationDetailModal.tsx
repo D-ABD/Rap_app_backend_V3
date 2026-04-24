@@ -10,7 +10,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Paper,
   Stack,
   useTheme,
 } from "@mui/material";
@@ -115,6 +114,9 @@ export default function FormationDetailModal({
   const modalTitleBorder = isLight
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+  const dialogSection = theme.custom.dialog.section;
+  const sectionBorder = isLight ? dialogSection.border.light : dialogSection.border.dark;
+  const sectionBg = isLight ? dialogSection.background.light : dialogSection.background.dark;
   const { data: formation, loading, error } = useFormation(formationId);
   const displayFormation = formation ?? initialFormation ?? null;
   const [openComments, setOpenComments] = useState(false);
@@ -162,7 +164,14 @@ export default function FormationDetailModal({
       </DialogTitle>
 
       <DialogContent dividers>
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+        <Box
+          sx={{
+            p: dialogSection.padding,
+            borderRadius: dialogSection.borderRadius,
+            border: sectionBorder,
+            background: sectionBg,
+          }}
+        >
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <Section title="Actions rapides">
@@ -548,7 +557,7 @@ export default function FormationDetailModal({
               </Section>
             </Grid>
           </Grid>
-        </Paper>
+        </Box>
       </DialogContent>
 
       {/* ✅ Actions principales : Fermer + Modifier */}

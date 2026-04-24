@@ -25,7 +25,10 @@ import useFiltresProspections, {
   prefetchProspectionDetail,
   useProspections,
 } from "../../hooks/useProspection";
-import type { Prospection, ProspectionFiltresValues } from "../../types/prospection";
+import type {
+  Prospection,
+  ProspectionFiltresValues,
+} from "../../types/prospection";
 import { useRedirectToCreateProspection } from "../../hooks/useRedirectToCreateProspection";
 import { useAuth } from "../../hooks/useAuth";
 import ProspectionTable from "./ProspectionTable";
@@ -48,15 +51,18 @@ export default function ProspectionPageCandidat() {
   const [showFilters, setShowFilters] = useState(false);
 
   // ── pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   // ── filtres envoyés à l'API
   type EffectiveFilters = ProspectionFiltresValues & {
     page: number;
     page_size: number;
   };
+
   const effectiveFilters: EffectiveFilters = useMemo(() => {
     const base: EffectiveFilters = { ...filters, page, page_size: pageSize };
+
     const pairs = Object.entries(base).filter(([k, v]) => {
       if (isCandidat && k === "owner") return false;
       if (v == null) return false;
@@ -64,11 +70,13 @@ export default function ProspectionPageCandidat() {
       if (Array.isArray(v)) return v.length > 0;
       return true;
     });
+
     return Object.fromEntries(pairs) as EffectiveFilters;
   }, [filters, page, pageSize, isCandidat]);
 
   const activeFiltersCount = useMemo(() => {
     const ignored = new Set(["page", "page_size", "search"]);
+
     return Object.entries(effectiveFilters).filter(([k, v]) => {
       if (ignored.has(k)) return false;
       if (v == null) return false;
@@ -82,7 +90,11 @@ export default function ProspectionPageCandidat() {
 
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { pageData, loading, error } = useProspections(effectiveFilters, reloadKey);
+  const { pageData, loading, error } = useProspections(
+    effectiveFilters,
+    reloadKey
+  );
+
   const prospections: Prospection[] = useMemo(
     () => (pageData?.results ?? []) as Prospection[],
     [pageData]
@@ -94,13 +106,16 @@ export default function ProspectionPageCandidat() {
 
   // ── sélection
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   useEffect(() => {
     const visible = new Set(prospections.map((p) => p.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [prospections]);
 
   const toggleSelect = (id: number) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
 
   // ── archivage via DELETE legacy
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -110,8 +125,11 @@ export default function ProspectionPageCandidat() {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
-      await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/candidat`)));
+      await Promise.all(
+        idsToDelete.map((id) => api.delete(`/prospections/${id}/candidat`))
+      );
       toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
@@ -125,15 +143,19 @@ export default function ProspectionPageCandidat() {
   // ── modal de détail
   const [showDetail, setShowDetail] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [selectedProspection, setSelectedProspection] = useState<Prospection | null>(null);
+  const [selectedProspection, setSelectedProspection] =
+    useState<Prospection | null>(null);
 
   const handleRowClick = (id: number, prospection?: Prospection) => {
     setSelectedProspection(prospection ?? null);
     setDetailId(id);
     setShowDetail(true);
+
     void prefetchProspectionDetail(id)
       .then((detail) => {
-        setSelectedProspection((current) => (current?.id === id || !current ? detail : current));
+        setSelectedProspection((current) =>
+          current?.id === id || !current ? detail : current
+        );
       })
       .catch(() => {
         // Ignore prefetch failures here; the modal manages loading/fallback.
@@ -161,6 +183,8 @@ export default function ProspectionPageCandidat() {
     }
   };
 
+  const hasResults = prospections.length > 0;
+
   return (
     <PageTemplate
       refreshButton
@@ -176,7 +200,7 @@ export default function ProspectionPageCandidat() {
         />
       }
       actions={
-        <Stack direction="row" spacing={1} flexWrap="wrap">
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
@@ -188,14 +212,20 @@ export default function ProspectionPageCandidat() {
               setFilters((prev) => {
                 const next = !prev.avec_archivees;
                 if (!next && prev.activite === "archivee") {
-                  return { ...prev, avec_archivees: undefined, activite: undefined };
+                  return {
+                    ...prev,
+                    avec_archivees: undefined,
+                    activite: undefined,
+                  };
                 }
                 return { ...prev, avec_archivees: next ? true : undefined };
               });
               setPage(1);
             }}
           >
-            {filters.avec_archivees ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+            {filters.avec_archivees
+              ? "🗂️ Masquer archivés"
+              : "🗃️ Inclure archivés"}
           </Button>
 
           <Button
@@ -213,7 +243,10 @@ export default function ProspectionPageCandidat() {
             {filters.activite === "archivee" ? "📂 Voir tout" : "🗄️ Archives seules"}
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
@@ -246,7 +279,6 @@ export default function ProspectionPageCandidat() {
                 width: 320,
                 maxWidth: "calc(100vw - 32px)",
                 p: 1.25,
-                borderRadius: 3,
               },
             }}
           >
@@ -260,7 +292,10 @@ export default function ProspectionPageCandidat() {
             </Box>
 
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <ExportButtonProspection data={prospections} selectedIds={selectedIds} />
+              <ExportButtonProspection
+                data={prospections}
+                selectedIds={selectedIds}
+              />
             </Stack>
           </Menu>
         </Stack>
@@ -268,7 +303,9 @@ export default function ProspectionPageCandidat() {
       filters={
         showFilters &&
         (filtresLoading ? (
-          <CircularProgress />
+          <Stack alignItems="center" justifyContent="center" sx={{ py: 2 }}>
+            <CircularProgress size={24} />
+          </Stack>
         ) : filtres ? (
           <FiltresProspectionsPanel
             filtres={{
@@ -282,7 +319,9 @@ export default function ProspectionPageCandidat() {
             }}
           />
         ) : (
-          <Typography color="error">⚠️ Impossible de charger les filtres</Typography>
+          <Typography color="error">
+            ⚠️ Impossible de charger les filtres
+          </Typography>
         ))
       }
       footer={
@@ -307,18 +346,22 @@ export default function ProspectionPageCandidat() {
       }
     >
       {loading ? (
-        <CircularProgress />
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+          <CircularProgress />
+        </Stack>
       ) : error ? (
-        <Typography color="error">Erreur lors du chargement des prospections.</Typography>
-      ) : prospections.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography color="error">
+            Erreur lors du chargement des prospections.
+          </Typography>
+        </Box>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Box sx={{ fontSize: 48, mb: 1 }}>📭</Box>
           <Typography>Aucune prospection trouvée.</Typography>
         </Box>
       ) : (
-        <Box sx={{ width: "100%", overflowX: "auto", mt: 2 }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <ProspectionTable
             prospections={prospections}
             selectedIds={selectedIds}
@@ -332,7 +375,12 @@ export default function ProspectionPageCandidat() {
       )}
 
       {/* ───────────── Confirmation archivage ───────────── */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Confirmation

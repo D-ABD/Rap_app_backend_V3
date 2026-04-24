@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Stack,
   Button,
@@ -19,7 +19,7 @@ import {
   useCerfaDelete,
   useCerfaDownloadPdf,
   useCerfaList,
-  useCerfaUpdate, // ✅ anticipé pour mise à jour
+  useCerfaUpdate,
 } from "../../hooks/useCerfa";
 import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -32,7 +32,9 @@ import { CerfaForm } from "./CerfaForm";
 import CerfaDetailModal from "./CerfaDetailModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useCentres } from "../../hooks/useCentres";
-import FiltresCerfaPanel, { CerfaFiltresValues } from "../../components/filters/FiltresCerfaPanel";
+import FiltresCerfaPanel, {
+  CerfaFiltresValues,
+} from "../../components/filters/FiltresCerfaPanel";
 
 export default function CerfaPage() {
   const { user } = useAuth();
@@ -62,10 +64,12 @@ export default function CerfaPage() {
   const [formFieldErrors, setFormFieldErrors] = useState<
     Partial<Record<keyof CerfaContratCreate, string>>
   >({});
-  const [newCerfaType, setNewCerfaType] = useState<"apprentissage" | "professionnalisation">(
-    "apprentissage"
+  const [newCerfaType, setNewCerfaType] = useState<
+    "apprentissage" | "professionnalisation"
+  >("apprentissage");
+  const [selectedContrat, setSelectedContrat] = useState<CerfaContrat | null>(
+    null
   );
-  const [selectedContrat, setSelectedContrat] = useState<CerfaContrat | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const parseId = (value: string | null): number | null => {
@@ -102,7 +106,9 @@ export default function CerfaPage() {
         employeur_nom: employeurNom ?? undefined,
       } as Partial<CerfaContratCreate>,
       selections: {
-        candidat: candidat ? { id: candidat, nom_complet: searchParams.get("candidat_nom") } : null,
+        candidat: candidat
+          ? { id: candidat, nom_complet: searchParams.get("candidat_nom") }
+          : null,
         formation: formation ? { id: formation, nom: formationNom } : null,
         partenaire: employeur ? { id: employeur, nom: employeurNom } : null,
       },
@@ -141,22 +147,38 @@ export default function CerfaPage() {
     }),
     [filters, page, pageSize, reloadKey]
   );
+
   const editingId = selectedId ?? selectedContrat?.id ?? null;
 
   const { data, isLoading, isError, refetch } = useCerfaList(queryParams);
-  const { data: centresData } = useCentres({ page: 1, page_size: 200, ordering: "nom" });
+  const { data: centresData } = useCentres({
+    page: 1,
+    page_size: 200,
+    ordering: "nom",
+  });
   const { mutateAsync: createCerfa, isPending: isCreating } = useCerfaCreate();
-  const { mutateAsync: updateCerfa, isPending: isUpdating } = useCerfaUpdate(editingId ?? -1);
+  const { mutateAsync: updateCerfa, isPending: isUpdating } = useCerfaUpdate(
+    editingId ?? -1
+  );
   const { mutateAsync: remove } = useCerfaDelete();
   const { mutateAsync: downloadPdf } = useCerfaDownloadPdf();
+
   const role = (user?.role ?? "").toLowerCase();
-  const canWriteCerfa = ["staff", "admin", "superadmin", "commercial", "charge_recrutement"].includes(role);
+  const canWriteCerfa = [
+    "staff",
+    "admin",
+    "superadmin",
+    "commercial",
+    "charge_recrutement",
+  ].includes(role);
 
   const contrats: CerfaContrat[] = useMemo(() => data?.results ?? [], [data]);
   const count = data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
+
   const clearSelection = () => setSelectedIds([]);
   const selectAll = () => setSelectedIds(contrats.map((contrat) => contrat.id));
+
   const activeFiltersCount = useMemo(
     () =>
       Object.entries(filters).filter(([key, value]) => {
@@ -185,15 +207,20 @@ export default function CerfaPage() {
     if (!errorData || typeof errorData !== "object" || Array.isArray(errorData)) {
       return next;
     }
-    Object.entries(errorData as Record<string, unknown>).forEach(([field, messages]) => {
-      next[field as keyof CerfaContratCreate] = formatBackendMessages(messages);
-    });
+    Object.entries(errorData as Record<string, unknown>).forEach(
+      ([field, messages]) => {
+        next[field as keyof CerfaContratCreate] = formatBackendMessages(messages);
+      }
+    );
     return next;
   };
 
   const buildCerfaFileName = (contrat?: CerfaContrat | null) => {
     const prefix =
-      contrat?.cerfa_type === "professionnalisation" ? "cerfa_pro" : "cerfa_apprent";
+      contrat?.cerfa_type === "professionnalisation"
+        ? "cerfa_pro"
+        : "cerfa_apprent";
+
     const slugify = (value?: string | null) =>
       (value ?? "")
         .toLowerCase()
@@ -220,9 +247,11 @@ export default function CerfaPage() {
 
   useEffect(() => {
     if (!canWriteCerfa) return;
+
     if (candidateContext) {
       setSelectedContrat(null);
       setSelectedId(null);
+
       if (candidateContext.cerfaType) {
         setShowForm(true);
       } else {
@@ -246,18 +275,29 @@ export default function CerfaPage() {
     setSelectedContrat(null);
     setSelectedId(null);
     setNewCerfaType(type);
+
     if (type === "professionnalisation") {
-      toast.info("CERFA professionnalisation selectionne. Le choix est memorise pour ce flux.");
+      toast.info(
+        "CERFA professionnalisation selectionne. Le choix est memorise pour ce flux."
+      );
     }
+
     setShowForm(true);
   };
 
+  const openNewCerfa = useCallback(() => {
+    if (!canWriteCerfa) return;
+    setSelectedContrat(null);
+    setSelectedId(null);
+    setShowTypeChoice(true);
+  }, [canWriteCerfa]);
+
   const handleRowClick = (id: number) => {
-    const contrat = contrats.find((c) => c.id === id);
-    if (contrat) {
-      setSelectedContrat(contrat);
-      setShowDetail(true);
-    }
+    const contrat = contrats.find((item) => item.id === id);
+    if (!contrat) return;
+
+    setSelectedContrat(contrat);
+    setShowDetail(true);
   };
 
   const handleDelete = async () => {
@@ -271,15 +311,14 @@ export default function CerfaPage() {
       setShowConfirm(false);
       setSelectedIds([]);
       setSelectedId(null);
-      setReloadKey((k) => k + 1);
-    } catch (_err) {
+      setReloadKey((key) => key + 1);
+    } catch {
       toast.error("Erreur lors de l'archivage.");
     } finally {
       setArchiveLoading(false);
     }
   };
 
-  // ✅ Création CERFA avec affichage des champs manquants
   const handleCreateCerfa = async (data: CerfaContratCreate) => {
     try {
       setFormError(null);
@@ -289,7 +328,7 @@ export default function CerfaPage() {
       setShowForm(false);
       setSelectedContrat(null);
       setSelectedId(null);
-      setReloadKey((k) => k + 1);
+      setReloadKey((key) => key + 1);
     } catch (_err: any) {
       const errorData = _err?.response?.data;
       let message = "❌ Erreur lors de la création du CERFA";
@@ -306,7 +345,10 @@ export default function CerfaPage() {
         message = errorData.detail;
       } else if (errorData && typeof errorData === "object") {
         const errors = Object.entries(errorData)
-          .map(([field, messages]) => `${field}: ${formatBackendMessages(messages)}`)
+          .map(
+            ([field, messages]) =>
+              `${field}: ${formatBackendMessages(messages)}`
+          )
           .join(" | ");
         message = `⚠️ Erreur de validation : ${errors}`;
       }
@@ -316,7 +358,9 @@ export default function CerfaPage() {
       toast.error(message);
 
       if (import.meta.env.MODE !== "production" && errorData) {
-        toast.info("📨 Détails complets de l’erreur backend affichés en console (mode dev)");
+        toast.info(
+          "📨 Détails complets de l’erreur backend affichés en console (mode dev)"
+        );
         // eslint-disable-next-line no-console
         console.group("📨 Détails complets de l’erreur backend");
         // eslint-disable-next-line no-console
@@ -326,6 +370,30 @@ export default function CerfaPage() {
       }
     }
   };
+
+  const closeCerfaForm = useCallback(() => {
+    setShowForm(false);
+    setSelectedContrat(null);
+    setSelectedId(null);
+    setFormError(null);
+    setFormFieldErrors({});
+
+    if (candidateContext) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        [
+          "candidat",
+          "candidat_nom",
+          "cerfa_type",
+          "formation",
+          "formation_nom",
+          "employeur",
+          "employeur_nom",
+        ].forEach((key) => next.delete(key));
+        return next;
+      });
+    }
+  }, [candidateContext, setSearchParams]);
 
   return (
     <PageTemplate
@@ -343,28 +411,29 @@ export default function CerfaPage() {
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
           <Button
             variant="outlined"
-            onClick={() => setShowFilters((v) => !v)}
+            onClick={() => setShowFilters((value) => !value)}
             startIcon={<span>{showFilters ? "🫣" : "🔎"}</span>}
           >
             {showFilters ? "Masquer filtres" : "Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
+
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             disabled={!canWriteCerfa}
-            onClick={() => {
-              if (!canWriteCerfa) return;
-              setSelectedContrat(null);
-              setSelectedId(null);
-              setShowTypeChoice(true);
-            }}
+            onClick={openNewCerfa}
           >
             Nouveau CERFA
           </Button>
+
           {canWriteCerfa && selectedIds.length > 0 && (
             <>
-              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
                 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
@@ -386,7 +455,7 @@ export default function CerfaPage() {
               setFilters(newValues);
               setPage(1);
             }}
-            onRefresh={() => setReloadKey((k) => k + 1)}
+            onRefresh={() => setReloadKey((key) => key + 1)}
           />
         ) : undefined
       }
@@ -404,7 +473,7 @@ export default function CerfaPage() {
           <Pagination
             page={page}
             count={totalPages}
-            onChange={(_, val) => setPage(val)}
+            onChange={(_, value) => setPage(value)}
             color="primary"
           />
         </Stack>
@@ -426,12 +495,7 @@ export default function CerfaPage() {
               variant="contained"
               startIcon={<AddIcon />}
               disabled={!canWriteCerfa}
-              onClick={() => {
-                if (!canWriteCerfa) return;
-                setSelectedContrat(null);
-                setSelectedId(null);
-                setShowTypeChoice(true);
-              }}
+              onClick={openNewCerfa}
             >
               Nouveau CERFA
             </Button>
@@ -443,7 +507,9 @@ export default function CerfaPage() {
           selectedIds={selectedIds}
           onToggleSelect={(id) =>
             setSelectedIds((prev) =>
-              prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+              prev.includes(id)
+                ? prev.filter((itemId) => itemId !== id)
+                : [...prev, id]
             )
           }
           onRowClick={handleRowClick}
@@ -455,15 +521,15 @@ export default function CerfaPage() {
           onDownloadPdf={async (id) => {
             try {
               const blob = await downloadPdf(id);
-              const contrat = contrats.find((c) => c.id === id);
+              const contrat = contrats.find((item) => item.id === id);
               const fileName = buildCerfaFileName(contrat);
               const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = fileName;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = fileName;
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
               URL.revokeObjectURL(url);
             } catch {
               toast.error("Erreur lors du téléchargement du PDF");
@@ -471,52 +537,38 @@ export default function CerfaPage() {
           }}
           onEditClick={(id) => {
             if (!canWriteCerfa) return;
-            const contrat = contrats.find((c) => c.id === id);
-            if (contrat) {
-              setSelectedContrat(contrat);
-              setSelectedId(id);
-              setShowForm(true);
-            }
+            const contrat = contrats.find((item) => item.id === id);
+            if (!contrat) return;
+            setSelectedContrat(contrat);
+            setSelectedId(id);
+            setShowForm(true);
           }}
           canWrite={canWriteCerfa}
         />
       )}
 
-      {/* ✅ Formulaire CERFA */}
       <CerfaForm
         open={showForm}
-        onClose={() => {
-          setShowForm(false);
-          setSelectedContrat(null);
-          setSelectedId(null);
-          setFormError(null);
-          setFormFieldErrors({});
-          if (candidateContext) {
-            setSearchParams((prev) => {
-              const next = new URLSearchParams(prev);
-              [
-                "candidat",
-                "candidat_nom",
-                "cerfa_type",
-                "formation",
-                "formation_nom",
-                "employeur",
-                "employeur_nom",
-              ].forEach((key) => next.delete(key));
-              return next;
-            });
-          }
-        }}
+        onClose={closeCerfaForm}
         initialData={selectedContrat}
-        initialContext={selectedContrat ? null : candidateContext?.form ?? { cerfa_type: newCerfaType }}
-        initialSelections={selectedContrat ? null : candidateContext?.selections ?? null}
+        initialContext={
+          selectedContrat
+            ? null
+            : candidateContext?.form ?? { cerfa_type: newCerfaType }
+        }
+        initialSelections={
+          selectedContrat ? null : candidateContext?.selections ?? null
+        }
         onSubmit={
           selectedContrat
             ? async (data) => {
                 if (!editingId) {
-                  toast.error("Impossible de retrouver l'identifiant du CERFA a modifier.");
+                  toast.error(
+                    "Impossible de retrouver l'identifiant du CERFA a modifier."
+                  );
                   return;
                 }
+
                 try {
                   setFormError(null);
                   setFormFieldErrors({});
@@ -524,7 +576,7 @@ export default function CerfaPage() {
                   toast.success("✅ Contrat mis à jour !");
                   setShowForm(false);
                   setSelectedContrat(null);
-                  setReloadKey((k) => k + 1);
+                  setReloadKey((key) => key + 1);
                 } catch (_err: any) {
                   const errorData = _err?.response?.data;
                   let message = "Erreur lors de la mise a jour du contrat.";
@@ -541,7 +593,10 @@ export default function CerfaPage() {
                     message = errorData.detail;
                   } else if (errorData && typeof errorData === "object") {
                     const errors = Object.entries(errorData)
-                      .map(([field, messages]) => `${field}: ${formatBackendMessages(messages)}`)
+                      .map(
+                        ([field, messages]) =>
+                          `${field}: ${formatBackendMessages(messages)}`
+                      )
                       .join(" | ");
                     message = `Erreur de validation : ${errors}`;
                   }
@@ -558,7 +613,12 @@ export default function CerfaPage() {
         globalError={formError}
       />
 
-      <Dialog open={showTypeChoice} onClose={() => setShowTypeChoice(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={showTypeChoice}
+        onClose={() => setShowTypeChoice(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Type de CERFA</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -587,20 +647,18 @@ export default function CerfaPage() {
         </DialogActions>
       </Dialog>
 
-      {/* ✅ Détail CERFA */}
       <CerfaDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
         contrat={selectedContrat}
         onEdit={(id) => {
           if (!canWriteCerfa) return;
-          const contrat = contrats.find((c) => c.id === id) ?? selectedContrat;
-          if (contrat) {
-            setSelectedContrat(contrat);
-            setSelectedId(id);
-            setShowDetail(false);
-            setShowForm(true);
-          }
+          const contrat = contrats.find((item) => item.id === id) ?? selectedContrat;
+          if (!contrat) return;
+          setSelectedContrat(contrat);
+          setSelectedId(id);
+          setShowDetail(false);
+          setShowForm(true);
         }}
         canWrite={canWriteCerfa}
       />

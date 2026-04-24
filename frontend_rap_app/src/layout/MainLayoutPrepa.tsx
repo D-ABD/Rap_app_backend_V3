@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -58,12 +58,18 @@ export default function MainLayoutPrepa() {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const toggleDrawer = () => setOpen(!open);
+  const openDrawer = () => setOpen(true);
+  const closeDrawer = () => setOpen(false);
   const isActive = (path: string) => location.pathname.startsWith(path);
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  useEffect(() => {
+    closeDrawer();
+    setAnchorUser(null);
+  }, [location.pathname]);
   const menuItems = [
     { label: "Dashboard Prépa", path: "/dashboard/prepa", icon: <HomeIcon /> },
     { label: "IC Prépa", path: "/prepa/ic", icon: <SchoolRoundedIcon /> },
@@ -168,7 +174,7 @@ export default function MainLayoutPrepa() {
           <IconButton
             color="inherit"
             edge="start"
-            onClick={toggleDrawer}
+            onClick={openDrawer}
             sx={{
               mr: 0.5,
               width: 42,
@@ -362,7 +368,7 @@ export default function MainLayoutPrepa() {
       <Drawer
         variant="temporary"
         open={open}
-        onClose={toggleDrawer}
+        onClose={closeDrawer}
         ModalProps={{ keepMounted: true }}
         sx={{
           "& .MuiDrawer-paper": {
@@ -425,7 +431,7 @@ export default function MainLayoutPrepa() {
               component={Link}
               to={item.path}
               selected={isActive(item.path)}
-              onClick={toggleDrawer}
+              onClick={closeDrawer}
               sx={getDrawerItemSx(theme)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>

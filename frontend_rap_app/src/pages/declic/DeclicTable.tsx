@@ -1,30 +1,29 @@
 // -----------------------------------------------------------------------------
-// 📄 DeclicTable.tsx — VERSION 100% CORRIGÉE
+// 📄 DeclicTable.tsx — ResponsiveTableTemplate + sticky + ligne TOTAL
 // -----------------------------------------------------------------------------
 
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Box,
   Checkbox,
-  Typography,
-  IconButton,
-  Stack,
-  Paper,
   Chip,
+  IconButton,
+  Link,
+  Stack,
+  TableCell,
+  TableRow,
+  Typography,
   useTheme,
 } from "@mui/material";
-import { useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link as RouterLink } from "react-router-dom";
-import { Link } from "@mui/material";
 import type { Declic } from "src/types/declic";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import ResponsiveTableTemplate, {
+  type TableColumn,
+} from "../../components/ResponsiveTableTemplate";
 import type { AppTheme } from "../../theme";
 
 /* ---------- Helpers ---------- */
@@ -44,6 +43,14 @@ function formatDateFR(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return "—";
   return dtfDateFR ? dtfDateFR.format(d) : d.toLocaleDateString("fr-FR");
 }
+
+const W_CHECK = 50;
+const W_TYPE = 150;
+const OFF_TYPE = W_CHECK;
+const OFF_DATE = W_CHECK + W_TYPE;
+const W_DATE = 100;
+const OFF_CENTRE = OFF_DATE + W_DATE;
+const W_CENTRE = 200;
 
 /* ---------- Component ---------- */
 type Props = {
@@ -71,25 +78,27 @@ export default function DeclicTable({
 }: Props) {
   const theme = useTheme<AppTheme>();
   const navigate = useNavigate();
-  const tableHeaderBackground =
-    theme.palette.mode === "light"
-      ? theme.custom.table.header.background.light
-      : theme.custom.table.header.background.dark;
-  const tableHeaderBorder =
-    theme.palette.mode === "light"
-      ? theme.custom.table.header.borderBottom.light
-      : theme.custom.table.header.borderBottom.dark;
-  const tableRowStripedBackground =
-    theme.palette.mode === "light"
-      ? theme.custom.table.row.stripedEven.light
-      : theme.custom.table.row.stripedEven.dark;
+
+  const tableHeaderBackground = useMemo(
+    () =>
+      theme.palette.mode === "light"
+        ? theme.custom.table.header.background.light
+        : theme.custom.table.header.background.dark,
+    [theme]
+  );
+  const tableHeaderBorder = useMemo(
+    () =>
+      theme.palette.mode === "light"
+        ? theme.custom.table.header.borderBottom.light
+        : theme.custom.table.header.borderBottom.dark,
+    [theme]
+  );
 
   const goEdit = useCallback(
     (id: number) => (onEdit ? onEdit(id) : navigate(`/declic/${id}/edit`)),
     [navigate, onEdit]
   );
 
-  /* ---------- Selection logic ---------- */
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const pageIds = useMemo(() => items.map((i) => i.id), [items]);
   const allChecked = pageIds.length > 0 && pageIds.every((id) => selectedSet.has(id));
@@ -121,22 +130,229 @@ export default function DeclicTable({
     [onSelectionChange, selectedIds, selectedSet]
   );
 
-  /* ---------- Totaux globaux ---------- */
-
   const totalInscrits = items.reduce((s, d) => s + (d.nb_inscrits_declic ?? 0), 0);
-
   const totalPresents = items.reduce((s, d) => s + (d.nb_presents_declic ?? 0), 0);
-
   const totalAbsents = items.reduce((s, d) => s + (d.nb_absents_declic ?? 0), 0);
-
-  /* --- Taux Atelier --- */
-  const totalPresentsAt = items.reduce((s, d) => s + (d.nb_presents_declic ?? 0), 0);
-  const totalAbsentsAt = items.reduce((s, d) => s + (d.nb_absents_declic ?? 0), 0);
-
+  const totalPresentsAt = totalPresents;
+  const totalAbsentsAt = totalAbsents;
   const tauxAtGlobal =
     totalPresentsAt + totalAbsentsAt > 0
       ? ((totalPresentsAt / (totalPresentsAt + totalAbsentsAt)) * 100).toFixed(1)
       : "—";
+
+  const fmt = (v?: number | null) => (v != null ? `${v.toFixed(1)} %` : "—");
+
+  const columns = useMemo<TableColumn<Declic>[]>(
+    () => [
+      {
+        key: "select",
+        label: "",
+        width: W_CHECK,
+        sticky: "left",
+        stickyLeftOffsetPx: 0,
+        headerRender: () => (
+          <Checkbox
+            inputRef={headerCbRef}
+            indeterminate={someChecked}
+            checked={allChecked}
+            onChange={toggleAllThisPage}
+          />
+        ),
+        render: (d) => (
+          <Box onClick={(e) => e.stopPropagation()} sx={{ display: "inline-flex" }}>
+            <Checkbox
+              checked={selectedSet.has(d.id)}
+              onChange={(e) => toggleOne(d.id, e.target.checked)}
+            />
+          </Box>
+        ),
+      },
+      {
+        key: "type_declic",
+        label: "📌 Type",
+        width: W_TYPE,
+        sticky: "left",
+        stickyLeftOffsetPx: OFF_TYPE,
+        render: (d) => <Typography fontWeight={600}>{d.type_declic_display}</Typography>,
+      },
+      {
+        key: "date_declic",
+        label: "📅 Date",
+        width: W_DATE,
+        sticky: "left",
+        stickyLeftOffsetPx: OFF_DATE,
+        render: (d) => (
+          <Chip size="small" color="info" label={formatDateFR(d.date_declic)} />
+        ),
+      },
+      {
+        key: "centre",
+        label: "🏫 Centre",
+        width: W_CENTRE,
+        sticky: "left",
+        stickyLeftOffsetPx: OFF_CENTRE,
+        render: (d) =>
+          d.centre?.id ? (
+            <Link
+              component={RouterLink}
+              to={`/declic/objectifs?centre=${d.centre.id}`}
+              underline="hover"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {d.centre.nom}
+            </Link>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "nb_inscrits",
+        label: "👤 Inscrits",
+        render: (d) => (
+          <Chip
+            size="small"
+            color={d.nb_inscrits_declic ? "info" : "default"}
+            label={d.nb_inscrits_declic ?? 0}
+          />
+        ),
+      },
+      {
+        key: "nb_presents",
+        label: "👥 Présents",
+        render: (d) => (
+          <Chip
+            size="small"
+            color={d.nb_presents_declic ? "primary" : "default"}
+            label={d.nb_presents_declic ?? 0}
+          />
+        ),
+      },
+      {
+        key: "nb_absents",
+        label: "🚫 Absents",
+        render: (d) => (
+          <Chip
+            size="small"
+            color={d.nb_absents_declic ? "warning" : "default"}
+            label={d.nb_absents_declic ?? 0}
+          />
+        ),
+      },
+      {
+        key: "presence",
+        label: "📈 Présence globale",
+        render: (d) => (
+          <Chip
+            size="small"
+            color={
+              (d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0) > 0 &&
+              ((d.nb_presents_declic ?? 0) /
+                ((d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0))) *
+                100 >=
+                70
+                ? "success"
+                : "warning"
+            }
+            label={fmt(
+              (d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0) > 0
+                ? ((d.nb_presents_declic ?? 0) /
+                    ((d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0))) *
+                    100
+                : null
+            )}
+          />
+        ),
+      },
+    ],
+    [
+      allChecked,
+      someChecked,
+      toggleAllThisPage,
+      toggleOne,
+      selectedSet,
+    ]
+  );
+
+  const tableBodyFooter = useMemo(
+    () => (
+      <TableRow
+        sx={{
+          position: "sticky",
+          bottom: 0,
+          bgcolor: tableHeaderBackground,
+          borderTop: tableHeaderBorder,
+          zIndex: 4,
+        }}
+      >
+        <TableCell />
+        <TableCell colSpan={3} sx={{ fontWeight: 700 }}>
+          TOTAL
+        </TableCell>
+        <TableCell>
+          <Typography fontWeight={700} color="info.main">
+            {totalInscrits}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Typography fontWeight={700} color="primary.main">
+            {totalPresents}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Typography fontWeight={700} color="warning.main">
+            {totalAbsents}
+          </Typography>
+        </TableCell>
+        <TableCell>
+          <Typography fontWeight={700} color="warning.dark">
+            {tauxAtGlobal} %
+          </Typography>
+        </TableCell>
+        <TableCell align="center">—</TableCell>
+      </TableRow>
+    ),
+    [
+      tableHeaderBackground,
+      tableHeaderBorder,
+      totalAbsents,
+      totalInscrits,
+      totalPresents,
+      tauxAtGlobal,
+    ]
+  );
+
+  const mobileStackFooter = useMemo(
+    () => (
+      <Box
+        sx={{
+          p: 1.5,
+          borderRadius: 1,
+          border: 1,
+          borderColor: "divider",
+          bgcolor: tableHeaderBackground,
+        }}
+      >
+        <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+          TOTAL (page)
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+          <Typography variant="caption">
+            Inscrits : <strong>{totalInscrits}</strong>
+          </Typography>
+          <Typography variant="caption">
+            Présents : <strong>{totalPresents}</strong>
+          </Typography>
+          <Typography variant="caption">
+            Absents : <strong>{totalAbsents}</strong>
+          </Typography>
+          <Typography variant="caption">
+            Taux : <strong>{tauxAtGlobal} %</strong>
+          </Typography>
+        </Stack>
+      </Box>
+    ),
+    [tableHeaderBackground, totalAbsents, totalInscrits, totalPresents, tauxAtGlobal]
+  );
 
   if (!items.length) {
     return (
@@ -146,323 +362,55 @@ export default function DeclicTable({
     );
   }
 
-  const fmt = (v?: number | null) => (v != null ? `${v.toFixed(1)} %` : "—");
-
-  /* ---------- Sticky Column Offsets ---------- */
-  const W_CHECK = 50;
-  const W_TYPE = 150;
-  const W_DATE = 100;
-  const W_CENTRE = 200;
-
-  /* ---------- Render ---------- */
   return (
-    <TableContainer
-      component={Paper}
-      sx={{
+    <ResponsiveTableTemplate<Declic>
+      columns={columns}
+      data={items}
+      getRowId={(d) => d.id}
+      onRowClick={onRowClick ? (d) => onRowClick(d.id) : undefined}
+      cardTitle={(d) => d.type_declic_display ?? d.type_declic}
+      actions={(d) => (
+        <Stack direction="row" spacing={1}>
+          <IconButton size="small" onClick={() => onRowClick?.(d.id)}>
+            <VisibilityIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton size="small" color="primary" onClick={() => goEdit(d.id)}>
+            <EditIcon fontSize="inherit" />
+          </IconButton>
+          {onDelete && (d.is_active ?? true) && (
+            <IconButton size="small" color="error" onClick={() => onDelete(d.id)}>
+              <DeleteIcon fontSize="inherit" />
+            </IconButton>
+          )}
+          {onToggleArchive && !(d.is_active ?? true) && (
+            <IconButton
+              size="small"
+              color="success"
+              aria-label="Restaurer"
+              onClick={() => onToggleArchive(d.id, true)}
+            >
+              ↩
+            </IconButton>
+          )}
+          {onHardDelete && !(d.is_active ?? true) && (
+            <IconButton
+              size="small"
+              color="error"
+              aria-label="Supprimer définitivement"
+              onClick={() => onHardDelete(d.id)}
+            >
+              ✖
+            </IconButton>
+          )}
+        </Stack>
+      )}
+      showActionsColumn
+      tableBodyFooter={tableBodyFooter}
+      mobileStackFooter={mobileStackFooter}
+      containerSx={{
         maxHeight: maxHeight ?? "70vh",
         position: "relative",
       }}
-    >
-      <Table stickyHeader size="small">
-        <TableHead>
-          <TableRow>
-            {/* Sticky 1 : Checkbox */}
-            <TableCell
-              padding="checkbox"
-              sx={{
-                position: "sticky",
-                left: 0,
-                zIndex: 10,
-                backgroundColor: "background.paper",
-                minWidth: W_CHECK,
-                width: W_CHECK,
-              }}
-            >
-              <Checkbox
-                inputRef={headerCbRef}
-                indeterminate={someChecked}
-                checked={allChecked}
-                onChange={toggleAllThisPage}
-              />
-            </TableCell>
-
-            {/* Sticky 2 : Type */}
-            <TableCell
-              sx={{
-                position: "sticky",
-                left: W_CHECK,
-                zIndex: 10,
-                backgroundColor: "background.paper",
-                minWidth: W_TYPE,
-                width: W_TYPE,
-              }}
-            >
-              📌 Type
-            </TableCell>
-
-            {/* Sticky 3 : Date */}
-            <TableCell
-              sx={{
-                position: "sticky",
-                left: W_CHECK + W_TYPE,
-                zIndex: 10,
-                backgroundColor: "background.paper",
-                minWidth: W_DATE,
-                width: W_DATE,
-              }}
-            >
-              📅 Date
-            </TableCell>
-
-            {/* Sticky 4 : Centre */}
-            <TableCell
-              sx={{
-                position: "sticky",
-                left: W_CHECK + W_TYPE + W_DATE,
-                zIndex: 10,
-                backgroundColor: "background.paper",
-                minWidth: W_CENTRE,
-                width: W_CENTRE,
-              }}
-            >
-              🏫 Centre
-            </TableCell>
-
-            {/* Non-sticky columns */}
-            <TableCell>👤 Inscrits</TableCell>
-            <TableCell>👥 Présents</TableCell>
-            <TableCell>🚫 Absents</TableCell>
-
-            <TableCell>📈 Présence globale</TableCell>
-
-            <TableCell>⚙️ Actions</TableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {items.map((d) => {
-            const dateTxt = formatDateFR(d.date_declic);
-            const isChecked = selectedSet.has(d.id);
-
-            return (
-              <TableRow
-                key={d.id}
-                hover
-                onClick={() => onRowClick?.(d.id)}
-                sx={{
-                  cursor: "pointer",
-                  "&:nth-of-type(even)": { bgcolor: tableRowStripedBackground },
-                }}
-              >
-                {/* Sticky 1 : Checkbox */}
-                <TableCell
-                  padding="checkbox"
-                  onClick={(e) => e.stopPropagation()}
-                  sx={{
-                    position: "sticky",
-                    left: 0,
-                    zIndex: 9,
-                    backgroundColor: "background.paper",
-                    minWidth: W_CHECK,
-                    width: W_CHECK,
-                  }}
-                >
-                  <Checkbox
-                    checked={isChecked}
-                    onChange={(e) => toggleOne(d.id, e.target.checked)}
-                  />
-                </TableCell>
-
-                {/* Sticky 2 : Type */}
-                <TableCell
-                  sx={{
-                    position: "sticky",
-                    left: W_CHECK,
-                    zIndex: 9,
-                    backgroundColor: "background.paper",
-                    minWidth: W_TYPE,
-                    width: W_TYPE,
-                  }}
-                >
-                  <Typography fontWeight={600}>{d.type_declic_display}</Typography>
-                </TableCell>
-
-                {/* Sticky 3 : Date */}
-                <TableCell
-                  sx={{
-                    position: "sticky",
-                    left: W_CHECK + W_TYPE,
-                    zIndex: 9,
-                    backgroundColor: "background.paper",
-                    minWidth: W_DATE,
-                    width: W_DATE,
-                  }}
-                >
-                  <Chip size="small" color="info" label={dateTxt} />
-                </TableCell>
-
-                {/* Sticky 4 : Centre */}
-                <TableCell
-                  sx={{
-                    position: "sticky",
-                    left: W_CHECK + W_TYPE + W_DATE,
-                    zIndex: 9,
-                    backgroundColor: "background.paper",
-                    minWidth: W_CENTRE,
-                    width: W_CENTRE,
-                  }}
-                >
-                  {d.centre?.id ? (
-                    <Link
-                      component={RouterLink}
-                      to={`/declic/objectifs?centre=${d.centre.id}`}
-                      underline="hover"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {d.centre.nom}
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-
-                {/* Inscrits */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={d.nb_inscrits_declic ? "info" : "default"}
-                    label={d.nb_inscrits_declic ?? 0}
-                  />
-                </TableCell>
-
-                {/* Présents */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={d.nb_presents_declic ? "primary" : "default"}
-                    label={d.nb_presents_declic ?? 0}
-                  />
-                </TableCell>
-
-                {/* Absents */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={d.nb_absents_declic ? "warning" : "default"}
-                    label={d.nb_absents_declic ?? 0}
-                  />
-                </TableCell>
-
-                {/* Présence globale */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={
-                      (d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0) > 0 &&
-                      ((d.nb_presents_declic ?? 0) /
-                        ((d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0))) *
-                        100 >=
-                        70
-                        ? "success"
-                        : "warning"
-                    }
-                    label={fmt(
-                      (d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0) > 0
-                        ? ((d.nb_presents_declic ?? 0) /
-                            ((d.nb_presents_declic ?? 0) + (d.nb_absents_declic ?? 0))) *
-                            100
-                        : null
-                    )}
-                  />
-                </TableCell>
-
-                {/* Actions */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Stack direction="row" spacing={1}>
-                    <IconButton size="small" onClick={() => onRowClick?.(d.id)}>
-                      <VisibilityIcon fontSize="inherit" />
-                    </IconButton>
-
-                    <IconButton size="small" color="primary" onClick={() => goEdit(d.id)}>
-                      <EditIcon fontSize="inherit" />
-                    </IconButton>
-
-                    {onDelete && (d.is_active ?? true) && (
-                      <IconButton size="small" color="error" onClick={() => onDelete(d.id)}>
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    )}
-
-                    {onToggleArchive && !(d.is_active ?? true) && (
-                      <IconButton
-                        size="small"
-                        color="success"
-                        aria-label="Restaurer"
-                        onClick={() => onToggleArchive(d.id, true)}
-                      >
-                        ↩
-                      </IconButton>
-                    )}
-
-                    {onHardDelete && !(d.is_active ?? true) && (
-                      <IconButton
-                        size="small"
-                        color="error"
-                        aria-label="Supprimer définitivement"
-                        onClick={() => onHardDelete(d.id)}
-                      >
-                        ✖
-                      </IconButton>
-                    )}
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-
-          {/* ---------- Total Row ---------- */}
-          <TableRow
-            sx={{
-              position: "sticky",
-              bottom: 0,
-              bgcolor: tableHeaderBackground,
-              borderTop: tableHeaderBorder,
-              zIndex: 4,
-            }}
-          >
-            <TableCell />
-            <TableCell colSpan={3} sx={{ fontWeight: 700 }}>
-              TOTAL
-            </TableCell>
-
-            <TableCell>
-              <Typography fontWeight={700} color="info.main">
-                {totalInscrits}
-              </Typography>
-            </TableCell>
-
-            <TableCell>
-              <Typography fontWeight={700} color="primary.main">
-                {totalPresents}
-              </Typography>
-            </TableCell>
-
-            <TableCell>
-              <Typography fontWeight={700} color="warning.main">
-                {totalAbsents}
-              </Typography>
-            </TableCell>
-
-            <TableCell>
-              <Typography fontWeight={700} color="warning.dark">
-                {tauxAtGlobal} %
-              </Typography>
-            </TableCell>
-
-            <TableCell align="center">—</TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </TableContainer>
+    />
   );
 }

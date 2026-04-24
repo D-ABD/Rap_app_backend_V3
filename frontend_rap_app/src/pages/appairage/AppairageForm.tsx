@@ -5,11 +5,28 @@ import {
   AppairageMeta,
   AppairageStatut,
 } from "../../types/appairage";
-import { useEffect, useMemo, useState, useRef, useCallback, MutableRefObject } from "react";
-import { Box, Button, Stack, TextField, MenuItem, FormHelperText } from "@mui/material";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  MutableRefObject,
+} from "react";
+import {
+  Box,
+  Button,
+  Stack,
+  TextField,
+  MenuItem,
+  FormHelperText,
+  Typography,
+  Divider,
+} from "@mui/material";
 
 import CandidatsSelectModal from "../../components/modals/CandidatsSelectModal";
 import PartenaireSelectModal from "../../components/modals/PartenairesSelectModal";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 
 type Mode = "create" | "edit";
 
@@ -37,6 +54,7 @@ function toDatetimeLocal(iso?: string | null): string {
     d.getHours()
   )}:${pad(d.getMinutes())}`;
 }
+
 function fromDatetimeLocal(local: string): string | null {
   if (!local) return null;
   const d = new Date(local);
@@ -81,6 +99,7 @@ function extractFormationFromCandidate(c: CandidatePick): {
   if (!nom && c.formation_obj && typeof c.formation_obj === "object") {
     if (typeof c.formation_obj.nom === "string") nom = c.formation_obj.nom ?? nom;
   }
+
   return { id: id ?? null, nom: nom ?? null };
 }
 
@@ -115,10 +134,18 @@ export default function AppairageForm({
   const [form, setForm] = useState<AppairageCreatePayload>(safeInitial);
   useEffect(() => setForm(safeInitial), [safeInitial]);
 
-  const [candidatNom, setCandidatNom] = useState<string | null>(initialValues?.candidat_nom ?? null);
-  const [partenaireNom, setPartenaireNom] = useState<string | null>(initialValues?.partenaire_nom ?? null);
-  const [formationLabel, setFormationLabel] = useState<string | null>(initialValues?.formation_nom ?? null);
-  const [errors, setErrors] = useState<Partial<Record<"candidat" | "partenaire", string>>>({});
+  const [candidatNom, setCandidatNom] = useState<string | null>(
+    initialValues?.candidat_nom ?? null
+  );
+  const [partenaireNom, setPartenaireNom] = useState<string | null>(
+    initialValues?.partenaire_nom ?? null
+  );
+  const [formationLabel, setFormationLabel] = useState<string | null>(
+    initialValues?.formation_nom ?? null
+  );
+  const [errors, setErrors] = useState<
+    Partial<Record<"candidat" | "partenaire", string>>
+  >({});
   const [showCandidatModal, setShowCandidatModal] = useState(false);
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
 
@@ -130,12 +157,16 @@ export default function AppairageForm({
 
   useEffect(() => {
     if (!meta) return;
+
     const c = meta.candidat_choices.find((x) => x.value === form.candidat);
     if (c?.label) setCandidatNom(c.label);
+
     const p = meta.partenaire_choices.find((x) => x.value === form.partenaire);
     if (p?.label) setPartenaireNom(p.label);
+
     const wantedId =
       (typeof fixedFormationId === "number" ? fixedFormationId : form.formation) ?? null;
+
     if (wantedId != null) {
       const f = meta.formation_choices.find((x) => x.value === wantedId);
       if (f?.label) setFormationLabel(f.label);
@@ -144,13 +175,16 @@ export default function AppairageForm({
 
   const displayFormation = useMemo(() => {
     if (formationLabel && formationLabel.trim() !== "") return formationLabel;
+
     const wantedId =
       (typeof fixedFormationId === "number" ? fixedFormationId : form.formation) ?? null;
+
     if (wantedId && meta?.formation_choices) {
       const found = meta.formation_choices.find((x) => x.value === wantedId);
       if (found?.label) return found.label;
       return `#${wantedId}`;
     }
+
     return "Formation inconnue";
   }, [formationLabel, fixedFormationId, form.formation, meta]);
 
@@ -176,27 +210,38 @@ export default function AppairageForm({
   useEffect(() => {
     formRef.current = form;
   }, [form]);
+
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
+
   useEffect(() => {
     fixedFormationIdRef.current = fixedFormationId;
   }, [fixedFormationId]);
+
   useEffect(() => {
     onSubmitRef.current = onSubmit;
   }, [onSubmit]);
 
   const doSubmit = useCallback(async () => {
     if (loadingRef.current || submittingRef.current) return;
+
     const current = formRef.current;
     const nextErrors: Partial<Record<"candidat" | "partenaire", string>> = {};
-    if (!current.candidat || current.candidat <= 0)
+
+    if (!current.candidat || current.candidat <= 0) {
       nextErrors.candidat = "Sélectionnez un candidat.";
-    if (!current.partenaire || current.partenaire <= 0)
+    }
+
+    if (!current.partenaire || current.partenaire <= 0) {
       nextErrors.partenaire = "Sélectionnez un partenaire.";
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
+
     submittingRef.current = true;
+
     try {
       const payload: AppairageCreatePayload = {
         ...current,
@@ -204,7 +249,9 @@ export default function AppairageForm({
           ? { formation: fixedFormationIdRef.current }
           : {}),
       };
+
       if (!payload.date_retour) payload.date_retour = null;
+
       await onSubmitRef.current(payload);
     } finally {
       submittingRef.current = false;
@@ -222,6 +269,7 @@ export default function AppairageForm({
         doSubmit();
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [doSubmit]);
@@ -231,68 +279,99 @@ export default function AppairageForm({
     value: AppairageCreatePayload[K]
   ) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const submitLabel = loading
+    ? mode === "create"
+      ? "⏳ Création…"
+      : "⏳ Sauvegarde…"
+    : mode === "create"
+      ? "✅ Créer l’appairage"
+      : useOwnForm
+        ? "✅ Enregistrer les modifications"
+        : "✅ Enregistrer";
+
   const FormContent = (
-    <Stack spacing={2}>
-      {/* Candidat */}
-      <Box>
-        <TextField
-          label="Candidat"
-          value={candidatNom ?? "Candidat inconnu"}
-          fullWidth
-          InputProps={{ readOnly: true }}
-          error={!!errors.candidat}
-          helperText={errors.candidat}
-        />
-        {mode === "create" && (
-          <Button
-            variant="outlined"
-            onClick={() => setShowCandidatModal(true)}
-            disabled={loading}
-            sx={{ mt: 1 }}
-          >
-            🔍 {candidatNom ? "Changer de candidat" : "Sélectionner un candidat"}
-          </Button>
-        )}
-        <FormHelperText>Astuce : Ctrl/Cmd + Entrée pour valider</FormHelperText>
-      </Box>
+    <Stack spacing={3}>
+      <Stack spacing={1}>
+        <Typography variant="h6">Sélection</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Associez un candidat, un partenaire et vérifiez la formation retenue.
+        </Typography>
+      </Stack>
 
-      {/* Partenaire */}
-      <Box>
-        <TextField
-          label="Partenaire"
-          value={partenaireNom ?? "Partenaire inconnu"}
-          fullWidth
-          InputProps={{ readOnly: true }}
-          error={!!errors.partenaire}
-          helperText={errors.partenaire}
-        />
-        <Button
-          variant="outlined"
-          onClick={() => setShowPartenaireModal(true)}
-          disabled={loading}
-          sx={{ mt: 1 }}
-        >
-          🔍 {partenaireNom ? "Changer de partenaire" : "Sélectionner un partenaire"}
-        </Button>
-      </Box>
+      <Divider />
 
-      {/* Formation */}
-      <Box>
-        <TextField
-          label="Formation"
-          value={displayFormation}
-          fullWidth
-          InputProps={{ readOnly: true }}
-        />
-        <FormHelperText>
-          {typeof fixedFormationId === "number"
-            ? `Formation fixée (#${fixedFormationId}).`
-            : "Si le candidat a une formation, elle sera reprise automatiquement."}
-        </FormHelperText>
-      </Box>
+      <Stack spacing={2.5}>
+        <Stack spacing={1}>
+          <TextField
+            label="Candidat"
+            value={candidatNom ?? "Candidat inconnu"}
+            fullWidth
+            InputProps={{ readOnly: true }}
+            error={!!errors.candidat}
+            helperText={errors.candidat}
+          />
 
-      {/* Statut */}
-      <Box>
+          {mode === "create" && (
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={() => setShowCandidatModal(true)}
+                disabled={loading}
+              >
+                🔍 {candidatNom ? "Changer de candidat" : "Sélectionner un candidat"}
+              </Button>
+            </Box>
+          )}
+
+          <FormHelperText>Astuce : Ctrl/Cmd + Entrée pour valider</FormHelperText>
+        </Stack>
+
+        <Stack spacing={1}>
+          <TextField
+            label="Partenaire"
+            value={partenaireNom ?? "Partenaire inconnu"}
+            fullWidth
+            InputProps={{ readOnly: true }}
+            error={!!errors.partenaire}
+            helperText={errors.partenaire}
+          />
+
+          <Box>
+            <Button
+              variant="outlined"
+              onClick={() => setShowPartenaireModal(true)}
+              disabled={loading}
+            >
+              🔍 {partenaireNom ? "Changer de partenaire" : "Sélectionner un partenaire"}
+            </Button>
+          </Box>
+        </Stack>
+
+        <Stack spacing={1}>
+          <TextField
+            label="Formation"
+            value={displayFormation}
+            fullWidth
+            InputProps={{ readOnly: true }}
+          />
+          <FormHelperText>
+            {typeof fixedFormationId === "number"
+              ? `Formation fixée (#${fixedFormationId}).`
+              : "Si le candidat a une formation, elle sera reprise automatiquement."}
+          </FormHelperText>
+        </Stack>
+      </Stack>
+
+      <Divider />
+
+      <Stack spacing={1}>
+        <Typography variant="h6">Suivi</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Définissez le statut et les informations de retour partenaire.
+        </Typography>
+      </Stack>
+
+      <Stack spacing={2.5}>
         <TextField
           select
           label="Statut"
@@ -308,63 +387,52 @@ export default function AppairageForm({
             </MenuItem>
           ))}
         </TextField>
-      </Box>
 
-      {/* Retour partenaire */}
-      <TextField
-        label="Retour partenaire"
-        value={form.retour_partenaire ?? ""}
-        onChange={(e) => handleChange("retour_partenaire", e.target.value)}
-        fullWidth
-        multiline
-        minRows={3}
-        disabled={loading}
-      />
+        <TextField
+          label="Retour partenaire"
+          value={form.retour_partenaire ?? ""}
+          onChange={(e) => handleChange("retour_partenaire", e.target.value)}
+          fullWidth
+          multiline
+          minRows={3}
+          disabled={loading}
+        />
 
-      {/* Date de retour */}
-      <TextField
-        label="Date de retour"
-        type={resolvedDateType}
-        value={dateRetourLocal}
-        onChange={(e) =>
-          handleChange(
-            "date_retour",
-            resolvedDateType === "datetime-local"
-              ? e.target.value
-                ? fromDatetimeLocal(e.target.value)
-                : null
-              : e.target.value
-                ? new Date(`${e.target.value}T00:00:00`).toISOString()
-                : null
-          )
-        }
-        fullWidth
-        disabled={loading}
-        InputLabelProps={{ shrink: true }} // ✅ corrige le chevauchement label/valeur
-      />
+        <TextField
+          label="Date de retour"
+          type={resolvedDateType}
+          value={dateRetourLocal}
+          onChange={(e) =>
+            handleChange(
+              "date_retour",
+              resolvedDateType === "datetime-local"
+                ? e.target.value
+                  ? fromDatetimeLocal(e.target.value)
+                  : null
+                : e.target.value
+                  ? new Date(`${e.target.value}T00:00:00`).toISOString()
+                  : null
+            )
+          }
+          fullWidth
+          disabled={loading}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
 
-      {/* Submit */}
-      {useOwnForm ? (
-        <Button type="submit" variant="contained" disabled={loading}>
-          {loading
-            ? mode === "create"
-              ? "⏳ Création…"
-              : "⏳ Sauvegarde…"
-            : mode === "create"
-              ? "✅ Créer l’appairage"
-              : "✅ Enregistrer les modifications"}
-        </Button>
-      ) : (
-        <Button type="button" variant="contained" onClick={doSubmit} disabled={loading}>
-          {loading
-            ? mode === "create"
-              ? "⏳ Création…"
-              : "⏳ Sauvegarde…"
-            : mode === "create"
-              ? "✅ Créer l’appairage"
-              : "✅ Enregistrer"}
-        </Button>
-      )}
+      <Divider />
+
+      <FormActionsBar>
+        {useOwnForm ? (
+          <Button type="submit" variant="contained" disabled={loading}>
+            {submitLabel}
+          </Button>
+        ) : (
+          <Button type="button" variant="contained" onClick={doSubmit} disabled={loading}>
+            {submitLabel}
+          </Button>
+        )}
+      </FormActionsBar>
     </Stack>
   );
 
@@ -385,7 +453,6 @@ export default function AppairageForm({
         <Box>{FormContent}</Box>
       )}
 
-      {/* Modals */}
       <CandidatsSelectModal
         show={showCandidatModal}
         onClose={() => setShowCandidatModal(false)}
@@ -393,17 +460,22 @@ export default function AppairageForm({
           setCandidatNom(c.nom_complet);
           setForm((f) => ({ ...f, candidat: c.id }));
           setErrors((e) => ({ ...e, candidat: undefined }));
+
           if (typeof fixedFormationId !== "number") {
-            const { id: candFormationId, nom: candFormationNom } = extractFormationFromCandidate(c);
+            const { id: candFormationId, nom: candFormationNom } =
+              extractFormationFromCandidate(c);
+
             if (candFormationId != null) {
               setForm((f) => ({ ...f, formation: candFormationId }));
               const metaLabel =
-                meta?.formation_choices.find((x) => x.value === candFormationId)?.label ?? null;
+                meta?.formation_choices.find((x) => x.value === candFormationId)?.label ??
+                null;
               setFormationLabel(metaLabel ?? candFormationNom ?? `#${candFormationId}`);
             } else if (candFormationNom) {
               setFormationLabel(candFormationNom);
             }
           }
+
           setShowCandidatModal(false);
         }}
       />

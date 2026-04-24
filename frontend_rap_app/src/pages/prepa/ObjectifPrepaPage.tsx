@@ -21,7 +21,10 @@ import ObjectifPrepaTable from "./ObjectifPrepaTable";
 import usePagination from "src/hooks/usePagination";
 import ObjectifPrepaForm from "./ObjectifPrepaForm";
 
-import { useObjectifsPrepa, useObjectifsPrepaFiltersOptions } from "src/hooks/usePrepaObjectifs";
+import {
+  useObjectifsPrepa,
+  useObjectifsPrepaFiltersOptions,
+} from "src/hooks/usePrepaObjectifs";
 
 import type { ObjectifPrepaFiltresValues } from "src/types/prepa";
 import FiltresObjectifsPrepaPanel from "src/components/filters/FiltresObjectifsPrepaPanel";
@@ -34,12 +37,14 @@ export default function ObjectifPrepaPage() {
   const { user } = useAuth();
   const canWritePrepa = canWritePrepaRole(user?.role);
   const [searchParams] = useSearchParams();
+
   const scopedCentre = useMemo(() => {
     const raw = searchParams.get("centre");
     if (!raw) return undefined;
     const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : undefined;
   }, [searchParams]);
+
   // 🎛️ États des filtres
   const [filters, setFilters] = useState<ObjectifPrepaFiltresValues>({
     annee: new Date().getFullYear(),
@@ -66,7 +71,8 @@ export default function ObjectifPrepaPage() {
   }, [scopedCentre]);
 
   // 🔢 Pagination locale
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   // 🔍 Filtres envoyés à l’API
   const effectiveFilters = useMemo(
@@ -76,7 +82,8 @@ export default function ObjectifPrepaPage() {
 
   // 📥 Données depuis l’API
   const { data, isLoading, isError, refetch } = useObjectifsPrepa(effectiveFilters);
-  const { data: options, isLoading: isLoadingOptions } = useObjectifsPrepaFiltersOptions();
+  const { data: options, isLoading: isLoadingOptions } =
+    useObjectifsPrepaFiltersOptions();
 
   // ✅ Toujours un tableau (évite les erreurs .reduce)
   const objectifs = useMemo(() => {
@@ -121,6 +128,9 @@ export default function ObjectifPrepaPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
+  const isBusy = isLoading || isLoadingOptions;
+  const hasResults = objectifs.length > 0;
+
   return (
     <PageTemplate
       refreshButton
@@ -130,7 +140,10 @@ export default function ObjectifPrepaPage() {
           placeholder="🔍 Rechercher un objectif Prépa..."
           value={filters.search ?? ""}
           onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
             setPage(1);
           }}
         />
@@ -138,7 +151,7 @@ export default function ObjectifPrepaPage() {
       filters={
         showFilters && (
           <FiltresObjectifsPrepaPanel
-            options={options ?? { annee: [], centre: [], departement: [] }} // ✅ fallback vide
+            options={options ?? { annee: [], centre: [], departement: [] }}
             values={filters}
             hideSearch
             hideToggle
@@ -149,8 +162,12 @@ export default function ObjectifPrepaPage() {
       }
       showFilters={showFilters}
       actions={
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} size="small">
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setShowFilters((v) => !v)}
+          >
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
@@ -201,7 +218,6 @@ export default function ObjectifPrepaPage() {
                 width: 320,
                 maxWidth: "calc(100vw - 32px)",
                 p: 1.25,
-                borderRadius: 3,
               },
             }}
           >
@@ -221,13 +237,12 @@ export default function ObjectifPrepaPage() {
         </Stack>
       }
       footer={
-        count > 0 && (
+        hasResults ? (
           <Stack
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
             alignItems="center"
             spacing={1}
-            mt={2}
           >
             <Typography variant="body2">
               Page {page} / {totalPages} ({count} résultats)
@@ -239,16 +254,15 @@ export default function ObjectifPrepaPage() {
               color="primary"
             />
           </Stack>
-        )
+        ) : null
       }
     >
-      {/* 🧭 Contenu principal */}
-      {isLoading || isLoadingOptions ? (
-        <Stack alignItems="center" justifyContent="center" sx={{ mt: 6 }}>
+      {isBusy ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
           <CircularProgress />
         </Stack>
-      ) : objectifs.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
           <Typography>
             Aucun objectif trouvé pour {filters.annee ?? new Date().getFullYear()}.
           </Typography>
@@ -257,7 +271,6 @@ export default function ObjectifPrepaPage() {
         <ObjectifPrepaTable data={objectifs} />
       )}
 
-      {/* 🧩 Formulaire modale */}
       <ObjectifPrepaForm
         open={showForm}
         onClose={() => {

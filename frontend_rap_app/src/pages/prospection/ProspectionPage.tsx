@@ -31,7 +31,10 @@ import useFiltresProspections, {
   prefetchProspectionDetail,
   useProspections,
 } from "../../hooks/useProspection";
-import type { Prospection, ProspectionFiltresValues } from "../../types/prospection";
+import type {
+  Prospection,
+  ProspectionFiltresValues,
+} from "../../types/prospection";
 import { useRedirectToCreateProspection } from "../../hooks/useRedirectToCreateProspection";
 import { useAuth } from "../../hooks/useAuth";
 import ProspectionTable from "./ProspectionTable";
@@ -238,7 +241,9 @@ export default function ProspectionPage() {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
     try {
-      await Promise.all(idsToDelete.map((id) => api.delete(`/prospections/${id}/`)));
+      await Promise.all(
+        idsToDelete.map((id) => api.delete(`/prospections/${id}/`))
+      );
       toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
       setSelectedId(null);
@@ -255,9 +260,8 @@ export default function ProspectionPage() {
 
   const [showDetail, setShowDetail] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [selectedProspection, setSelectedProspection] = useState<Prospection | null>(
-    null
-  );
+  const [selectedProspection, setSelectedProspection] =
+    useState<Prospection | null>(null);
 
   const handleRowClick = (id: number, prospection?: Prospection) => {
     setSelectedProspection(prospection ?? null);
@@ -341,7 +345,9 @@ export default function ProspectionPage() {
       setSelectedIds([]);
       setReloadKey((k) => k + 1);
     } catch {
-      toast.error("Impossible de changer le statut des prospections sélectionnées.");
+      toast.error(
+        "Impossible de changer le statut des prospections sélectionnées."
+      );
     } finally {
       setBulkStatusLoading(false);
     }
@@ -588,7 +594,9 @@ export default function ProspectionPage() {
       {loading ? (
         <CircularProgress />
       ) : error ? (
-        <Typography color="error">Erreur lors du chargement des prospections.</Typography>
+        <Typography color="error">
+          Erreur lors du chargement des prospections.
+        </Typography>
       ) : prospections.length === 0 ? (
         <Box textAlign="center" color="text.secondary" my={4}>
           <Box fontSize={48} mb={1}>
@@ -597,7 +605,7 @@ export default function ProspectionPage() {
           <Typography>Aucune prospection trouvée.</Typography>
         </Box>
       ) : (
-        <Box sx={{ width: "100%", overflowX: "auto", mt: 2 }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <ProspectionTable
             prospections={prospections}
             selectedIds={selectedIds}
@@ -646,7 +654,8 @@ export default function ProspectionPage() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. La prospection archivée sera supprimée définitivement.
+            Cette action est irréversible. La prospection archivée sera supprimée
+            définitivement.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

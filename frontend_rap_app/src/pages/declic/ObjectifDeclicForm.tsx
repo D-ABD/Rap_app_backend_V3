@@ -2,6 +2,7 @@
 // 🎯 Formulaire Objectif Déclic — CRUD complet (hook-based, MUI ready)
 // -----------------------------------------------------------------------------
 import {
+  Box,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -11,7 +12,6 @@ import {
   TextField,
   Stack,
   Typography,
-  Paper,
   CircularProgress,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +35,31 @@ interface Props {
   id?: number | null;
 }
 
+type DialogSectionProps = {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+};
+
+function DialogSection({ title, subtitle, children }: DialogSectionProps) {
+  return (
+    <Stack spacing={1.5}>
+      <Box>
+        <Typography variant="subtitle1" fontWeight={700}>
+          {title}
+        </Typography>
+        {subtitle ? (
+          <Typography variant="body2" color="text.secondary">
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Box>
+
+      <Box>{children}</Box>
+    </Stack>
+  );
+}
+
 // ─────────────────────────────────────────────
 // 📘 Composant principal
 // ─────────────────────────────────────────────
@@ -43,7 +68,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
   const createMutation = useCreateObjectifDeclic();
   const updateMutation = useUpdateObjectifDeclic();
 
-  // ✅ On mémorise la liste (évite les warnings ESLint)
   const objectifs = useMemo(() => paginated?.results ?? [], [paginated]);
 
   const [form, setForm] = useState<Partial<ObjectifDeclic>>({
@@ -53,9 +77,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
   const [showCentreModal, setShowCentreModal] = useState(false);
   const [centreLabel, setCentreLabel] = useState("");
 
-  // ───────────────────────────────
-  // 🔁 Préremplir le formulaire si édition
-  // ───────────────────────────────
   useEffect(() => {
     if (!id || objectifs.length === 0) {
       setForm({ annee: new Date().getFullYear() });
@@ -67,7 +88,7 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
     if (found) {
       setForm({
         ...found,
-        centre_id: found.centre_id ?? found.centre?.id, // ✅ Ajout du centre_id
+        centre_id: found.centre_id ?? found.centre?.id,
       });
       setCentreLabel(found.centre?.nom ?? "");
     }
@@ -76,9 +97,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
   const handleChange = (key: keyof ObjectifDeclic, value: any) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  // ───────────────────────────────
-  // 💾 Soumission du formulaire
-  // ───────────────────────────────
   const handleSubmit = async () => {
     if (!form.centre_id && !form.centre?.id) {
       toast.warn("Veuillez sélectionner un centre.");
@@ -116,9 +134,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
     }
   };
 
-  // ───────────────────────────────
-  // ⏳ Loader initial
-  // ───────────────────────────────
   if (isLoading) {
     return (
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -130,9 +145,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
     );
   }
 
-  // ───────────────────────────────
-  // 🧱 Formulaire principal
-  // ───────────────────────────────
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -141,97 +153,109 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
         </DialogTitle>
 
         <DialogContent dividers>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Informations principales
-            </Typography>
+          <Stack spacing={3}>
+            <DialogSection
+              title="Informations principales"
+              subtitle="Renseignez l’année, le centre et la valeur cible de l’objectif."
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Année"
+                    type="number"
+                    fullWidth
+                    required
+                    value={form.annee ?? new Date().getFullYear()}
+                    onChange={(e) =>
+                      handleChange(
+                        "annee",
+                        Number(e.target.value) || new Date().getFullYear()
+                      )
+                    }
+                  />
+                </Grid>
 
-            <Grid container spacing={2}>
-              {/* Année */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Année"
-                  type="number"
-                  fullWidth
-                  required
-                  value={form.annee ?? new Date().getFullYear()}
-                  onChange={(e) =>
-                    handleChange("annee", Number(e.target.value) || new Date().getFullYear())
-                  }
-                />
-              </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Objectif (personnes)"
+                    type="number"
+                    fullWidth
+                    required
+                    value={form.valeur_objectif ?? ""}
+                    onChange={(e) =>
+                      handleChange("valeur_objectif", Number(e.target.value) || 0)
+                    }
+                  />
+                </Grid>
 
-              {/* Objectif */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Objectif (personnes)"
-                  type="number"
-                  fullWidth
-                  required
-                  value={form.valeur_objectif ?? ""}
-                  onChange={(e) => handleChange("valeur_objectif", Number(e.target.value) || 0)}
-                />
-              </Grid>
+                <Grid item xs={12} md={8}>
+                  <Stack spacing={1}>
+                    <TextField
+                      label="Centre"
+                      fullWidth
+                      placeholder="— Aucun centre sélectionné —"
+                      value={
+                        centreLabel ||
+                        form.centre?.nom ||
+                        (form.centre_id ? `#${form.centre_id}` : "")
+                      }
+                      InputProps={{ readOnly: true }}
+                    />
 
-              {/* Centre */}
-              <Grid item xs={12} md={8}>
-                <TextField
-                  label="Centre"
-                  fullWidth
-                  placeholder="— Aucun centre sélectionné —"
-                  value={
-                    centreLabel || form.centre?.nom || (form.centre_id ? `#${form.centre_id}` : "")
-                  }
-                  InputProps={{ readOnly: true }}
-                />
-                <Stack direction="row" spacing={1} mt={1}>
-                  <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
-                    🏫 Sélectionner un centre
-                  </Button>
-                  {form.centre_id && (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => {
-                        setForm((f) => ({
-                          ...f,
-                          centre_id: undefined,
-                          centre: null,
-                        }));
-                        setCentreLabel("");
-                      }}
-                    >
-                      ✖ Effacer
-                    </Button>
-                  )}
-                </Stack>
-              </Grid>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setShowCentreModal(true)}
+                      >
+                        🏫 Sélectionner un centre
+                      </Button>
 
-              {/* Département */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  label="Département"
-                  fullWidth
-                  value={form.departement ?? ""}
-                  onChange={(e) => handleChange("departement", e.target.value)}
-                />
-              </Grid>
+                      {form.centre_id && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => {
+                            setForm((f) => ({
+                              ...f,
+                              centre_id: undefined,
+                              centre: null,
+                            }));
+                            setCentreLabel("");
+                          }}
+                        >
+                          ✖ Effacer
+                        </Button>
+                      )}
+                    </Stack>
+                  </Stack>
+                </Grid>
 
-              {/* Commentaire */}
-              <Grid item xs={12}>
-                <RichHtmlEditorField
-                  label="Commentaire"
-                  value={form.commentaire ?? ""}
-                  onChange={(value) => handleChange("commentaire", value)}
-                  placeholder="Ajouter un commentaire enrichi…"
-                  minHeight={120}
-                />
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    label="Département"
+                    fullWidth
+                    value={form.departement ?? ""}
+                    onChange={(e) => handleChange("departement", e.target.value)}
+                  />
+                </Grid>
               </Grid>
-            </Grid>
-          </Paper>
+            </DialogSection>
+
+            <DialogSection
+              title="Commentaire"
+              subtitle="Ajoutez un commentaire enrichi si nécessaire."
+            >
+              <RichHtmlEditorField
+                label="Commentaire"
+                value={form.commentaire ?? ""}
+                onChange={(value) => handleChange("commentaire", value)}
+                placeholder="Ajouter un commentaire enrichi…"
+                minHeight={120}
+              />
+            </DialogSection>
+          </Stack>
         </DialogContent>
 
-        {/* 🎯 Actions */}
         <DialogActions>
           <Button onClick={onClose} disabled={saving}>
             Annuler
@@ -251,7 +275,6 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* 🏫 Sélecteur de centre */}
       <CentresSelectModal
         show={showCentreModal}
         onClose={() => setShowCentreModal(false)}
@@ -262,7 +285,9 @@ export default function ObjectifDeclicForm({ open, onClose, id }: Props) {
             centre_id: c.id,
             departement: c.departement ?? f.departement,
           }));
-          setCentreLabel(`${c.nom ?? c.label ?? `Centre #${c.id}`} (${c.departement ?? ""})`);
+          setCentreLabel(
+            `${c.nom ?? c.label ?? `Centre #${c.id}`}${c.departement ? ` (${c.departement})` : ""}`
+          );
           setShowCentreModal(false);
         }}
       />

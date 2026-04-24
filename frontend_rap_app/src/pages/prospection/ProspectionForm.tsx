@@ -6,8 +6,8 @@ import {
   Grid,
   MenuItem,
   CircularProgress,
-  Typography,
   Stack,
+  Typography,
 } from "@mui/material";
 import {
   Business as BusinessIcon,
@@ -193,6 +193,7 @@ export default function ProspectionForm({
 
   const handleSubmit = async (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
+
     if (!form.partenaire) {
       toast.warning("Veuillez sélectionner un partenaire.");
       return;
@@ -251,6 +252,14 @@ export default function ProspectionForm({
     </Stack>
   );
 
+  const cardSx = {
+    mb: 3,
+    background: (theme: Theme) =>
+      theme.palette.mode === "light"
+        ? (theme as AppTheme).custom.form.section.paperBackground.light
+        : (theme as AppTheme).custom.form.section.paperBackground.dark,
+  };
+
   return (
     <Box component="form" onSubmit={handleSubmit}>
       {generalError ? (
@@ -260,84 +269,74 @@ export default function ProspectionForm({
       ) : null}
 
       <FormSectionCard
-        sx={{
-          mb: 3,
-          background: (theme: Theme) =>
-            theme.palette.mode === "light"
-              ? (theme as AppTheme).custom.form.section.paperBackground.light
-              : (theme as AppTheme).custom.form.section.paperBackground.dark,
-        }}
-        title={sectionTitle(<BusinessIcon color="primary" />, "Entités liées (Partenaire, Formation, Candidat)")}
+        sx={cardSx}
+        title={sectionTitle(
+          <BusinessIcon color="primary" />,
+          "Entités liées (Partenaire, Formation, Candidat)"
+        )}
       >
-        <Stack spacing={2}>
-          <EntityPickerField
-            label="Partenaire"
-            displayValue={partenaireNom ?? ""}
-            placeholder="— Non défini"
-            onOpen={() => setShowPartenaireModal(true)}
-            required
-            helperText="Sélectionnez le partenaire lié à cette prospection."
-          />
+        <Grid container spacing={2} alignItems="stretch">
+          <Grid item xs={12}>
+            <EntityPickerField
+              label="Partenaire"
+              displayValue={partenaireNom ?? ""}
+              placeholder="— Non défini"
+              onOpen={() => setShowPartenaireModal(true)}
+              required
+              helperText="Sélectionnez le partenaire lié à cette prospection."
+            />
+          </Grid>
 
           {!fixedFormationId ? (
+            <Grid item xs={12}>
+              <EntityPickerField
+                label="Formation"
+                displayValue={formationNom ?? ""}
+                placeholder="— Non définie"
+                onOpen={() => setShowFormationModal(true)}
+                disabled={hasCandidateOwner}
+                helperText={
+                  hasCandidateOwner ? (
+                    "La formation du candidat sélectionné sera utilisée automatiquement."
+                  ) : (
+                    <>
+                      Numéro d&apos;offre : <strong>{numOffre ?? "— Non défini"}</strong>
+                    </>
+                  )
+                }
+              />
+            </Grid>
+          ) : null}
+
+          <Grid item xs={12}>
             <EntityPickerField
-              label="Formation"
-              displayValue={formationNom ?? ""}
-              placeholder="— Non définie"
-              onOpen={() => setShowFormationModal(true)}
-              disabled={hasCandidateOwner}
+              label="Candidat"
+              displayValue={ownerUsername ?? ""}
+              placeholder="— Aucun"
+              onOpen={() => setShowOwnerModal(true)}
               helperText={
-                hasCandidateOwner ? (
-                  "La formation du candidat sélectionné sera utilisée automatiquement."
-                ) : (
+                !form.owner ? (
+                  "Vous pouvez attribuer cette prospection à un candidat existant."
+                ) : form.formation_nom ? (
                   <>
-                    Numéro d&apos;offre : <strong>{numOffre ?? "— Non défini"}</strong>
+                    Cette prospection sera liée au candidat sélectionné. Formation :{" "}
+                    <strong>{form.formation_nom}</strong> (automatique)
                   </>
+                ) : (
+                  "Cette prospection sera liée au candidat sélectionné."
                 )
               }
             />
-          ) : null}
-
-          <EntityPickerField
-            label="Candidat"
-            displayValue={ownerUsername ?? ""}
-            placeholder="— Aucun"
-            onOpen={() => setShowOwnerModal(true)}
-            helperText={
-              !form.owner ? (
-                "Vous pouvez attribuer cette prospection à un candidat existant."
-              ) : form.formation_nom ? (
-                <>
-                  Cette prospection sera liée au candidat sélectionné. Formation :{" "}
-                  <strong>{form.formation_nom}</strong> (automatique)
-                </>
-              ) : (
-                "Cette prospection sera liée au candidat sélectionné."
-              )
-            }
-          />
-        </Stack>
+          </Grid>
+        </Grid>
       </FormSectionCard>
 
       <FormSectionCard
-        sx={{
-          mb: 3,
-          background: (theme: Theme) =>
-            theme.palette.mode === "light"
-              ? (theme as AppTheme).custom.form.section.paperBackground.light
-              : (theme as AppTheme).custom.form.section.paperBackground.dark,
-        }}
+        sx={cardSx}
         title={sectionTitle(<AssignmentIcon color="primary" />, "Informations de prospection")}
       >
-        <Grid
-          container
-          spacing={2}
-          sx={{
-            "& .MuiFormControl-root, & .MuiTextField-root": { width: "100%" },
-            "& .MuiGrid-item": { display: "flex", alignItems: "center" },
-          }}
-        >
-          <Grid item xs={12} sm={6}>
+        <Grid container spacing={2} alignItems="flex-start">
+          <Grid item xs={12} md={6}>
             <Stack spacing={2}>
               <AppDateField
                 name="date_prospection"
@@ -379,7 +378,7 @@ export default function ProspectionForm({
             </Stack>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} md={6}>
             <Stack spacing={2}>
               <AppSelectField
                 label="Moyen de contact"
@@ -442,13 +441,7 @@ export default function ProspectionForm({
       </FormSectionCard>
 
       <FormSectionCard
-        sx={{
-          mb: 3,
-          background: (theme: Theme) =>
-            theme.palette.mode === "light"
-              ? (theme as AppTheme).custom.form.section.paperBackground.light
-              : (theme as AppTheme).custom.form.section.paperBackground.dark,
-        }}
+        sx={cardSx}
         title={sectionTitle(<AssignmentIcon color="primary" />, "Commentaire libre")}
       >
         <RichHtmlEditorField
@@ -520,6 +513,7 @@ export default function ProspectionForm({
             toast.warning("Ce candidat n'a pas de compte utilisateur lié.");
             return;
           }
+
           const name = extractCandidateDisplayName(cand);
           setForm((fm) => ({
             ...fm,

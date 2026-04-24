@@ -11,6 +11,7 @@ import {
   ListItemText,
   Typography,
   Chip,
+  Box,
 } from "@mui/material";
 import api from "../../api/axios";
 import type { Formation } from "../../types/formation";
@@ -48,20 +49,31 @@ function readStartDate(f: Formation): string | null {
     "start_date",
     "startDate",
   ] as const;
+
   for (const k of keys) {
     const v = obj[k];
     if (typeof v === "string" && v.trim()) return v;
   }
+
   return null;
 }
 
 function readEndDate(f: Formation): string | null {
   const obj = f as unknown as Record<string, unknown>;
-  const keys = ["date_fin", "dateFin", "fin", "end_date", "endDate", "date_fin_prevue"] as const;
+  const keys = [
+    "date_fin",
+    "dateFin",
+    "fin",
+    "end_date",
+    "endDate",
+    "date_fin_prevue",
+  ] as const;
+
   for (const k of keys) {
     const v = obj[k];
     if (typeof v === "string" && v.trim()) return v;
   }
+
   return null;
 }
 
@@ -69,6 +81,7 @@ function formatDate(d?: string | null): string {
   if (!d) return "—";
   const dt = new Date(d);
   if (Number.isNaN(dt.getTime())) return "—";
+
   return new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "2-digit",
@@ -79,6 +92,7 @@ function formatDate(d?: string | null): string {
 function toPick(f: Formation): FormationPick {
   const date_debut = readStartDate(f);
   const date_fin = readEndDate(f);
+
   return {
     id: f.id,
     nom: f.nom ?? null,
@@ -97,7 +111,11 @@ function toPick(f: Formation): FormationPick {
   };
 }
 
-export default function FormationSelectModal({ show, onClose, onSelect }: Props) {
+export default function FormationSelectModal({
+  show,
+  onClose,
+  onSelect,
+}: Props) {
   const [search, setSearch] = useState("");
   const [formations, setFormations] = useState<Formation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,7 +130,9 @@ export default function FormationSelectModal({ show, onClose, onSelect }: Props)
         const res = await api.get("/formations/", {
           params: { texte: search, page_size: 20 },
         });
+
         const data = (res.data?.data?.results ?? res.data?.results ?? []) as Formation[];
+
         if (!cancelled) setFormations(data);
       } catch (_err) {
         if (import.meta.env.MODE !== "production") {
@@ -126,6 +146,7 @@ export default function FormationSelectModal({ show, onClose, onSelect }: Props)
     };
 
     fetch();
+
     return () => {
       cancelled = true;
     };
@@ -140,42 +161,58 @@ export default function FormationSelectModal({ show, onClose, onSelect }: Props)
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "🔍 Rechercher une formation...",
+        placeholder: "Rechercher une formation...",
       }}
       showSearchWhenLoading
       loading={loading}
       error={null}
       empty={!loading && formations.length === 0}
       emptyMessage={
-        <Typography sx={{ mt: 2, textAlign: "center" }}>Aucune formation trouvée.</Typography>
+        <Typography color="text.secondary" textAlign="center">
+          Aucune formation trouvée.
+        </Typography>
       }
     >
-      <List>
+      <List disablePadding>
         {formations.map((f) => {
           const pick = toPick(f);
           const typeLabel = pick.type_offre?.nom ?? pick.type_offre?.libelle ?? null;
+
           return (
             <ListItem key={f.id} disablePadding>
               <ListItemButton onClick={() => onSelect(pick)}>
                 <ListItemText
                   primary={
-                    <>
-                      📚 <strong>{pick.nom ?? "—"}</strong> — {pick.centre?.nom ?? "—"} · {pick.num_offre ?? "—"}
-                      {typeLabel && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography component="span" variant="body2" fontWeight={700}>
+                        {pick.nom ?? "—"}
+                      </Typography>
+
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {pick.centre?.nom ?? "—"} · {pick.num_offre ?? "—"}
+                      </Typography>
+
+                      {typeLabel ? (
                         <Chip
                           label={typeLabel}
                           size="small"
-                          sx={{
-                            ml: 1,
-                            backgroundColor: pick.type_offre?.couleur ?? "primary.light",
-                            color: "primary.dark",
-                            fontWeight: 600,
-                          }}
+                          variant="outlined"
                         />
-                      )}
-                    </>
+                      ) : null}
+                    </Box>
                   }
-                  secondary={`📅 ${formatDate(pick.date_debut)} → ${formatDate(pick.date_fin)}`}
+                  secondary={
+                    <Typography component="span" variant="caption" color="text.secondary">
+                      {formatDate(pick.date_debut)} → {formatDate(pick.date_fin)}
+                    </Typography>
+                  }
                 />
               </ListItemButton>
             </ListItem>

@@ -8,8 +8,6 @@ import {
   Box,
   Typography,
   Button,
-  IconButton,
-  TextField,
   Select,
   MenuItem,
   List,
@@ -17,14 +15,19 @@ import {
   ListItemText,
   Chip,
   CircularProgress,
+  Stack,
+  Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import {
   useListProspectionComments,
   useCreateProspectionComment,
 } from "../../hooks/useProspectionComments";
 import type { ProspectionCommentDTO } from "../../types/prospectionComment";
+import type { AppTheme } from "../../theme";
 import api from "../../api/axios";
 import ProspectionCommentForm from "../../pages/prospection/prospectioncomments/ProspectionCommentForm";
+import SearchInput from "../SearchInput";
 import { toast } from "react-toastify";
 
 /* ---------- Types ---------- */
@@ -46,6 +49,7 @@ const dtf = new Intl.DateTimeFormat("fr-FR", {
   dateStyle: "short",
   timeStyle: "short",
 });
+
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "—" : dtf.format(d);
@@ -59,6 +63,9 @@ export default function ProspectionCommentsModal({
   isStaff = false,
   onCommentAdded,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
   const [reloadKey, setReloadKey] = useState(0);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -73,6 +80,35 @@ export default function ProspectionCommentsModal({
   const { data, loading, error } = useListProspectionComments(listParams, reloadKey);
   const { create, loading: creating } = useCreateProspectionComment();
 
+  const dialogSectionTokens = theme.custom.dialog.section;
+  const sectionBackground = isLight
+    ? dialogSectionTokens.background.light
+    : dialogSectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? dialogSectionTokens.border.light
+    : dialogSectionTokens.border.dark;
+
+  const sectionTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const sectionTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+
+  const sectionContainerSx = {
+    border: sectionBorder,
+    borderRadius: dialogSectionTokens.borderRadius,
+    background: sectionBackground,
+    overflow: "hidden",
+  } as const;
+
+  const sectionHeaderSx = {
+    px: dialogSectionTokens.padding,
+    py: 1,
+    background: sectionTitleBackground,
+    borderBottom: sectionTitleBorder,
+  } as const;
+
   useEffect(() => {
     if (!open) return;
     setReloadKey((k) => k + 1);
@@ -85,6 +121,7 @@ export default function ProspectionCommentsModal({
         const formation_nom: string | null = p?.formation_nom ?? null;
         const label =
           [partenaire_nom, formation_nom].filter(Boolean).join(" • ") || `#${prospectionId}`;
+
         if (!cancelled) setMeta({ partenaire_nom, formation_nom, label });
       } catch {
         if (!cancelled) {
@@ -96,12 +133,12 @@ export default function ProspectionCommentsModal({
         }
       }
     })();
+
     return () => {
       cancelled = true;
     };
   }, [open, prospectionId]);
 
-  // ✅ isolé pour éviter un recalcul dans useMemo suivant
   const rows = useMemo(() => data?.results ?? [], [data]);
 
   const filteredRows = useMemo(() => {
@@ -116,6 +153,7 @@ export default function ProspectionCommentsModal({
 
   const handleDelete = async (id: number) => {
     if (!confirm(`Archiver le commentaire #${id} ?`)) return;
+
     try {
       setDeletingId(id);
       await api.delete(`/prospection-commentaires/${id}/`);
@@ -140,105 +178,165 @@ export default function ProspectionCommentsModal({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>💬 Commentaires de prospection</DialogTitle>
-      {meta && (
-        <Typography variant="subtitle2" color="text.secondary" sx={{ px: 3, mt: -1, mb: 1 }}>
-          Prospection #{prospectionId} — {meta.label}
-        </Typography>
-      )}
+      <DialogTitle>Commentaires de prospection</DialogTitle>
 
-      <DialogContent dividers>
-        {/* Header badges & actions */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Chip label={`${rows.length} commentaire${rows.length > 1 ? "s" : ""}`} color="primary" />
-          <Box display="flex" gap={1}>
-            <IconButton
-              onClick={() => setReloadKey((k) => k + 1)}
-              disabled={loading || creating || deletingId !== null}
-              title="Rafraîchir"
-            >
-              🔄
-            </IconButton>
-            <IconButton onClick={onClose} title="Fermer">
-              ✖
-            </IconButton>
-          </Box>
-        </Box>
+      <DialogContent>
+        <Stack spacing={2}>
+          {meta ? (
+            <Typography variant="body2" color="text.secondary">
+              Prospection #{prospectionId} — {meta.label}
+            </Typography>
+          ) : null}
 
-        {/* Formulaire création */}
-        <ProspectionCommentForm
-          prospectionId={prospectionId}
-          canSetInternal={isStaff}
-          onSubmit={handleAddComment}
-        />
-
-        {/* Toolbar */}
-        <Box display="flex" gap={1} mt={2} mb={1}>
-          <TextField
-            size="small"
-            placeholder="Rechercher (texte ou auteur)…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            fullWidth
-          />
-          {isStaff && (
-            <Select
-              size="small"
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as "all" | "public" | "internal")}
-            >
-              <MenuItem value="all">Tous</MenuItem>
-              <MenuItem value="public">Public</MenuItem>
-              <MenuItem value="internal">Interne</MenuItem>
-            </Select>
-          )}
-        </Box>
-
-        {/* Liste */}
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={3}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : error ? (
-          <Typography color="error">
-            Erreur : {String((error as Error).message || error)}
-          </Typography>
-        ) : filteredRows.length === 0 ? (
-          <Typography>Aucun commentaire ne correspond à vos filtres.</Typography>
-        ) : (
-          <List>
-            {filteredRows.map((c) => (
-              <ListItem
-                key={c.id}
-                alignItems="flex-start"
-                secondaryAction={
-                  <Button
-                    onClick={() => handleDelete(c.id)}
-                    disabled={deletingId === c.id || creating || loading}
-                    size="small"
-                    color="error"
-                  >
-                    {deletingId === c.id ? "⏳" : "🗑️"}
-                  </Button>
-                }
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems={{ xs: "stretch", sm: "center" }}
+                justifyContent="space-between"
               >
-                <ListItemText
-                  primary={
-                    <>
-                      <strong>{c.created_by_username}</strong> • {fmtDate(c.created_at)}{" "}
-                      <Chip
-                        size="small"
-                        label={c.is_internal ? "Interne" : "Public"}
-                        sx={{ ml: 1 }}
-                      />
-                    </>
-                  }
-                  secondary={c.body}
+                <Chip
+                  label={`${rows.length} commentaire${rows.length > 1 ? "s" : ""}`}
+                  color="primary"
+                  size="small"
                 />
-              </ListItem>
-            ))}
-          </List>
-        )}
+
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Button
+                    onClick={() => setReloadKey((k) => k + 1)}
+                    disabled={loading || creating || deletingId !== null}
+                    size="small"
+                    variant="outlined"
+                  >
+                    Rafraîchir
+                  </Button>
+                  <Button onClick={onClose} size="small" variant="text" color="secondary">
+                    Fermer
+                  </Button>
+                </Stack>
+              </Stack>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              <ProspectionCommentForm
+                prospectionId={prospectionId}
+                canSetInternal={isStaff}
+                onSubmit={handleAddComment}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Rechercher et filtrer
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <SearchInput
+                  placeholder="Rechercher (texte ou auteur)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.currentTarget.value)}
+                  fullWidth
+                />
+
+                {isStaff ? (
+                  <Select
+                    size="small"
+                    value={visibility}
+                    onChange={(e) =>
+                      setVisibility(e.target.value as "all" | "public" | "internal")
+                    }
+                    sx={{ minWidth: { xs: "100%", sm: 160 } }}
+                  >
+                    <MenuItem value="all">Tous</MenuItem>
+                    <MenuItem value="public">Public</MenuItem>
+                    <MenuItem value="internal">Interne</MenuItem>
+                  </Select>
+                ) : null}
+              </Stack>
+            </Box>
+          </Box>
+
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Historique des commentaires
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : error ? (
+                <Typography color="error">
+                  Erreur : {String((error as Error).message || error)}
+                </Typography>
+              ) : filteredRows.length === 0 ? (
+                <Typography color="text.secondary">
+                  Aucun commentaire ne correspond à vos filtres.
+                </Typography>
+              ) : (
+                <List disablePadding>
+                  {filteredRows.map((c, index) => (
+                    <Box key={c.id}>
+                      <ListItem
+                        alignItems="flex-start"
+                        disableGutters
+                        secondaryAction={
+                          <Button
+                            onClick={() => handleDelete(c.id)}
+                            disabled={deletingId === c.id || creating || loading}
+                            size="small"
+                            color="error"
+                          >
+                            {deletingId === c.id ? "Archivage…" : "Archiver"}
+                          </Button>
+                        }
+                        sx={{ py: 1.25, pr: 12 }}
+                      >
+                        <ListItemText
+                          disableTypography
+                          primary={
+                            <Typography variant="body2" component="div">
+                              <Box component="span" sx={{ fontWeight: 700 }}>
+                                {c.created_by_username}
+                              </Box>
+                              {" • "}
+                              {fmtDate(c.created_at)}
+                              <Chip
+                                size="small"
+                                label={c.is_internal ? "Interne" : "Public"}
+                                sx={{ ml: 1 }}
+                              />
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography
+                              variant="body2"
+                              component="div"
+                              color="text.secondary"
+                              sx={{ mt: 0.5, whiteSpace: "pre-wrap" }}
+                            >
+                              {c.body}
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+
+                      {index < filteredRows.length - 1 ? <Divider /> : null}
+                    </Box>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </Box>
+        </Stack>
       </DialogContent>
 
       <DialogActions>

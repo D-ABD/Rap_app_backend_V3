@@ -7,7 +7,11 @@ import {
   DialogActions,
   Button,
   Typography,
+  Box,
+  Stack,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import type { AppTheme } from "../../theme";
 
 type Variant = "primary" | "secondary" | "danger" | "success" | "warning";
 
@@ -18,7 +22,12 @@ type NavButtonProps = {
   onClick?: () => void;
 };
 
-function NavButton({ href, label, variant = "primary", onClick }: NavButtonProps) {
+function NavButton({
+  href,
+  label,
+  variant = "primary",
+  onClick,
+}: NavButtonProps) {
   return (
     <Button
       component="a"
@@ -34,7 +43,6 @@ function NavButton({ href, label, variant = "primary", onClick }: NavButtonProps
               ? "warning"
               : "primary"
       }
-      sx={{ textTransform: "none" }}
     >
       {label}
     </Button>
@@ -87,20 +95,55 @@ export default function PostCreateChoiceModal({
   cancelLabel,
   cancelVariant = "secondary",
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
   const hasPrimary = !!primaryHref && !!primaryLabel;
   const hasSecondary = !!secondaryHref && !!secondaryLabel;
   const hasTertiary = !!tertiaryHref && !!tertiaryLabel;
+
+  const dialogSectionTokens = theme.custom.dialog.section;
+  const sectionBackground = isLight
+    ? dialogSectionTokens.background.light
+    : dialogSectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? dialogSectionTokens.border.light
+    : dialogSectionTokens.border.dark;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         {resourceLabel} créé{persistId ? ` (#${persistId})` : ""}
       </DialogTitle>
-      <DialogContent dividers>
-        {extraContent}
-        <Typography sx={{ mt: 1 }}>Que souhaitez-vous faire ensuite&nbsp;?</Typography>
+
+      <DialogContent>
+        <Stack spacing={2}>
+          {extraContent ? (
+            <Box
+              sx={{
+                border: sectionBorder,
+                borderRadius: dialogSectionTokens.borderRadius,
+                background: sectionBackground,
+                p: dialogSectionTokens.padding,
+              }}
+            >
+              {extraContent}
+            </Box>
+          ) : null}
+
+          <Typography color="text.secondary">
+            Que souhaitez-vous faire ensuite&nbsp;?
+          </Typography>
+        </Stack>
       </DialogContent>
-      <DialogActions sx={{ flexWrap: "wrap", gap: 1, justifyContent: "flex-end" }}>
+
+      <DialogActions
+        sx={{
+          flexWrap: "wrap",
+          gap: 1,
+          justifyContent: "flex-end",
+        }}
+      >
         {hasPrimary && (
           <NavButton
             href={primaryHref!}
@@ -109,6 +152,7 @@ export default function PostCreateChoiceModal({
             onClick={onClose}
           />
         )}
+
         {hasSecondary && (
           <NavButton
             href={secondaryHref!}
@@ -117,6 +161,7 @@ export default function PostCreateChoiceModal({
             onClick={onClose}
           />
         )}
+
         {hasTertiary && (
           <NavButton
             href={tertiaryHref!}
@@ -125,6 +170,7 @@ export default function PostCreateChoiceModal({
             onClick={onClose}
           />
         )}
+
         {cancelLabel && (
           <Button
             onClick={onClose}
@@ -138,7 +184,6 @@ export default function PostCreateChoiceModal({
                     ? "warning"
                     : "primary"
             }
-            sx={{ textTransform: "none" }}
           >
             {cancelLabel}
           </Button>

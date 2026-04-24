@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
-  Paper,
   Grid,
   Typography,
   TextField,
@@ -14,6 +13,8 @@ import {
 import { Declic, CentreLight } from "src/types/declic";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
+import FormSectionCard from "src/components/forms/FormSectionCard";
+import FormActionsBar from "src/components/forms/FormActionsBar";
 import DeclicParticipantsSection from "./DeclicParticipantsSection";
 
 interface Props {
@@ -65,7 +66,9 @@ export default function DeclicForm({
   /* ===================== CHOIX DYNAMIQUES ===================== */
   const typeChoices = useMemo(
     () =>
-      meta?.type_declic_choices?.length ? meta.type_declic_choices : TYPE_DEClic_CHOICES_FALLBACK,
+      meta?.type_declic_choices?.length
+        ? meta.type_declic_choices
+        : TYPE_DEClic_CHOICES_FALLBACK,
     [meta?.type_declic_choices]
   );
 
@@ -73,9 +76,7 @@ export default function DeclicForm({
     setForm((prev) => ({ ...prev, [key]: value }));
 
   /* ===================== AUTO-CALCUL ABSENTS ===================== */
-
   useEffect(() => {
-    // Atelier : absents = inscrits - présents
     if (form.nb_inscrits_declic !== undefined && form.nb_presents_declic !== undefined) {
       setForm((prev) => ({
         ...prev,
@@ -106,152 +107,154 @@ export default function DeclicForm({
   };
 
   /* ===================== DÉTERMINER LE TYPE ===================== */
-  const isAtelier = form.type_declic?.startsWith("atelier") || form.type_declic === "autre";
+  const isAtelier =
+    form.type_declic?.startsWith("atelier") || form.type_declic === "autre";
 
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
-        {/* --- Informations principales --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6">Informations principales</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Type, date et centre de la séance Déclic.
-          </Typography>
-
-          <Grid container spacing={2}>
-            {/* Type d’activité */}
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Type d’activité *</Typography>
-              <Select
-                fullWidth
-                required
-                value={form.type_declic ?? ""}
-                onChange={(e) => handleChange("type_declic", e.target.value as string)}
-              >
-                {typeChoices.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Grid>
-
-            {/* Date */}
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Date *</Typography>
-              <TextField
-                type="date"
-                fullWidth
-                required
-                InputLabelProps={{ shrink: true }}
-                value={form.date_declic ?? ""}
-                onChange={(e) => handleChange("date_declic", e.target.value)}
-              />
-            </Grid>
-
-            {/* Centre */}
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Centre *</Typography>
-              <TextField
-                fullWidth
-                placeholder="— Aucun centre sélectionné —"
-                value={centreLabel || (form.centre_id ? `#${form.centre_id}` : "")}
-                InputProps={{ readOnly: true }}
-              />
-              <Stack direction="row" spacing={1} mt={1}>
-                <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
-                  🏫 Sélectionner un centre
-                </Button>
-                {form.centre_id && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      handleChange("centre_id", undefined);
-                      setCentreLabel("");
-                      onCentreChange?.("");
-                    }}
-                  >
-                    ✖ Effacer
-                  </Button>
-                )}
-              </Stack>
-            </Grid>
-          </Grid>
-        </Paper>
-
-        {/* --- Ateliers Déclic --- */}
-        <Collapse in={isAtelier} unmountOnExit>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6">Ateliers Déclic</Typography>
+        <Stack spacing={3}>
+          <FormSectionCard
+            title="Informations principales"
+            subtitle="Type, date et centre de la séance Déclic."
+          >
             <Grid container spacing={2}>
-              {[
-                ["nb_inscrits_declic", "Inscrits"],
-                ["nb_presents_declic", "Présents"],
-              ].map(([key, label]) => (
-                <Grid item xs={12} md={4} key={key}>
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <Typography fontWeight={600}>Type d’activité *</Typography>
+                  <Select
+                    fullWidth
+                    required
+                    value={form.type_declic ?? ""}
+                    onChange={(e) => handleChange("type_declic", e.target.value as string)}
+                  >
+                    {typeChoices.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <Typography fontWeight={600}>Date *</Typography>
+                  <TextField
+                    type="date"
+                    fullWidth
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    value={form.date_declic ?? ""}
+                    onChange={(e) => handleChange("date_declic", e.target.value)}
+                  />
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <Typography fontWeight={600}>Centre *</Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="— Aucun centre sélectionné —"
+                    value={centreLabel || (form.centre_id ? `#${form.centre_id}` : "")}
+                    InputProps={{ readOnly: true }}
+                  />
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                    <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
+                      🏫 Sélectionner un centre
+                    </Button>
+                    {form.centre_id && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          handleChange("centre_id", undefined as any);
+                          setCentreLabel("");
+                          onCentreChange?.("");
+                        }}
+                      >
+                        ✖ Effacer
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              </Grid>
+            </Grid>
+          </FormSectionCard>
+
+          <Collapse in={isAtelier} unmountOnExit>
+            <FormSectionCard
+              title="Ateliers Déclic"
+              subtitle="Renseignez les effectifs de participation."
+            >
+              <Grid container spacing={2}>
+                {[
+                  ["nb_inscrits_declic", "Inscrits"],
+                  ["nb_presents_declic", "Présents"],
+                ].map(([key, label]) => (
+                  <Grid item xs={12} md={4} key={key}>
+                    <TextField
+                      type="number"
+                      fullWidth
+                      label={label}
+                      value={(form as any)[key] ?? ""}
+                      onChange={(e) =>
+                        handleChange(key as keyof Declic, Number(e.target.value) as any)
+                      }
+                    />
+                  </Grid>
+                ))}
+
+                <Grid item xs={12} md={4}>
                   <TextField
                     type="number"
                     fullWidth
-                    label={label}
-                    value={(form as any)[key] ?? ""}
-                    onChange={(e) =>
-                      handleChange(key as keyof Declic, Number(e.target.value) as any)
-                    }
+                    label="Absents (auto)"
+                    value={form.nb_absents_declic ?? 0}
+                    InputProps={{ readOnly: true }}
                   />
                 </Grid>
-              ))}
-
-              {/* Absents auto */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  type="number"
-                  fullWidth
-                  label="Absents (auto)"
-                  value={form.nb_absents_declic ?? 0}
-                  InputProps={{ readOnly: true }}
-                />
               </Grid>
-            </Grid>
-          </Paper>
-        </Collapse>
+            </FormSectionCard>
+          </Collapse>
 
-        <DeclicParticipantsSection
-          participants={form.participants_declic ?? []}
-          onChange={(participants) => handleChange("participants_declic", participants)}
-        />
-
-        {/* --- Commentaire --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6">Commentaire</Typography>
-          <RichHtmlEditorField
-            label="Commentaire"
-            value={form.commentaire ?? ""}
-            onChange={(value) => handleChange("commentaire", value)}
-            placeholder="Ajouter un commentaire enrichi…"
+          <DeclicParticipantsSection
+            participants={form.participants_declic ?? []}
+            onChange={(participants) => handleChange("participants_declic", participants)}
           />
-        </Paper>
 
-        {/* --- Actions --- */}
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          {onCancel && (
-            <Button variant="outlined" onClick={onCancel}>
-              Annuler
+          <FormSectionCard
+            title="Commentaire"
+            subtitle="Ajoutez un commentaire enrichi si nécessaire."
+          >
+            <RichHtmlEditorField
+              label="Commentaire"
+              value={form.commentaire ?? ""}
+              onChange={(value) => handleChange("commentaire", value)}
+              placeholder="Ajouter un commentaire enrichi…"
+            />
+          </FormSectionCard>
+
+          <FormActionsBar>
+            {onCancel && (
+              <Button variant="outlined" onClick={onCancel}>
+                Annuler
+              </Button>
+            )}
+            <Button variant="contained" type="submit" disabled={submitting}>
+              {submitting ? "Enregistrement…" : "Enregistrer"}
             </Button>
-          )}
-          <Button variant="contained" type="submit" disabled={submitting}>
-            {submitting ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          </FormActionsBar>
         </Stack>
       </Box>
 
-      {/* --- Sélection centre --- */}
       <CentresSelectModal
         show={showCentreModal}
         onClose={() => setShowCentreModal(false)}
         onSelect={(centre) => {
           const c = centre as unknown as CentreLight;
-          handleChange("centre_id", c.id);
+          handleChange("centre_id", c.id as any);
           const label = `${c.nom ?? "Centre"}${c.departement ? ` (${c.departement})` : ""}`;
           setCentreLabel(label);
           onCentreChange?.(label);

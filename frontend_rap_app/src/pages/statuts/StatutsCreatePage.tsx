@@ -1,12 +1,23 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Stack, Button, TextField, MenuItem, Paper, useTheme } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Button,
+  TextField,
+  MenuItem,
+  Grid,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import type { AppTheme } from "../../theme";
 
 import api from "../../api/axios";
 import useForm from "../../hooks/useForm";
 import PageTemplate from "../../components/PageTemplate";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 
 type Choice = {
   value: string;
@@ -56,6 +67,7 @@ export default function StatutsCreatePage() {
   return (
     <PageTemplate
       title="Créer un statut"
+      subtitle="Ajoutez un nouveau statut avec son libellé et sa couleur d’affichage."
       backButton
       onBack={() => navigate(-1)}
       refreshButton
@@ -64,77 +76,94 @@ export default function StatutsCreatePage() {
         toast.info("Formulaire réinitialisé");
       }}
     >
-      <Paper sx={{ p: 3 }}>
-        <form onSubmit={handleSubmit}>
-          {/* Select statut */}
-          <TextField
-            select
-            fullWidth
-            margin="normal"
-            id="nom"
-            name="nom"
-            label="Nom du statut"
-            value={values.nom}
-            onChange={handleChange}
-            required
+      <Box component="form" onSubmit={handleSubmit}>
+        <Stack spacing={2}>
+          <FormSectionCard
+            title="Informations principales"
+            subtitle="Sélectionnez le statut, ajoutez une description si nécessaire et définissez sa couleur."
           >
-            {choices.map((c) => (
-              <MenuItem key={c.value} value={c.value}>
-                {c.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  id="nom"
+                  name="nom"
+                  label="Nom du statut"
+                  value={values.nom}
+                  onChange={handleChange}
+                  required
+                  helperText="Choisissez un statut dans la liste disponible."
+                >
+                  {choices.map((c) => (
+                    <MenuItem key={c.value} value={c.value}>
+                      {c.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
 
-          {/* Champ description si "autre" */}
-          {values.nom === "autre" && (
-            <TextField
-              fullWidth
-              margin="normal"
-              id="description_autre"
-              name="description_autre"
-              label="Description personnalisée"
-              value={values.description_autre}
-              onChange={handleChange}
-              required
-            />
-          )}
+              {values.nom === "autre" ? (
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    id="description_autre"
+                    name="description_autre"
+                    label="Description personnalisée"
+                    value={values.description_autre}
+                    onChange={handleChange}
+                    required
+                    helperText="Précisez le libellé du statut personnalisé."
+                  />
+                </Grid>
+              ) : null}
 
-          {/* Champ couleur */}
-          <TextField
-            fullWidth
-            margin="normal"
-            id="couleur"
-            name="couleur"
-            label="Couleur (hexadécimal)"
-            value={values.couleur}
-            onChange={handleChange}
-          />
+              <Grid item xs={12} md={8}>
+                <TextField
+                  fullWidth
+                  id="couleur"
+                  name="couleur"
+                  label="Couleur (hexadécimal)"
+                  value={values.couleur}
+                  onChange={handleChange}
+                  helperText="Laissez vide pour utiliser la couleur par défaut du statut sélectionné."
+                />
+              </Grid>
 
-          {/* Aperçu couleur */}
-          <Box
-            sx={{
-              mt: 2,
-              width: 40,
-              height: 20,
-              borderRadius: 1,
-              bgcolor: previewColor,
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-            title={`Aperçu couleur : ${previewColor}`}
-          />
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <Typography variant="body2" color="text.secondary">
+                    Aperçu couleur
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: "100%",
+                      minHeight: 56,
+                      borderRadius: 2,
+                      bgcolor: previewColor,
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
+                    title={`Aperçu couleur : ${previewColor}`}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {previewColor}
+                  </Typography>
+                </Stack>
+              </Grid>
+            </Grid>
+          </FormSectionCard>
 
-          {/* Boutons */}
-          <Stack direction="row" spacing={2} mt={3}>
-            <Button type="submit" variant="contained" color="success">
-              💾 Créer
-            </Button>
+          <FormActionsBar sx={{ mt: 1 }}>
             <Button type="button" variant="outlined" onClick={() => navigate("/statuts")}>
               Annuler
             </Button>
-          </Stack>
-        </form>
-      </Paper>
+            <Button type="submit" variant="contained" color="success">
+              💾 Créer
+            </Button>
+          </FormActionsBar>
+        </Stack>
+      </Box>
     </PageTemplate>
   );
 }

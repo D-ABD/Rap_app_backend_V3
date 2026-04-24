@@ -1,5 +1,12 @@
 // src/components/ResponsiveTableTemplate.tsx
-import { useMemo } from "react";
+import {
+  useCallback,
+  useMemo,
+  type ElementType,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   Box,
   Table,
@@ -17,17 +24,22 @@ import {
   type SxProps,
   type Theme,
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import type { ElementType, ReactNode } from "react";
 import type { AppTheme } from "../theme";
 
 export type TableColumn<T> = {
   key: keyof T | string;
   label: ReactNode;
   sticky?: "left" | "right";
+  /**
+   * Décalage en px pour `sticky: "left"` (2e colonne = largeur de la 1re, ex. 36).
+   * La colonne la plus à gauche reste en général à 0.
+   */
+  stickyLeftOffsetPx?: number;
   width?: number;
   flexGrow?: number;
   align?: "left" | "center" | "right";
+  /** Si false, le texte peut revenir à la ligne (ex. contenu riche). Par défaut : nowrap. */
+  noWrap?: boolean;
   render?: (row: T) => ReactNode;
   headerRender?: () => ReactNode;
   hideable?: boolean;
@@ -41,12 +53,23 @@ interface Props<T> {
   cardTitle?: (row: T) => string;
   onRowClick?: (row: T) => void;
   onRowHover?: (row: T) => void;
+  /** Surcharge clavier (ex. Enter / Espace) — ne pas supprimer l’a11y des tables métier. */
+  onRowKeyDown?: (e: KeyboardEvent<HTMLElement>, row: T) => void;
+  /** Attribut `title` sur chaque ligne (indice clavier / clic). */
+  rowHintTitle?: string;
+  /** MUI `TableRow` sélectionné (surlignage) */
+  isRowSelected?: (row: T) => boolean;
   rowSx?: (row: T) => object;
   tableContainerComponent?: ElementType;
   containerSx?: SxProps<Theme>;
   actionsAlign?: "left" | "center" | "right";
   visibleColumnKeys?: string[];
   showActionsColumn?: boolean;
+  density?: "default" | "compact";
+  /** Lignes après les données (ex. ligne TOTAL en bas de tableau). */
+  tableBodyFooter?: ReactNode;
+  /** Complément sous les cartes (mobile) — ex. mêmes totaux que `tableBodyFooter`. */
+  mobileStackFooter?: ReactNode;
 }
 
 export default function ResponsiveTableTemplate<T>({
@@ -57,34 +80,80 @@ export default function ResponsiveTableTemplate<T>({
   cardTitle,
   onRowClick,
   onRowHover,
+  onRowKeyDown,
+  rowHintTitle,
+  isRowSelected,
   rowSx,
   tableContainerComponent,
   containerSx,
   actionsAlign = "center",
   visibleColumnKeys,
   showActionsColumn = true,
+  density = "default",
+  tableBodyFooter,
+  mobileStackFooter,
 }: Props<T>) {
   const theme = useTheme<AppTheme>();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isLight = theme.palette.mode === "light";
 
-  const tableHeaderBackground = isLight
-    ? theme.custom.table.header.background.light
-    : theme.custom.table.header.background.dark;
-  const tableHeaderBorder = isLight
-    ? theme.custom.table.header.borderBottom.light
-    : theme.custom.table.header.borderBottom.dark;
-  const tableRowHoverBackground = isLight
-    ? theme.custom.table.row.hover.light
-    : theme.custom.table.row.hover.dark;
-  const tableCellBorder = isLight
-    ? theme.custom.table.cell.borderBottom.light
-    : theme.custom.table.cell.borderBottom.dark;
+  const tableTokens = theme.custom.table;
+  const densityTokens = tableTokens.densities?.[density];
+  const densitySpacing = densityTokens?.spacing;
+  const densitySizing = densityTokens?.sizing;
+  const densityRadius = densityTokens?.radius;
+  const densityTypography = densityTokens?.typography;
 
-  const stickyColumnShadow = `inset -10px 0 12px -12px ${alpha(
-    theme.palette.common.black,
-    isLight ? 0.2 : 0.45
-  )}`;
+  const tableHeaderBackground = isLight
+    ? tableTokens.header.background.light
+    : tableTokens.header.background.dark;
+
+  const tableHeaderBorder = isLight
+    ? tableTokens.header.borderBottom.light
+    : tableTokens.header.borderBottom.dark;
+
+  const tableRowHoverBackground = isLight
+    ? tableTokens.row.hover.light
+    : tableTokens.row.hover.dark;
+
+  const tableRowStripedBackground = isLight
+    ? tableTokens.row.stripedEven.light
+    : tableTokens.row.stripedEven.dark;
+
+  const tableCellBorder = isLight
+    ? tableTokens.cell.borderBottom.light
+    : tableTokens.cell.borderBottom.dark;
+
+  const tableContainerBackground = isLight
+    ? tableTokens.container.background.light
+    : tableTokens.container.background.dark;
+
+  const tableContainerBorder = isLight
+    ? tableTokens.container.border.light
+    : tableTokens.container.border.dark;
+
+  const stickyColumnShadow = isLight
+    ? tableTokens.sticky.shadow.light
+    : tableTokens.sticky.shadow.dark;
+
+  const cellPaddingX = densitySpacing?.cellPaddingX ?? 1;
+  const cellPaddingY = densitySpacing?.cellPaddingY ?? 0.75;
+  const headerPaddingX = densitySpacing?.headerPaddingX ?? 1;
+  const headerPaddingY = densitySpacing?.headerPaddingY ?? 0.75;
+  const inlineGap = densitySpacing?.inlineGap ?? 0.5;
+  const stackGap = densitySpacing?.stackGap ?? 0.5;
+
+  const rowMinHeight = densitySizing?.rowMinHeight ?? 44;
+  const actionSize = densitySizing?.actionSize ?? 32;
+
+  const mobilePrimaryVariant = densityTypography?.primaryVariant ?? "body2";
+  const mobileSecondaryVariant =
+    densityTypography?.secondaryVariant ?? "body2";
+  const mobileMetaVariant = densityTypography?.metaVariant ?? "caption";
+
+  const controlRadius = densityRadius?.controlSx ?? 1.5;
+  const surfaceRadius = tableTokens.mobileCard.borderRadius;
+  const tableMaxHeight = tableTokens.container.maxHeight;
 
   const normalizedColumns = useMemo(
     () =>
@@ -104,7 +173,43 @@ export default function ResponsiveTableTemplate<T>({
     return normalizedColumns.filter((col) => visibleSet.has(col._columnKey));
   }, [normalizedColumns, visibleColumnKeys]);
 
+  const minStickyLeftOffsetPx = useMemo(() => {
+    const lefts = visibleColumns
+      .filter((c) => c.sticky === "left")
+      .map((c) => c.stickyLeftOffsetPx ?? 0);
+    return lefts.length ? Math.min(...lefts) : 0;
+  }, [visibleColumns]);
+
+  const stickyLeftRank = useCallback(
+    (offsetPx: number) => {
+      const uniq = [
+        ...new Set(
+          visibleColumns
+            .filter((c) => c.sticky === "left")
+            .map((c) => c.stickyLeftOffsetPx ?? 0)
+        ),
+      ].sort((a, b) => a - b);
+      return Math.max(0, uniq.indexOf(offsetPx));
+    },
+    [visibleColumns]
+  );
+
   const actionsVisible = Boolean(actions) && showActionsColumn;
+
+  const createRowClickHandler = useCallback(
+    (row: T) => (e: MouseEvent) => {
+      if (!onRowClick) return;
+      const t = e.target as HTMLElement;
+      if (t.closest("button, a, input, [role='checkbox'], textarea")) return;
+      onRowClick(row);
+    },
+    [onRowClick]
+  );
+
+  const getCellValue = (
+    row: T,
+    col: TableColumn<T> & { _columnKey?: string }
+  ) => (col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—"));
 
   const actionContentSx: SxProps<Theme> = {
     display: "flex",
@@ -116,34 +221,29 @@ export default function ResponsiveTableTemplate<T>({
           : "center",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 0.5,
+    gap: inlineGap,
     width: "100%",
-    maxWidth: 220,
+    maxWidth: theme.spacing(27.5),
     ml: actionsAlign === "right" ? "auto" : 0,
     mr: actionsAlign === "left" ? "auto" : 0,
-
     "& .MuiStack-root": {
       flexWrap: "wrap",
-      gap: theme.spacing(0.5),
-      justifyContent:
-        actionsAlign === "right"
-          ? "flex-end"
-          : actionsAlign === "left"
-            ? "flex-start"
-            : "center",
+      gap: theme.spacing(inlineGap),
     },
-
     "& .MuiButton-root": {
       minWidth: 0,
-      paddingLeft: theme.spacing(0.75),
-      paddingRight: theme.spacing(0.75),
+      px: Math.max(cellPaddingX - 0.25, 0.5),
+      minHeight: actionSize,
       whiteSpace: "nowrap",
       flexShrink: 0,
+      borderRadius: controlRadius,
     },
-
     "& .MuiIconButton-root": {
-      padding: theme.spacing(0.5),
+      p: 0.5,
+      width: actionSize,
+      height: actionSize,
       flexShrink: 0,
+      borderRadius: controlRadius,
     },
   };
 
@@ -153,12 +253,14 @@ export default function ResponsiveTableTemplate<T>({
     backgroundColor: theme.palette.background.paper,
     zIndex: theme.zIndex.appBar - 1,
     borderBottom: tableCellBorder,
-    px: 1,
-    py: 0.75,
-    minWidth: 140,
-    maxWidth: 240,
+    px: cellPaddingX,
+    py: cellPaddingY,
+    minWidth: theme.spacing(tableTokens.actionsColumn.minWidth),
+    maxWidth: theme.spacing(tableTokens.actionsColumn.maxWidth),
     width: 1,
+    minHeight: rowMinHeight,
     verticalAlign: "top",
+    boxShadow: stickyColumnShadow,
   };
 
   const actionHeaderCellSx: SxProps<Theme> = {
@@ -167,51 +269,86 @@ export default function ResponsiveTableTemplate<T>({
     right: 0,
     backgroundColor: tableHeaderBackground,
     borderBottom: tableHeaderBorder,
-    fontWeight: "bold",
+    fontWeight: theme.typography.fontWeightBold,
     zIndex: theme.zIndex.appBar + 3,
-    px: 1,
-    minWidth: 140,
-    maxWidth: 240,
+    px: headerPaddingX,
+    py: headerPaddingY,
+    minWidth: theme.spacing(tableTokens.actionsColumn.minWidth),
+    maxWidth: theme.spacing(tableTokens.actionsColumn.maxWidth),
     width: 1,
     whiteSpace: "nowrap",
+    boxShadow: stickyColumnShadow,
   };
 
   if (isMobile) {
     return (
-      <Stack spacing={2} sx={{ p: 2 }}>
+      <Stack spacing={stackGap}>
         {data.map((row) => (
           <Card
             key={getRowId(row)}
             variant="outlined"
-            onClick={() => onRowClick?.(row)}
+            onClick={onRowClick ? createRowClickHandler(row) : undefined}
+            onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(e, row) : undefined}
             onMouseEnter={() => onRowHover?.(row)}
             onFocus={() => onRowHover?.(row)}
+            role={onRowClick || onRowKeyDown ? "button" : undefined}
+            tabIndex={onRowClick || onRowKeyDown ? 0 : undefined}
+            title={rowHintTitle}
             sx={{
-              cursor: onRowClick ? "pointer" : "default",
+              cursor: onRowClick || onRowKeyDown ? "pointer" : "default",
+              borderRadius: surfaceRadius,
+              boxShadow: "none",
+              transition: theme.transitions.create(
+                ["border-color", "background-color", "box-shadow"],
+                { duration: theme.transitions.duration.shorter }
+              ),
+              "&:hover": onRowClick
+                ? {
+                    borderColor: "divider",
+                    backgroundColor: tableRowHoverBackground,
+                  }
+                : undefined,
+              "&:focus-within": {
+                    outline: "none",
+                    borderColor: "primary.main",
+                  },
               ...(rowSx ? rowSx(row) : {}),
             }}
           >
-            <CardContent>
-              <Stack spacing={1}>
+            <CardContent
+              sx={{
+                p: tableTokens.mobileCard.padding,
+                "&:last-child": {
+                  pb: tableTokens.mobileCard.padding,
+                },
+              }}
+            >
+              <Stack spacing={stackGap}>
                 {cardTitle && (
-                  <Typography variant="h6" fontWeight="bold">
+                  <Typography
+                    variant={mobileSecondaryVariant}
+                    fontWeight={theme.typography.fontWeightBold}
+                  >
                     {cardTitle(row)}
                   </Typography>
                 )}
 
                 {visibleColumns.map((col) => (
                   <Box key={col._columnKey}>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant={mobileMetaVariant}
+                      color="text.secondary"
+                    >
                       {col.label}
                     </Typography>
-                    <Typography variant="body1">
-                      {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}
+                    <Typography variant={mobilePrimaryVariant}>
+                      {getCellValue(row, col)}
                     </Typography>
                   </Box>
                 ))}
 
                 {actionsVisible ? (
-                  <Box mt={1} onClick={(e) => e.stopPropagation()} sx={actionContentSx}>
+                  <Box onClick={(e) => e.stopPropagation()} sx={actionContentSx}>
                     {actions?.(row)}
                   </Box>
                 ) : null}
@@ -219,6 +356,7 @@ export default function ResponsiveTableTemplate<T>({
             </CardContent>
           </Card>
         ))}
+        {mobileStackFooter}
       </Stack>
     );
   }
@@ -228,28 +366,39 @@ export default function ResponsiveTableTemplate<T>({
       {...(tableContainerComponent ? { component: tableContainerComponent } : {})}
       sx={[
         {
-          maxHeight: "calc(100vh - 64px)",
+          maxHeight: tableMaxHeight,
           overflow: "auto",
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
-          backgroundColor: theme.palette.background.paper,
+          width: "100%",
+          backgroundColor: tableContainerBackground,
+          border: tableContainerBorder,
+          borderRadius: tableTokens.container.borderRadius,
         },
-        ...(containerSx ? (Array.isArray(containerSx) ? containerSx : [containerSx]) : []),
+        ...(containerSx
+          ? Array.isArray(containerSx)
+            ? containerSx
+            : [containerSx]
+          : []),
       ]}
     >
       <Table
         stickyHeader
         size="small"
         sx={{
+          width: "100%",
+          minWidth: "100%",
           borderCollapse: "separate",
           borderSpacing: 0,
+          tableLayout: "auto",
         }}
       >
         <TableHead>
           <TableRow>
-            {visibleColumns.map((col, index) => {
+            {visibleColumns.map((col) => {
               const isStickyLeft = col.sticky === "left";
-              const isFirstStickyLeft = isStickyLeft && index === 0;
+              const offset = col.stickyLeftOffsetPx ?? 0;
+              const isFirstStickyLeft =
+                isStickyLeft && offset === minStickyLeftOffsetPx;
+              const slRank = isStickyLeft ? stickyLeftRank(offset) : 0;
 
               return (
                 <TableCell
@@ -258,13 +407,17 @@ export default function ResponsiveTableTemplate<T>({
                   sx={{
                     position: "sticky",
                     top: 0,
-                    left: isStickyLeft ? 0 : undefined,
-                    zIndex: isStickyLeft ? theme.zIndex.appBar + 4 : theme.zIndex.appBar + 2,
+                    left: isStickyLeft ? `${offset}px` : undefined,
+                    zIndex: isStickyLeft
+                      ? theme.zIndex.appBar + 4 - slRank
+                      : theme.zIndex.appBar + 2,
                     minWidth: col.width,
                     backgroundColor: tableHeaderBackground,
                     borderBottom: tableHeaderBorder,
-                    fontWeight: "bold",
-                    whiteSpace: "nowrap",
+                    fontWeight: theme.typography.fontWeightBold,
+                    whiteSpace: col.noWrap === false ? "normal" : "nowrap",
+                    px: headerPaddingX,
+                    py: headerPaddingY,
                     boxShadow: isFirstStickyLeft ? stickyColumnShadow : undefined,
                   }}
                 >
@@ -282,24 +435,42 @@ export default function ResponsiveTableTemplate<T>({
         </TableHead>
 
         <TableBody>
-          {data.map((row) => (
+          {data.map((row, rowIndex) => (
             <TableRow
               hover
               key={getRowId(row)}
-              onClick={() => onRowClick?.(row)}
+              onClick={onRowClick ? createRowClickHandler(row) : undefined}
+              onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(e, row) : undefined}
               onMouseEnter={() => onRowHover?.(row)}
               onFocus={() => onRowHover?.(row)}
+              selected={isRowSelected ? isRowSelected(row) : false}
+              role={onRowClick || onRowKeyDown ? "button" : undefined}
+              tabIndex={onRowClick || onRowKeyDown ? 0 : undefined}
+              title={rowHintTitle}
               sx={{
-                cursor: onRowClick ? "pointer" : "default",
+                cursor: onRowClick || onRowKeyDown ? "pointer" : "default",
+                minHeight: rowMinHeight,
+                backgroundColor:
+                  rowIndex % 2 === 1 ? tableRowStripedBackground : undefined,
+                transition: theme.transitions.create(
+                  ["background-color", "box-shadow"],
+                  { duration: theme.transitions.duration.shorter }
+                ),
                 "&:hover": {
+                  backgroundColor: tableRowHoverBackground,
+                },
+                "&:focus-within": {
                   backgroundColor: tableRowHoverBackground,
                 },
                 ...(rowSx ? rowSx(row) : {}),
               }}
             >
-              {visibleColumns.map((col, index) => {
+              {visibleColumns.map((col) => {
                 const isStickyLeft = col.sticky === "left";
-                const isFirstStickyLeft = isStickyLeft && index === 0;
+                const offset = col.stickyLeftOffsetPx ?? 0;
+                const isFirstStickyLeft =
+                  isStickyLeft && offset === minStickyLeftOffsetPx;
+                const slRank = isStickyLeft ? stickyLeftRank(offset) : 0;
 
                 return (
                   <TableCell
@@ -307,18 +478,24 @@ export default function ResponsiveTableTemplate<T>({
                     align={col.align ?? "left"}
                     sx={{
                       position: isStickyLeft ? "sticky" : "static",
-                      left: isStickyLeft ? 0 : undefined,
-                      zIndex: isStickyLeft ? theme.zIndex.appBar - 1 : 1,
+                      left: isStickyLeft ? `${offset}px` : undefined,
+                      zIndex: isStickyLeft
+                        ? theme.zIndex.appBar - 1 - slRank
+                        : 1,
                       minWidth: col.width,
                       backgroundColor: isStickyLeft
                         ? theme.palette.background.paper
                         : undefined,
                       borderBottom: tableCellBorder,
-                      whiteSpace: "nowrap",
+                      whiteSpace: col.noWrap === false ? "normal" : "nowrap",
+                      verticalAlign: col.noWrap === false ? "top" : undefined,
+                      px: cellPaddingX,
+                      py: cellPaddingY,
+                      minHeight: rowMinHeight,
                       boxShadow: isFirstStickyLeft ? stickyColumnShadow : undefined,
                     }}
                   >
-                    {col.render ? col.render(row) : String(row[col.key as keyof T] ?? "—")}
+                    {getCellValue(row, col)}
                   </TableCell>
                 );
               })}
@@ -334,6 +511,7 @@ export default function ResponsiveTableTemplate<T>({
               ) : null}
             </TableRow>
           ))}
+          {tableBodyFooter}
         </TableBody>
       </Table>
     </TableContainer>

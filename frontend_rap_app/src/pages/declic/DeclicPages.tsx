@@ -67,7 +67,8 @@ export default function DeclicPage() {
   };
 
   // 🔹 Récupération dynamique des options de filtres
-  const { data: filterOptions, isLoading: loadingFilters } = useDeclicFiltersOptions();
+  const { data: filterOptions, isLoading: loadingFilters } =
+    useDeclicFiltersOptions();
 
   // ───────────── Toggle filtres (persisté localStorage) ─────────────
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -75,6 +76,7 @@ export default function DeclicPage() {
     const saved = localStorage.getItem("declic.showFilters");
     return saved != null ? saved === "1" : false;
   });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("declic.showFilters", showFilters ? "1" : "0");
@@ -82,7 +84,15 @@ export default function DeclicPage() {
   }, [showFilters]);
 
   // ───────────── Pagination ─────────────
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const {
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    count,
+    setCount,
+    totalPages,
+  } = usePagination();
 
   const hasActiveFilters = Boolean(
     filters.search ||
@@ -115,6 +125,7 @@ export default function DeclicPage() {
 
   // ───────────── Sélection multi ─────────────
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   useEffect(() => {
     const visible = new Set(items.map((i) => i.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
@@ -129,14 +140,19 @@ export default function DeclicPage() {
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       await Promise.all(idsToDelete.map((id) => remove(id)));
-      toast.success(`${idsToDelete.length} séance(s) Déclic archivée(s) avec succès.`);
+      toast.success(
+        `${idsToDelete.length} séance(s) Déclic archivée(s) avec succès.`
+      );
       setShowConfirm(false);
       setSelectedId(null);
       setSelectedIds([]);
-      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
-      setFilters((f) => ({ ...f })); // refresh soft
+      setPage((p) =>
+        items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p
+      );
+      setFilters((f) => ({ ...f }));
     } catch {
       toast.error("La séance Déclic n'a pas pu être archivée.");
     }
@@ -154,13 +170,18 @@ export default function DeclicPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       await hardDelete(hardDeleteId);
-      toast.success("La séance Déclic archivée a été supprimée définitivement.");
+      toast.success(
+        "La séance Déclic archivée a été supprimée définitivement."
+      );
       setHardDeleteId(null);
       setFilters((f) => ({ ...f }));
     } catch {
-      toast.error("La suppression définitive de la séance Déclic a échoué.");
+      toast.error(
+        "La suppression définitive de la séance Déclic a échoué."
+      );
     }
   };
 
@@ -176,7 +197,26 @@ export default function DeclicPage() {
     }
   };
 
-  // ───────────── Rendu principal ─────────────
+  const footer =
+    count > 0 ? (
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        spacing={1}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Page {page} / {totalPages} ({count} résultats)
+        </Typography>
+        <Pagination
+          page={page}
+          count={totalPages}
+          onChange={(_, val) => setPage(val)}
+          color="primary"
+        />
+      </Stack>
+    ) : undefined;
+
   return (
     <PageTemplate
       refreshButton
@@ -189,14 +229,21 @@ export default function DeclicPage() {
           placeholder="🔍 Rechercher une séance Déclic..."
           value={filters.search ?? ""}
           onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
             setPage(1);
           }}
         />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          {/* Affichage filtres */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+        >
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
@@ -207,11 +254,13 @@ export default function DeclicPage() {
             </Button>
           )}
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
 
-          {/* Taille de page */}
           <Select
             size="small"
             value={pageSize}
@@ -227,28 +276,47 @@ export default function DeclicPage() {
             ))}
           </Select>
 
-          {/* Création */}
           {canWriteDeclic && (
-            <Button variant="contained" onClick={() => navigate("/declic/create")}>
+            <Button
+              variant="contained"
+              onClick={() => navigate("/declic/create")}
+            >
               ➕ Ajouter une séance
             </Button>
           )}
 
-          <Button variant="outlined" onClick={() => navigate("/participants-declic")}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/participants-declic")}
+          >
             👥 Gérer les participants
           </Button>
 
           <Button
-            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            variant={
+              filters.avec_archivees || filters.archives_seules
+                ? "contained"
+                : "outlined"
+            }
             onClick={() =>
               setFilters((prev) =>
                 prev.avec_archivees || prev.archives_seules
-                  ? { ...prev, avec_archivees: undefined, archives_seules: undefined }
-                  : { ...prev, avec_archivees: true, archives_seules: undefined }
+                  ? {
+                      ...prev,
+                      avec_archivees: undefined,
+                      archives_seules: undefined,
+                    }
+                  : {
+                      ...prev,
+                      avec_archivees: true,
+                      archives_seules: undefined,
+                    }
               )
             }
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivées" : "Inclure archivées"}
+            {filters.avec_archivees || filters.archives_seules
+              ? "Masquer archivées"
+              : "Inclure archivées"}
           </Button>
 
           {(filters.avec_archivees || filters.archives_seules) && (
@@ -257,8 +325,16 @@ export default function DeclicPage() {
               onClick={() =>
                 setFilters((prev) =>
                   prev.archives_seules
-                    ? { ...prev, archives_seules: undefined, avec_archivees: undefined }
-                    : { ...prev, archives_seules: true, avec_archivees: true }
+                    ? {
+                        ...prev,
+                        archives_seules: undefined,
+                        avec_archivees: undefined,
+                      }
+                    : {
+                        ...prev,
+                        archives_seules: true,
+                        avec_archivees: true,
+                      }
                 )
               }
             >
@@ -296,10 +372,17 @@ export default function DeclicPage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
-              <Button variant="outlined" onClick={() => setSelectedIds(items.map((i) => i.id))}>
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedIds(items.map((i) => i.id))}
+              >
                 ✅ Tout sélectionner
               </Button>
               <Button variant="outlined" onClick={() => setSelectedIds([])}>
@@ -309,30 +392,8 @@ export default function DeclicPage() {
           )}
         </Stack>
       }
-      footer={
-        count > 0 && (
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-            alignItems="center"
-            spacing={1}
-          >
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
-            </Typography>
-            <Pagination
-              page={page}
-              count={totalPages}
-              onChange={(_, val) => setPage(val)}
-              color="primary"
-            />
-          </Stack>
-        )
-      }
-    >
-      {/* ───────────── Panneau de filtres ───────────── */}
-      {showFilters && (
-        <Box mb={2}>
+      filters={
+        showFilters ? (
           <FiltresDeclicPanel
             options={loadingFilters ? undefined : filterOptions}
             values={filters}
@@ -344,19 +405,47 @@ export default function DeclicPage() {
             onRefresh={() => setFilters({ ...filters })}
             onReset={resetAllFilters}
           />
-        </Box>
-      )}
-
-      {/* ───────────── Table principale ───────────── */}
+        ) : undefined
+      }
+      footer={footer}
+    >
       {loading ? (
-        <CircularProgress />
+        <Box
+          sx={{
+            minHeight: 240,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
       ) : error ? (
-        <Typography color="error">
-          ⚠️ {error.message || "Impossible de charger les séances Déclic."}
-        </Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Typography color="error" textAlign="center">
+            ⚠️ {error.message || "Impossible de charger les séances Déclic."}
+          </Typography>
+        </Box>
       ) : !items.length ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Typography>Aucune séance Déclic ne correspond aux filtres actuels.</Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          <Typography color="text.secondary">
+            Aucune séance Déclic ne correspond aux filtres actuels.
+          </Typography>
         </Box>
       ) : (
         <DeclicTable
@@ -373,7 +462,6 @@ export default function DeclicPage() {
         />
       )}
 
-      {/* ───────────── Modale de détail ───────────── */}
       <DeclicDetailModal
         open={showDetail}
         onClose={() => setShowDetail(false)}
@@ -381,7 +469,6 @@ export default function DeclicPage() {
         onEdit={(id) => navigate(`/declic/${id}/edit`)}
       />
 
-      {/* ───────────── Confirmation archivage ───────────── */}
       <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>Archiver la séance</DialogTitle>
         <DialogContent>
@@ -399,16 +486,24 @@ export default function DeclicPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+      <Dialog
+        open={Boolean(hardDeleteId)}
+        onClose={() => setHardDeleteId(null)}
+      >
         <DialogTitle>Suppression définitive</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette séance Déclic archivée sera supprimée définitivement. Cette action est irréversible.
+            Cette séance Déclic archivée sera supprimée définitivement. Cette
+            action est irréversible.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleHardDelete}>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleHardDelete}
+          >
             Supprimer définitivement
           </Button>
         </DialogActions>

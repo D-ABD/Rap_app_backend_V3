@@ -7,11 +7,10 @@ import {
   Box,
   Grid,
   Typography,
-  Divider,
-  Paper,
   CircularProgress,
   Link,
   useTheme,
+  Stack,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddCommentIcon from "@mui/icons-material/AddComment";
@@ -38,18 +37,15 @@ export default function AppairageDetailModal({
   const navigate = useNavigate();
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
+
   const modalScrim = isLight
     ? theme.custom.overlay.scrim.background.light
     : theme.custom.overlay.scrim.background.dark;
-  const modalTitleBackground = isLight
-    ? theme.custom.overlay.modalSectionTitle.background.light
-    : theme.custom.overlay.modalSectionTitle.background.dark;
-  const modalTitleBorder = isLight
-    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
-    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
-  const sectionPaperBg = isLight
-    ? theme.custom.form.section.paperBackground.light
-    : theme.custom.form.section.paperBackground.dark;
+
+  const actionsBorder = isLight
+    ? theme.custom.dialog.actions.borderTop.light
+    : theme.custom.dialog.actions.borderTop.dark;
+
   if (!open) return null;
 
   return (
@@ -62,254 +58,255 @@ export default function AppairageDetailModal({
       disableEnforceFocus
       BackdropProps={{ sx: { backgroundColor: modalScrim } }}
     >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          backgroundColor: modalTitleBackground,
-          borderBottom: modalTitleBorder,
-        }}
-      >
-        <Typography component="div" variant="h6" fontWeight={700}>
-          🔗 Détail de l’appairage
-        </Typography>
+      <DialogTitle>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          justifyContent="space-between"
+        >
+          <Typography component="div" variant="h6" fontWeight={700}>
+            Détail de l’appairage
+          </Typography>
 
-        <Button onClick={onClose} variant="outlined">
-          Fermer
-        </Button>
+          <Box>
+            <Button onClick={onClose} variant="outlined">
+              Fermer
+            </Button>
+          </Box>
+        </Stack>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent>
         {loading || !appairage ? (
-          <Box textAlign="center" py={4}>
+          <Box sx={{ textAlign: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Grid container spacing={2}>
-              {/* ───────────── Colonne gauche ───────────── */}
-              <Grid item xs={12} md={6}>
-                <Section title="Partenaire">
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Item label="Nom" value={appairage.partenaire_nom} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Ouvrir"
-                        value={
-                          appairage.partenaire ? (
-                            <Link
-                              component={RouterLink}
-                              to={`/partenaires/${appairage.partenaire}/edit`}
-                              underline="hover"
-                            >
-                              Voir le partenaire
-                            </Link>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Contact" value={appairage.partenaire_contact_nom} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Email" value={appairage.partenaire_email} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Téléphone" value={appairage.partenaire_telephone} />
-                    </Grid>
+          <Grid container spacing={2}>
+            {/* ───────────── Colonne gauche ───────────── */}
+            <Grid item xs={12} md={6}>
+              <Section title="Partenaire">
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Nom" value={appairage.partenaire_nom} />
                   </Grid>
-                </Section>
-
-                <Section title="Candidat">
-                  <Item label="Nom" value={appairage.candidat_nom} />
-                  <Item
-                    label="Ouvrir"
-                    value={
-                      appairage.candidat ? (
-                        <Link
-                          component={RouterLink}
-                          to={`/candidats/${appairage.candidat}`}
-                          underline="hover"
-                        >
-                          Voir le candidat
-                        </Link>
-                      ) : (
-                        "—"
-                      )
-                    }
-                  />
-                </Section>
-              </Grid>
-
-              {/* ───────────── Colonne droite ───────────── */}
-              <Grid item xs={12} md={6}>
-                <Section title="Formation">
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Item label="Nom" value={appairage.formation_nom} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Ouvrir"
-                        value={
-                          appairage.formation ? (
-                            <Link
-                              component={RouterLink}
-                              to={`/formations/${appairage.formation}`}
-                              underline="hover"
-                            >
-                              Voir la formation
-                            </Link>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Type" value={appairage.formation_type_offre} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Centre" value={appairage.formation_centre} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Statut" value={appairage.formation_statut} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Places"
-                        value={
-                          appairage.formation_places_disponibles != null &&
-                          appairage.formation_places_total != null
-                            ? `${appairage.formation_places_disponibles} / ${appairage.formation_places_total}`
-                            : "—"
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Dates"
-                        value={
-                          appairage.formation_date_debut || appairage.formation_date_fin
-                            ? `${appairage.formation_date_debut ?? "?"} → ${appairage.formation_date_fin ?? "?"}`
-                            : "—"
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Numéro offre" value={appairage.formation_numero_offre} />
-                    </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Ouvrir"
+                      value={
+                        appairage.partenaire ? (
+                          <Link
+                            component={RouterLink}
+                            to={`/partenaires/${appairage.partenaire}/edit`}
+                            underline="hover"
+                          >
+                            Voir le partenaire
+                          </Link>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
                   </Grid>
-                </Section>
-
-                <Section title="Audit">
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Activité"
-                        value={
-                          appairage.activite_display ? (
-                            <Box
-                              component="span"
-                              sx={{
-                                fontWeight: 600,
-                                color: appairage.activite_display.toLowerCase().includes("archiv")
-                                  ? "text.secondary"
-                                  : "success.main",
-                              }}
-                            >
-                              {appairage.activite_display}
-                            </Box>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
-                    </Grid>
-
-                    <Grid item xs={6}>
-                      <Item label="Statut" value={appairage.statut_display} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="Créé par" value={appairage.created_by_nom} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="Créé le"
-                        value={
-                          appairage.created_at
-                            ? new Date(appairage.created_at).toLocaleString()
-                            : "—"
-                        }
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item label="MAJ par" value={appairage.updated_by_nom} />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Item
-                        label="MAJ le"
-                        value={
-                          appairage.updated_at
-                            ? new Date(appairage.updated_at).toLocaleString()
-                            : "—"
-                        }
-                      />
-                    </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Contact" value={appairage.partenaire_contact_nom} />
                   </Grid>
-                </Section>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Email" value={appairage.partenaire_email} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Téléphone" value={appairage.partenaire_telephone} />
+                  </Grid>
+                </Grid>
+              </Section>
 
-                {/* ───────────── Dernier commentaire ───────────── */}
-                {appairage.last_commentaire && (
-                  <Section title="Dernier commentaire">
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 1.5,
-                        borderRadius: 1,
-                        backgroundColor: sectionPaperBg,
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          whiteSpace: "pre-wrap",
-                          color: "text.primary",
-                        }}
-                      >
-                        {appairage.last_commentaire}
-                      </Typography>
-
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", mt: 1 }}
-                      >
-                        ✍️ {appairage.created_by_nom ?? "—"} —{" "}
-                        {appairage.created_at
-                          ? new Date(appairage.created_at).toLocaleString("fr-FR", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "—"}
-                      </Typography>
-                    </Paper>
-                  </Section>
-                )}
-              </Grid>
+              <Section title="Candidat">
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Item label="Nom" value={appairage.candidat_nom} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Item
+                      label="Ouvrir"
+                      value={
+                        appairage.candidat ? (
+                          <Link
+                            component={RouterLink}
+                            to={`/candidats/${appairage.candidat}`}
+                            underline="hover"
+                          >
+                            Voir le candidat
+                          </Link>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
+                  </Grid>
+                </Grid>
+              </Section>
             </Grid>
-          </Paper>
+
+            {/* ───────────── Colonne droite ───────────── */}
+            <Grid item xs={12} md={6}>
+              <Section title="Formation">
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Nom" value={appairage.formation_nom} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Ouvrir"
+                      value={
+                        appairage.formation ? (
+                          <Link
+                            component={RouterLink}
+                            to={`/formations/${appairage.formation}`}
+                            underline="hover"
+                          >
+                            Voir la formation
+                          </Link>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Type" value={appairage.formation_type_offre} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Centre" value={appairage.formation_centre} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Statut" value={appairage.formation_statut} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Places"
+                      value={
+                        appairage.formation_places_disponibles != null &&
+                        appairage.formation_places_total != null
+                          ? `${appairage.formation_places_disponibles} / ${appairage.formation_places_total}`
+                          : "—"
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Dates"
+                      value={
+                        appairage.formation_date_debut || appairage.formation_date_fin
+                          ? `${appairage.formation_date_debut ?? "?"} → ${appairage.formation_date_fin ?? "?"}`
+                          : "—"
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Numéro offre" value={appairage.formation_numero_offre} />
+                  </Grid>
+                </Grid>
+              </Section>
+
+              <Section title="Audit">
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Activité"
+                      value={
+                        appairage.activite_display ? (
+                          <Box
+                            component="span"
+                            sx={{
+                              fontWeight: 600,
+                              color: appairage.activite_display.toLowerCase().includes("archiv")
+                                ? "text.secondary"
+                                : "success.main",
+                            }}
+                          >
+                            {appairage.activite_display}
+                          </Box>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Statut" value={appairage.statut_display} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="Créé par" value={appairage.created_by_nom} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="Créé le"
+                      value={
+                        appairage.created_at
+                          ? new Date(appairage.created_at).toLocaleString("fr-FR")
+                          : "—"
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item label="MAJ par" value={appairage.updated_by_nom} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Item
+                      label="MAJ le"
+                      value={
+                        appairage.updated_at
+                          ? new Date(appairage.updated_at).toLocaleString("fr-FR")
+                          : "—"
+                      }
+                    />
+                  </Grid>
+                </Grid>
+              </Section>
+
+              {appairage.last_commentaire && (
+                <Section title="Dernier commentaire">
+                  <Typography
+                    variant="body2"
+                    component="div"
+                    sx={{
+                      whiteSpace: "pre-wrap",
+                      color: "text.primary",
+                    }}
+                  >
+                    {appairage.last_commentaire}
+                  </Typography>
+
+                  <Typography
+                    variant="caption"
+                    component="div"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    {appairage.created_by_nom ?? "—"} —{" "}
+                    {appairage.created_at
+                      ? new Date(appairage.created_at).toLocaleString("fr-FR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—"}
+                  </Typography>
+                </Section>
+              )}
+            </Grid>
+          </Grid>
         )}
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "space-between", px: 3, py: 2, borderTop: modalTitleBorder }}>
-        <Box display="flex" gap={1} flexWrap="wrap">
+      <DialogActions
+        sx={{
+          justifyContent: "space-between",
+          borderTop: actionsBorder,
+        }}
+      >
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
           {appairage && onEdit && (
             <Button
               startIcon={<EditIcon />}
@@ -320,6 +317,7 @@ export default function AppairageDetailModal({
               Modifier
             </Button>
           )}
+
           {appairage && (
             <Button
               startIcon={<AddCommentIcon />}
@@ -329,6 +327,7 @@ export default function AppairageDetailModal({
               Ajouter un commentaire
             </Button>
           )}
+
           {appairage && (
             <Button
               startIcon={<LaunchIcon />}
@@ -347,43 +346,81 @@ export default function AppairageDetailModal({
     </Dialog>
   );
 }
+
 /* ---------- Sous-composants ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
+
+  const sectionTokens = theme.custom.dialog.section;
   const modalTitleBackground = isLight
     ? theme.custom.overlay.modalSectionTitle.background.light
     : theme.custom.overlay.modalSectionTitle.background.dark;
   const modalTitleBorder = isLight
     ? theme.custom.overlay.modalSectionTitle.borderBottom.light
     : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+
+  const sectionBackground = isLight
+    ? sectionTokens.background.light
+    : sectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? sectionTokens.border.light
+    : sectionTokens.border.dark;
+
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box
+      sx={{
+        mb: 2,
+        border: sectionBorder,
+        borderRadius: sectionTokens.borderRadius,
+        background: sectionBackground,
+        overflow: "hidden",
+      }}
+    >
       <Box
         sx={{
-          mb: 1,
-          px: 1.25,
-          py: 0.75,
-          borderRadius: 1.5,
+          px: sectionTokens.padding,
+          py: 1,
           backgroundColor: modalTitleBackground,
           borderBottom: modalTitleBorder,
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
           {title}
         </Typography>
       </Box>
-      <Divider sx={{ mb: 1, display: "none" }} />
-      {children}
+
+      <Box sx={{ p: sectionTokens.padding }}>{children}</Box>
     </Box>
   );
 }
 
 function Item({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
-    <Typography variant="body2" sx={{ mb: 0.5, whiteSpace: "nowrap" }}>
-      <strong>{label} :</strong>{" "}
-      {value ?? <span style={{ color: "red", fontStyle: "italic", opacity: 0.8 }}>— NC</span>}
+    <Typography
+      variant="body2"
+      component="div"
+      sx={{
+        mb: 0.5,
+        minWidth: 0,
+        overflowWrap: "anywhere",
+      }}
+    >
+      <Box component="span" sx={{ fontWeight: 700 }}>
+        {label} :
+      </Box>{" "}
+      {value ?? (
+        <Box
+          component="span"
+          sx={{
+            color: "text.secondary",
+            fontStyle: "italic",
+            opacity: 0.8,
+          }}
+        >
+          — NC
+        </Box>
+      )}
     </Typography>
   );
 }

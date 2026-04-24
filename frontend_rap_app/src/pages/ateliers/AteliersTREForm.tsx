@@ -1,10 +1,10 @@
 // =============================================
-// components/ateliers/AtelierTREForm.tsx (full MUI, tous champs inclus)
+// components/ateliers/AtelierTREForm.tsx
+// Refactor LOT 7 — structure formulaire allégée
 // =============================================
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
-  Paper,
   Grid,
   Typography,
   TextField,
@@ -24,7 +24,10 @@ import type {
   PresenceStatut,
 } from "../../types/ateliersTre";
 import CentresSelectModal from "../../components/modals/CentresSelectModal";
-import CandidatsSelectModal, { CandidatPick } from "../../components/modals/CandidatsSelectModal";
+import CandidatsSelectModal, {
+  CandidatPick,
+} from "../../components/modals/CandidatsSelectModal";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 
 /* ====================== Fallbacks ====================== */
 const TYPE_CHOICES_FALLBACK: Choice[] = [
@@ -56,6 +59,7 @@ function toDatetimeLocalValue(iso?: string | null): string {
     d.getDate()
   )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
 function fromDatetimeLocalInput(v: string): string | undefined {
   return v || undefined;
 }
@@ -89,7 +93,10 @@ export default function AtelierTREForm({
   const [candPills, setCandPills] = useState<Array<{ id: number; label: string }>>([]);
   const [presences, setPresences] = useState<Record<number, PresenceStatut>>(
     Object.fromEntries(
-      (initialValues?.presences ?? []).map((presence) => [presence.candidat_id, presence.statut])
+      (initialValues?.presences ?? []).map((presence) => [
+        presence.candidat_id,
+        presence.statut,
+      ])
     ) as Record<number, PresenceStatut>
   );
 
@@ -97,17 +104,22 @@ export default function AtelierTREForm({
   const [showCandidatsModal, setShowCandidatsModal] = useState(false);
 
   const typeChoices = useMemo(
-    () => (meta?.type_atelier_choices?.length ? meta.type_atelier_choices : TYPE_CHOICES_FALLBACK),
+    () =>
+      meta?.type_atelier_choices?.length
+        ? meta.type_atelier_choices
+        : TYPE_CHOICES_FALLBACK,
     [meta?.type_atelier_choices]
   );
   const centreChoices = useMemo(() => meta?.centre_choices ?? [], [meta?.centre_choices]);
-  const candidatChoices = useMemo(() => meta?.candidat_choices ?? [], [meta?.candidat_choices]);
+  const candidatChoices = useMemo(
+    () => meta?.candidat_choices ?? [],
+    [meta?.candidat_choices]
+  );
   const presenceChoices = useMemo(
     () => meta?.presence_statut_choices ?? PRESENCE_CHOICES_FALLBACK,
     [meta?.presence_statut_choices]
   );
 
-  // --- Effets dérivés ---
   useEffect(() => {
     if (form.centre != null) {
       const opt = centreChoices.find((c) => Number(c.value) === form.centre);
@@ -126,9 +138,9 @@ export default function AtelierTREForm({
     setCandPills(list);
   }, [form.candidats, candidatChoices]);
 
-  // --- Soumission ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const payload: AtelierTREFormData = {
       type_atelier: form.type_atelier,
       date_atelier: form.date_atelier ?? null,
@@ -139,185 +151,227 @@ export default function AtelierTREForm({
         statut,
       })),
     };
+
     await onSubmit(payload);
   };
 
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
-        {/* Informations principales */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6">Informations de l’atelier</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Renseignez le type, la date/heure et le centre.
-          </Typography>
+        <Stack spacing={3}>
+          {/* Informations principales */}
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h6">Informations de l’atelier</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Renseignez le type, la date/heure et le centre.
+              </Typography>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Type d’atelier *</Typography>
-              <Select
-                fullWidth
-                required
-                value={form.type_atelier}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    type_atelier: e.target.value as TypeAtelier,
-                  }))
-                }
-              >
-                {typeChoices.map((c) => (
-                  <MenuItem key={String(c.value)} value={String(c.value)}>
-                    {c.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Date & heure</Typography>
-              <TextField
-                type="datetime-local"
-                fullWidth
-                value={toDatetimeLocalValue(form.date_atelier ?? undefined)}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    date_atelier: fromDatetimeLocalInput(e.target.value) ?? null,
-                  }))
-                }
-                helperText="Laissez vide si la date n’est pas encore fixée."
-              />
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Typography fontWeight={600}>Centre</Typography>
-              <TextField
-                fullWidth
-                placeholder="— Aucune sélection —"
-                value={centreLabel || (form.centre ? `#${form.centre}` : "")}
-                InputProps={{ readOnly: true }}
-              />
-              <Stack direction="row" spacing={1} mt={1}>
-                <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
-                  🏫 Sélectionner un centre
-                </Button>
-                {form.centre != null && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      setForm((f) => ({ ...f, centre: null }));
-                      setCentreLabel("");
-                    }}
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <Typography fontWeight={600}>Type d’atelier *</Typography>
+                  <Select
+                    fullWidth
+                    required
+                    value={form.type_atelier}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        type_atelier: e.target.value as TypeAtelier,
+                      }))
+                    }
                   >
-                    ✖ Effacer
-                  </Button>
-                )}
-              </Stack>
+                    {typeChoices.map((c) => (
+                      <MenuItem key={String(c.value)} value={String(c.value)}>
+                        {c.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField
+                  label="Date & heure"
+                  type="datetime-local"
+                  fullWidth
+                  value={toDatetimeLocalValue(form.date_atelier ?? undefined)}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      date_atelier: fromDatetimeLocalInput(e.target.value) ?? null,
+                    }))
+                  }
+                  helperText="Laissez vide si la date n’est pas encore fixée."
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1}>
+                  <TextField
+                    label="Centre"
+                    fullWidth
+                    placeholder="— Aucune sélection —"
+                    value={centreLabel || (form.centre ? `#${form.centre}` : "")}
+                    InputProps={{ readOnly: true }}
+                  />
+
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => setShowCentreModal(true)}
+                    >
+                      🏫 Sélectionner un centre
+                    </Button>
+
+                    {form.centre != null && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => {
+                          setForm((f) => ({ ...f, centre: null }));
+                          setCentreLabel("");
+                        }}
+                      >
+                        ✖ Effacer
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              </Grid>
             </Grid>
-          </Grid>
-        </Paper>
+          </Stack>
 
-        {/* Candidats et présences */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6">Candidats & présences</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Ajoutez des candidats et définissez leur présence.
-          </Typography>
+          <Divider />
 
-          <Stack direction="row" spacing={1} mb={2}>
-            <Button variant="outlined" onClick={() => setShowCandidatsModal(true)}>
-              👥 Sélectionner des candidats
-            </Button>
-            {!!(form.candidats?.length ?? 0) && (
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={() => {
-                  setForm((f) => ({ ...f, candidats: [] }));
-                  setCandPills([]);
-                  setPresences({});
-                }}
-              >
-                ✖ Tout effacer
+          {/* Candidats et présences */}
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h6">Candidats & présences</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ajoutez des candidats et définissez leur présence.
+              </Typography>
+            </Box>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button variant="outlined" onClick={() => setShowCandidatsModal(true)}>
+                👥 Sélectionner des candidats
               </Button>
+
+              {!!(form.candidats?.length ?? 0) && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => {
+                    setForm((f) => ({ ...f, candidats: [] }));
+                    setCandPills([]);
+                    setPresences({});
+                  }}
+                >
+                  ✖ Tout effacer
+                </Button>
+              )}
+            </Stack>
+
+            {!!candPills.length && (
+              <Stack spacing={1.5}>
+                <FormHelperText>
+                  {candPills.length} candidat(s) sélectionné(s)
+                </FormHelperText>
+
+                <Divider />
+
+                <Grid container spacing={1.5}>
+                  {candPills.map((c) => (
+                    <Grid item xs={12} md={6} key={c.id}>
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                        alignItems={{ xs: "stretch", sm: "center" }}
+                      >
+                        <Chip label={c.label} />
+
+                        <Select
+                          size="small"
+                          value={presences[c.id] ?? "inconnu"}
+                          onChange={(e) =>
+                            setPresences((prev) => ({
+                              ...prev,
+                              [c.id]: e.target.value as PresenceStatut,
+                            }))
+                          }
+                        >
+                          {presenceChoices.map((p: Choice) => (
+                            <MenuItem key={p.value} value={p.value}>
+                              {p.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            setForm((f) => ({
+                              ...f,
+                              candidats: (f.candidats ?? []).filter((id) => id !== c.id),
+                            }));
+                            setPresences((prev) => {
+                              const next = { ...prev };
+                              delete next[c.id];
+                              return next;
+                            });
+                          }}
+                        >
+                          Retirer
+                        </Button>
+                      </Stack>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Stack>
             )}
           </Stack>
 
-          {!!candPills.length && (
-            <>
-              <FormHelperText>{candPills.length} candidat(s) sélectionné(s)</FormHelperText>
-              <Divider sx={{ my: 1 }} />
-              <Grid container spacing={1}>
-                {candPills.map((c) => (
-                  <Grid item xs={12} md={6} key={c.id}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Chip label={c.label} />
-                      <Select
-                        size="small"
-                        value={presences[c.id] ?? "inconnu"}
-                        onChange={(e) =>
-                          setPresences((prev) => ({
-                            ...prev,
-                            [c.id]: e.target.value as PresenceStatut,
-                          }))
-                        }
-                      >
-                        {presenceChoices.map((p: Choice) => (
-                          <MenuItem key={p.value} value={p.value}>
-                            {p.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          setForm((f) => ({
-                            ...f,
-                            candidats: (f.candidats ?? []).filter((id) => id !== c.id),
-                          }));
-                          setPresences((prev) => {
-                            const next = { ...prev };
-                            delete next[c.id];
-                            return next;
-                          });
-                        }}
-                      >
-                        Retirer
-                      </Button>
-                    </Stack>
-                  </Grid>
-                ))}
-              </Grid>
-            </>
-          )}
-        </Paper>
+          <Divider />
 
-        {/* Notes */}
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography variant="h6">Notes internes</Typography>
-          <TextField
-            multiline
-            minRows={4}
-            fullWidth
-            placeholder="Saisir une note (optionnel)…"
-            value={form.notes ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
-        </Paper>
+          {/* Notes */}
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h6">Notes internes</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ajoutez une note libre si nécessaire.
+              </Typography>
+            </Box>
 
-        {/* Actions */}
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          {onCancel && (
-            <Button variant="outlined" onClick={onCancel}>
-              Annuler
+            <TextField
+              label="Notes"
+              multiline
+              minRows={4}
+              fullWidth
+              placeholder="Saisir une note (optionnel)…"
+              value={form.notes ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            />
+          </Stack>
+
+          <Divider />
+
+          {/* Actions */}
+          <FormActionsBar>
+            {onCancel && (
+              <Button variant="outlined" onClick={onCancel}>
+                Annuler
+              </Button>
+            )}
+
+            <Button variant="contained" type="submit" disabled={submitting}>
+              {submitting ? "Enregistrement…" : "Enregistrer"}
             </Button>
-          )}
-          <Button variant="contained" type="submit" disabled={submitting}>
-            {submitting ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          </FormActionsBar>
         </Stack>
       </Box>
 
@@ -349,7 +403,9 @@ export default function AtelierTREForm({
           setForm((f) => ({ ...f, candidats: nextIds }));
           setPresences((prev) =>
             Object.fromEntries(
-              Object.entries(prev).filter(([candidateId]) => nextIds.includes(Number(candidateId)))
+              Object.entries(prev).filter(([candidateId]) =>
+                nextIds.includes(Number(candidateId))
+              )
             ) as Record<number, PresenceStatut>
           );
         }}

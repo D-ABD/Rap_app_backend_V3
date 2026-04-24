@@ -1,6 +1,7 @@
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
-import { Alert, Button, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Button, Paper, Stack, Typography, useTheme } from "@mui/material";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../theme";
 
 type ErrorStateProps = {
   title?: ReactNode;
@@ -12,17 +13,31 @@ type ErrorStateProps = {
 
 export default function ErrorState({
   title = "Une erreur est survenue",
-  message = "Le contenu n'a pas pu etre charge.",
+  message = "Le contenu n'a pas pu être chargé.",
   details,
-  retryLabel = "Reessayer",
+  retryLabel = "Réessayer",
   onRetry,
 }: ErrorStateProps) {
+  const theme = useTheme<AppTheme>();
+  const tokens = theme.custom.feedback.errorState;
+
   return (
-    <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-      <Stack spacing={2}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: tokens.padding,
+        borderRadius: tokens.borderRadius,
+      }}
+    >
+      <Stack spacing={tokens.gap}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <ErrorOutlineRoundedIcon color="error" />
-          <Typography variant="h6">{title}</Typography>
+          <ErrorOutlineRoundedIcon
+            color="error"
+            sx={tokens.iconSize ? { fontSize: tokens.iconSize } : undefined}
+          />
+          <Typography variant="h6" component="div">
+            {title}
+          </Typography>
         </Stack>
 
         <Alert severity="error" variant="outlined">
@@ -30,7 +45,7 @@ export default function ErrorState({
         </Alert>
 
         {details ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" component="div">
             {details}
           </Typography>
         ) : null}

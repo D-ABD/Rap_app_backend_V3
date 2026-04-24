@@ -120,7 +120,6 @@ export default function CandidatsPage() {
 
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  // Filtres
   const [filters, setFilters] = useState<CandidatFiltresValues>(urlFilters);
 
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -128,7 +127,6 @@ export default function CandidatsPage() {
     return false;
   });
 
-  // Colonnes
   const [anchorColumns, setAnchorColumns] = useState<null | HTMLElement>(null);
 
   const defaultVisibleColumnKeys = useMemo(
@@ -234,23 +232,25 @@ export default function CandidatsPage() {
     []
   );
 
-  const toggleColumnVisibility = useCallback((key: string) => {
-    setVisibleColumnKeys((prev) => {
-      const item = columnVisibilityItems.find((col) => col.key === key);
-      if (!item || item.hideable === false) return prev;
+  const toggleColumnVisibility = useCallback(
+    (key: string) => {
+      setVisibleColumnKeys((prev) => {
+        const item = columnVisibilityItems.find((col) => col.key === key);
+        if (!item || item.hideable === false) return prev;
 
-      const isVisible = prev.includes(key);
+        const isVisible = prev.includes(key);
 
-      if (isVisible) {
-        const next = prev.filter((itemKey) => itemKey !== key);
-        return next.length > 0 ? next : prev;
-      }
+        if (isVisible) {
+          const next = prev.filter((itemKey) => itemKey !== key);
+          return next.length > 0 ? next : prev;
+        }
 
-      return [...prev, key];
-    });
-  }, [columnVisibilityItems]);
+        return [...prev, key];
+      });
+    },
+    [columnVisibilityItems]
+  );
 
-  // Pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
     usePagination();
 
@@ -321,7 +321,6 @@ export default function CandidatsPage() {
     }).length;
   }, [effectiveFilters]);
 
-  // Data
   const { data: pageData, loading } = useCandidats(effectiveFilters, refreshNonce);
   const { options, loading: loadingOptions } = useCandidatFiltres();
   const { remove } = useDeleteCandidat();
@@ -345,16 +344,20 @@ export default function CandidatsPage() {
     setCount(pageData?.count ?? 0);
   }, [pageData, setCount]);
 
-  // Sélection
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
-    const visible = new Set(items.map((i) => i.id));
+    const visible = new Set(items.map((item) => item.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [items]);
 
-  const clearSelection = () => setSelectedIds([]);
-  const selectAll = () => setSelectedIds(items.map((i) => i.id));
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(items.map((item) => item.id));
+  }, [items]);
 
   const [showAtelierBulkDialog, setShowAtelierBulkDialog] = useState(false);
   const [anchorImportExport, setAnchorImportExport] =
@@ -397,11 +400,14 @@ export default function CandidatsPage() {
     []
   );
 
-  // Archivage logique
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false);
+
+  const refreshList = useCallback(() => {
+    setRefreshNonce((value) => value + 1);
+  }, []);
 
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
@@ -470,8 +476,7 @@ export default function CandidatsPage() {
       refreshList();
     } catch (error: any) {
       toast.error(
-        error?.message ||
-          "Impossible d'enregistrer l'entrée en formation."
+        error?.message || "Impossible d'enregistrer l'entrée en formation."
       );
     }
   };
@@ -514,8 +519,7 @@ export default function CandidatsPage() {
       refreshList();
     } catch (error: any) {
       toast.error(
-        error?.message ||
-          "Impossible d'inscrire ces candidats dans GESPERS."
+        error?.message || "Impossible d'inscrire ces candidats dans GESPERS."
       );
     }
   };
@@ -529,8 +533,7 @@ export default function CandidatsPage() {
       refreshList();
     } catch (error: any) {
       toast.error(
-        error?.message ||
-          "Impossible d'annuler l'inscription GESPERS."
+        error?.message || "Impossible d'annuler l'inscription GESPERS."
       );
     }
   };
@@ -582,10 +585,7 @@ export default function CandidatsPage() {
 
     try {
       const result = await bulkAssignAtelierTre(selectedIds, selectedAtelierId);
-      summarizeBulkResult(
-        result,
-        "Affectation à l'atelier TRE réussie pour"
-      );
+      summarizeBulkResult(result, "Affectation à l'atelier TRE réussie pour");
       setShowAtelierBulkDialog(false);
       clearSelection();
       refreshList();
@@ -609,7 +609,6 @@ export default function CandidatsPage() {
     return parts.join(" - ");
   }, []);
 
-  // ── Détail du candidat ─────────────────────────────────────────────
   const [showDetail, setShowDetail] = useState(false);
   const [selectedCandidat, setSelectedCandidat] = useState<Candidat | null>(
     null
@@ -702,10 +701,6 @@ export default function CandidatsPage() {
     }
   };
 
-  const refreshList = useCallback(() => {
-    setRefreshNonce((value) => value + 1);
-  }, []);
-
   const refreshSelectedCandidate = useCallback(async () => {
     if (!selectedCandidat?.id) {
       refreshList();
@@ -734,9 +729,7 @@ export default function CandidatsPage() {
   return (
     <PageTemplate
       refreshButton
-      onRefresh={() => {
-        refreshList();
-      }}
+      onRefresh={refreshList}
       headerExtra={
         <SearchInput
           placeholder="🔍 Rechercher un candidat..."
@@ -787,9 +780,9 @@ export default function CandidatsPage() {
               setPage(1);
             }}
           >
-            {[5, 10, 20].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
+            {[5, 10, 20].map((size) => (
+              <MenuItem key={size} value={size}>
+                {size} / page
               </MenuItem>
             ))}
           </Select>
@@ -1070,8 +1063,8 @@ export default function CandidatsPage() {
               options={options}
               values={effectiveFilters}
               hideSearch
-              onChange={(v) => {
-                setFilters((f) => ({ ...f, ...v }));
+              onChange={(values) => {
+                setFilters((current) => ({ ...current, ...values }));
                 setPage(1);
               }}
             />
@@ -1210,9 +1203,7 @@ export default function CandidatsPage() {
             </Alert>
           ) : (
             <FormControl fullWidth sx={{ mt: 1 }}>
-              <InputLabel id="bulk-atelier-select-label">
-                Atelier TRE
-              </InputLabel>
+              <InputLabel id="bulk-atelier-select-label">Atelier TRE</InputLabel>
               <Select
                 labelId="bulk-atelier-select-label"
                 value={selectedAtelierId}

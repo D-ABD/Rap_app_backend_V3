@@ -16,11 +16,15 @@ import {
   Typography,
   Chip,
   Stack,
+  Divider,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { toast } from "react-toastify";
-import axios, { AxiosError } from "axios"; // ✅ import correct
+import axios, { AxiosError } from "axios";
 import api from "../../api/axios";
 import type { Partenaire } from "../../types/partenaire";
+import type { AppTheme } from "../../theme";
+import SearchInput from "../SearchInput";
 
 /* ---------- Types ---------- */
 interface Props {
@@ -133,6 +137,9 @@ export default function PartenaireSelectModal({
   onCreate,
   prospectionId,
 }: Props) {
+  const theme = useTheme<AppTheme>();
+  const isLight = theme.palette.mode === "light";
+
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -146,6 +153,35 @@ export default function PartenaireSelectModal({
   const [zip, setZip] = useState("");
   const [email, setEmail] = useState("");
   const [tel, setTel] = useState("");
+
+  const dialogSectionTokens = theme.custom.dialog.section;
+  const sectionBackground = isLight
+    ? dialogSectionTokens.background.light
+    : dialogSectionTokens.background.dark;
+  const sectionBorder = isLight
+    ? dialogSectionTokens.border.light
+    : dialogSectionTokens.border.dark;
+
+  const sectionTitleBackground = isLight
+    ? theme.custom.overlay.modalSectionTitle.background.light
+    : theme.custom.overlay.modalSectionTitle.background.dark;
+  const sectionTitleBorder = isLight
+    ? theme.custom.overlay.modalSectionTitle.borderBottom.light
+    : theme.custom.overlay.modalSectionTitle.borderBottom.dark;
+
+  const sectionContainerSx = {
+    border: sectionBorder,
+    borderRadius: dialogSectionTokens.borderRadius,
+    background: sectionBackground,
+    overflow: "hidden",
+  } as const;
+
+  const sectionHeaderSx = {
+    px: dialogSectionTokens.padding,
+    py: 1,
+    background: sectionTitleBackground,
+    borderBottom: sectionTitleBorder,
+  } as const;
 
   useEffect(() => {
     if (!show) return;
@@ -207,7 +243,6 @@ export default function PartenaireSelectModal({
       onSelect(created as Partenaire);
       onClose();
     } catch (err: unknown) {
-      // ✅ typage correct + test axios
       if (axios.isAxiosError(err)) {
         const detail = (err as AxiosError<{ detail?: string }>).response?.data?.detail;
         if (typeof detail === "string") {
@@ -229,136 +264,184 @@ export default function PartenaireSelectModal({
 
   return (
     <Dialog open={show} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>🏢 Sélectionner un partenaire</DialogTitle>
-      <DialogContent dividers>
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error">Les partenaires n'ont pas pu être chargés.</Typography>
-        ) : (
-          <>
-            <TextField
-              fullWidth
-              type="text"
-              placeholder="🔍 Rechercher par nom ou ville..."
-              value={search}
-              onChange={(ev) => setSearch(ev.target.value)}
-              margin="normal"
-            />
-            <List>
-              {filtered.map((partenaire) => (
-                <ListItem key={partenaire.id} disablePadding>
-                  <ListItemButton onClick={() => onSelect(partenaire)}>
-                    <ListItemText
-                      primary={
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          useFlexGap
-                          flexWrap="wrap"
-                        >
-                          <Typography variant="body1" fontWeight={600}>
-                            {partenaire.nom}
-                          </Typography>
-                          {partenaire.type_display ? (
-                            <Chip size="small" label={partenaire.type_display} variant="outlined" />
-                          ) : null}
-                          {!partenaire.is_active ? (
-                            <Chip size="small" color="warning" label="Archivé" />
-                          ) : null}
-                        </Stack>
-                      }
-                      secondary={
-                        <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-                          {getPartenaireLocation(partenaire) ? (
-                            <Typography component="span" variant="body2">
-                              {getPartenaireLocation(partenaire)}
-                            </Typography>
-                          ) : null}
-                          {getPartenaireSummary(partenaire) ? (
-                            <Typography component="span" variant="body2" color="text.secondary">
-                              {getPartenaireSummary(partenaire)}
-                            </Typography>
-                          ) : (
-                            <Typography component="span" variant="body2" color="text.secondary">
-                              Aucun complément renseigné.
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-              {filtered.length === 0 && <Typography>Aucun partenaire trouvé.</Typography>}
-            </List>
-          </>
-        )}
+      <DialogTitle>Sélectionner un partenaire</DialogTitle>
 
-        {canCreate && (
-          <Box sx={{ mt: 2, p: 2, border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Créer et lier un partenaire
-            </Typography>
-            <Grid container spacing={1}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Nom *"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Ville"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Code postal / département"
-                  value={zip}
-                  onChange={(e) => setZip(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Email contact"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Téléphone contact"
-                  value={tel}
-                  onChange={(e) => setTel(e.target.value)}
-                />
-              </Grid>
-            </Grid>
-            <Button onClick={handleCreate} disabled={createDisabled} sx={{ mt: 1 }}>
-              {creating ? "Création…" : "Créer et sélectionner"}
-            </Button>
+      <DialogContent>
+        <Stack spacing={2}>
+          <SearchInput
+            type="text"
+            placeholder="Rechercher par nom ou ville..."
+            value={search}
+            onChange={(ev) => setSearch(ev.target.value)}
+            fullWidth
+          />
+
+          <Box sx={sectionContainerSx}>
+            <Box sx={sectionHeaderSx}>
+              <Typography variant="subtitle2" fontWeight={700}>
+                Partenaires disponibles
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: dialogSectionTokens.padding }}>
+              {loading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  <CircularProgress />
+                </Box>
+              ) : error ? (
+                <Typography color="error">Les partenaires n'ont pas pu être chargés.</Typography>
+              ) : filtered.length === 0 ? (
+                <Typography color="text.secondary">Aucun partenaire trouvé.</Typography>
+              ) : (
+                <List disablePadding>
+                  {filtered.map((partenaire, index) => (
+                    <Box key={partenaire.id}>
+                      <ListItem disablePadding>
+                        <ListItemButton onClick={() => onSelect(partenaire)}>
+                          <ListItemText
+                            disableTypography
+                            primary={
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                useFlexGap
+                                flexWrap="wrap"
+                              >
+                                <Typography variant="body2" component="span" fontWeight={700}>
+                                  {partenaire.nom}
+                                </Typography>
+
+                                {partenaire.type_display ? (
+                                  <Chip
+                                    size="small"
+                                    label={partenaire.type_display}
+                                    variant="outlined"
+                                  />
+                                ) : null}
+
+                                {!partenaire.is_active ? (
+                                  <Chip size="small" color="warning" label="Archivé" />
+                                ) : null}
+                              </Stack>
+                            }
+                            secondary={
+                              <Box
+                                sx={{
+                                  mt: 0.5,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 0.25,
+                                }}
+                              >
+                                {getPartenaireLocation(partenaire) ? (
+                                  <Typography variant="body2" component="div">
+                                    {getPartenaireLocation(partenaire)}
+                                  </Typography>
+                                ) : null}
+
+                                {getPartenaireSummary(partenaire) ? (
+                                  <Typography
+                                    variant="body2"
+                                    component="div"
+                                    color="text.secondary"
+                                  >
+                                    {getPartenaireSummary(partenaire)}
+                                  </Typography>
+                                ) : (
+                                  <Typography
+                                    variant="body2"
+                                    component="div"
+                                    color="text.secondary"
+                                  >
+                                    Aucun complément renseigné.
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          />
+                        </ListItemButton>
+                      </ListItem>
+
+                      {index < filtered.length - 1 ? <Divider /> : null}
+                    </Box>
+                  ))}
+                </List>
+              )}
+            </Box>
           </Box>
-        )}
+
+          {canCreate && (
+            <Box sx={sectionContainerSx}>
+              <Box sx={sectionHeaderSx}>
+                <Typography variant="subtitle2" fontWeight={700}>
+                  Créer et lier un partenaire
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: dialogSectionTokens.padding }}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Nom *"
+                      value={nom}
+                      onChange={(e) => setNom(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Type"
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Ville"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Code postal / département"
+                      value={zip}
+                      onChange={(e) => setZip(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Email contact"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Téléphone contact"
+                      value={tel}
+                      onChange={(e) => setTel(e.target.value)}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 1.5 }}>
+                  <Button onClick={handleCreate} disabled={createDisabled}>
+                    {creating ? "Création…" : "Créer et sélectionner"}
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Stack>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose} color="secondary">
           Fermer

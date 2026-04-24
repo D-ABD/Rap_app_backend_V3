@@ -1,24 +1,14 @@
 // src/pages/ateliers/AteliersTRETable.tsx
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  Typography,
-  IconButton,
-  Stack,
-  Paper,
-  Chip,
-} from "@mui/material";
 import { useEffect, useMemo, useRef, useCallback } from "react";
+import { Box, Checkbox, Chip, IconButton, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import type { AtelierTRE } from "../../types/ateliersTre";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
+import ResponsiveTableTemplate, {
+  type TableColumn,
+} from "../../components/ResponsiveTableTemplate";
+import type { AtelierTRE } from "../../types/ateliersTre";
 
 /* ---------- Types ---------- */
 type Props = {
@@ -28,7 +18,7 @@ type Props = {
   onEdit?: (id: number) => void;
   onShow?: (id: number) => void;
   onDelete?: (id: number) => void;
-  onRowClick?: (id: number) => void; // ✅ ajouté
+  onRowClick?: (id: number) => void;
   maxHeight?: string;
 };
 
@@ -63,7 +53,7 @@ function candidatsPreview(a: AtelierTRE): string {
   return `${names}${more}`;
 }
 
-/* ---------- Component ---------- */
+/* ---------- Composant ---------- */
 export default function AteliersTreTable({
   items,
   selectedIds,
@@ -111,6 +101,112 @@ export default function AteliersTreTable({
     [onSelectionChange, selectedIds, selectedSet]
   );
 
+  const columns = useMemo<TableColumn<AtelierTRE>[]>(
+    () => [
+      {
+        key: "select",
+        label: "",
+        width: 48,
+        headerRender: () => (
+          <Checkbox
+            inputRef={headerCbRef}
+            indeterminate={someChecked}
+            checked={allChecked}
+            onChange={toggleAllThisPage}
+          />
+        ),
+        render: (a) => (
+          <Box onClick={(e) => e.stopPropagation()} sx={{ display: "inline-flex" }}>
+            <Checkbox
+              checked={selectedIds.includes(a.id)}
+              onChange={(e) => toggleOne(a.id, e.target.checked)}
+            />
+          </Box>
+        ),
+      },
+      {
+        key: "type_atelier",
+        label: "📌 Atelier",
+        noWrap: false,
+        render: (a) => (
+          <Box>
+            <Typography fontWeight={600}>
+              {a.type_atelier_display || a.type_atelier}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {a.type_atelier}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        key: "date_atelier",
+        label: "📅 Date",
+        render: (a) => (
+          <Chip
+            size="small"
+            color="info"
+            label={formatDateTimeFR(a.date_atelier)}
+            sx={{ fontSize: "0.75rem" }}
+          />
+        ),
+      },
+      {
+        key: "centre",
+        label: "🏫 Centre",
+        render: (a) => a.centre_detail?.label ?? "—",
+      },
+      {
+        key: "nb_inscrits",
+        label: "👥 Inscrits",
+        render: (a) => {
+          const nbInscrits =
+            typeof a.nb_inscrits === "number" ? a.nb_inscrits : (a.candidats?.length ?? 0);
+          return (
+            <Chip
+              size="small"
+              color={nbInscrits > 0 ? "success" : "default"}
+              label={`${nbInscrits} inscrits`}
+            />
+          );
+        },
+      },
+      {
+        key: "nb_presents",
+        label: "✅ Présents",
+        render: (a) => {
+          const nbPresents = a.presence_counts?.present ?? 0;
+          return (
+            <Chip
+              size="small"
+              color={nbPresents > 0 ? "primary" : "default"}
+              label={`${nbPresents} présents`}
+            />
+          );
+        },
+      },
+      {
+        key: "candidats",
+        label: "👤 Candidats",
+        render: (a) => {
+          const candPrev = candidatsPreview(a);
+          return (
+            <Typography variant="body2" noWrap title={candPrev}>
+              {candPrev}
+            </Typography>
+          );
+        },
+      },
+    ],
+    [
+      allChecked,
+      selectedIds,
+      someChecked,
+      toggleAllThisPage,
+      toggleOne,
+    ]
+  );
+
   if (!items.length) {
     return (
       <Typography sx={{ p: 2, color: "text.secondary", textAlign: "center" }}>
@@ -120,138 +216,40 @@ export default function AteliersTreTable({
   }
 
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: maxHeight ?? "65vh" }}>
-      <Table stickyHeader size="small" aria-label="Table des ateliers TRE">
-        <TableHead>
-          <TableRow>
-            <TableCell padding="checkbox">
-              <Checkbox
-                inputRef={headerCbRef}
-                indeterminate={someChecked}
-                checked={allChecked}
-                onChange={toggleAllThisPage}
-              />
-            </TableCell>
-            <TableCell>📌 Atelier</TableCell>
-            <TableCell>📅 Date</TableCell>
-            <TableCell>🏫 Centre</TableCell>
-            <TableCell>👥 Inscrits</TableCell>
-            <TableCell>✅ Présents</TableCell>
-            <TableCell>👤 Candidats</TableCell>
-            <TableCell>⚙️ Actions</TableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {items.map((a) => {
-            const isChecked = selectedSet.has(a.id);
-            const typeDisplay = a.type_atelier_display || a.type_atelier;
-            const dateTxt = formatDateTimeFR(a.date_atelier);
-            const centre = a.centre_detail?.label ?? "—";
-            const nbInscrits =
-              typeof a.nb_inscrits === "number" ? a.nb_inscrits : (a.candidats?.length ?? 0);
-            const nbPresents = a.presence_counts?.present ?? 0;
-            const candPrev = candidatsPreview(a);
-
-            return (
-              <TableRow
-                key={a.id}
-                hover
-                role="button"
-                tabIndex={0}
-                title="Cliquer pour voir le détail"
-                onClick={() => onRowClick?.(a.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onRowClick?.(a.id);
-                  }
-                }}
-                sx={{
-                  cursor: "pointer",
-                  "&:nth-of-type(even)": { bgcolor: "grey.50" },
-                }}
-              >
-                {/* Checkbox sélection */}
-                <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isChecked}
-                    onChange={(e) => toggleOne(a.id, e.target.checked)}
-                  />
-                </TableCell>
-
-                {/* Atelier */}
-                <TableCell>
-                  <Typography fontWeight={600}>{typeDisplay}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {a.type_atelier}
-                  </Typography>
-                </TableCell>
-
-                {/* Date */}
-                <TableCell>
-                  <Chip size="small" color="info" label={dateTxt} sx={{ fontSize: "0.75rem" }} />
-                </TableCell>
-
-                {/* Centre */}
-                <TableCell>{centre}</TableCell>
-
-                {/* Inscrits */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={nbInscrits > 0 ? "success" : "default"}
-                    label={`${nbInscrits} inscrits`}
-                  />
-                </TableCell>
-
-                {/* Présents */}
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={nbPresents > 0 ? "primary" : "default"}
-                    label={`${nbPresents} présents`}
-                  />
-                </TableCell>
-
-                {/* Candidats */}
-                <TableCell>
-                  <Typography variant="body2" noWrap title={candPrev}>
-                    {candPrev}
-                  </Typography>
-                </TableCell>
-
-                {/* Actions */}
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Stack direction="row" spacing={1}>
-                    <IconButton aria-label="Voir" size="small" onClick={() => onRowClick?.(a.id)}>
-                      <VisibilityIcon fontSize="inherit" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Éditer"
-                      size="small"
-                      color="primary"
-                      onClick={() => goEdit(a.id)}
-                    >
-                      <EditIcon fontSize="inherit" />
-                    </IconButton>
-                    {onDelete && (
-                      <IconButton
-                        aria-label="Archiver"
-                        size="small"
-                        color="error"
-                        onClick={() => onDelete(a.id)}
-                      >
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    )}
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <ResponsiveTableTemplate<AtelierTRE>
+      columns={columns}
+      data={items}
+      getRowId={(a) => a.id}
+      onRowClick={onRowClick ? (a) => onRowClick(a.id) : undefined}
+      onRowKeyDown={
+        onRowClick
+          ? (e, a) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onRowClick(a.id);
+              }
+            }
+          : undefined
+      }
+      rowHintTitle="Cliquer pour voir le détail"
+      cardTitle={(a) => a.type_atelier_display || a.type_atelier || "Atelier"}
+      actions={(a) => (
+        <Stack direction="row" spacing={1}>
+          <IconButton aria-label="Voir" size="small" onClick={() => onRowClick?.(a.id)}>
+            <VisibilityIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton aria-label="Éditer" size="small" color="primary" onClick={() => goEdit(a.id)}>
+            <EditIcon fontSize="inherit" />
+          </IconButton>
+          {onDelete && (
+            <IconButton aria-label="Archiver" size="small" color="error" onClick={() => onDelete(a.id)}>
+              <DeleteIcon fontSize="inherit" />
+            </IconButton>
+          )}
+        </Stack>
+      )}
+      showActionsColumn
+      containerSx={{ maxHeight: maxHeight ?? "65vh" }}
+    />
   );
 }

@@ -24,7 +24,12 @@ import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 
 import { CVThequeItem } from "src/types/cvtheque";
-import { useCVThequeList, useDeleteCV, useRestoreCV, useHardDeleteCV } from "src/hooks/useCvtheque";
+import {
+  useCVThequeList,
+  useDeleteCV,
+  useRestoreCV,
+  useHardDeleteCV,
+} from "src/hooks/useCvtheque";
 import CVThequeFiltresPanel from "../../components/filters/CVThequeFiltresPanel";
 import { toast } from "react-toastify";
 import CVThequeTable from "./cvthequeTable";
@@ -55,6 +60,7 @@ const defaultFilters: CVFilters = {};
 export default function CVThequePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const scopedCandidateId = useMemo(() => {
     const raw = searchParams.get("candidat");
     if (!raw) return undefined;
@@ -67,11 +73,13 @@ export default function CVThequePage() {
     candidat: scopedCandidateId,
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
+  const [anchorImportExport, setAnchorImportExport] =
+    useState<null | HTMLElement>(null);
 
   const [previewItem, setPreviewItem] = useState<CVThequeItem | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);
 
@@ -207,13 +215,43 @@ export default function CVThequePage() {
   };
 
   const handleEdit = (id: number) => {
-    navigate(`/cvtheque/${id}/edit${scopedCandidateId ? `?candidat=${scopedCandidateId}` : ""}`);
+    navigate(
+      `/cvtheque/${id}/edit${
+        scopedCandidateId ? `?candidat=${scopedCandidateId}` : ""
+      }`
+    );
   };
 
+  const archivesVisible = Boolean(
+    filters.avec_archivees || filters.archives_seules
+  );
 
-  // -------------------------------
-  // RENDER
-  // -------------------------------
+  const footer = (
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      justifyContent="space-between"
+      alignItems={{ xs: "stretch", sm: "center" }}
+      spacing={1.5}
+    >
+      <Typography color="text.secondary">
+        Page {page} / {totalPages} ({data?.count || 0} résultats)
+      </Typography>
+
+      <Stack direction="row" spacing={1} justifyContent={{ xs: "flex-start", sm: "flex-end" }}>
+        {hasPrev && (
+          <Button variant="outlined" onClick={() => setPage(page - 1)}>
+            ← Précédent
+          </Button>
+        )}
+        {hasNext && (
+          <Button variant="outlined" onClick={() => setPage(page + 1)}>
+            Suivant →
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
+
   return (
     <PageTemplate
       refreshButton
@@ -229,8 +267,12 @@ export default function CVThequePage() {
         />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          {/* Filtres */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+        >
           <Button
             variant="outlined"
             startIcon={<FilterAltIcon />}
@@ -266,7 +308,7 @@ export default function CVThequePage() {
           </Button>
 
           <Button
-            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            variant={archivesVisible ? "contained" : "outlined"}
             onClick={() => {
               setFilters((prev) => ({
                 ...prev,
@@ -276,10 +318,10 @@ export default function CVThequePage() {
               setPage(1);
             }}
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+            {archivesVisible ? "Masquer archivés" : "Inclure archivés"}
           </Button>
 
-          {(filters.avec_archivees || filters.archives_seules) && (
+          {archivesVisible && (
             <Button
               variant={filters.archives_seules ? "contained" : "outlined"}
               onClick={() => {
@@ -295,7 +337,6 @@ export default function CVThequePage() {
             </Button>
           )}
 
-          {/* Ajout */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -303,6 +344,16 @@ export default function CVThequePage() {
           >
             Ajouter un CV
           </Button>
+
+          {selectedIds.length > 0 && (
+            <Button
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => setConfirmOpen(true)}
+            >
+              Archiver ({selectedIds.length})
+            </Button>
+          )}
 
           <Menu
             anchorEl={anchorImportExport}
@@ -328,20 +379,13 @@ export default function CVThequePage() {
             </Box>
 
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <Lot1ExcelActions resource="cvtheque" exportParams={cvthequeIeParams} isMobile={false} />
+              <Lot1ExcelActions
+                resource="cvtheque"
+                exportParams={cvthequeIeParams}
+                isMobile={false}
+              />
             </Stack>
           </Menu>
-
-          {/* Archivage */}
-          {selectedIds.length > 0 && (
-            <Button
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={() => setConfirmOpen(true)}
-            >
-              Archiver ({selectedIds.length})
-            </Button>
-          )}
         </Stack>
       }
       filters={
@@ -355,10 +399,18 @@ export default function CVThequePage() {
                 search: filters.search,
                 ville: filters.ville,
                 document_type: values.document_type || undefined,
-                centre_id: values.centre_id ? Number(values.centre_id) : undefined,
-                formation_id: values.formation_id ? Number(values.formation_id) : undefined,
-                type_offre_id: values.type_offre_id ? Number(values.type_offre_id) : undefined,
-                statut_formation: values.statut_formation ? Number(values.statut_formation) : undefined,
+                centre_id: values.centre_id
+                  ? Number(values.centre_id)
+                  : undefined,
+                formation_id: values.formation_id
+                  ? Number(values.formation_id)
+                  : undefined,
+                type_offre_id: values.type_offre_id
+                  ? Number(values.type_offre_id)
+                  : undefined,
+                statut_formation: values.statut_formation
+                  ? Number(values.statut_formation)
+                  : undefined,
               };
               setFilters(clean);
               setPage(1);
@@ -366,54 +418,52 @@ export default function CVThequePage() {
           />
         )
       }
+      footer={footer}
     >
-      {/* CONTENU */}
       {loading ? (
-        <CircularProgress />
+        <Box
+          sx={{
+            minHeight: 240,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
       ) : items.length === 0 ? (
-        <Typography textAlign="center" color="text.secondary">
-          Aucun document trouvé.
-        </Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Typography textAlign="center" color="text.secondary">
+            Aucun document trouvé.
+          </Typography>
+        </Box>
       ) : (
-<CVThequeTable
-  rows={items}
-  selectedIds={selectedIds}
-  onToggleSelect={(id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }}
-  onPreview={handlePreview}
-  onEdit={handleEdit}   // ✅ CORRECTION ICI
-  onDelete={handleDeleteOne}
-  onRestore={handleRestoreOne}
-  onHardDelete={(id) => setHardDeleteId(id)}
-  canHardDelete={canHardDelete}
-/>
-
+        <CVThequeTable
+          rows={items}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => {
+            setSelectedIds((prev) =>
+              prev.includes(id)
+                ? prev.filter((x) => x !== id)
+                : [...prev, id]
+            );
+          }}
+          onPreview={handlePreview}
+          onEdit={handleEdit}
+          onDelete={handleDeleteOne}
+          onRestore={handleRestoreOne}
+          onHardDelete={(id) => setHardDeleteId(id)}
+          canHardDelete={canHardDelete}
+        />
       )}
 
-      {/* PAGINATION */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mt={3}>
-        <Typography>
-          Page {page} / {totalPages} ({data?.count || 0} résultats)
-        </Typography>
-
-        <Stack direction="row" spacing={1}>
-          {hasPrev && (
-            <Button variant="outlined" onClick={() => setPage(page - 1)}>
-              ← Précédent
-            </Button>
-          )}
-          {hasNext && (
-            <Button variant="outlined" onClick={() => setPage(page + 1)}>
-              Suivant →
-            </Button>
-          )}
-        </Stack>
-      </Stack>
-
-      {/* CONFIRM ARCHIVE MULTIPLE */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
@@ -423,7 +473,11 @@ export default function CVThequePage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleDeleteMultiple}>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteMultiple}
+          >
             Archiver
           </Button>
         </DialogActions>
@@ -433,18 +487,22 @@ export default function CVThequePage() {
         <DialogTitle>Suppression définitive</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. Le document archivé sera supprimé définitivement.
+            Cette action est irréversible. Le document archivé sera supprimé
+            définitivement.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={handleHardDeleteOne}>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleHardDeleteOne}
+          >
             Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* PREVIEW */}
       {previewItem && (
         <CVThequePreview
           item={previewItem}

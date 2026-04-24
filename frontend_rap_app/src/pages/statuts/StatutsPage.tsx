@@ -13,7 +13,6 @@ import {
   useTheme,
   useMediaQuery,
   Paper,
-  TextField,
 } from "@mui/material";
 
 import usePagination from "../../hooks/usePagination";
@@ -24,6 +23,7 @@ import PageTemplate from "../../components/PageTemplate";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingState from "../../components/ui/LoadingState";
+import SearchInput from "../../components/SearchInput";
 import type { AppTheme } from "../../theme";
 
 type Statut = {
@@ -46,7 +46,8 @@ export default function StatutsPage() {
   const [archivesOnly, setArchivesOnly] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
+  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } =
+    usePagination();
 
   const navigate = useNavigate();
   const theme = useTheme<AppTheme>();
@@ -86,7 +87,9 @@ export default function StatutsPage() {
   }, [data?.count, setCount]);
 
   const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   const clearSelection = () => setSelectedIds([]);
@@ -127,6 +130,7 @@ export default function StatutsPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     setHardDeleteLoading(true);
     try {
       const mod = await import("../../api/axios");
@@ -150,7 +154,7 @@ export default function StatutsPage() {
       refreshButton
       onRefresh={() => setReloadKey((k) => k + 1)}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
           <Select
             size="small"
             value={pageSize}
@@ -166,7 +170,11 @@ export default function StatutsPage() {
             ))}
           </Select>
 
-          <Lot1ExcelActions resource="statut" exportParams={lot1ExportParams} isMobile={isMobile} />
+          <Lot1ExcelActions
+            resource="statut"
+            exportParams={lot1ExportParams}
+            isMobile={isMobile}
+          />
 
           <Button
             variant="contained"
@@ -188,7 +196,9 @@ export default function StatutsPage() {
               setPage(1);
             }}
           >
-            {includeArchived || archivesOnly ? "Masquer archivés" : "Inclure archivés"}
+            {includeArchived || archivesOnly
+              ? "Masquer archivés"
+              : "Inclure archivés"}
           </Button>
 
           {(includeArchived || archivesOnly) && (
@@ -211,7 +221,11 @@ export default function StatutsPage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
@@ -225,10 +239,7 @@ export default function StatutsPage() {
         </Stack>
       }
       filters={
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
+        <SearchInput
           placeholder="Rechercher un statut..."
           value={search}
           onChange={(e) => {

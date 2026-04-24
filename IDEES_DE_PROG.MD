@@ -48,7 +48,12 @@ conserver x mois
 Intégration d’une IA très légère, locale et strictement limitée aux données de l’application
 Objectif
 --------------------------------------------------------------------
-
+Je souhaite que les candidats aient acces à toutes leurs infos et puissent les modifier, 
+sauf : 
+Assignations & visibilité (pas d'acces)
+Suivi & situation (lecture uniquement. ) Communication, CSP et experience non visibles
+Type de contrat du stagiaire, Contrat signé, numero osia, permis, rqth, et formation en lecture seule
+--------------------------------------------------------------------
 
 
 prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI..... 
@@ -635,4 +640,8 @@ Identifie les composants qui pourraient être plus 'Premium' (Boutons, Inputs, M
 
 STOP : Avant de proposer le code, liste-moi les fichiers de configuration dont tu as besoin (theme, icônes, types) pour garantir que le nouveau look sera globalement modifiable via le thème.
 
-VOICI LE CODE À REFACTORISER :
+RÈGLE DE VÉRIFICATION OBLIGATOIRE :
+"Tu as l'interdiction de générer du code utilisant des types, des constantes de couleurs ou des structures de données (ex: l'interface Formation) sans avoir ouvert le fichier source correspondant.
+
+Si tu identifies un import vers un fichier que tu n'as pas dans tes connaissances (ex: src/types/formation.ts, src/constants/colors.ts), tu dois STOPPER et me demander :
+'J'ai besoin de voir [Nom du fichier] pour garantir la validité du typage et des couleurs avant de continuer.'"

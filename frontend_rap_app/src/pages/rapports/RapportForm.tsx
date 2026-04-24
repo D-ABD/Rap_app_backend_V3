@@ -1,4 +1,4 @@
-import { Alert, Button, CircularProgress, Grid, MenuItem, Stack } from "@mui/material";
+import { Alert, Button, CircularProgress, Grid, Stack } from "@mui/material";
 import FormActionsBar from "../../components/forms/FormActionsBar";
 import FormSectionCard from "../../components/forms/FormSectionCard";
 import AppDateField from "../../components/forms/fields/AppDateField";
@@ -44,11 +44,20 @@ export default function RapportForm({
     <Stack spacing={2}>
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-      <FormSectionCard title="Paramètres du rapport">
+      <FormSectionCard
+        title="Paramètres du rapport"
+        subtitle="Définissez le périmètre, la période et les filtres utilisés pour générer le rapport."
+      >
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
-            <AppTextField label="Nom du rapport" value={value.nom} onChange={(e) => update("nom", e.target.value)} />
+            <AppTextField
+              label="Nom du rapport"
+              value={value.nom}
+              onChange={(e) => update("nom", e.target.value)}
+              helperText="Nom interne du rapport."
+            />
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppSelectField
               label="Type de rapport"
@@ -56,17 +65,16 @@ export default function RapportForm({
               displayEmpty
               value={value.type_rapport}
               onChange={(e) => update("type_rapport", String(e.target.value))}
+              helperText="Catégorie de rapport à produire."
             >
-              <MenuItem value="">
-                <em>Type de rapport</em>
-              </MenuItem>
               {choices.type_rapport.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppSelectField
               label="Période"
@@ -74,31 +82,34 @@ export default function RapportForm({
               displayEmpty
               value={value.periode}
               onChange={(e) => update("periode", String(e.target.value))}
+              helperText="Cadre temporel principal."
             >
-              <MenuItem value="">
-                <em>Période</em>
-              </MenuItem>
               {choices.periode.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppDateField
               label="Date début"
               value={value.date_debut}
               onChange={(e) => update("date_debut", e.target.value)}
+              helperText="Borne basse de la période."
             />
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppDateField
               label="Date fin"
               value={value.date_fin}
               onChange={(e) => update("date_fin", e.target.value)}
+              helperText="Borne haute de la période."
             />
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppSelectField
               label="Format"
@@ -106,17 +117,16 @@ export default function RapportForm({
               displayEmpty
               value={value.format}
               onChange={(e) => update("format", e.target.value as RapportFormData["format"])}
+              helperText="Format de sortie du rapport."
             >
-              <MenuItem value="">
-                <em>Format</em>
-              </MenuItem>
               {choices.format.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={3}>
             <AppSelectField
               label="Centre"
@@ -124,15 +134,17 @@ export default function RapportForm({
               displayEmpty
               value={value.centre === "" ? "" : String(value.centre)}
               onChange={(e) => update("centre", e.target.value ? Number(e.target.value) : "")}
+              helperText="Laisser vide pour inclure tous les centres."
             >
-              <MenuItem value="">Tous les centres</MenuItem>
+              <option value="">Tous les centres</option>
               {choices.centres.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={4}>
             <AppSelectField
               label="Type d’offre"
@@ -140,15 +152,17 @@ export default function RapportForm({
               displayEmpty
               value={value.type_offre === "" ? "" : String(value.type_offre)}
               onChange={(e) => update("type_offre", e.target.value ? Number(e.target.value) : "")}
+              helperText="Laisser vide pour inclure tous les types d’offre."
             >
-              <MenuItem value="">Tous les types d’offre</MenuItem>
+              <option value="">Tous les types d’offre</option>
               {choices.type_offres.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={4}>
             <AppSelectField
               label="Statut"
@@ -156,15 +170,17 @@ export default function RapportForm({
               displayEmpty
               value={value.statut === "" ? "" : String(value.statut)}
               onChange={(e) => update("statut", e.target.value ? Number(e.target.value) : "")}
+              helperText="Laisser vide pour inclure tous les statuts."
             >
-              <MenuItem value="">Tous les statuts</MenuItem>
+              <option value="">Tous les statuts</option>
               {choices.statuts.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
+
           <Grid item xs={12} md={4}>
             <AppSelectField
               label="Formation"
@@ -172,26 +188,32 @@ export default function RapportForm({
               displayEmpty
               value={value.formation === "" ? "" : String(value.formation)}
               onChange={(e) => update("formation", e.target.value ? Number(e.target.value) : "")}
+              helperText="Laisser vide pour inclure toutes les formations."
             >
-              <MenuItem value="">Toutes les formations</MenuItem>
+              <option value="">Toutes les formations</option>
               {choices.formations.map((item) => (
-                <MenuItem key={item.value} value={item.value}>
+                <option key={item.value} value={item.value}>
                   {item.label}
-                </MenuItem>
+                </option>
               ))}
             </AppSelectField>
           </Grid>
         </Grid>
       </FormSectionCard>
 
-      <AppReadonlyField
-        label="Information"
-        value="La génération des données du rapport se fait automatiquement à la création et à la modification."
-        multiline
-        minRows={2}
-        onChange={() => {}}
-        sx={{ bgcolor: "grey.50", borderRadius: 2 }}
-      />
+      <FormSectionCard
+        title="Information"
+        subtitle="Rappel sur le comportement du module de génération."
+      >
+        <AppReadonlyField
+          label="Information"
+          value="La génération des données du rapport se fait automatiquement à la création et à la modification."
+          multiline
+          minRows={2}
+          onChange={() => {}}
+          sx={{ bgcolor: "grey.50", borderRadius: 2 }}
+        />
+      </FormSectionCard>
 
       <FormActionsBar>
         <Button variant="outlined" onClick={onCancel}>

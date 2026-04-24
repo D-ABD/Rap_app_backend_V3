@@ -3,10 +3,12 @@ import {
   FormHelperText,
   InputLabel,
   Select,
+  useTheme,
   type FormControlProps,
   type SelectProps,
 } from "@mui/material";
 import type { ReactNode } from "react";
+import type { AppTheme } from "../../../theme";
 
 export type AppSelectFieldProps = {
   label: string;
@@ -31,13 +33,54 @@ export default function AppSelectField({
   size = "small",
   ...selectProps
 }: AppSelectFieldProps) {
+  const theme = useTheme<AppTheme>();
+  const tokens = theme.custom.form;
+
   return (
-    <FormControl fullWidth={fullWidth} size={size} error={error} disabled={disabled} required={required}>
+    <FormControl
+      fullWidth={fullWidth}
+      size={size}
+      error={error}
+      disabled={disabled}
+      required={required}
+    >
       <InputLabel id={labelId}>{label}</InputLabel>
-      <Select labelId={labelId} label={label} {...selectProps}>
+
+      <Select
+        labelId={labelId}
+        label={label}
+        sx={{
+          "& .MuiSelect-select": {
+            minHeight: tokens.inlineBlock.minHeight,
+            display: "flex",
+            alignItems: "center",
+          },
+        }}
+        {...selectProps}
+      >
         {children}
       </Select>
-      {helperText != null && helperText !== "" ? <FormHelperText>{helperText}</FormHelperText> : null}
+
+      {helperText != null && helperText !== "" ? (
+        <FormHelperText
+          sx={{
+            minHeight: theme.spacing(tokens.helperArea.minHeight),
+            mt: tokens.helperArea.paddingTop,
+          }}
+        >
+          {helperText}
+        </FormHelperText>
+      ) : (
+        <FormHelperText
+          sx={{
+            minHeight: theme.spacing(tokens.helperArea.minHeight),
+            mt: tokens.helperArea.paddingTop,
+            visibility: "hidden",
+          }}
+        >
+          &nbsp;
+        </FormHelperText>
+      )}
     </FormControl>
   );
 }

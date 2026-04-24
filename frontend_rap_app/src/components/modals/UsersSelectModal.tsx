@@ -1,6 +1,15 @@
 // src/components/modals/UsersSelectModal.tsx
 import { useEffect, useMemo, useState } from "react";
-import { List, ListItem, ListItemButton, ListItemText, Typography, Chip } from "@mui/material";
+import {
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Typography,
+  Chip,
+  Box,
+  Divider,
+} from "@mui/material";
 import api from "../../api/axios";
 import EntityPickerDialog from "../dialogs/EntityPickerDialog";
 
@@ -20,6 +29,7 @@ type DRFPaginated<T> = {
   previous: string | null;
   results: T[];
 };
+
 type DRFEnvelope<T> = DRFPaginated<T> | { data: DRFPaginated<T> };
 
 type UserApi = {
@@ -51,6 +61,7 @@ interface Props {
 function asPaginated<T>(data: DRFEnvelope<T>): DRFPaginated<T> {
   return "results" in data ? data : data.data;
 }
+
 const _nn = (v?: string | null) => (v ?? "").trim();
 
 function toFullName(x: UserApi): string {
@@ -91,13 +102,16 @@ export default function UsersSelectModal({
     const fetchUsers = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const params: Record<string, unknown> = { page_size: 50 };
+
         if (_nn(search)) {
           params.search = search;
           params.q = search;
           params.texte = search;
         }
+
         params.role__in = allowedRoles.join(",");
         if (onlyActive) params.is_active = true;
 
@@ -115,18 +129,23 @@ export default function UsersSelectModal({
           }
         }
 
-        if (!page) throw lastError ?? new Error("Aucun endpoint utilisateur valide.");
+        if (!page) {
+          throw lastError ?? new Error("Aucun endpoint utilisateur valide.");
+        }
 
         const normalized = page.results.map(normalizeUser);
         if (!cancelled) setItems(normalized);
       } catch {
-        if (!cancelled) setError("Erreur lors du chargement des utilisateurs.");
+        if (!cancelled) {
+          setError("Erreur lors du chargement des utilisateurs.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     fetchUsers();
+
     return () => {
       cancelled = true;
     };
@@ -139,14 +158,22 @@ export default function UsersSelectModal({
 
   const filtered = useMemo<UserPick[]>(() => {
     let list = items;
-    list = list.filter((u) => (u.role ? allowed.has(u.role.toString().toLowerCase()) : false));
+
+    list = list.filter((u) =>
+      u.role ? allowed.has(u.role.toString().toLowerCase()) : false
+    );
+
     if (onlyActive) {
       list = list.filter((u) => u.is_active);
     }
+
     const s = _nn(search).toLowerCase();
     if (s) {
-      list = list.filter((u) => `${u.full_name} ${u.email ?? ""}`.toLowerCase().includes(s));
+      list = list.filter((u) =>
+        `${u.full_name} ${u.email ?? ""}`.toLowerCase().includes(s)
+      );
     }
+
     return list;
   }, [allowed, items, onlyActive, search]);
 
@@ -158,7 +185,7 @@ export default function UsersSelectModal({
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "🔍 Rechercher un utilisateur (nom, email)…",
+        placeholder: "Rechercher un utilisateur (nom, email)…",
         type: "search",
       }}
       showSearchWhenLoading
@@ -167,39 +194,54 @@ export default function UsersSelectModal({
       empty={!loading && !error && filtered.length === 0}
       emptyMessage="Aucun utilisateur trouvé."
     >
-      <List>
-        {filtered.map((u) => (
-          <ListItem key={u.id} disablePadding divider>
-            <ListItemButton onClick={() => onSelect(u)}>
-              <ListItemText
-                primary={
-                  <>
-                    <strong>{u.full_name}</strong>
-                    {u.email && <span style={{ color: "var(--mui-palette-text-secondary)" }}> ({u.email})</span>}
-                    {u.role && (
-                      <Chip
-                        size="small"
-                        label={u.role}
-                        sx={{
-                          ml: 1,
-                          fontWeight: 600,
-                          bgcolor: "primary.50",
-                          color: "primary.dark",
-                        }}
-                      />
-                    )}
-                  </>
-                }
-                secondary={
-                  !u.is_active ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Compte inactif
-                    </Typography>
-                  ) : null
-                }
-              />
-            </ListItemButton>
-          </ListItem>
+      <List disablePadding>
+        {filtered.map((u, index) => (
+          <Box key={u.id}>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => onSelect(u)}>
+                <ListItemText
+                  disableTypography
+                  primary={
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography variant="body2" component="span" fontWeight={700}>
+                        {u.full_name}
+                      </Typography>
+
+                      {u.email ? (
+                        <Typography
+                          variant="body2"
+                          component="span"
+                          color="text.secondary"
+                        >
+                          ({u.email})
+                        </Typography>
+                      ) : null}
+
+                      {u.role ? (
+                        <Chip size="small" label={u.role} variant="outlined" />
+                      ) : null}
+                    </Box>
+                  }
+                  secondary={
+                    !u.is_active ? (
+                      <Typography variant="body2" component="div" color="text.secondary">
+                        Compte inactif
+                      </Typography>
+                    ) : null
+                  }
+                />
+              </ListItemButton>
+            </ListItem>
+
+            {index < filtered.length - 1 ? <Divider /> : null}
+          </Box>
         ))}
       </List>
     </EntityPickerDialog>

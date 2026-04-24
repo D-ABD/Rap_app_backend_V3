@@ -6,7 +6,6 @@ import {
   Box,
   Stack,
   Button,
-  TextField,
   Select,
   MenuItem,
   Typography,
@@ -23,6 +22,7 @@ import {
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import PageTemplate from "../../components/PageTemplate";
+import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useUserFiltres, { useUserRoles } from "../../hooks/useUsers";
@@ -49,7 +49,8 @@ export default function UsersPage() {
   const { filtresOptions, loading: loadingFiltres } = useUserFiltres();
   const { roles: availableRoles } = useUserRoles();
 
-  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } = usePagination();
+  const { page, setPage, count, setCount, totalPages, pageSize, setPageSize } =
+    usePagination();
 
   const { data, loading, error, fetchData } = useFetch<PaginatedResponse<User>>(
     "/users/",
@@ -62,13 +63,17 @@ export default function UsersPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
   useEffect(() => {
     if (data?.count !== undefined) setCount(data.count);
   }, [data?.count, setCount]);
 
   const toggleSelect = useCallback((id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   }, []);
+
   const clearSelection = () => setSelectedIds([]);
   const selectAll = () => setSelectedIds(users.map((u) => u.id));
 
@@ -91,6 +96,7 @@ export default function UsersPage() {
 
   const handleActivate = async () => {
     if (!selectedIds.length) return;
+
     try {
       const api = await import("../../api/axios");
       await Promise.all(
@@ -106,18 +112,23 @@ export default function UsersPage() {
 
   const handleChangeRole = async () => {
     if (!selectedIds.length) return;
+
     try {
       const api = await import("../../api/axios");
       await Promise.all(
         selectedIds.map((id) => api.default.patch(`/users/${id}/`, { role: selectedRole }))
       );
-      toast.success(`👤 Rôle "${selectedRole}" appliqué à ${selectedIds.length} utilisateur(s)`);
+      toast.success(
+        `👤 Rôle "${selectedRole}" appliqué à ${selectedIds.length} utilisateur(s)`
+      );
       setSelectedIds([]);
       fetchData();
     } catch {
       toast.error("Erreur lors du changement de rôle");
     }
   };
+
+  const hasResults = users.length > 0;
 
   return (
     <PageTemplate
@@ -127,9 +138,8 @@ export default function UsersPage() {
       refreshButton
       onRefresh={fetchData}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          <TextField
-            size="small"
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
+          <SearchInput
             value={search}
             placeholder="🔍 Rechercher..."
             onChange={(e) => {
@@ -138,6 +148,7 @@ export default function UsersPage() {
             }}
             fullWidth={isMobile}
           />
+
           <Select
             size="small"
             value={pageSize}
@@ -152,6 +163,7 @@ export default function UsersPage() {
               </MenuItem>
             ))}
           </Select>
+
           <Button
             variant="contained"
             onClick={() => navigate("/users/create")}
@@ -165,9 +177,11 @@ export default function UsersPage() {
               <Button color="error" variant="contained" onClick={() => setShowConfirm(true)}>
                 📦 Désactiver ({selectedIds.length})
               </Button>
+
               <Button color="success" variant="contained" onClick={handleActivate}>
                 ✅ Activer
               </Button>
+
               <Select
                 size="small"
                 value={selectedRole}
@@ -179,12 +193,15 @@ export default function UsersPage() {
                   </MenuItem>
                 ))}
               </Select>
+
               <Button color="warning" variant="contained" onClick={handleChangeRole}>
                 🔄 Changer rôle
               </Button>
+
               <Button variant="outlined" onClick={selectAll}>
                 ✅ Tout
               </Button>
+
               <Button variant="outlined" onClick={clearSelection}>
                 ❌ Annuler
               </Button>
@@ -226,14 +243,18 @@ export default function UsersPage() {
       }
     >
       {loading ? (
-        <CircularProgress />
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+          <CircularProgress />
+        </Stack>
       ) : error ? (
-        <Typography color="error">Erreur lors du chargement des utilisateurs.</Typography>
-      ) : users.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography color="error">
+            Erreur lors du chargement des utilisateurs.
+          </Typography>
+        </Box>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Box sx={{ fontSize: 48, mb: 1 }}>📭</Box>
           <Typography>Aucun utilisateur trouvé.</Typography>
         </Box>
       ) : (

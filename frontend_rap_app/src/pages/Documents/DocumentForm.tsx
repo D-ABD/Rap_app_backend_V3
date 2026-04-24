@@ -8,14 +8,16 @@ import {
   Button,
   CircularProgress,
   MenuItem,
-  Paper,
   Select,
   Stack,
   TextField,
   Typography,
+  Link,
 } from "@mui/material";
 
 import FormationSelectModal from "../../components/modals/FormationSelectModal";
+import FormSectionCard from "../../components/forms/FormSectionCard";
+import FormActionsBar from "../../components/forms/FormActionsBar";
 import useForm from "../../hooks/useForm";
 import { useDocumentsApi } from "../../hooks/useDocuments";
 import type { DocumentFormInitialValues, TypeDocumentChoice } from "../../types/document";
@@ -65,7 +67,6 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
     formation: scopedFormationId ? Number(scopedFormationId) : "",
   });
 
-  // 🔽 Charger le nom de la formation si absent
   useEffect(() => {
     const id = scopedFormationId ? Number(scopedFormationId) : null;
     if (!id || formationNom) return;
@@ -79,7 +80,6 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
     });
   }, [scopedFormationId, formationNom]);
 
-  // 🔽 Charger les types de document
   useEffect(() => {
     fetchTypeDocuments()
       .then(setTypeDocumentChoices)
@@ -135,46 +135,60 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
     }
   };
 
+  if (loading) {
+    return (
+      <FormSectionCard title="Chargement">
+        <Box display="flex" justifyContent="center" alignItems="center" py={2}>
+          <CircularProgress />
+        </Box>
+      </FormSectionCard>
+    );
+  }
+
   return (
-    <Paper sx={{ p: 3 }}>
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* ✅ Informations si édition */}
-          {documentId && initialValues && (
-            <Box mb={2}>
+    <Box component="form" onSubmit={handleSubmit}>
+      <Stack spacing={3}>
+        {documentId && initialValues && (
+          <FormSectionCard
+            title="Document existant"
+            subtitle="Consultez les informations déjà enregistrées avant modification."
+          >
+            <Stack spacing={1}>
               {initialValues.type_document_display && (
                 <Typography>🗂️ Type : {initialValues.type_document_display}</Typography>
               )}
+
               {initialValues.download_url && (
                 <Typography>
-                  📥 <a href={initialValues.download_url}>Télécharger</a>
+                  📥{" "}
+                  <Link href={initialValues.download_url} target="_blank" rel="noreferrer">
+                    Télécharger
+                  </Link>
                 </Typography>
               )}
-            </Box>
-          )}
+            </Stack>
+          </FormSectionCard>
+        )}
 
-          {/* ✅ Sélection de formation si nécessaire */}
-          {!formationId && !initialValues?.formation && (
-            <Box mb={2}>
-              <Typography variant="subtitle1" gutterBottom>
-                🏫 Formation associée
-              </Typography>
-
+        {!formationId && !initialValues?.formation && (
+          <FormSectionCard
+            title="Formation associée"
+            subtitle="Sélectionnez la formation liée à ce document."
+          >
+            <Stack spacing={2}>
               {formationNom ? (
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  📚 {formationNom}
-                </Typography>
+                <Typography variant="body2">📚 {formationNom}</Typography>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
                   — Aucune formation sélectionnée
                 </Typography>
               )}
 
-              <Button variant="outlined" onClick={() => setShowModal(true)}>
-                {formationNom ? "Changer de formation" : "🔍 Sélectionner une formation"}
-              </Button>
+              <Box>
+                <Button variant="outlined" onClick={() => setShowModal(true)}>
+                  {formationNom ? "Changer de formation" : "🔍 Sélectionner une formation"}
+                </Button>
+              </Box>
 
               <FormationSelectModal
                 show={showModal}
@@ -186,10 +200,14 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
                   toast.info(`Formation sélectionnée : ${pick.nom}`);
                 }}
               />
-            </Box>
-          )}
+            </Stack>
+          </FormSectionCard>
+        )}
 
-          {/* ✅ Champs du formulaire */}
+        <FormSectionCard
+          title="Informations du document"
+          subtitle="Renseignez le nom, le type et le fichier à importer."
+        >
           <Stack spacing={2}>
             <TextField
               label="Nom du fichier"
@@ -218,6 +236,7 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
                 </MenuItem>
               ))}
             </Select>
+
             {errors.type_document && (
               <Typography color="error" variant="body2">
                 {errors.type_document}
@@ -239,28 +258,30 @@ export default function DocumentForm({ formationId, initialValues, documentId }:
             {documentId && initialValues?.download_url && (
               <Typography variant="body2" color="text.secondary">
                 📥{" "}
-                <a href={initialValues.download_url} target="_blank" rel="noreferrer">
+                <Link href={initialValues.download_url} target="_blank" rel="noreferrer">
                   Télécharger le fichier actuel
-                </a>{" "}
+                </Link>{" "}
                 — laisser vide pour le conserver.
               </Typography>
             )}
-
-            <Stack direction="row" spacing={2} mt={2}>
-              <Button type="submit" variant="contained" color="success">
-                💾 Enregistrer
-              </Button>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={() => navigate(returnToListUrl)}
-              >
-                Annuler
-              </Button>
-            </Stack>
           </Stack>
-        </Box>
-      )}
-    </Paper>
+        </FormSectionCard>
+
+        <FormActionsBar>
+          <Button
+            variant="outlined"
+            color="secondary"
+            type="button"
+            onClick={() => navigate(returnToListUrl)}
+          >
+            Annuler
+          </Button>
+
+          <Button type="submit" variant="contained" color="success">
+            💾 Enregistrer
+          </Button>
+        </FormActionsBar>
+      </Stack>
+    </Box>
   );
 }

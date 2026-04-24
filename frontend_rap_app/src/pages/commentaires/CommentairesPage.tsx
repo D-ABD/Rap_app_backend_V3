@@ -23,7 +23,6 @@ import {
   DialogActions,
   useMediaQuery,
   useTheme,
-  TextField,
   Alert,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -31,7 +30,10 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import { useCommentairesFiltres } from "../../hooks/useCommentaires";
-import type { Commentaire, CommentaireFiltresValues } from "../../types/commentaire";
+import type {
+  Commentaire,
+  CommentaireFiltresValues,
+} from "../../types/commentaire";
 
 import PageTemplate from "../../components/PageTemplate";
 import FiltresCommentairesPanel from "../../components/filters/FiltresCommentairesPanel";
@@ -39,6 +41,7 @@ import CommentairesTable from "./CommentairesTable";
 import ExportButtonCommentaires from "../../components/export_buttons/ExportButtonCommentaires";
 import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
+import SearchInput from "../../components/SearchInput";
 import type { AppTheme } from "../../theme";
 
 export default function CommentairesPage() {
@@ -48,16 +51,14 @@ export default function CommentairesPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);
-  const isScopedStaff =
-    ["staff", "staff_read", "declic_staff", "prepa_staff"].includes(
-      (user?.role ?? "").toLowerCase()
-    );
-  const hasNoAssignedCentre = isScopedStaff && (user?.centres?.length ?? 0) === 0;
+  const isScopedStaff = ["staff", "staff_read", "declic_staff", "prepa_staff"].includes(
+    (user?.role ?? "").toLowerCase()
+  );
+  const hasNoAssignedCentre =
+    isScopedStaff && (user?.centres?.length ?? 0) === 0;
 
-  // 🔎 recherche
   const [search, setSearch] = useState("");
 
-  // 🎚️ filtres
   const scopedFormationId = useMemo(() => {
     const raw = searchParams.get("formation") || searchParams.get("formation_id");
     if (!raw) return undefined;
@@ -76,18 +77,17 @@ export default function CommentairesPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  // 🧩 données des filtres dynamiques
-  const { filtres, loading: filtresLoading, error: filtresError } = useCommentairesFiltres();
+  const { filtres, loading: filtresLoading, error: filtresError } =
+    useCommentairesFiltres();
 
-  // 🧾 sélection
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
-  // 📄 pagination
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
 
   const resetAllFilters = useCallback(() => {
     setSearch("");
@@ -112,7 +112,6 @@ export default function CommentairesPage() {
     setPage(1);
   }, [scopedFormationId, setPage]);
 
-  // ⚙️ fetch des commentaires
   const effectiveParams = useMemo(
     () => ({
       search,
@@ -129,36 +128,42 @@ export default function CommentairesPage() {
     count: number;
   }>("/commentaires/", effectiveParams);
 
-  // 🔁 refetch automatique quand paramètres changent
   useEffect(() => {
     fetchData();
   }, [fetchData, effectiveParams]);
 
-  const commentaires: Commentaire[] = useMemo(() => data?.results ?? [], [data]);
+  const commentaires: Commentaire[] = useMemo(
+    () => data?.results ?? [],
+    [data]
+  );
 
   useEffect(() => {
     if (typeof data?.count === "number") setCount(data.count);
   }, [data, setCount]);
 
   useEffect(() => {
-    const visible = new Set(commentaires.map((c) => c.id));
+    const visible = new Set(commentaires.map((commentaire) => commentaire.id));
     setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
   }, [commentaires]);
 
-  // ✅ helpers sélection
   const toggleSelect = useCallback((id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
   }, []);
-  const clearSelection = () => setSelectedIds([]);
-  const selectAll = () => setSelectedIds(commentaires.map((c) => c.id));
 
-  // 📦 archivage logique via endpoint DELETE legacy
+  const clearSelection = () => setSelectedIds([]);
+  const selectAll = () => setSelectedIds(commentaires.map((commentaire) => commentaire.id));
+
   const handleDelete = async () => {
     const idsToDelete = selectedId ? [selectedId] : selectedIds;
     if (!idsToDelete.length) return;
+
     try {
       const api = await import("../../api/axios");
-      await Promise.all(idsToDelete.map((id) => api.default.delete(`/commentaires/${id}/`)));
+      await Promise.all(
+        idsToDelete.map((id) => api.default.delete(`/commentaires/${id}/`))
+      );
       toast.success(`📦 ${idsToDelete.length} commentaire(s) archivé(s)`);
       setShowConfirm(false);
       setSelectedId(null);
@@ -184,6 +189,7 @@ export default function CommentairesPage() {
 
   const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       const api = await import("../../api/axios");
       await api.default.post(`/commentaires/${hardDeleteId}/hard-delete/`);
@@ -195,32 +201,36 @@ export default function CommentairesPage() {
     }
   };
 
-  // ────────────────────────────── UI ──────────────────────────────
   return (
     <PageTemplate
       refreshButton
       onRefresh={fetchData}
       headerExtra={
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap={{ xs: "wrap", md: "nowrap" }}>
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="Rechercher un commentaire..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </Stack>
+        <SearchInput
+          placeholder="Rechercher un commentaire..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
       }
       actions={
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap">
-          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} fullWidth={isMobile}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowFilters((v) => !v)}
+            fullWidth={isMobile}
+          >
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
           </Button>
 
-          <Button variant="outlined" color="warning" onClick={resetAllFilters} fullWidth={isMobile}>
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={resetAllFilters}
+            fullWidth={isMobile}
+          >
             ♻️ Réinitialiser filtres
           </Button>
 
@@ -238,7 +248,9 @@ export default function CommentairesPage() {
               setPage(1);
             }}
           >
-            {String(filters.statut_id || "") === "all" ? "🗂️ Masquer archivés" : "🗃️ Inclure archivés"}
+            {String(filters.statut_id || "") === "all"
+              ? "🗂️ Masquer archivés"
+              : "🗃️ Inclure archivés"}
           </Button>
 
           <Button
@@ -255,10 +267,16 @@ export default function CommentairesPage() {
               setPage(1);
             }}
           >
-            {String(filters.statut_id || "") === "archive" ? "📂 Voir tout" : "🗄️ Archives seules"}
+            {String(filters.statut_id || "") === "archive"
+              ? "📂 Voir tout"
+              : "🗄️ Archives seules"}
           </Button>
 
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)} fullWidth={isMobile}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+            fullWidth={isMobile}
+          >
             Options
           </Button>
 
@@ -270,9 +288,9 @@ export default function CommentairesPage() {
               setPage(1);
             }}
           >
-            {[5, 10, 20].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
+            {[5, 10, 20].map((size) => (
+              <MenuItem key={size} value={size}>
+                {size} / page
               </MenuItem>
             ))}
           </Select>
@@ -281,7 +299,9 @@ export default function CommentairesPage() {
             variant="contained"
             onClick={() =>
               navigate(
-                scopedFormationId ? `/commentaires/create/${scopedFormationId}` : "/commentaires/create"
+                scopedFormationId
+                  ? `/commentaires/create/${scopedFormationId}`
+                  : "/commentaires/create"
               )
             }
             fullWidth={isMobile}
@@ -311,11 +331,12 @@ export default function CommentairesPage() {
                 Actions secondaires de la liste
               </Typography>
             </Box>
+
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
               <ExportButtonCommentaires
-                data={commentaires.map((c) => ({
-                  ...c,
-                  created_at: c.created_at ?? "",
+                data={commentaires.map((commentaire) => ({
+                  ...commentaire,
+                  created_at: commentaire.created_at ?? "",
                 }))}
                 selectedIds={selectedIds}
                 requestParams={effectiveParams}
@@ -326,7 +347,11 @@ export default function CommentairesPage() {
 
           {selectedIds.length > 0 && (
             <>
-              <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => setShowConfirm(true)}
+              >
                 📦 Archiver ({selectedIds.length})
               </Button>
               <Button variant="outlined" onClick={selectAll}>
@@ -409,15 +434,17 @@ export default function CommentairesPage() {
 
       {hasNoAssignedCentre && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Aucun centre n’est rattaché à ton compte. La liste des commentaires reste vide tant qu’un
-          centre ne t’est pas affecté.
+          Aucun centre n’est rattaché à ton compte. La liste des commentaires reste vide tant
+          qu’un centre ne t’est pas affecté.
         </Alert>
       )}
 
       {loading ? (
         <CircularProgress />
       ) : error ? (
-        <Typography color="error">Erreur lors du chargement des commentaires.</Typography>
+        <Typography color="error">
+          Erreur lors du chargement des commentaires.
+        </Typography>
       ) : commentaires.length === 0 ? (
         <Box textAlign="center" color="text.secondary" my={4}>
           <Box fontSize={48} mb={1}>
@@ -437,8 +464,12 @@ export default function CommentairesPage() {
         />
       )}
 
-      {/* Confirmation archivage */}
-      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)} fullWidth maxWidth="xs">
+      <Dialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
           Confirmation
@@ -458,14 +489,20 @@ export default function CommentairesPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={hardDeleteId !== null}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="error" />
           Suppression définitive
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. Le commentaire archivé sera supprimé définitivement.
+            Cette action est irréversible. Le commentaire archivé sera supprimé
+            définitivement.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

@@ -6,12 +6,17 @@ import {
   AccordionDetails,
   Typography,
   Alert,
+  Stack,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Candidat, CandidatFormData, CandidatMeta } from "../../types/candidat";
 import { User } from "../../types/User";
-import FormationSelectModal, { FormationPick } from "../../components/modals/FormationSelectModal";
-import UsersSelectModal, { UserPick } from "../../components/modals/UsersSelectModal";
+import FormationSelectModal, {
+  FormationPick,
+} from "../../components/modals/FormationSelectModal";
+import UsersSelectModal, {
+  UserPick,
+} from "../../components/modals/UsersSelectModal";
 import { isCoreWriteRole } from "../../utils/roleGroups";
 
 // Sections
@@ -82,7 +87,11 @@ export default function CandidatForm({
   const [, forceRender] = useState(0);
 
   const setForm = useCallback(
-    (updater: Partial<CandidatFormData> | ((prev: CandidatFormData) => CandidatFormData)) => {
+    (
+      updater:
+        | Partial<CandidatFormData>
+        | ((prev: CandidatFormData) => CandidatFormData)
+    ) => {
       const current = formRef.current;
       formRef.current =
         typeof updater === "function" ? updater(current) : { ...current, ...updater };
@@ -104,11 +113,13 @@ export default function CandidatForm({
     mapFormationInfo(initialFormationInfo)
   );
   const [openSection, setOpenSection] = useState<string | false>("identite");
+
   const requiresRgpdForManualCreate =
     !initialValues &&
     !!currentUser &&
     isCoreWriteRole(currentUser.role) &&
     !!meta?.rgpd_legal_basis_choices?.length;
+
   const effectiveFormation = form.formation ?? initialValues?.formation;
 
   const identiteForm = useMemo(
@@ -253,12 +264,9 @@ export default function CandidatForm({
   // ---------------------------------------------------------------------
   // toggleSection
   // ---------------------------------------------------------------------
-  const toggleSection = useCallback(
-    (section: string) => {
-      setOpenSection((prev) => (prev === section ? false : section));
-    },
-    []
-  );
+  const toggleSection = useCallback((section: string) => {
+    setOpenSection((prev) => (prev === section ? false : section));
+  }, []);
 
   // ---------------------------------------------------------------------
   // handleSubmit — formation obligatoire
@@ -278,7 +286,9 @@ export default function CandidatForm({
       if (requiresRgpdForManualCreate && !form.rgpd_legal_basis) {
         setOpenSection("suivi");
         setErrors({
-          rgpd_legal_basis: ["Veuillez sélectionner une base légale RGPD avant de créer le candidat."],
+          rgpd_legal_basis: [
+            "Veuillez sélectionner une base légale RGPD avant de créer le candidat.",
+          ],
         });
         setGlobalError("Base légale RGPD obligatoire pour créer un candidat manuellement.");
         return;
@@ -291,7 +301,9 @@ export default function CandidatForm({
             "Le consentement explicite doit être confirmé quand la base légale est le consentement.",
           ],
         });
-        setGlobalError("Le consentement explicite est requis avec la base légale « consentement ».");
+        setGlobalError(
+          "Le consentement explicite est requis avec la base légale « consentement »."
+        );
         return;
       }
 
@@ -311,20 +323,22 @@ export default function CandidatForm({
           } else {
             const [firstField, firstMessages] = Object.entries(parsedErrors)[0] ?? [];
             if (firstField && firstMessages?.length) {
-              if ([
-                "nom",
-                "prenom",
-                "email",
-                "telephone",
-                "formation",
-                "date_naissance",
-                "nir",
-                "code_postal",
-                "ville",
-                "type_contrat",
-                "contrat_signe",
-                "numero_osia",
-              ].includes(firstField)) {
+              if (
+                [
+                  "nom",
+                  "prenom",
+                  "email",
+                  "telephone",
+                  "formation",
+                  "date_naissance",
+                  "nir",
+                  "code_postal",
+                  "ville",
+                  "type_contrat",
+                  "contrat_signe",
+                  "numero_osia",
+                ].includes(firstField)
+              ) {
                 setOpenSection("identite");
               } else if (
                 [
@@ -353,6 +367,7 @@ export default function CandidatForm({
               } else if (firstField.startsWith("rgpd_")) {
                 setOpenSection("suivi");
               }
+
               const userLabel =
                 firstField === "type_contrat_code"
                   ? "Type de contrat CERFA (code notice)"
@@ -361,12 +376,16 @@ export default function CandidatForm({
                     : firstField === "contrat_signe"
                       ? "Contrat signe"
                       : firstField === "numero_osia" &&
-                          firstMessages.join(" ").toLowerCase().includes("requis quand le contrat est signe")
-                        ? "Pour enregistrer un contrat signe a \"Oui\", renseignez d'abord le numero OSIA."
-                      : null;
+                          firstMessages
+                            .join(" ")
+                            .toLowerCase()
+                            .includes("requis quand le contrat est signe")
+                        ? 'Pour enregistrer un contrat signe a "Oui", renseignez d\'abord le numero OSIA.'
+                        : null;
+
               setGlobalError(
                 userLabel ===
-                  "Pour enregistrer un contrat signe a \"Oui\", renseignez d'abord le numero OSIA."
+                  'Pour enregistrer un contrat signe a "Oui", renseignez d\'abord le numero OSIA.'
                   ? userLabel
                   : userLabel
                     ? `${userLabel} : ${firstMessages.join(", ")}`
@@ -385,124 +404,131 @@ export default function CandidatForm({
   // ---------------------------------------------------------------------
   // select formation
   // ---------------------------------------------------------------------
-  const handleSelectFormation = useCallback((pick: FormationPick) => {
-    setForm((f) => ({ ...f, formation: pick.id }));
-    setFormationInfo(pick);
-    setShowFormationModal(false);
-  }, [setForm]);
+  const handleSelectFormation = useCallback(
+    (pick: FormationPick) => {
+      setForm((f) => ({ ...f, formation: pick.id }));
+      setFormationInfo(pick);
+      setShowFormationModal(false);
+    },
+    [setForm]
+  );
 
   // ---------------------------------------------------------------------
   // select vu_par
   // ---------------------------------------------------------------------
-  const handleSelectUser = useCallback((pick: UserPick) => {
-    setForm((f) => ({ ...f, vu_par: pick.id }));
-    setShowUsersModal(false);
-  }, [setForm]);
+  const handleSelectUser = useCallback(
+    (pick: UserPick) => {
+      setForm((f) => ({ ...f, vu_par: pick.id }));
+      setShowUsersModal(false);
+    },
+    [setForm]
+  );
+
+  const renderSection = useCallback(
+    ({
+      keyName,
+      title,
+      content,
+      hasError = false,
+    }: {
+      keyName: string;
+      title: string;
+      content: React.ReactNode;
+      hasError?: boolean;
+    }) => (
+      <Accordion
+        expanded={openSection === keyName}
+        onChange={() => toggleSection(keyName)}
+        TransitionProps={{ unmountOnExit: true }}
+        sx={{
+          borderLeft: hasError ? "3px solid" : undefined,
+          borderLeftColor: hasError ? "error.main" : undefined,
+        }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography fontWeight={600}>{title}</Typography>
+        </AccordionSummary>
+        <AccordionDetails>{content}</AccordionDetails>
+      </Accordion>
+    ),
+    [openSection, toggleSection]
+  );
 
   // ---------------------------------------------------------------------
   // RENDER
   // ---------------------------------------------------------------------
   return (
-    <Box component="form" onSubmit={handleSubmit} display="grid" gap={2}>
+    <Box component="form" onSubmit={handleSubmit}>
+      <Stack spacing={2}>
+        <Alert severity="info">
+          Les champs marqués d’un * sont obligatoires. Remplissez au minimum la section{" "}
+          <b>Identité + Formation</b>.
+        </Alert>
 
-      <Alert severity="info" sx={{ mb: 1 }}>
-        Les champs marqués d’un * sont obligatoires. Remplissez au minimum la section{" "}
-        <b>Identité + Formation</b>.
-      </Alert>
+        {globalError && <Alert severity="error">{globalError}</Alert>}
 
-      {globalError && <Alert severity="error">{globalError}</Alert>}
+        {renderSection({
+          keyName: "identite",
+          title: "Identité & Formation",
+          hasError: Boolean(errors.nom || errors.prenom),
+          content: (
+            <MemoIdentite
+              form={identiteForm}
+              setForm={setForm}
+              meta={meta}
+              errors={errors}
+              canEditFormation={canEditFormation}
+              showFormationModal={showFormationModal}
+              setShowFormationModal={setShowFormationModal}
+              formationInfo={formationInfo}
+            />
+          ),
+        })}
 
-      {/* Identité (inclut Adresse + Formation) */}
-      <Accordion
-        expanded={openSection === "identite"}
-        onChange={() => toggleSection("identite")}
-        TransitionProps={{ unmountOnExit: true }}
-        sx={{ borderLeft: errors.nom || errors.prenom ? "3px solid red" : undefined }}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight={600}>Identité & Formation</Typography>
-        </AccordionSummary>
+        {renderSection({
+          keyName: "suivi",
+          title: "Suivi administratif",
+          content: (
+            <MemoIndicateurs
+              form={suiviForm}
+              setForm={setForm}
+              meta={meta}
+              errors={errors}
+            />
+          ),
+        })}
 
-        <AccordionDetails>
-          <MemoIdentite
-            form={identiteForm}
-            setForm={setForm}
-            meta={meta}
-            errors={errors}
+        {renderSection({
+          keyName: "assignations",
+          title: "Assignations / visibilité",
+          content: (
+            <MemoAssignations
+              form={assignationsForm}
+              setForm={setForm}
+              showUsersModal={showUsersModal}
+              setShowUsersModal={setShowUsersModal}
+              errors={errors}
+            />
+          ),
+        })}
 
-            canEditFormation={canEditFormation}
-            showFormationModal={showFormationModal}
-            setShowFormationModal={setShowFormationModal}
-            formationInfo={formationInfo}
-          />
-        </AccordionDetails>
-      </Accordion>
+        {renderSection({
+          keyName: "cerfa",
+          title: "Informations CERFA / contrat",
+          content: (
+            <MemoInfosContrat form={cerfaForm} setForm={setForm} errors={errors} />
+          ),
+        })}
 
-      {/* Suivi */}
-      <Accordion
-        expanded={openSection === "suivi"}
-        onChange={() => toggleSection("suivi")}
-        TransitionProps={{ unmountOnExit: true }}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight={600}>Suivi administratif</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <MemoIndicateurs form={suiviForm} setForm={setForm} meta={meta} errors={errors} />
-        </AccordionDetails>
-      </Accordion>
+        {renderSection({
+          keyName: "notes",
+          title: "Notes internes",
+          content: <MemoNotes form={notesForm} setForm={setForm} errors={errors} />,
+        })}
 
-      {/* Assignations */}
-      <Accordion
-        expanded={openSection === "assignations"}
-        onChange={() => toggleSection("assignations")}
-        TransitionProps={{ unmountOnExit: true }}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight={600}>Assignations / visibilité</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <MemoAssignations
-            form={assignationsForm}
-            setForm={setForm}
-            showUsersModal={showUsersModal}
-            setShowUsersModal={setShowUsersModal}
-            errors={errors}
-          />
-        </AccordionDetails>
-      </Accordion>
+        <ActionsBar onCancel={onCancel} submitting={submitting} />
+      </Stack>
 
-      {/* CERFA / contrat */}
-      <Accordion
-        expanded={openSection === "cerfa"}
-        onChange={() => toggleSection("cerfa")}
-        TransitionProps={{ unmountOnExit: true }}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight={600}>Informations CERFA / contrat</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <MemoInfosContrat form={cerfaForm} setForm={setForm} errors={errors} />
-        </AccordionDetails>
-      </Accordion>
-
-      {/* Notes */}
-      <Accordion
-        expanded={openSection === "notes"}
-        onChange={() => toggleSection("notes")}
-        TransitionProps={{ unmountOnExit: true }}
-      >
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography fontWeight={600}>Notes internes</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <MemoNotes form={notesForm} setForm={setForm} errors={errors} />
-        </AccordionDetails>
-      </Accordion>
-
-      <ActionsBar onCancel={onCancel} submitting={submitting} />
-
-      {/* Modaux */}
       <FormationSelectModal
         show={showFormationModal}
         onClose={() => setShowFormationModal(false)}

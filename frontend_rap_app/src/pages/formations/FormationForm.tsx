@@ -14,8 +14,6 @@ import {
   Typography,
   CircularProgress,
   Grid,
-  Paper,
-  Divider,
   FormHelperText,
   useTheme,
 } from "@mui/material";
@@ -33,47 +31,101 @@ import { NSF_SPECIALITE_OPTIONS } from "../../constants/nsfOptions";
 import { suggestNsfSpecialite } from "../../constants/nsfSuggestions";
 import type { AppTheme } from "../../theme";
 
-/* =========================================
- * Sous-composants au niveau module
- * ========================================= */
+type SectionProps = {
+  icon: React.ReactNode;
+  title: string;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+};
 
-type SectionProps = { icon: React.ReactNode; title: string; children: React.ReactNode };
-function Section({ icon, title, children }: SectionProps) {
+function Section({ icon, title, description, children }: SectionProps) {
   const theme = useTheme<AppTheme>();
+  const sectionCardTokens = theme.custom.form.sectionCard;
+  const inlineBlockTokens = theme.custom.form.inlineBlock;
+
+  const sectionBackground =
+    theme.palette.mode === "light"
+      ? sectionCardTokens.background.light
+      : sectionCardTokens.background.dark;
+
+  const sectionBorder =
+    theme.palette.mode === "light"
+      ? sectionCardTokens.border.light
+      : sectionCardTokens.border.dark;
+
+  const accentHeaderBackground =
+    theme.palette.mode === "light"
+      ? theme.custom.form.section.accentHeaderBackground.light
+      : theme.custom.form.section.accentHeaderBackground.dark;
+
+  const dividerColor =
+    theme.palette.mode === "light"
+      ? theme.custom.form.divider.dashedColor.light
+      : theme.custom.form.divider.dashedColor.dark;
+
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        p: 2.5,
-        mb: 3,
-        borderRadius: 2,
-        backgroundColor:
-          theme.palette.mode === "light"
-            ? theme.custom.form.section.paperBackground.light
-            : theme.custom.form.section.paperBackground.dark,
+        borderRadius: sectionCardTokens.borderRadius,
+        p: sectionCardTokens.padding,
+        background: sectionBackground,
+        border: sectionBorder,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-        {icon}
-        <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
-          {title}
-        </Typography>
+      <Stack spacing={sectionCardTokens.titleGap}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: inlineBlockTokens.gap,
+            px: { xs: 1, sm: 1.25 },
+            py: { xs: 0.875, sm: 1 },
+            borderRadius: theme.shape.borderRadius,
+            background: accentHeaderBackground,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: inlineBlockTokens.minHeight,
+              color: "primary.main",
+              flexShrink: 0,
+            }}
+          >
+            {icon}
+          </Box>
+
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {title}
+            </Typography>
+
+            {description ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                {description}
+              </Typography>
+            ) : null}
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            borderBottomStyle: "dashed",
+            borderBottomWidth: theme.custom.form.divider.dashedWidth,
+            borderColor: dividerColor,
+            borderBottom: `${theme.custom.form.divider.dashedWidth} dashed ${dividerColor}`,
+          }}
+        />
+
+        <Grid container spacing={sectionCardTokens.contentGap}>
+          {children}
+        </Grid>
       </Stack>
-      <Divider
-        sx={{
-          mb: 2,
-          borderBottomStyle: "dashed",
-          borderBottomWidth: theme.custom.form.divider.dashedWidth,
-          borderColor:
-            theme.palette.mode === "light"
-              ? theme.custom.form.divider.dashedColor.light
-              : theme.custom.form.divider.dashedColor.dark,
-        }}
-      />
-      <Grid container spacing={2}>
-        {children}
-      </Grid>
-    </Paper>
+    </Box>
   );
 }
 
@@ -81,12 +133,26 @@ type InputProps = {
   label: string;
   name: keyof FormationFormDataRaw | string;
   type?: string;
-  value: any;
+  value: unknown;
   error?: string;
+  helperText?: React.ReactNode;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => void;
+  multiline?: boolean;
+  minRows?: number;
+  required?: boolean;
   [k: string]: any;
 };
-function Input({ label, name, type = "text", value, error, onChange, ...props }: InputProps) {
+
+function Input({
+  label,
+  name,
+  type = "text",
+  value,
+  error,
+  helperText,
+  onChange,
+  ...props
+}: InputProps) {
   return (
     <Grid item xs={12} sm={6}>
       <TextField
@@ -97,16 +163,55 @@ function Input({ label, name, type = "text", value, error, onChange, ...props }:
         value={value ?? ""}
         onChange={onChange}
         error={!!error}
-        helperText={error}
+        helperText={error || helperText || " "}
         {...props}
       />
     </Grid>
   );
 }
 
-/* =========================================
- * Composant principal
- * ========================================= */
+type SelectFieldProps = {
+  label: string;
+  labelId: string;
+  name: string;
+  value: string;
+  error?: string;
+  helperText?: React.ReactNode;
+  required?: boolean;
+  onChange: (e: any) => void;
+  children: React.ReactNode;
+};
+
+function SelectField({
+  label,
+  labelId,
+  name,
+  value,
+  error,
+  helperText,
+  required,
+  onChange,
+  children,
+}: SelectFieldProps) {
+  return (
+    <Grid item xs={12} sm={6}>
+      <FormControl fullWidth error={!!error}>
+        <InputLabel id={labelId}>{label}</InputLabel>
+        <Select
+          labelId={labelId}
+          name={name}
+          value={value}
+          onChange={onChange}
+          label={label}
+          required={required}
+        >
+          {children}
+        </Select>
+        <FormHelperText>{error || helperText || " "}</FormHelperText>
+      </FormControl>
+    </Grid>
+  );
+}
 
 interface FormationFormProps {
   initialValues?: Partial<Formation>;
@@ -131,6 +236,8 @@ function FormationForm({
   onCancel,
   submitLabel = "💾 Enregistrer",
 }: FormationFormProps) {
+  const theme = useTheme<AppTheme>();
+
   const diplomeCodeOptions = [
     { value: "13", label: "13 - Aucun diplome ni titre professionnel" },
     { value: "25", label: "25 - Diplome national du Brevet" },
@@ -157,10 +264,14 @@ function FormationForm({
     { value: "79", label: "79 - Autre niveau bac+5 ou plus" },
     { value: "80", label: "80 - Doctorat" },
   ];
+
   const qualificationViseeOptions = [
     { value: "1", label: "1 - Certification enregistree au RNCP autre qu'un CQP" },
     { value: "2", label: "2 - Certificat de qualification professionnelle (CQP)" },
-    { value: "3", label: "3 - Qualification reconnue dans les classifications d'une convention collective nationale" },
+    {
+      value: "3",
+      label: "3 - Qualification reconnue dans les classifications d'une convention collective nationale",
+    },
     {
       value: "4",
       label: "4 - Action delivree dans le cadre du contrat de professionnalisation experimental",
@@ -210,7 +321,6 @@ function FormationForm({
   const [generalError, setGeneralError] = useState<string>("");
   const suggestedNsf = suggestNsfSpecialite(values.nom, values.intitule_diplome);
 
-  // ✅ Initialisation — exécution une seule fois au montage
   useEffect(() => {
     if (!initialValues) return;
 
@@ -247,7 +357,6 @@ function FormationForm({
     });
   }, [initialValues]);
 
-  // ✅ Handlers
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
       const { name, value } = e.target;
@@ -311,7 +420,10 @@ function FormationForm({
       } catch (err) {
         const apiError = toApiError(err);
         const fieldErrors = Object.fromEntries(
-          Object.entries(apiError.errors ?? {}).map(([field, messages]) => [field, messages[0] ?? ""])
+          Object.entries(apiError.errors ?? {}).map(([field, messages]) => [
+            field,
+            messages[0] ?? "",
+          ])
         );
 
         if (Object.keys(fieldErrors).length > 0) {
@@ -331,321 +443,395 @@ function FormationForm({
     inscrits_mp: "Inscrits MP",
     cap: "Capacité maximale",
     entree_formation: "Entrées en formation",
+    presents_en_formation: "Présents en formation",
     nombre_candidats: "Nombre de candidats",
     nombre_entretiens: "Nombre d’entretiens",
   };
 
-  // ✅ Rendu
+  const numericFieldsWithHelpers: Record<string, string> = {
+    prevus_crif: "Volume prévisionnel côté CRIF.",
+    prevus_mp: "Volume prévisionnel côté MP.",
+    inscrits_crif: "Nombre actuellement inscrits via CRIF.",
+    inscrits_mp: "Nombre actuellement inscrits via MP.",
+    cap: "Capacité maximale de la session.",
+    entree_formation: "Entrées réellement constatées.",
+    presents_en_formation: "Effectif présent à date.",
+    nombre_candidats: "Candidatures reçues ou suivies.",
+    nombre_entretiens: "Entretiens réalisés.",
+    total_heures: "Durée totale de la formation.",
+    heures_enseignements_generaux: "Volume des enseignements généraux.",
+    heures_distanciel: "Volume réalisé en distanciel.",
+  };
+
+  const actionGap = theme.custom.page.template.header.actions.gap.default;
+
   return (
     <Box component="form" onSubmit={handleSubmit}>
-      {generalError ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {generalError}
-        </Alert>
-      ) : null}
+      <Stack spacing={2}>
+        {generalError ? (
+          <Alert severity="error">{generalError}</Alert>
+        ) : null}
 
-      <Section icon={<AssignmentIcon color="primary" />} title="Informations principales">
-        <Grid item xs={12}>
-          <Alert severity="info">
-            Les dates de formation et les informations diplôme ci-dessous sont utilisées pour le
-            pré-remplissage du CERFA.
-          </Alert>
-        </Grid>
-        <Input
-          label="Nom"
-          name="nom"
-          required
-          value={values.nom}
-          error={errors.nom}
-          onChange={handleChange}
-        />
-
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth error={!!errors.centre_id}>
-            <InputLabel id="centre-label">Centre</InputLabel>
-            <Select
-              labelId="centre-label"
-              name="centre_id"
-              value={values.centre_id ? String(values.centre_id) : ""}
-              onChange={handleChange}
-              label="Centre"
-              required
-            >
-              {centres.map((c) => (
-                <MenuItem key={c.id} value={String(c.id)}>
-                  {c.nom}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.centre_id || "Centre de rattachement de la formation."}</FormHelperText>
-          </FormControl>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth error={!!errors.type_offre_id}>
-            <InputLabel id="type-offre-label">Type d’offre</InputLabel>
-            <Select
-              labelId="type-offre-label"
-              name="type_offre_id"
-              value={values.type_offre_id ? String(values.type_offre_id) : ""}
-              onChange={handleChange}
-              label="Type d’offre"
-              required
-            >
-              {typeOffres.map((t) => (
-                <MenuItem key={t.id} value={String(t.id)}>
-                  {t.nom}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.type_offre_id || "Type de dispositif ou d’offre associé."}</FormHelperText>
-          </FormControl>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth error={!!errors.statut_id}>
-            <InputLabel id="statut-label">Statut</InputLabel>
-            <Select
-              labelId="statut-label"
-              name="statut_id"
-              value={values.statut_id ? String(values.statut_id) : ""}
-              onChange={handleChange}
-              label="Statut"
-              required
-            >
-              {statuts.map((s) => (
-                <MenuItem key={s.id} value={String(s.id)}>
-                  {s.nom}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>{errors.statut_id || "Statut administratif actuel de la formation."}</FormHelperText>
-          </FormControl>
-        </Grid>
-
-        <Input
-          label="Date de début"
-          name="start_date"
-          type="date"
-          value={values.start_date}
-          error={errors.start_date}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-        />
-        <Input
-          label="Date de fin"
-          name="end_date"
-          type="date"
-          value={values.end_date}
-          error={errors.end_date}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-        />
-      </Section>
-
-      {/* Section 2 */}
-      <Section icon={<NumbersIcon color="primary" />} title="Numéros & assistante">
-        <Input
-          label="N° Kairos"
-          name="num_kairos"
-          value={values.num_kairos}
-          onChange={handleChange}
-        />
-        <Input label="N° Offre" name="num_offre" value={values.num_offre} onChange={handleChange} />
-        <Input
-          label="N° Produit"
-          name="num_produit"
-          value={values.num_produit}
-          onChange={handleChange}
-        />
-        <Input
-          label="Assistante"
-          name="assistante"
-          value={values.assistante}
-          onChange={handleChange}
-        />
-      </Section>
-
-      {/* Section 3 */}
-      <Section icon={<SchoolIcon color="primary" />} title="Diplôme ou titre visé (CERFA)">
-        <Grid item xs={12}>
-          <Alert severity="info">
-            Ces champs alimentent le bloc formation du CERFA : diplôme visé, code diplôme, RNCP
-            et durée de formation.
-          </Alert>
-        </Grid>
-        <Input
-          label="Intitulé précis"
-          name="intitule_diplome"
-          value={values.intitule_diplome}
-          onChange={handleChange}
-        />
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel id="diplome-vise-code-label">Code diplome CERFA</InputLabel>
-            <Select
-              labelId="diplome-vise-code-label"
-              label="Code diplome CERFA"
-              name="diplome_vise_code"
-              value={values.diplome_vise_code ?? ""}
-              onChange={handleChange}
-            >
-              <MenuItem value="">Non defini</MenuItem>
-              {diplomeCodeOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>Codification CERFA du diplome vise, sans remplacer l'intitule libre.</FormHelperText>
-          </FormControl>
-        </Grid>
-        <Input
-          label="Code diplôme"
-          name="code_diplome"
-          value={values.code_diplome}
-          onChange={handleChange}
-        />
-        <Input
-          label="Code RNCP"
-          name="code_rncp"
-          value={values.code_rncp}
-          onChange={handleChange}
-        />
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel id="type-qualification-visee-label">Type de qualification visée</InputLabel>
-            <Select
-              labelId="type-qualification-visee-label"
-              label="Type de qualification visée"
-              name="type_qualification_visee"
-              value={values.type_qualification_visee ?? ""}
-              onChange={handleChange}
-            >
-              <MenuItem value="">Non defini</MenuItem>
-              {qualificationViseeOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              Source metier pour pre-remplir le CERFA professionnalisation.
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth>
-            <InputLabel id="specialite-formation-label">Code NSF spécialité de formation</InputLabel>
-            <Select
-              labelId="specialite-formation-label"
-              label="Code NSF spécialité de formation"
-              name="specialite_formation"
-              value={values.specialite_formation ?? ""}
-              onChange={handleChange}
-            >
-              <MenuItem value="">Non defini</MenuItem>
-              {NSF_SPECIALITE_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>Code NSF a 3 chiffres pour le CERFA professionnalisation.</FormHelperText>
-          </FormControl>
-        </Grid>
-        {suggestedNsf && suggestedNsf.code !== (values.specialite_formation ?? "") && (
-          <Grid item xs={12}>
-            <Alert severity="info">Suggestion NSF : {suggestedNsf.label}</Alert>
-          </Grid>
-        )}
-        <Input
-          label="Total heures"
-          name="total_heures"
-          type="number"
-          value={values.total_heures}
-          onChange={handleChange}
-        />
-        <Input
-          label="Heures d'enseignements généraux"
-          name="heures_enseignements_generaux"
-          type="number"
-          value={values.heures_enseignements_generaux}
-          onChange={handleChange}
-        />
-        <Input
-          label="Heures distanciel"
-          name="heures_distanciel"
-          type="number"
-          value={values.heures_distanciel}
-          onChange={handleChange}
-        />
-      </Section>
-
-      {/* Section 4 */}
-      <Section icon={<BusinessIcon color="primary" />} title="Places & inscrits">
-        {["prevus_crif", "prevus_mp", "inscrits_crif", "inscrits_mp", "cap"].map((field) => (
-          <Input
-            key={field}
-            label={numericLabels[field] || field}
-            name={field}
-            type="number"
-            value={(values as any)[field]}
-            onChange={handleChange}
-          />
-        ))}
-      </Section>
-
-      {/* Section 5 */}
-      <Section icon={<TrendingUpIcon color="primary" />} title="Recrutement & statistiques">
-        {["entree_formation", "presents_en_formation", "nombre_candidats", "nombre_entretiens"].map((field) => (
-          <Input
-            key={field}
-            label={numericLabels[field] || field}
-            name={field}
-            type="number"
-            value={(values as any)[field]}
-            onChange={handleChange}
-          />
-        ))}
-
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={!!values.convocation_envoie}
-                onChange={handleCheckbox}
-                name="convocation_envoie"
-              />
-            }
-            label="Convocation envoyée"
-          />
-        </Grid>
-      </Section>
-
-      {/* Boutons */}
-      <Stack
-        direction={{ xs: "column-reverse", sm: "row" }}
-        spacing={2}
-        justifyContent="flex-end"
-        sx={{ mt: 3 }}
-      >
-        <Button
-          type="submit"
-          variant="contained"
-          color="success"
-          disabled={loading || loadingChoices}
-          startIcon={loading ? <CircularProgress size={18} /> : undefined}
-          fullWidth={loading || loadingChoices ? true : false}
+        <Section
+          icon={<AssignmentIcon color="primary" />}
+          title="Informations principales"
+          description="Bloc de référence pour l’identité de la formation, ses rattachements et sa période."
         >
-          {loading ? "Enregistrement..." : submitLabel}
-        </Button>
+          <Grid item xs={12}>
+            <Alert severity="info">
+              Les dates de formation et les informations diplôme ci-dessous sont utilisées pour le
+              pré-remplissage du CERFA.
+            </Alert>
+          </Grid>
 
-        {onCancel && (
-          <Button variant="outlined" color="inherit" onClick={onCancel} fullWidth>
-            Annuler
-          </Button>
-        )}
+          <Input
+            label="Nom"
+            name="nom"
+            required
+            value={values.nom}
+            error={errors.nom}
+            helperText="Nom affiché de la formation."
+            onChange={handleChange}
+          />
+
+          <SelectField
+            label="Centre"
+            labelId="centre-label"
+            name="centre_id"
+            value={values.centre_id ? String(values.centre_id) : ""}
+            onChange={handleChange}
+            error={errors.centre_id}
+            helperText="Centre de rattachement de la formation."
+            required
+          >
+            {centres.map((c) => (
+              <MenuItem key={c.id} value={String(c.id)}>
+                {c.nom}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          <SelectField
+            label="Type d’offre"
+            labelId="type-offre-label"
+            name="type_offre_id"
+            value={values.type_offre_id ? String(values.type_offre_id) : ""}
+            onChange={handleChange}
+            error={errors.type_offre_id}
+            helperText="Type de dispositif ou d’offre associé."
+            required
+          >
+            {typeOffres.map((t) => (
+              <MenuItem key={t.id} value={String(t.id)}>
+                {t.nom}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          <SelectField
+            label="Statut"
+            labelId="statut-label"
+            name="statut_id"
+            value={values.statut_id ? String(values.statut_id) : ""}
+            onChange={handleChange}
+            error={errors.statut_id}
+            helperText="Statut administratif actuel de la formation."
+            required
+          >
+            {statuts.map((s) => (
+              <MenuItem key={s.id} value={String(s.id)}>
+                {s.nom}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          <Input
+            label="Date de début"
+            name="start_date"
+            type="date"
+            value={values.start_date}
+            error={errors.start_date}
+            helperText="Date prévue de démarrage."
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          <Input
+            label="Date de fin"
+            name="end_date"
+            type="date"
+            value={values.end_date}
+            error={errors.end_date}
+            helperText="Date prévue de fin."
+            onChange={handleChange}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Section>
+
+        <Section
+          icon={<NumbersIcon color="primary" />}
+          title="Numéros & assistante"
+          description="Identifiants métier et informations de suivi administratif."
+        >
+          <Input
+            label="N° Kairos"
+            name="num_kairos"
+            value={values.num_kairos}
+            helperText="Référence Kairos."
+            onChange={handleChange}
+          />
+
+          <Input
+            label="N° Offre"
+            name="num_offre"
+            value={values.num_offre}
+            helperText="Référence de l’offre."
+            onChange={handleChange}
+          />
+
+          <Input
+            label="N° Produit"
+            name="num_produit"
+            value={values.num_produit}
+            helperText="Référence produit associée."
+            onChange={handleChange}
+          />
+
+          <Input
+            label="Assistante"
+            name="assistante"
+            value={values.assistante}
+            helperText="Personne référente ou assistante associée."
+            onChange={handleChange}
+          />
+        </Section>
+
+        <Section
+          icon={<SchoolIcon color="primary" />}
+          title="Diplôme ou titre visé"
+          description="Champs utilisés pour le bloc formation du CERFA et les informations de certification."
+        >
+          <Grid item xs={12}>
+            <Alert severity="info">
+              Ces champs alimentent le bloc formation du CERFA : diplôme visé, code diplôme, RNCP
+              et durée de formation.
+            </Alert>
+          </Grid>
+
+          <Input
+            label="Intitulé précis"
+            name="intitule_diplome"
+            value={values.intitule_diplome}
+            helperText="Libellé libre du diplôme ou titre visé."
+            onChange={handleChange}
+          />
+
+          <SelectField
+            label="Code diplome CERFA"
+            labelId="diplome-vise-code-label"
+            name="diplome_vise_code"
+            value={values.diplome_vise_code ?? ""}
+            onChange={handleChange}
+            helperText="Codification CERFA du diplôme visé, sans remplacer l’intitulé libre."
+          >
+            <MenuItem value="">Non defini</MenuItem>
+            {diplomeCodeOptions.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          <Input
+            label="Code diplôme"
+            name="code_diplome"
+            value={values.code_diplome}
+            helperText="Code diplôme interne ou réglementaire."
+            onChange={handleChange}
+          />
+
+          <Input
+            label="Code RNCP"
+            name="code_rncp"
+            value={values.code_rncp}
+            helperText="Code RNCP si disponible."
+            onChange={handleChange}
+          />
+
+          <SelectField
+            label="Type de qualification visée"
+            labelId="type-qualification-visee-label"
+            name="type_qualification_visee"
+            value={values.type_qualification_visee ?? ""}
+            onChange={handleChange}
+            helperText="Source métier pour pré-remplir le CERFA professionnalisation."
+          >
+            <MenuItem value="">Non defini</MenuItem>
+            {qualificationViseeOptions.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          <SelectField
+            label="Code NSF spécialité de formation"
+            labelId="specialite-formation-label"
+            name="specialite_formation"
+            value={values.specialite_formation ?? ""}
+            onChange={handleChange}
+            helperText="Code NSF à 3 chiffres pour le CERFA professionnalisation."
+          >
+            <MenuItem value="">Non defini</MenuItem>
+            {NSF_SPECIALITE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </SelectField>
+
+          {suggestedNsf && suggestedNsf.code !== (values.specialite_formation ?? "") ? (
+            <Grid item xs={12}>
+              <Alert severity="info">Suggestion NSF : {suggestedNsf.label}</Alert>
+            </Grid>
+          ) : null}
+
+          <Input
+            label="Total heures"
+            name="total_heures"
+            type="number"
+            value={values.total_heures}
+            helperText={numericFieldsWithHelpers.total_heures}
+            onChange={handleChange}
+          />
+
+          <Input
+            label="Heures d'enseignements généraux"
+            name="heures_enseignements_generaux"
+            type="number"
+            value={values.heures_enseignements_generaux}
+            helperText={numericFieldsWithHelpers.heures_enseignements_generaux}
+            onChange={handleChange}
+          />
+
+          <Input
+            label="Heures distanciel"
+            name="heures_distanciel"
+            type="number"
+            value={values.heures_distanciel}
+            helperText={numericFieldsWithHelpers.heures_distanciel}
+            onChange={handleChange}
+          />
+        </Section>
+
+        <Section
+          icon={<BusinessIcon color="primary" />}
+          title="Places & inscrits"
+          description="Pilotage des volumes prévus, capacités et effectifs inscrits."
+        >
+          {["prevus_crif", "prevus_mp", "inscrits_crif", "inscrits_mp", "cap"].map((field) => (
+            <Input
+              key={field}
+              label={numericLabels[field] || field}
+              name={field}
+              type="number"
+              value={(values as any)[field]}
+              helperText={numericFieldsWithHelpers[field]}
+              onChange={handleChange}
+            />
+          ))}
+        </Section>
+
+        <Section
+          icon={<TrendingUpIcon color="primary" />}
+          title="Recrutement & statistiques"
+          description="Suivi opérationnel de la session et état d’avancement du recrutement."
+        >
+          {[
+            "entree_formation",
+            "presents_en_formation",
+            "nombre_candidats",
+            "nombre_entretiens",
+          ].map((field) => (
+            <Input
+              key={field}
+              label={numericLabels[field] || field}
+              name={field}
+              type="number"
+              value={(values as any)[field]}
+              helperText={numericFieldsWithHelpers[field]}
+              onChange={handleChange}
+            />
+          ))}
+
+          <Grid item xs={12}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                minHeight: theme.custom.form.inlineBlock.minHeight,
+                px: { xs: 1, sm: 1.25 },
+                py: { xs: 0.75, sm: 1 },
+                borderRadius: theme.shape.borderRadius,
+                border: "1px solid",
+                borderColor: "divider",
+                backgroundColor: "background.paper",
+              }}
+            >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={!!values.convocation_envoie}
+                    onChange={handleCheckbox}
+                    name="convocation_envoie"
+                  />
+                }
+                label="Convocation envoyée"
+              />
+            </Box>
+          </Grid>
+        </Section>
+
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            width: "100%",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column-reverse", sm: "row" }}
+            spacing={actionGap}
+            useFlexGap
+            sx={{
+              width: { xs: "100%", sm: "auto" },
+              "& > *": {
+                minWidth: { xs: "100%", sm: theme.spacing(18) },
+              },
+            }}
+          >
+            {onCancel ? (
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={onCancel}
+                disabled={loading || loadingChoices}
+              >
+                Annuler
+              </Button>
+            ) : null}
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="success"
+              disabled={loading || loadingChoices}
+              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : undefined}
+            >
+              {loading ? "Enregistrement..." : submitLabel}
+            </Button>
+          </Stack>
+        </Box>
       </Stack>
     </Box>
   );

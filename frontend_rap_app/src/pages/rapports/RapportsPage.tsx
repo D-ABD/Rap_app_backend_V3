@@ -1,17 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, Paper, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { toast } from "react-toastify";
+
 import PageTemplate from "../../components/PageTemplate";
 import usePagination from "../../hooks/usePagination";
 import RapportDetailModal from "./RapportDetailModal";
 import RapportTable from "./RapportTable";
-import { useDeleteRapport, useRapportExports, useRapports } from "../../hooks/useRapports";
+import {
+  useDeleteRapport,
+  useRapportExports,
+  useRapports,
+} from "../../hooks/useRapports";
 import type { Rapport } from "../../types/rapport";
-import FilterTemplate, { type FieldConfig } from "../../components/filters/FilterTemplate";
+import FilterTemplate, {
+  type FieldConfig,
+} from "../../components/filters/FilterTemplate";
 import EntityToolbar from "../../components/filters/EntityToolbar";
 import PageSizeSelect from "../../components/filters/PageSizeSelect";
 import ListPaginationBar from "../../components/tables/ListPaginationBar";
+import StatCard from "../../components/dashboard/StatCard";
 
 type RapportListFilters = { search: string };
 
@@ -26,12 +47,25 @@ const RAPPORT_FILTER_FIELDS: FieldConfig<RapportListFilters>[] = [
 
 export default function RapportsPage() {
   const navigate = useNavigate();
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
+  const {
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    count,
+    setCount,
+    totalPages,
+  } = usePagination();
+
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState<Rapport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Rapport | null>(null);
 
-  const params = useMemo(() => ({ search, page, page_size: pageSize }), [search, page, pageSize]);
+  const params = useMemo(
+    () => ({ search, page, page_size: pageSize }),
+    [search, page, pageSize]
+  );
+
   const { data, loading, error, refresh } = useRapports(params);
   const { deleteRapport } = useDeleteRapport();
   const { exportListXlsx, exportRapport } = useRapportExports();
@@ -41,14 +75,20 @@ export default function RapportsPage() {
   }, [data, setCount]);
 
   const rapports = useMemo(() => data?.results ?? [], [data]);
+
   const overview = useMemo(() => {
     return rapports.reduce(
       (acc, rapport) => {
-        const summary = (rapport.donnees?.phase_summary as Record<string, unknown> | undefined) ?? {};
-        const candidats = (summary.candidats as Record<string, unknown> | undefined) ?? {};
+        const summary =
+          (rapport.donnees?.phase_summary as Record<string, unknown> | undefined) ??
+          {};
+        const candidats =
+          (summary.candidats as Record<string, unknown> | undefined) ?? {};
+
         acc.candidats += Number(candidats.total ?? 0);
         acc.enFormation += Number(candidats.stagiaires_en_formation ?? 0);
         acc.abandons += Number(candidats.abandons ?? 0);
+
         return acc;
       },
       { candidats: 0, enFormation: 0, abandons: 0 }
@@ -57,15 +97,22 @@ export default function RapportsPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+
     try {
       await deleteRapport(deleteTarget.id);
       toast.success("Rapport archivé avec succès.");
       setDeleteTarget(null);
       await refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de l'archivage du rapport.");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de l'archivage du rapport."
+      );
     }
   };
+
+  const hasResults = rapports.length > 0;
 
   return (
     <PageTemplate
@@ -84,7 +131,11 @@ export default function RapportsPage() {
               setPage(1);
             }}
           />
-          <Button variant="outlined" disabled={loading || rapports.length === 0} onClick={() => void exportListXlsx(params)}>
+          <Button
+            variant="outlined"
+            disabled={loading || rapports.length === 0}
+            onClick={() => void exportListXlsx(params)}
+          >
             Exporter la liste
           </Button>
           <Button variant="contained" onClick={() => navigate("/rapports/create")}>
@@ -112,55 +163,57 @@ export default function RapportsPage() {
       }
       footer={
         count > 0 ? (
-          <ListPaginationBar page={page} totalPages={totalPages} count={count} onPageChange={setPage} />
+          <ListPaginationBar
+            page={page}
+            totalPages={totalPages}
+            count={count}
+            onPageChange={setPage}
+          />
         ) : null
       }
     >
-      {loading ? <CircularProgress /> : null}
+      {loading ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+          <CircularProgress />
+        </Stack>
+      ) : null}
+
       {error ? <Alert severity="error">{error}</Alert> : null}
-      {!loading && !error && rapports.length > 0 ? (
+
+      {!loading && !error && hasResults ? (
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: "center" }}>
-              <Typography variant="caption" color="text.secondary">
-                Rapports visibles
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {rapports.length}
-              </Typography>
-            </Paper>
+            <StatCard
+              label="Rapports visibles"
+              value={rapports.length}
+            />
           </Grid>
+
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: "center" }}>
-              <Typography variant="caption" color="text.secondary">
-                Candidats couverts
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {overview.candidats}
-              </Typography>
-            </Paper>
+            <StatCard
+              label="Candidats couverts"
+              value={overview.candidats}
+            />
           </Grid>
+
           <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2, textAlign: "center" }}>
-              <Typography variant="caption" color="text.secondary">
-                Abandons visibles
-              </Typography>
-              <Typography variant="h5" fontWeight={700} color={overview.abandons > 0 ? "error.main" : "text.primary"}>
-                {overview.abandons}
-              </Typography>
-            </Paper>
+            <StatCard
+              label="Abandons visibles"
+              value={overview.abandons}
+              valueColor={overview.abandons > 0 ? "error.main" : undefined}
+            />
           </Grid>
         </Grid>
       ) : null}
-      {!loading && !error && rapports.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Box fontSize={48} mb={1}>
-            📭
-          </Box>
+
+      {!loading && !error && !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Box sx={{ fontSize: 48, mb: 1 }}>📭</Box>
           <Typography>Aucun rapport trouvé.</Typography>
         </Box>
       ) : null}
-      {!loading && !error && rapports.length > 0 ? (
+
+      {!loading && !error && hasResults ? (
         <RapportTable
           rapports={rapports}
           onOpen={setDetail}

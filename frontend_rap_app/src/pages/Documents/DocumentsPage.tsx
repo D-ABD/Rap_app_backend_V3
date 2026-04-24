@@ -15,13 +15,11 @@ import {
   MenuItem,
   Select,
   Stack,
-  TextField,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 
 import PageTemplate from "../../components/PageTemplate";
+import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useFiltresDocuments from "../../hooks/useFiltresDocuments";
@@ -29,23 +27,20 @@ import type { Document } from "../../types/document";
 import type { FiltresValues } from "../../types/Filtres";
 import DocumentsFiltresPanel from "../../components/filters/DocumentsFiltresPanel";
 import DocumentsTable from "./DocumentsTable";
-import DocumentPreview from "./DocumentPreview"; // ✅ import ajouté
 import { useDocumentsApi } from "../../hooks/useDocuments";
 import { useAuth } from "../../hooks/useAuth";
 import { isAdminLikeRole } from "../../utils/roleGroups";
 import Lot1ExcelActions from "../../components/import_export/Lot1ExcelActions";
 import { buildDocumentExportQueryParams } from "../../api/lot1ImportExport";
-import type { AppTheme } from "../../theme";
 
 export default function DocumentsPage() {
-  const theme = useTheme<AppTheme>();
-  const _isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [search, setSearch] = useState("");
   const [searchParams] = useSearchParams();
 
-  const [previewDoc] = useState<Document | null>(null); // ✅ nouveau
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
-  const [anchorImportExport, setAnchorImportExport] = useState<null | HTMLElement>(null);
+  const [anchorImportExport, setAnchorImportExport] =
+    useState<null | HTMLElement>(null);
+
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);
 
@@ -61,6 +56,7 @@ export default function DocumentsPage() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("documents.showFilters") === "1";
   });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("documents.showFilters", showFilters ? "1" : "0");
@@ -79,15 +75,28 @@ export default function DocumentsPage() {
   );
 
   const { formation_id } = useParams<{ formation_id?: string }>();
-  const formationIdFromQuery = searchParams.get("formation") || searchParams.get("formation_id");
+  const formationIdFromQuery =
+    searchParams.get("formation") || searchParams.get("formation_id");
   const scopedFormationId = formationIdFromQuery ?? formation_id ?? undefined;
+
   const navigate = useNavigate();
 
-  const { page, setPage, pageSize, setPageSize, hasNext, hasPrev, count, setCount, totalPages } =
-    usePagination();
+  const {
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    hasNext,
+    hasPrev,
+    count,
+    setCount,
+    totalPages,
+  } = usePagination();
 
-  const { filtres, loading: filtresLoading, error: filtresError } = useFiltresDocuments();
-  const { deleteDocument, restoreDocument, hardDeleteDocument } = useDocumentsApi();
+  const { filtres, loading: filtresLoading, error: filtresError } =
+    useFiltresDocuments();
+  const { deleteDocument, restoreDocument, hardDeleteDocument } =
+    useDocumentsApi();
 
   const safeFiltres = useMemo(
     () =>
@@ -101,7 +110,10 @@ export default function DocumentsPage() {
   );
 
   const cleanFilters = useMemo(
-    () => Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined)),
+    () =>
+      Object.fromEntries(
+        Object.entries(filters).filter(([, v]) => v !== undefined)
+      ),
     [filters]
   );
 
@@ -186,53 +198,117 @@ export default function DocumentsPage() {
     }
   };
 
-  if (filtresLoading) return <CircularProgress />;
-  if (filtresError) {
+  if (filtresLoading) {
     return (
-      <Typography color="error">
-        ⚠️ Erreur lors du chargement des filtres : {filtresError}
-      </Typography>
+      <Box
+        sx={{
+          minHeight: 240,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
+
+  if (filtresError) {
+    return (
+      <Box
+        sx={{
+          minHeight: 180,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+        }}
+      >
+        <Typography color="error">
+          ⚠️ Erreur lors du chargement des filtres : {filtresError}
+        </Typography>
+      </Box>
+    );
+  }
+
+  const footer = (
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      justifyContent="space-between"
+      alignItems={{ xs: "stretch", sm: "center" }}
+      spacing={1.5}
+    >
+      <Typography color="text.secondary">
+        Page {page} / {totalPages} ({count} résultats)
+      </Typography>
+
+      <Stack
+        direction="row"
+        spacing={1}
+        justifyContent={{ xs: "flex-start", sm: "flex-end" }}
+      >
+        {hasPrev && (
+          <Button variant="outlined" onClick={() => setPage(page - 1)}>
+            ← Précédent
+          </Button>
+        )}
+        {hasNext && (
+          <Button variant="outlined" onClick={() => setPage(page + 1)}>
+            Suivant →
+          </Button>
+        )}
+      </Stack>
+    </Stack>
+  );
 
   return (
     <PageTemplate
       backButton
       onRefresh={fetchData}
       headerExtra={
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap={{ xs: "wrap", md: "nowrap" }}>
-          <TextField
-            type="search"
-            size="small"
-            fullWidth
-            placeholder="Rechercher un document..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </Stack>
+        <SearchInput
+          placeholder="Rechercher un document..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
       }
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          alignItems={{ xs: "stretch", sm: "center" }}
+          flexWrap="wrap"
+          useFlexGap
+        >
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
 
           <Button
-            variant={filters.avec_archivees || filters.archives_seules ? "contained" : "outlined"}
+            variant={
+              filters.avec_archivees || filters.archives_seules
+                ? "contained"
+                : "outlined"
+            }
             onClick={() => {
               setFilters((prev) => ({
                 ...prev,
-                avec_archivees: !prev.avec_archivees && !prev.archives_seules ? true : undefined,
+                avec_archivees:
+                  !prev.avec_archivees && !prev.archives_seules
+                    ? true
+                    : undefined,
                 archives_seules: undefined,
               }));
               setPage(1);
             }}
           >
-            {filters.avec_archivees || filters.archives_seules ? "Masquer archivés" : "Inclure archivés"}
+            {filters.avec_archivees || filters.archives_seules
+              ? "Masquer archivés"
+              : "Inclure archivés"}
           </Button>
 
           {(filters.avec_archivees || filters.archives_seules) && (
@@ -251,7 +327,10 @@ export default function DocumentsPage() {
             </Button>
           )}
 
-          <Button variant="outlined" onClick={(event) => setAnchorImportExport(event.currentTarget)}>
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorImportExport(event.currentTarget)}
+          >
             Import / Export
           </Button>
 
@@ -274,7 +353,9 @@ export default function DocumentsPage() {
             variant="contained"
             onClick={() =>
               navigate(
-                `/documents/create${scopedFormationId ? `?formation_id=${scopedFormationId}` : ""}`
+                `/documents/create${
+                  scopedFormationId ? `?formation_id=${scopedFormationId}` : ""
+                }`
               )
             }
           >
@@ -304,14 +385,17 @@ export default function DocumentsPage() {
               </Typography>
             </Box>
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <Lot1ExcelActions resource="document" exportParams={documentIeParams} isMobile={false} />
+              <Lot1ExcelActions
+                resource="document"
+                exportParams={documentIeParams}
+                isMobile={false}
+              />
             </Stack>
           </Menu>
         </Stack>
       }
-    >
-      {showFilters && (
-        <Box mb={2}>
+      filters={
+        showFilters ? (
           <DocumentsFiltresPanel
             filtres={safeFiltres}
             values={filters}
@@ -320,14 +404,36 @@ export default function DocumentsPage() {
               setPage(1);
             }}
           />
-        </Box>
-      )}
-
+        ) : undefined
+      }
+      footer={footer}
+    >
       {loading ? (
-        <CircularProgress />
+        <Box
+          sx={{
+            minHeight: 240,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CircularProgress />
+        </Box>
       ) : error ? (
-        <Typography color="error">⚠️ Erreur lors du chargement des documents.</Typography>
-      ) : documentsUniques.length ? (
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          <Typography color="error">
+            ⚠️ Erreur lors du chargement des documents.
+          </Typography>
+        </Box>
+      ) : documentsUniques.length > 0 ? (
         <DocumentsTable
           documents={documentsUniques}
           showActions
@@ -337,43 +443,32 @@ export default function DocumentsPage() {
           canHardDelete={canHardDelete}
         />
       ) : (
-        <Typography color="text.secondary" align="center" sx={{ mt: 4 }}>
-          📭 Aucun document trouvé.
-        </Typography>
+        <Box
+          sx={{
+            minHeight: 180,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+          }}
+        >
+          <Typography color="text.secondary">
+            📭 Aucun document trouvé.
+          </Typography>
+        </Box>
       )}
 
-      {/* ✅ Pagination */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-        <Typography>
-          Page {page} / {totalPages} ({count} résultats)
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          {hasPrev && (
-            <Button variant="outlined" onClick={() => setPage(page - 1)}>
-              ← Précédent
-            </Button>
-          )}
-          {hasNext && (
-            <Button variant="outlined" onClick={() => setPage(page + 1)}>
-              Suivant →
-            </Button>
-          )}
-        </Stack>
-      </Stack>
-
-      {/* ✅ Modale d’aperçu */}
-      {previewDoc && (
-        <DocumentPreview
-          url={previewDoc.download_url || previewDoc.fichier}
-          nom={previewDoc.nom_fichier}
-        />
-      )}
-
-      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+      <Dialog
+        open={hardDeleteId !== null}
+        onClose={() => setHardDeleteId(null)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Suppression définitive</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. Le document archivé sera supprimé définitivement.
+            Cette action est irréversible. Le document archivé sera supprimé
+            définitivement.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

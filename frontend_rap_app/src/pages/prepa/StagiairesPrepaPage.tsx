@@ -1,276 +1,280 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Pagination, Stack, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Stack,
+  Button,
+  CircularProgress,
+  Typography,
+  Select,
+  MenuItem,
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Menu,
+} from "@mui/material";
+
 import PageTemplate from "src/components/PageTemplate";
 import usePagination from "src/hooks/usePagination";
-import { useDeleteStagiairePrepa, useDesarchiverStagiairePrepa, useExportStagiairesPrepa, useHardDeleteStagiairePrepa, useStagiairePrepaDetail, useStagiairesPrepaList, useStagiairesPrepaMeta } from "src/hooks/useStagiairesPrepa";
-import type { StagiairePrepaFiltersValues } from "src/types/prepa";
-import StagiairesPrepaTable from "./StagiairesPrepaTable";
-import StagiairesPrepaDetailModal from "./StagiairesPrepaDetailModal";
+
+import {
+  usePrepaFiltersOptions,
+  usePrepaList,
+  useDeletePrepa,
+  useDesarchiverPrepa,
+  useHardDeletePrepa,
+} from "src/hooks/usePrepa";
+
+import { Prepa } from "src/types/prepa";
+import type { PrepaFiltresValues } from "src/types/prepa";
+
+import PrepaTableIC from "./PrepaTableIC";
+import PrepaDetailModal from "./PrepaDetailModal";
+
+import ExportButtonPrepa from "src/components/export_buttons/ExportButtonPrepa";
+import FiltresPrepaPanel from "src/components/filters/FiltresPrepaPanel";
+import SearchInput from "src/components/SearchInput";
 import { useAuth } from "src/hooks/useAuth";
 import { canWritePrepaRole } from "src/utils/roleGroups";
-import SearchInput from "src/components/SearchInput";
 
-export default function StagiairesPrepaPage() {
+export default function PrepaPageIC() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const canWritePrepa = canWritePrepaRole(user?.role);
-  const [searchParams] = useSearchParams();
-  const [filters, setFilters] = useState<StagiairePrepaFiltersValues>({
-    ordering: "nom",
+
+  // Filtres
+  const [filters, setFilters] = useState<PrepaFiltresValues>({
+    ordering: "-date_prepa",
     page: 1,
-    prepa_origine: searchParams.get("prepa_origine") ? Number(searchParams.get("prepa_origine")) : undefined,
   });
 
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
-  const { data: meta, loading: loadingMeta } = useStagiairesPrepaMeta();
-  const effectiveFilters = useMemo(
-    () => ({ ...filters, page, page_size: pageSize }),
-    [filters, page, pageSize]
-  );
-  const { data, loading, error } = useStagiairesPrepaList(effectiveFilters);
-  const { remove } = useDeleteStagiairePrepa();
-  const { restore } = useDesarchiverStagiairePrepa();
-  const { hardDelete } = useHardDeleteStagiairePrepa();
-  const { exportList, exportPresence, exportEmargement } = useExportStagiairesPrepa();
+  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions();
+
+  // Toggle panneau filtres
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem("prepa.showFilters");
+    return saved === "1";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("prepa.showFilters", showFilters ? "1" : "0");
+  }, [showFilters]);
+
+  // Pagination
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
+
+  // 🔵 Filtre automatique : IC uniquement
+  const effectiveFilters = useMemo(() => {
+    const { type_prepa: _ignore, ...rest } = filters;
+
+    return {
+      ...rest,
+      page,
+      page_size: pageSize,
+      type_prepa: "info_collective",
+    };
+  }, [filters, page, pageSize]);
+
+  // Données API
+  const { data, loading, error } = usePrepaList(effectiveFilters);
+  const { remove } = useDeletePrepa();
+  const { restore } = useDesarchiverPrepa();
+  const { hardDelete } = useHardDeletePrepa();
+
+  const items: Prepa[] = useMemo(() => data?.results ?? [], [data]);
 
   useEffect(() => {
     setCount(data?.count ?? 0);
   }, [data, setCount]);
 
-  const items = data?.results ?? [];
-  const centres = (meta?.centres as Array<{ id: number; nom: string }>) ?? [];
-  const statuts = (meta?.statut_parcours as Array<{ value: string; label: string }>) ?? [];
-  const ateliers = (meta?.type_atelier as Array<{ value: string; label: string }>) ?? [];
+  // Sélection
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  useEffect(() => {
+    const visible = new Set(items.map((i) => i.id));
+    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [items]);
 
-  const [detailId, setDetailId] = useState<number | null>(null);
-  const { data: detailData } = useStagiairePrepaDetail(detailId);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  // Archivage
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const saved = localStorage.getItem("stagiairesPrepa.showFilters");
-    return saved === "1";
-  });
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("stagiairesPrepa.showFilters", showFilters ? "1" : "0");
-    }
-  }, [showFilters]);
+  const handleDelete = async () => {
+    const idsToDelete = selectedId ? [selectedId] : selectedIds;
+    if (!idsToDelete.length) return;
 
-  const refresh = () => setFilters((prev) => ({ ...prev }));
-
-  const onDelete = async () => {
-    if (!deleteId) return;
     try {
-      await remove(deleteId);
-      toast.success("Stagiaire Prépa archivé");
-      setDeleteId(null);
-      refresh();
+      await Promise.all(idsToDelete.map((id) => remove(id)));
+      toast.success(`📦 ${idsToDelete.length} séance(s) archivée(s)`);
+      setShowConfirm(false);
+      setSelectedId(null);
+      setSelectedIds([]);
+      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
+      setFilters((f) => ({ ...f }));
     } catch {
-      toast.error("Erreur lors de l'archivage");
+      toast.error("Erreur d'archivage");
     }
   };
 
-  const onRestore = async (id: number) => {
+  const handleRestore = async (id: number) => {
     try {
       await restore(id);
-      toast.success("Stagiaire Prépa restauré");
-      refresh();
+      toast.success("Séance restaurée");
+      setFilters((f) => ({ ...f }));
     } catch {
-      toast.error("Erreur lors de la restauration");
+      toast.error("Erreur de restauration");
     }
   };
 
-  const onHardDelete = async () => {
+  const handleHardDelete = async () => {
     if (!hardDeleteId) return;
+
     try {
       await hardDelete(hardDeleteId);
-      toast.success("Stagiaire Prépa supprimé définitivement");
+      toast.success("Séance supprimée définitivement");
       setHardDeleteId(null);
-      refresh();
+      setFilters((f) => ({ ...f }));
     } catch {
-      toast.error("Erreur lors de la suppression définitive");
+      toast.error("Erreur de suppression définitive");
     }
   };
 
-  const activeFiltersCount = useMemo(() => {
-    const ignored = new Set(["ordering", "page", "search"]);
-    return Object.entries(filters).filter(([key, value]) => {
-      if (ignored.has(key)) return false;
-      if (value == null) return false;
-      if (typeof value === "string") return value.trim() !== "";
-      return true;
-    }).length;
-  }, [filters]);
+  // Détail
+  const [selectedPrepa, setSelectedPrepa] = useState<Prepa | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+
+  const handleRowClick = (id: number) => {
+    const item = items.find((i) => i.id === id);
+    if (item) {
+      setSelectedPrepa(item);
+      setShowDetail(true);
+    }
+  };
+
+  const hasArchiveFilter = Boolean(
+    filters.avec_archivees || filters.archives_seules
+  );
+
+  const hasResults = items.length > 0;
 
   return (
     <PageTemplate
       backButton
       onBack={() => navigate(-1)}
       refreshButton
-      onRefresh={refresh}
+      onRefresh={() => setFilters({ ...filters })}
       headerExtra={
         <SearchInput
-          placeholder="🔍 Rechercher un stagiaire Prépa..."
+          placeholder="🔍 Rechercher une séance Prépa..."
           value={filters.search ?? ""}
           onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
             setPage(1);
           }}
         />
       }
       filters={
-        showFilters ? (
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} flexWrap="wrap">
-            <TextField
-              select
-              size="small"
-              label="Centre"
-              value={filters.centre ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  centre: e.target.value === "" ? undefined : Number(e.target.value),
-                }));
-                setPage(1);
-              }}
-              sx={{ minWidth: 180 }}
-            >
-              <MenuItem value="">Tous</MenuItem>
-              {centres.map((centre) => (
-                <MenuItem key={centre.id} value={centre.id}>
-                  {centre.nom}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label="Statut"
-              value={filters.statut_parcours ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  statut_parcours: e.target.value === "" ? undefined : (e.target.value as any),
-                }));
-                setPage(1);
-              }}
-              sx={{ minWidth: 190 }}
-            >
-              <MenuItem value="">Tous</MenuItem>
-              {statuts.map((statut) => (
-                <MenuItem key={statut.value} value={statut.value}>
-                  {statut.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              size="small"
-              label="Type d'atelier"
-              value={filters.type_atelier ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  type_atelier: e.target.value === "" ? undefined : e.target.value,
-                }));
-                setPage(1);
-              }}
-              sx={{ minWidth: 180 }}
-            >
-              <MenuItem value="">Tous</MenuItem>
-              {ateliers.map((atelier) => (
-                <MenuItem key={atelier.value} value={atelier.value}>
-                  {atelier.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              size="small"
-              label="Année"
-              type="number"
-              value={filters.annee ?? ""}
-              onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  annee: e.target.value === "" ? undefined : Number(e.target.value),
-                }));
-                setPage(1);
-              }}
-              sx={{ maxWidth: 130 }}
-            />
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setFilters({ ordering: "nom", page: 1 });
-                setPage(1);
-              }}
-            >
-              Réinitialiser
-            </Button>
-          </Stack>
-        ) : undefined
+        showFilters && (
+          <FiltresPrepaPanel
+            options={loadingFilters ? undefined : filterOptions}
+            values={filters}
+            hideSearch
+            onChange={(next) => {
+              setFilters(next);
+              setPage(1);
+            }}
+            onRefresh={() => setFilters({ ...filters })}
+          />
+        )
       }
+      showFilters={showFilters}
       actions={
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
           <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
             {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
-            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
-          <Button variant="outlined" onClick={(event) => setAnchorOptions(event.currentTarget)}>
+
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
+          >
             Options
           </Button>
-          {canWritePrepa && (
-            <Button variant="contained" onClick={() => navigate("/prepa/stagiaires/create")}>
-              ➕ Nouveau stagiaire
-            </Button>
-          )}
-          <Button
-            variant={filters.avec_archivees ? "contained" : "outlined"}
-            onClick={() => {
-              setFilters((prev) => ({
-                ...prev,
-                avec_archivees: !prev.avec_archivees,
-                archives_seules: prev.archives_seules ? false : prev.archives_seules,
-              }));
-              setPage(1);
-            }}
-          >
-            {filters.avec_archivees ? "Masquer archivés" : "Inclure archivés"}
-          </Button>
-          <Button
-            variant={filters.archives_seules ? "contained" : "outlined"}
-            onClick={() => {
-              setFilters((prev) => ({
-                ...prev,
-                archives_seules: !prev.archives_seules,
-                avec_archivees: !prev.archives_seules ? true : prev.avec_archivees,
-              }));
-              setPage(1);
-            }}
-          >
-            {filters.archives_seules ? "Voir tout" : "Archives seules"}
-          </Button>
-          <TextField
-            select
+
+          <Select
             size="small"
             value={pageSize}
             onChange={(e) => {
               setPageSize(Number(e.target.value));
               setPage(1);
             }}
-            sx={{ minWidth: 110 }}
           >
-            {[10, 20, 50].map((size) => (
-              <MenuItem key={size} value={size}>
-                {size} / page
+            {[5, 10, 20, 50].map((s) => (
+              <MenuItem key={s} value={s}>
+                {s} / page
               </MenuItem>
             ))}
-          </TextField>
+          </Select>
+
+          {canWritePrepa && (
+            <Button variant="contained" onClick={() => navigate("/prepa/create/ic")}>
+              ➕ Nouvelle séance
+            </Button>
+          )}
+
+          <Button
+            variant={hasArchiveFilter ? "contained" : "outlined"}
+            onClick={() =>
+              setFilters((prev) =>
+                prev.avec_archivees || prev.archives_seules
+                  ? {
+                      ...prev,
+                      avec_archivees: undefined,
+                      archives_seules: undefined,
+                    }
+                  : {
+                      ...prev,
+                      avec_archivees: true,
+                      archives_seules: undefined,
+                    }
+              )
+            }
+          >
+            {hasArchiveFilter ? "Masquer archivées" : "Inclure archivées"}
+          </Button>
+
+          {hasArchiveFilter && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() =>
+                setFilters((prev) =>
+                  prev.archives_seules
+                    ? {
+                        ...prev,
+                        archives_seules: undefined,
+                        avec_archivees: undefined,
+                      }
+                    : {
+                        ...prev,
+                        archives_seules: true,
+                        avec_archivees: true,
+                      }
+                )
+              }
+            >
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
+
           <Menu
             anchorEl={anchorOptions}
             open={Boolean(anchorOptions)}
@@ -278,10 +282,9 @@ export default function StagiairesPrepaPage() {
             PaperProps={{
               sx: {
                 mt: 1,
-                width: 340,
+                width: 320,
                 maxWidth: "calc(100vw - 32px)",
                 p: 1.25,
-                borderRadius: 3,
               },
             }}
           >
@@ -290,66 +293,109 @@ export default function StagiairesPrepaPage() {
                 Options
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Exports et documents liés aux stagiaires
+                Export et actions secondaires
               </Typography>
             </Box>
+
             <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <Button variant="outlined" onClick={() => exportList()}>
-                ⬇️ Export liste
-              </Button>
-              <Button variant="outlined" onClick={() => exportPresence()}>
-                📋 Feuille de présence
-              </Button>
-              <Button variant="outlined" onClick={() => exportEmargement()}>
-                📝 Feuille d&apos;émargement
-              </Button>
+              <ExportButtonPrepa data={items} selectedIds={selectedIds} />
             </Stack>
           </Menu>
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
+                📦 Archiver ({selectedIds.length})
+              </Button>
+
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedIds(items.map((i) => i.id))}
+              >
+                ✅ Tout sélectionner
+              </Button>
+
+              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
         </Stack>
       }
       footer={
         count > 0 ? (
-          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" spacing={1}>
-            <Typography>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1}
+          >
+            <Typography variant="body2">
               Page {page} / {totalPages} ({count} résultats)
             </Typography>
-            <Pagination page={page} count={totalPages} onChange={(_, value) => setPage(value)} />
+
+            <Pagination
+              page={page}
+              count={totalPages}
+              onChange={(_, v) => setPage(v)}
+              color="primary"
+            />
           </Stack>
-        ) : undefined
+        ) : null
       }
     >
-      <Box mt={2}>
-        {loading || loadingMeta ? (
+      {loading ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
           <CircularProgress />
-        ) : error ? (
-          <Typography color="error">Erreur de chargement des stagiaires Prépa.</Typography>
-        ) : (
-          <StagiairesPrepaTable
-            items={items}
-            onEdit={(id) => navigate(`/prepa/stagiaires/${id}/edit`)}
-            onDelete={(id) => setDeleteId(id)}
-            onRestore={(id) => onRestore(id)}
-            onHardDelete={(id) => setHardDeleteId(id)}
-            onRowClick={(id) => setDetailId(id)}
-          />
-        )}
-      </Box>
+        </Stack>
+      ) : error ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography color="error">⚠️ Erreur de chargement</Typography>
+        </Box>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Typography>Aucune séance trouvée.</Typography>
+        </Box>
+      ) : (
+        <PrepaTableIC
+          items={items}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onDelete={(id) => {
+            setSelectedId(id);
+            setShowConfirm(true);
+          }}
+          onToggleArchive={(id) => handleRestore(id)}
+          onHardDelete={(id) => setHardDeleteId(id)}
+          onRowClick={handleRowClick}
+        />
+      )}
 
-      <StagiairesPrepaDetailModal
-        open={Boolean(detailId)}
-        onClose={() => setDetailId(null)}
-        stagiaire={detailData}
-        onEdit={(id) => navigate(`/prepa/stagiaires/${id}/edit`)}
+      {/* Modale Détail */}
+      <PrepaDetailModal
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        prepa={selectedPrepa}
+        onEdit={(id) => navigate(`/prepa/${id}/edit`)}
       />
 
-      <Dialog open={Boolean(deleteId)} onClose={() => setDeleteId(null)}>
+      {/* Confirm archive */}
+      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
-          <DialogContentText>Archiver ce stagiaire Prépa ?</DialogContentText>
+          <DialogContentText>
+            {selectedId
+              ? "Archiver cette séance ?"
+              : `Archiver les ${selectedIds.length} séances sélectionnées ?`}
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={onDelete}>
+          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
             Archiver
           </Button>
         </DialogActions>
@@ -359,12 +405,12 @@ export default function StagiairesPrepaPage() {
         <DialogTitle>Suppression définitive</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Cette action est irréversible. Supprimer définitivement ce stagiaire Prépa archivé ?
+            Cette séance Prépa archivée sera supprimée définitivement.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
-          <Button color="error" variant="contained" onClick={onHardDelete}>
+          <Button onClick={handleHardDelete} color="error" variant="contained">
             Supprimer définitivement
           </Button>
         </DialogActions>

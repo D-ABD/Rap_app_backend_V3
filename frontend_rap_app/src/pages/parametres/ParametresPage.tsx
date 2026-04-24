@@ -1,5 +1,12 @@
 import { Link as RouterLink } from "react-router-dom";
-import { Grid, Card, CardContent, CardActions, Typography, Button, Stack } from "@mui/material";
+import {
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Typography,
+  Button,
+} from "@mui/material";
 import PageTemplate from "../../components/PageTemplate";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -41,7 +48,6 @@ const ParametresPage = () => {
       title: "Administration",
       text: "Accès à l'interface d’administration Django.",
       link: "/admin/",
-
       external: true,
     },
   ];
@@ -51,7 +57,15 @@ const ParametresPage = () => {
   };
 
   return (
-    <PageTemplate title="Paramètres" centered={false}>
+    <PageTemplate
+      title="Paramètres"
+      centered={false}
+      actions={
+        <Button variant="contained" color="error" onClick={handleLogout}>
+          🚪 Déconnexion
+        </Button>
+      }
+    >
       <Grid container spacing={3}>
         {cards.map((c) => (
           <Grid item xs={12} sm={6} md={4} key={c.title}>
@@ -60,8 +74,6 @@ const ParametresPage = () => {
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
-                transition: "transform 0.2s",
-                "&:hover": { transform: "translateY(-4px)" },
               }}
             >
               <CardContent sx={{ flexGrow: 1 }}>
@@ -72,6 +84,7 @@ const ParametresPage = () => {
                   {c.text}
                 </Typography>
               </CardContent>
+
               <CardActions>
                 {c.external ? (
                   <Button
@@ -85,7 +98,12 @@ const ParametresPage = () => {
                     Accéder
                   </Button>
                 ) : (
-                  <Button component={RouterLink} to={c.link} size="small" color="primary">
+                  <Button
+                    component={RouterLink}
+                    to={c.link}
+                    size="small"
+                    color="primary"
+                  >
                     Accéder
                   </Button>
                 )}
@@ -94,12 +112,6 @@ const ParametresPage = () => {
           </Grid>
         ))}
       </Grid>
-
-      <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 4 }}>
-        <Button variant="contained" color="error" onClick={handleLogout}>
-          🚪 Déconnexion
-        </Button>
-      </Stack>
     </PageTemplate>
   );
 };

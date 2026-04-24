@@ -1,125 +1,70 @@
-// -----------------------------------------------------------------------------
-// 📊 ObjectifDeclicPage — Liste + filtres + CRUD (création / édition modale)
-// -----------------------------------------------------------------------------
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Stack,
-  Typography,
-  CircularProgress,
+  Box,
   Button,
-  Select,
+  CircularProgress,
   MenuItem,
   Pagination,
-  Box,
-  Menu,
+  Select,
+  Stack,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { toast } from "react-toastify";
 
 import PageTemplate from "src/components/PageTemplate";
-import ObjectifDeclicTable from "./ObjectifDeclicTable";
-import FiltresObjectifsDeclicPanel from "src/components/filters/FiltresObjectifsDeclicPanel";
-import ExportButtonObjectifsDeclic from "src/components/export_buttons/ExportButtonDeclicObjectifs";
-import usePagination from "src/hooks/usePagination";
-import ObjectifDeclicForm from "./ObjectifDeclicForm";
 import SearchInput from "src/components/SearchInput";
-
-import { useObjectifsDeclic, useObjectifsDeclicFiltersOptions } from "src/hooks/useDeclicObjectifs";
-
-import type { ObjectifDeclicFiltresValues } from "src/types/declic";
+import usePagination from "src/hooks/usePagination";
+import {
+  useObjectifsDeclic,
+  useObjectifsDeclicFiltersOptions,
+} from "src/hooks/useDeclicObjectifs";
 import { useAuth } from "src/hooks/useAuth";
 import { canWriteDeclicRole } from "src/utils/roleGroups";
+import type { ObjectifDeclicFiltresValues } from "src/types/declic";
+
+import ObjectifDeclicForm from "./ObjectifDeclicForm";
+import ObjectifDeclicTable from "./ObjectifDeclicTable";
 
 export default function ObjectifDeclicPage() {
   const { user } = useAuth();
-  const canWriteDeclic = canWriteDeclicRole(user?.role);
   const [searchParams] = useSearchParams();
-  const scopedCentre = useMemo(() => {
-    const raw = searchParams.get("centre");
-    if (!raw) return undefined;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }, [searchParams]);
-  // 🎛️ États des filtres
+  const canWriteDeclic = canWriteDeclicRole(user?.role);
+  const initialCentre = Number(searchParams.get("centre"));
+
+  const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<ObjectifDeclicFiltresValues>({
-    annee: new Date().getFullYear(),
-    centre: scopedCentre,
-    ordering: "-annee",
-    page: 1,
+    ordering: "centre__nom",
+    centre: Number.isFinite(initialCentre) && initialCentre > 0 ? initialCentre : undefined,
   });
 
-  // 🔄 Affichage des filtres (persisté)
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const saved = localStorage.getItem("objectifsDeclic.showFilters");
-    return saved ? saved === "1" : false;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("objectifsDeclic.showFilters", showFilters ? "1" : "0");
-    }
-  }, [showFilters]);
-
-  useEffect(() => {
-    setFilters((prev) => ({ ...prev, centre: scopedCentre }));
-  }, [scopedCentre]);
-
-  // 🔢 Pagination locale
-  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } = usePagination();
-
-  // 🔍 Filtres envoyés à l’API
+  const { page, setPage, count, setCount, totalPages } = usePagination();
   const effectiveFilters = useMemo(
-    () => ({ ...filters, page, page_size: pageSize }),
-    [filters, page, pageSize]
+    () => ({
+      ...filters,
+      page,
+    }),
+    [filters, page]
   );
 
-  // 📥 Données depuis l’API
-  const { data, isLoading, isError, refetch } = useObjectifsDeclic(effectiveFilters);
-  const { data: options, isLoading: isLoadingOptions } = useObjectifsDeclicFiltersOptions();
+  const { data, isLoading, isError, error, refetch } = useObjectifsDeclic(effectiveFilters);
+  const { data: filterOptions, isLoading: filtersLoading } = useObjectifsDeclicFiltersOptions();
+  const objectifs = data?.results ?? [];
 
-  // ✅ Toujours un tableau (évite les erreurs .reduce)
-  const objectifs = useMemo(() => {
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray((data as any).results)) return (data as any).results;
-    return [];
-  }, [data]);
-
-  // ✅ Met à jour le compteur uniquement quand tout est prêt
   useEffect(() => {
-    if (!isLoading && !isLoadingOptions) {
-      setCount(objectifs.length);
-    }
-  }, [isLoading, isLoadingOptions, objectifs, setCount]);
+    setCount(data?.count ?? 0);
+  }, [data?.count, setCount]);
 
-  // ⚠️ Affiche une seule erreur si chargement échoue
-  useEffect(() => {
-    if (isError) {
-      toast.error("Erreur lors du chargement des objectifs Déclic");
-    }
-  }, [isError]);
-
-  // ♻️ Changement des filtres
-  const handleFiltersChange = (next: ObjectifDeclicFiltresValues) => {
-    setFilters(next);
+  const updateFilters = (next: Partial<ObjectifDeclicFiltresValues>) => {
+    setFilters((prev) => ({ ...prev, ...next }));
     setPage(1);
   };
 
-  // 🧮 Nombre de filtres actifs
-  const activeFiltersCount = useMemo(() => {
-    const ignored = new Set(["ordering", "page"]);
-    return Object.entries(filters).filter(([key, val]) => {
-      if (ignored.has(key)) return false;
-      if (val == null) return false;
-      if (typeof val === "string") return val.trim() !== "";
-      return true;
-    }).length;
-  }, [filters]);
-
-  // 🧩 État du formulaire (modale)
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
+  const resetFilters = () => {
+    setFilters({ ordering: "centre__nom" });
+    setPage(1);
+  };
 
   return (
     <PageTemplate
@@ -127,145 +72,126 @@ export default function ObjectifDeclicPage() {
       onRefresh={() => refetch()}
       headerExtra={
         <SearchInput
-          placeholder="🔍 Rechercher un objectif Déclic..."
+          placeholder="Rechercher un objectif Declic..."
           value={filters.search ?? ""}
-          onChange={(e) => {
-            setFilters((prev) => ({ ...prev, search: e.target.value || undefined }));
-            setPage(1);
-          }}
+          onChange={(event) => updateFilters({ search: event.target.value || undefined })}
         />
       }
-      filters={
-        showFilters && (
-          <FiltresObjectifsDeclicPanel
-            options={options ?? { annee: [], centre: [], departement: [] }} // ✅ fallback vide
-            values={filters}
-            hideSearch
-            hideToggle
-            onChange={handleFiltersChange}
-            onRefresh={() => refetch()}
-          />
-        )
-      }
-      showFilters={showFilters}
       actions={
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)} size="small">
-            {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
-            {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} flexWrap="wrap" useFlexGap>
+          <Button variant="outlined" onClick={() => setShowFilters((value) => !value)}>
+            {showFilters ? "Masquer filtres" : "Afficher filtres"}
           </Button>
 
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={(event) => setAnchorOptions(event.currentTarget)}
-          >
-            Options
+          <Button variant="outlined" color="warning" onClick={resetFilters}>
+            Reinitialiser filtres
           </Button>
 
-          {/* 📄 Taille page */}
-          <Select
-            size="small"
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-          >
-            {[10, 20, 50].map((s) => (
-              <MenuItem key={s} value={s}>
-                {s} / page
-              </MenuItem>
-            ))}
-          </Select>
-
-          {canWriteDeclic && (
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => {
-                setEditId(null);
-                setShowForm(true);
-              }}
-            >
-              + Ajouter un objectif
+          {canWriteDeclic ? (
+            <Button variant="contained" onClick={() => setShowForm(true)}>
+              Nouvel objectif
             </Button>
-          )}
-
-          <Menu
-            anchorEl={anchorOptions}
-            open={Boolean(anchorOptions)}
-            onClose={() => setAnchorOptions(null)}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                width: 320,
-                maxWidth: "calc(100vw - 32px)",
-                p: 1.25,
-                borderRadius: 3,
-              },
-            }}
-          >
-            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                Options
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Export et actions secondaires
-              </Typography>
-            </Box>
-
-            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
-              <ExportButtonObjectifsDeclic data={objectifs} selectedIds={[]} />
-            </Stack>
-          </Menu>
+          ) : null}
         </Stack>
       }
+      filters={
+        showFilters ? (
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+            <TextField
+              label="Annee"
+              type="number"
+              size="small"
+              value={filters.annee ?? ""}
+              onChange={(event) =>
+                updateFilters({
+                  annee: event.target.value ? Number(event.target.value) : undefined,
+                })
+              }
+              sx={{ minWidth: 140 }}
+            />
+
+            <TextField
+              label="Departement"
+              size="small"
+              value={filters.departement ?? ""}
+              onChange={(event) =>
+                updateFilters({ departement: event.target.value || undefined })
+              }
+              sx={{ minWidth: 180 }}
+            />
+
+            <Select
+              size="small"
+              displayEmpty
+              value={filters.centre ?? ""}
+              onChange={(event) =>
+                updateFilters({
+                  centre: event.target.value ? Number(event.target.value) : undefined,
+                })
+              }
+              sx={{ minWidth: 240 }}
+              disabled={filtersLoading}
+            >
+              <MenuItem value="">Tous les centres</MenuItem>
+              {(filterOptions?.centre ?? []).map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
+        ) : undefined
+      }
       footer={
-        count > 0 && (
+        count > 0 ? (
           <Stack
             direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", sm: "center" }}
             spacing={1}
-            mt={2}
           >
-            <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
+            <Typography variant="body2" color="text.secondary">
+              Page {page} / {totalPages} ({count} resultats)
             </Typography>
-            <Pagination
-              page={page}
-              count={totalPages}
-              onChange={(_, val) => setPage(val)}
-              color="primary"
-            />
+
+            <Box sx={{ display: "flex", justifyContent: { xs: "center", sm: "flex-end" } }}>
+              <Pagination
+                page={page}
+                count={totalPages}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
           </Stack>
-        )
+        ) : undefined
       }
     >
-      {/* 🧭 Contenu principal */}
-      {isLoading || isLoadingOptions ? (
-        <Stack alignItems="center" justifyContent="center" sx={{ mt: 6 }}>
+      {isLoading ? (
+        <Box minHeight={220} display="flex" alignItems="center" justifyContent="center">
           <CircularProgress />
-        </Stack>
+        </Box>
+      ) : isError ? (
+        <Box minHeight={180} display="flex" alignItems="center" justifyContent="center">
+          <Typography color="error" textAlign="center">
+            {error?.message || "Impossible de charger les objectifs Declic."}
+          </Typography>
+        </Box>
       ) : objectifs.length === 0 ? (
-        <Box textAlign="center" color="text.secondary" my={4}>
-          <Typography>
-            Aucun objectif trouvé pour {filters.annee ?? new Date().getFullYear()}.
+        <Box minHeight={180} display="flex" alignItems="center" justifyContent="center">
+          <Typography color="text.secondary" textAlign="center">
+            Aucun objectif Declic ne correspond aux filtres actuels.
           </Typography>
         </Box>
       ) : (
         <ObjectifDeclicTable data={objectifs} />
       )}
 
-      {/* 🧩 Formulaire modale */}
       <ObjectifDeclicForm
         open={showForm}
         onClose={() => {
           setShowForm(false);
-          refetch();
+          void refetch();
         }}
-        id={editId}
       />
     </PageTemplate>
   );

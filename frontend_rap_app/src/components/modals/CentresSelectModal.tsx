@@ -1,6 +1,13 @@
 // src/components/modals/CentresSelectModal.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { List, ListItem, ListItemButton, ListItemText } from "@mui/material";
+import {
+  Divider,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Typography,
+} from "@mui/material";
 import api from "../../api/axios";
 import EntityPickerDialog from "../dialogs/EntityPickerDialog";
 
@@ -67,16 +74,20 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
 
   useEffect(() => {
     if (!show) return;
-    (async () => {
+
+    let cancelled = false;
+
+    const fetchCentres = async () => {
       setLoading(true);
       setErr(null);
+
       try {
         try {
           const r = await api.get("/centres/liste-simple/", {
             params: { search: dq || undefined, page_size: 200 },
           });
           const results = extractResults(r.data);
-          setItems(results.map(toCentreLite));
+          if (!cancelled) setItems(results.map(toCentreLite));
         } catch {
           const r = await api.get("/centres/", {
             params: {
@@ -86,15 +97,23 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
             },
           });
           const results = extractResults(r.data);
-          setItems(results.map(toCentreLite));
+          if (!cancelled) setItems(results.map(toCentreLite));
         }
       } catch {
-        setErr("Erreur lors du chargement des centres.");
-        setItems([]);
+        if (!cancelled) {
+          setErr("Erreur lors du chargement des centres.");
+          setItems([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    void fetchCentres();
+
+    return () => {
+      cancelled = true;
+    };
   }, [show, dq]);
 
   const filtered = useMemo(() => {
@@ -107,11 +126,11 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
     <EntityPickerDialog
       open={show}
       onClose={onClose}
-      title="🏫 Sélectionner un centre"
+      title="Sélectionner un centre"
       search={{
         value: q,
         onChange: setQ,
-        placeholder: "🔍 Rechercher un centre…",
+        placeholder: "Rechercher un centre…",
       }}
       showSearchWhenLoading={false}
       loading={loading}
@@ -119,13 +138,40 @@ export default function CentresSelectModal({ show, onClose, onSelect }: Props) {
       empty={!loading && !err && filtered.length === 0}
       emptyMessage="Aucun centre trouvé."
     >
-      <List>
-        {filtered.map((c) => (
-          <ListItem key={c.id} disablePadding>
-            <ListItemButton onClick={() => onSelect(c)}>
-              <ListItemText primary={c.label} secondary={`#${c.id}`} />
-            </ListItemButton>
-          </ListItem>
+      <List disablePadding>
+        {filtered.map((c, index) => (
+          <React.Fragment key={c.id}>
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => {
+                  onSelect(c);
+                  onClose();
+                }}
+                sx={{
+                  alignItems: "flex-start",
+                  py: 1.25,
+                  px: 0.5,
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {c.label}
+                    </Typography>
+                  }
+                  secondary={
+                    <Typography variant="caption" color="text.secondary">
+                      ID centre: #{c.id}
+                    </Typography>
+                  }
+                  primaryTypographyProps={{ component: "div" }}
+                  secondaryTypographyProps={{ component: "div" }}
+                />
+              </ListItemButton>
+            </ListItem>
+
+            {index < filtered.length - 1 && <Divider component="li" />}
+          </React.Fragment>
         ))}
       </List>
     </EntityPickerDialog>

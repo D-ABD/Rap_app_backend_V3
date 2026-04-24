@@ -6,7 +6,6 @@ import {
   Stack,
   Button,
   Typography,
-  TextField,
   Select,
   MenuItem,
   Pagination,
@@ -21,6 +20,7 @@ import api from "../../api/axios";
 
 import FormationTable from "./FormationTable";
 import FiltresFormationsPanel from "../../components/filters/FiltresFormationsPanel";
+import SearchInput from "../../components/SearchInput";
 import usePagination from "../../hooks/usePagination";
 import useFetch from "../../hooks/useFetch";
 import useFiltresFormations from "../../hooks/useFiltresFormations";
@@ -200,6 +200,11 @@ export default function FormationsPage() {
   // formations visibles
   const formations: Formation[] = useMemo(() => data?.results ?? [], [data]);
 
+  const hasSearchText = Boolean(filters.texte?.trim());
+  const showArchivedToggleActive =
+    Boolean(filters.avec_archivees) || filters.activite === "archivee";
+  const hasSelection = selectedIds.length > 0;
+
   // initial / refresh
   useEffect(() => {
     fetchData();
@@ -246,6 +251,11 @@ export default function FormationsPage() {
     },
     [setPage]
   );
+
+  const handleClearSearch = useCallback(() => {
+    setFilters((prev) => ({ ...prev, texte: "" }));
+    setPage(1);
+  }, [setPage]);
 
   const handleSearchKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -326,23 +336,15 @@ export default function FormationsPage() {
           alignItems="center"
           flexWrap={{ xs: "wrap", md: "nowrap" }}
         >
-          <TextField
-            type="search"
-            size="small"
+          <SearchInput
             fullWidth
             value={filters.texte ?? ""}
             onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
             placeholder="🔎 Recherche libre (nom, numeros, diplome, centre, CFA, type, statut, assistante…)"
           />
-          {filters.texte && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setFilters((prev) => ({ ...prev, texte: "" }));
-                setPage(1);
-              }}
-            >
+          {hasSearchText && (
+            <Button variant="outlined" onClick={handleClearSearch}>
               ✕
             </Button>
           )}
@@ -377,11 +379,7 @@ export default function FormationsPage() {
           </Button>
 
           <Button
-            variant={
-              filters.avec_archivees || filters.activite === "archivee"
-                ? "contained"
-                : "outlined"
-            }
+            variant={showArchivedToggleActive ? "contained" : "outlined"}
             onClick={() => {
               setFilters((prev) =>
                 prev.avec_archivees || prev.activite === "archivee"
@@ -392,12 +390,10 @@ export default function FormationsPage() {
             }}
             fullWidth={isMobile}
           >
-            {filters.avec_archivees || filters.activite === "archivee"
-              ? "Masquer archivées"
-              : "Inclure archivées"}
+            {showArchivedToggleActive ? "Masquer archivées" : "Inclure archivées"}
           </Button>
 
-          {(filters.avec_archivees || filters.activite === "archivee") && (
+          {showArchivedToggleActive && (
             <Button
               variant={filters.activite === "archivee" ? "contained" : "outlined"}
               onClick={() => {
@@ -530,7 +526,7 @@ export default function FormationsPage() {
             </Stack>
           </Menu>
 
-          {selectedIds.length > 0 && (
+          {hasSelection && (
             <Stack direction="row" spacing={1} flexWrap="wrap">
               <Button variant="contained" color="error" onClick={() => setShowConfirm(true)}>
                 📦 Archiver ({selectedIds.length})
