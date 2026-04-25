@@ -466,7 +466,14 @@ export default function MainLayout() {
                     color="inherit"
                     onClick={(e) => setAnchorRevue(e.currentTarget)}
                     endIcon={<FolderIcon />}
-                    sx={getTopNavButtonSx(theme, isActive("/formations") || isActive("/commentaires") || isActive("/documents") || isActive("/evenements"))}
+                    sx={getTopNavButtonSx(
+                      theme,
+                      isActive("/formations") ||
+                        isActive("/commentaires") ||
+                        isActive("/plans-action-formations") ||
+                        isActive("/documents") ||
+                        isActive("/evenements")
+                    )}
                   >
                     Revue d&apos;offres
                   </Button>
@@ -481,6 +488,10 @@ export default function MainLayout() {
                     </MenuItem>
                     <MenuItem component={Link} to="/commentaires">
                       Commentaires
+                    </MenuItem>
+                    <MenuItem component={Link} to="/plans-action-formations">
+                      <TrackChangesIcon fontSize="small" sx={{ mr: 1, verticalAlign: "middle" }} />
+                      Plans d&apos;action formation
                     </MenuItem>
                     <MenuItem component={Link} to="/documents">
                       Documents

@@ -606,6 +606,7 @@ export default function FormationsPage() {
           onHardDelete={(row) => setHardDeleteId(row.id)}
           visibleColumnKeys={visibleColumnKeys}
           showActionsColumn={showActionsColumn}
+          showPlanActionEntry={canWriteFormations}
         />
       )}
 

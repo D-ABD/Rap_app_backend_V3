@@ -50,6 +50,9 @@ import CommentairesPage from "../pages/commentaires/CommentairesPage";
 import CommentairesCreatePage from "../pages/commentaires/CommentairesCreatePage";
 import CommentairesCreateFromFormationPage from "../pages/commentaires/CommentairesCreateFromFormationPage";
 import CommentairesEditPage from "../pages/commentaires/CommentairesEditPage";
+import PlansActionFormationPage from "../pages/plansActionFormation/PlansActionFormationPage";
+import PlanActionFormationCreatePage from "../pages/plansActionFormation/PlanActionFormationCreatePage";
+import PlanActionFormationEditPage from "../pages/plansActionFormation/PlanActionFormationEditPage";
 import CerfaPage from "../pages/cerfa/CerfaPage";
 import CerfaEditPage from "../pages/cerfa/CerfaEditPage";
 
@@ -482,6 +485,25 @@ export default function AppRoute() {
           element={<CoreWriteRoute><CommentairesCreateFromFormationPage /></CoreWriteRoute>}
         />
         <Route path="/commentaires/:id/edit" element={<CoreWriteRoute><CommentairesEditPage /></CoreWriteRoute>} />
+
+        {/* Plans d'action formation (module isolé) */}
+        <Route path="/plans-action-formations" element={<CoreStaffRoute><PlansActionFormationPage /></CoreStaffRoute>} />
+        <Route
+          path="/plans-action-formations/create"
+          element={
+            <CoreWriteRoute>
+              <PlanActionFormationCreatePage />
+            </CoreWriteRoute>
+          }
+        />
+        <Route
+          path="/plans-action-formations/:id/edit"
+          element={
+            <CoreWriteRoute>
+              <PlanActionFormationEditPage />
+            </CoreWriteRoute>
+          }
+        />
 
         {/* CERFA */}
         <Route path="/cerfa" element={cerfaSecure(<CerfaPage />)} />

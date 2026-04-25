@@ -18,6 +18,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import ArchiveIcon from "@mui/icons-material/Archive";
 import UnarchiveIcon from "@mui/icons-material/Unarchive";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import type { AppTheme } from "../../theme";
 import { useNavigate } from "react-router-dom";
 import { Formation } from "../../types/formation";
@@ -37,6 +38,8 @@ interface Props {
   onHardDelete?: (row: Formation) => void;
   visibleColumnKeys?: string[];
   showActionsColumn?: boolean;
+  /** Point d’entrée secondaire vers la création de plan d’action (même règles d’accès qu’en création de plan). */
+  showPlanActionEntry?: boolean;
 }
 
 const formatDate = (d?: string) =>
@@ -48,6 +51,13 @@ const buildInscritsUrl = (id: number) =>
 const buildProspectionsUrl = (id: number) => `/prospections?formation=${id}`;
 const buildAppairagesUrl = (id: number) => `/appairages?formation=${id}`;
 const buildEvenementsUrl = (id: number) => `/evenements?formation=${id}`;
+
+const buildPlanActionCreateUrl = (row: Formation) => {
+  const p = new URLSearchParams();
+  p.set("formation", String(row.id));
+  if (row.centre?.id != null) p.set("centre", String(row.centre.id));
+  return `/plans-action-formations/create?${p.toString()}`;
+};
 
 const getProspectionsCount = (row: Formation) =>
   typeof row.nombre_prospections === "number"
@@ -82,6 +92,7 @@ export default function FormationTable({
   onHardDelete,
   visibleColumnKeys,
   showActionsColumn = true,
+  showPlanActionEntry = true,
 }: Props) {
   const theme = useTheme<AppTheme>();
   const navigate = useNavigate();
@@ -655,6 +666,23 @@ export default function FormationTable({
                 <EditIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+
+            {showPlanActionEntry && (
+              <Tooltip title="Préparer un plan d'action">
+                <IconButton
+                  size="small"
+                  color="default"
+                  sx={actionIconButtonSx}
+                  aria-label={`Préparer un plan d'action pour ${row.nom ?? row.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(buildPlanActionCreateUrl(row));
+                  }}
+                >
+                  <AssignmentIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
 
             {onToggleArchive && (
               <Tooltip title={row.activite === "archivee" ? "Restaurer" : "Archiver"}>

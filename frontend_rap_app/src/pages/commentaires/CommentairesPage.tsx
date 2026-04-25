@@ -40,7 +40,7 @@ import FiltresCommentairesPanel from "../../components/filters/FiltresCommentair
 import CommentairesTable from "./CommentairesTable";
 import ExportButtonCommentaires from "../../components/export_buttons/ExportButtonCommentaires";
 import { useAuth } from "../../hooks/useAuth";
-import { isAdminLikeRole } from "../../utils/roleGroups";
+import { isAdminLikeRole, isCoreWriteRole } from "../../utils/roleGroups";
 import SearchInput from "../../components/SearchInput";
 import type { AppTheme } from "../../theme";
 
@@ -51,6 +51,7 @@ export default function CommentairesPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const canHardDelete = isAdminLikeRole(user?.role);
+  const canPreFillPlanAction = isCoreWriteRole(user?.role);
   const isScopedStaff = ["staff", "staff_read", "declic_staff", "prepa_staff"].includes(
     (user?.role ?? "").toLowerCase()
   );
@@ -176,6 +177,24 @@ export default function CommentairesPage() {
 
   const handleRowClick = (id: number) => navigate(`/commentaires/${id}/edit`);
 
+  const buildPlanActionCreatePath = useCallback((f: CommentaireFiltresValues) => {
+    const p = new URLSearchParams();
+    if (f.centre_id != null && Number.isFinite(Number(f.centre_id))) {
+      p.set("centre", String(f.centre_id));
+    }
+    if (f.formation != null && Number.isFinite(Number(f.formation))) {
+      p.set("formation", String(f.formation));
+    }
+    if (f.date_from) p.set("date_debut", f.date_from);
+    if (f.date_to) p.set("date_fin", f.date_to);
+    if (!f.date_from && !f.date_to && f.date) {
+      p.set("date_debut", f.date);
+      p.set("date_fin", f.date);
+    }
+    const qs = p.toString();
+    return qs ? `/plans-action-formations/create?${qs}` : "/plans-action-formations/create";
+  }, []);
+
   const handleRestore = async (id: number) => {
     try {
       const api = await import("../../api/axios");
@@ -271,6 +290,17 @@ export default function CommentairesPage() {
               ? "📂 Voir tout"
               : "🗄️ Archives seules"}
           </Button>
+
+          {canPreFillPlanAction && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              fullWidth={isMobile}
+              onClick={() => navigate(buildPlanActionCreatePath(filters))}
+            >
+              Construire une synthèse
+            </Button>
+          )}
 
           <Button
             variant="outlined"

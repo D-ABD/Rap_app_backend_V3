@@ -8,6 +8,8 @@ Je souhaite aussi améliorer la qualité des données en intégrant un mécanism
 
 Comment organiser les futurs endpoints, statistiques, bulk actions et règles métier pour obtenir une application plus intelligente, plus robuste et plus simple à utiliser.
 --------------------------------------------------------------------
+Ajouter la double authentification pour sécuriser
+--------------------------------------------------------------------
 
 Revoir les dates dans les form et certains form sont tres lents. et impossible de taper l'année
 --------------------------------------------------------------------
@@ -54,13 +56,13 @@ Assignations & visibilité (pas d'acces)
 Suivi & situation (lecture uniquement. ) Communication, CSP et experience non visibles
 Type de contrat du stagiaire, Contrat signé, numero osia, permis, rqth, et formation en lecture seule
 --------------------------------------------------------------------
-
+ 
 
 prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI..... 
 --------------------------------------------------------------------
  
 git add .
-git commit -m "Ajout presents en formation"
+git commit -m "update UI theme refactor theme_saas_premium_"
 git push origin main
 
 

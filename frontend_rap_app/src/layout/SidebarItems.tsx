@@ -197,6 +197,11 @@ export const sidebarItems: SidebarItem[] = [
         icon: createSidebarIcon(CommentIcon, "secondary.main"),
       },
       {
+        label: "Plans d'action formation",
+        path: "/plans-action-formations",
+        icon: createSidebarIcon(TrackChangesIcon, "secondary.main"),
+      },
+      {
         label: "Documents",
         path: "/documents",
         icon: createSidebarIcon(DescriptionIcon, "secondary.main"),

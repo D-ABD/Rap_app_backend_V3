@@ -32,6 +32,7 @@ from .viewsets.health_viewset import HealthViewSet
 from .viewsets.logs_viewsets import LogChoicesView, LogUtilisateurViewSet
 from .viewsets.me_viewsets import DemandeCompteCandidatView, MeAPIView, RoleChoicesView
 from .viewsets.partenaires_viewsets import PartenaireViewSet
+from .viewsets.plan_action_viewsets import PlanActionFormationViewSet
 from .viewsets.prepa_objectifs_viewsets import ObjectifPrepaViewSet
 from .viewsets.prepa_viewset import PrepaViewSet
 from .viewsets.stagiaires_prepa_viewsets import StagiairePrepaViewSet
@@ -73,6 +74,7 @@ router.register(r"formations", FormationViewSet, basename="formation")
 router.register(r"documents", DocumentViewSet, basename="document")
 router.register(r"evenements", EvenementViewSet, basename="evenement")
 router.register(r"commentaires", CommentaireViewSet, basename="commentaire")
+router.register(r"plans-action-formation", PlanActionFormationViewSet, basename="plan-action-formation")
 router.register(r"candidats", CandidatViewSet, basename="candidat")
 router.register(r"cerfa-contrats", CerfaContratViewSet, basename="cerfa-contrat")
 router.register(r"appairages", AppairageViewSet, basename="appairage")

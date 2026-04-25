@@ -21,6 +21,7 @@ class RapAppConfig(AppConfig):
         import rap_app.signals.formations_signals
         import rap_app.signals.logs_signals
         import rap_app.signals.partenaires_signals
+        import rap_app.signals.plan_action_signals
         import rap_app.signals.prospections_signals
         import rap_app.signals.rapports_signals
         import rap_app.signals.types_offres_signals

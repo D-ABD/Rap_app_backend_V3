@@ -68,7 +68,7 @@ Le chantier est terminé si :
 ---
 
 # 3. Principes d’exécution validés
-
+ 
 ## 3.1 Hiérarchie d’arbitrage
 Toujours appliquer cette hiérarchie :
 1. Besoin global ou récurrent → **modifier les tokens**

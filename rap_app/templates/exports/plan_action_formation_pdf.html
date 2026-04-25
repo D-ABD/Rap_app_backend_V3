@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ plan.titre }} — Plan d'action formation</title>
+  <style>
+    @page { size: A4; margin: 1.8cm; }
+    body { font-family: "DejaVu Sans", sans-serif; font-size: 11px; color: #333; }
+    header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0077cc; padding-bottom: 8px; margin-bottom: 16px; }
+    .logo { height: 36px; }
+    h1 { font-size: 17px; color: #0077cc; margin: 0 0 6px 0; }
+    .meta { font-size: 10px; color: #555; margin-bottom: 14px; }
+    .section { margin-bottom: 14px; page-break-inside: avoid; }
+    .section h2 { font-size: 12px; color: #0077cc; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin: 0 0 6px 0; }
+    .section .body { white-space: pre-wrap; line-height: 1.4; }
+    .commentaire { margin-bottom: 12px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #fafafa; page-break-inside: avoid; }
+    .commentaire .head { font-size: 9px; color: #666; margin-bottom: 6px; }
+    .bloc-fusion { padding: 12px; border: 1px solid #ccc; border-radius: 4px; background: #fafafa; }
+    .hint-fusion { font-size: 9px; color: #666; margin: 0 0 8px 0; }
+    .badge-adapt { display: inline-block; font-size: 8px; color: #0066aa; background: #e6f2ff; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+    footer { margin-top: 20px; font-size: 9px; color: #888; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <img class="logo" src="{{ logo_url }}" alt="" />
+    <div style="text-align:right;font-size:11px;color:#0077cc;font-weight:bold;">Rap_App — Plan d'action formation</div>
+  </header>
+
+  <h1>{{ plan.titre }}</h1>
+  <p class="meta">
+    Période : {{ plan.date_debut }} → {{ plan.date_fin }} · {{ plan.periode_type_display|default:plan.periode_type }}
+    · Statut : {{ plan.statut_display|default:plan.statut }}
+    {% if plan.centre_nom %}· Centre : {{ plan.centre_nom }}{% endif %}
+    {% if plan.formation_nom %}· Formation : {{ plan.formation_nom }}{% endif %}
+  </p>
+
+  {% if plan.synthese %}
+  <div class="section">
+    <h2>Synthèse</h2>
+    <div class="body">{{ plan.synthese }}</div>
+  </div>
+  {% endif %}
+
+  {% if plan.resume_points_cles %}
+  <div class="section">
+    <h2>Points clés</h2>
+    <div class="body">{{ plan.resume_points_cles }}</div>
+  </div>
+  {% endif %}
+
+  {% if plan.plan_action %}
+  <div class="section">
+    <h2>Plan d'action</h2>
+    <div class="body">{{ plan.plan_action }}</div>
+  </div>
+  {% endif %}
+
+  <div class="section">
+    <h2>Commentaires sources ({{ nb_commentaires }})</h2>
+    {% if export_pdf_regroupe %}
+    {% if texte_fusion %}
+    <p class="hint-fusion">Affichage regroupé : un seul bloc, sans repères par formation.</p>
+    {% if any_commentaire_surcharge %}
+    <p class="hint-fusion" style="color:#0066aa;">Un ou plusieurs textes ont été personnalisés pour l&rsquo;export (remplacements côté plan d&rsquo;action).</p>
+    {% endif %}
+    <div class="bloc-fusion body">{{ texte_fusion }}</div>
+    {% else %}
+    <p style="color:#888;">Aucun commentaire lié.</p>
+    {% endif %}
+    {% else %}
+    {% for c in commentaires %}
+    <div class="commentaire">
+      <div class="head">
+        #{{ c.id }} · {{ c.formation_nom }}{% if c.centre_nom %} · {{ c.centre_nom }}{% endif %}
+        · {{ c.auteur|default:"—" }} · {{ c.created_at }}{% if c.pdf_texte_adapte %}<span class="badge-adapt">Texte adapté pour l&rsquo;export</span>{% endif %}
+      </div>
+      <div class="body">{{ c.contenu }}</div>
+    </div>
+    {% empty %}
+    <p style="color:#888;">Aucun commentaire lié.</p>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <footer>
+    Document généré le {{ now|date:"d/m/Y à H:i" }}
+    — {{ user.get_full_name|default:user.username|default:"Utilisateur" }}
+  </footer>
+</body>
+</html>

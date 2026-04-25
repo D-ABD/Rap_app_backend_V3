@@ -30,6 +30,7 @@ from .jury import SuiviJury
 from .logs import LogUtilisateur
 from .models_test import DummyModel
 from .partenaires import Partenaire
+from .plan_action import PlanActionFormation
 from .prepa import Prepa, StagiairePrepa
 from .declic import Declic, ParticipantDeclic
 from .prospection import HistoriqueProspection, Prospection
