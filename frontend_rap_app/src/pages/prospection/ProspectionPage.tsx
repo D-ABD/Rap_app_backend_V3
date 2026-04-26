@@ -594,9 +594,16 @@ export default function ProspectionPage() {
       {loading ? (
         <CircularProgress />
       ) : error ? (
-        <Typography color="error">
-          Erreur lors du chargement des prospections.
-        </Typography>
+        <Box>
+          <Typography color="error" component="p" sx={{ m: 0 }}>
+            Erreur lors du chargement des prospections.
+          </Typography>
+          {error.message ? (
+            <Typography color="error" variant="body2" sx={{ mt: 0.5 }}>
+              {error.message}
+            </Typography>
+          ) : null}
+        </Box>
       ) : prospections.length === 0 ? (
         <Box textAlign="center" color="text.secondary" my={4}>
           <Box fontSize={48} mb={1}>

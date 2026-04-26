@@ -1049,20 +1049,22 @@ class Candidat(BaseModel):
             logger.warning(f"Candidat incomplet : nom ou prénom manquant (id={self.pk})")
         if self.statut == self.StatutCandidat.AUTRE:
             logger.info(f"Candidat #{self.pk} a un statut 'autre'")
+        # Dériver les horodatages quand le booléen / le statut l'imposent, avant les contrôles
+        # ci-dessous. Sinon `full_clean()` lève des erreurs sur `rgpd_consent_obtained_at` ou
+        # `rgpd_notice_sent_at` : champs souvent *readonly* dans l'admin et absents du ModelForm,
+        # ce qui provoquait ValueError: « CandidatForm has no field named '…' ».
+        if self.rgpd_consent_obtained and not self.rgpd_consent_obtained_at:
+            self.rgpd_consent_obtained_at = timezone.now()
+        if self.rgpd_notice_status == self.RgpdNoticeStatus.NOTIFIEE and not self.rgpd_notice_sent_at:
+            self.rgpd_notice_sent_at = timezone.now()
         if self.rgpd_legal_basis == self.RgpdLegalBasis.CONSENTEMENT and not self.rgpd_consent_obtained:
             errors["rgpd_consent_obtained"] = _(
                 "Le consentement explicite est requis lorsque la base légale retenue est le consentement."
-            )
-        if self.rgpd_consent_obtained and not self.rgpd_consent_obtained_at:
-            errors["rgpd_consent_obtained_at"] = _(
-                "La date d'obtention du consentement est requise quand le consentement est indiqué comme obtenu."
             )
         if self.rgpd_consent_obtained_at and not self.rgpd_consent_obtained:
             errors["rgpd_consent_obtained"] = _(
                 "Le consentement RGPD doit être marqué comme obtenu lorsque sa date est renseignée."
             )
-        if self.rgpd_notice_status == self.RgpdNoticeStatus.NOTIFIEE and not self.rgpd_notice_sent_at:
-            errors["rgpd_notice_sent_at"] = _("La date d'envoi est requise quand la notification RGPD est marquée comme envoyée.")
         if self.rgpd_notice_sent_at and self.rgpd_notice_status != self.RgpdNoticeStatus.NOTIFIEE:
             errors["rgpd_notice_status"] = _(
                 "Le statut de notification RGPD doit être 'notifiée' lorsque la date d'envoi est renseignée."

@@ -13,6 +13,13 @@ from ...models.partenaires import Partenaire
 from .rich_text_utils import sanitize_rich_text
 
 
+def _normalize_partenaire_nom(nom: str) -> str:
+    """Aligné sur Partenaire.save (strip, espaces, title) pour le détecteur de doublon iexact."""
+    s = (nom or "").strip()
+    s = " ".join(s.split())
+    return s.title() if s else s
+
+
 class CentreLiteSerializer(serializers.ModelSerializer):
     """
     Représentation minimale d'un centre (id, nom) pour imbrication (ex. default_centre du partenaire). Lecture seule.
@@ -83,10 +90,22 @@ class PartenaireSerializer(serializers.ModelSerializer):
 
     was_reused = serializers.SerializerMethodField(read_only=True)
 
+    retrait_dans_ma_liste = serializers.SerializerMethodField(read_only=True)
+
     @extend_schema_field(str)
     def get_was_reused(self, obj):
         """Retourne l'attribut _was_reused de l'instance ou False."""
         return getattr(obj, "_was_reused", False)
+
+    @extend_schema_field(bool)
+    def get_retrait_dans_ma_liste(self, obj):
+        """True si l’utilisateur courant a retiré cette fiche de sa liste (sans archivage global)."""
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_authenticated", False):
+            return False
+        if not hasattr(obj, "retrait_de_vue_par"):
+            return False
+        return obj.retrait_de_vue_par.filter(pk=request.user.pk).exists()
 
     class Meta:
         model = Partenaire
@@ -144,6 +163,7 @@ class PartenaireSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "is_active",
+            "retrait_dans_ma_liste",
             "full_address",
             "contact_info",
             "has_contact",
@@ -172,6 +192,7 @@ class PartenaireSerializer(serializers.ModelSerializer):
             "default_centre",
             "default_centre_nom",
             "was_reused",
+            "retrait_dans_ma_liste",
         ]
 
     @extend_schema_field(str)
@@ -257,15 +278,81 @@ class PartenaireSerializer(serializers.ModelSerializer):
                 count = 0
         return {"count": int(count)}
 
+    def _user_for_save(self):
+        """Utilisateur DRF (JWT/session) fiable, contrairement au thread local seul en entrée de requête."""
+        request = self.context.get("request")
+        if not request:
+            return None
+        u = getattr(request, "user", None)
+        if u and getattr(u, "is_authenticated", False):
+            return u
+        return None
+
+    def _enregistrer_saisi_par(self, instance) -> None:
+        """Garantit la visibilité partagée entre candidats (même fiche, doublons)."""
+        u = self._user_for_save()
+        if u and instance.pk:
+            instance.saisi_par.add(u)
+
+    def _reouvrir_fiche_lors_reutilisation_doublon(self, instance) -> None:
+        """
+        Lors d’une « création » qui réutilise un nom existant : le poste
+        s’apparente à une nouvelle saisie — on réintègre la fiche (réactive
+        l’archivage global, retire le retrait de liste perso) pour l’utilisateur
+        en cours, afin qu’il la voie de nouveau en liste.
+        """
+        if not getattr(instance, "_was_reused", False):
+            return
+        u = self._user_for_save()
+        if not u or not u.pk:
+            return
+        if hasattr(instance, "retrait_de_vue_par") and instance.retrait_de_vue_par.filter(pk=u.pk).exists():
+            instance.retrait_de_vue_par.remove(u)
+        if not instance.is_active:
+            instance.is_active = True
+            instance.save(user=u)
+        # else: déjà actif, rien d’autre (saisi_enregistré dans update)
+
     def create(self, validated_data):
-        """Crée une instance Partenaire avec les données validées."""
-        return Partenaire.objects.create(**validated_data)
+        """
+        Crée un partenaire, ou met à jour l’enregistrement existant si le nom (iexact,
+        même normalisation que `Partenaire.save`) est déjà en base.
+
+        Ne pas utiliser ici `Partenaire.objects.create` dans ce cas : Django force un
+        INSERT (force_insert) et la logique de réutilisation du modèle entrait en conflit
+        avec l’ORM (500 / IntegrityError). Le chemin `update` sur l’instance existante
+        applique un UPDATE classique.
+        """
+        u = self._user_for_save()
+        nom = validated_data.get("nom")
+        if nom is None or (isinstance(nom, str) and not nom.strip()):
+            p = Partenaire(**validated_data)
+            p.save(user=u)
+            self._enregistrer_saisi_par(p)
+            return p
+
+        norm = _normalize_partenaire_nom(str(nom))
+        validated_data["nom"] = norm
+
+        existing = Partenaire.objects.filter(nom__iexact=norm).order_by("pk").first()
+        if not existing:
+            p = Partenaire(**validated_data)
+            p.save(user=u)
+            self._enregistrer_saisi_par(p)
+            return p
+
+        # Même fiche partagée (autre rôle, autre contexte) : réutilisation sans écraser le créateur d’origine
+        validated_data.pop("created_by", None)
+        existing._was_reused = True
+        return self.update(existing, validated_data)
 
     def update(self, instance, validated_data):
         """Met à jour l'instance avec les champs fournis puis sauvegarde."""
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save()
+        instance.save(user=self._user_for_save())
+        self._enregistrer_saisi_par(instance)
+        self._reouvrir_fiche_lors_reutilisation_doublon(instance)
         return instance
 
     def validate_description(self, value):

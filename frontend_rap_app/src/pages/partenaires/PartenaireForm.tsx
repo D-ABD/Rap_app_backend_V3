@@ -1,5 +1,5 @@
 // src/pages/partenaires/PartenaireForm.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -294,6 +294,19 @@ export default function PartenaireForm({
     value: Partenaire[K] | undefined
   ) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  const typeOptionsList = choices?.types ?? [];
+  const rawPartenaireType = form.type ?? "";
+  const partenaireTypeSelectValue = useMemo(() => {
+    if (!rawPartenaireType) return "";
+    if (typeOptionsList.length === 0) return "";
+    return rawPartenaireType;
+  }, [typeOptionsList, rawPartenaireType]);
+  const partenaireTypeOrphan = Boolean(
+    rawPartenaireType &&
+      typeOptionsList.length > 0 &&
+      !typeOptionsList.some((o) => o.value === rawPartenaireType)
+  );
+
   const getDateValue = useCallback((value?: string | null) => {
     if (!value) return null;
     const parsed = dayjs(value);
@@ -415,17 +428,20 @@ export default function PartenaireForm({
                 select
                 fullWidth
                 label="Type"
-                value={form.type ?? ""}
+                value={partenaireTypeSelectValue}
                 onChange={(e) => handleChange("type", e.target.value as Partenaire["type"])}
                 disabled={loading}
                 helperText="Catégorie métier du partenaire."
               >
                 <MenuItem value="">Sélectionner…</MenuItem>
-                {choices?.types?.map((t) => (
+                {typeOptionsList.map((t) => (
                   <MenuItem key={t.value} value={t.value}>
                     {t.label}
                   </MenuItem>
                 ))}
+                {partenaireTypeOrphan && (
+                  <MenuItem value={rawPartenaireType}>{rawPartenaireType}</MenuItem>
+                )}
               </TextField>
             </Grid>
 

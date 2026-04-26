@@ -3,6 +3,7 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 
+from ...models.centres import Centre
 from ...models.partenaires import Partenaire
 from .setup_base_tests import BaseModelTestSetupMixin
 
@@ -45,6 +46,33 @@ class PartenaireModelTest(BaseModelTestSetupMixin):
             p.full_clean()  # Ne doit pas lever d'erreur
         except ValidationError:
             self.fail("ValidationError raised for a valid social network URL")
+
+    def test_create_reuse_same_nom_uses_update_not_integrity_error(self):
+        """
+        Réutilisation iexact d’un nom : objects.create() passait force_insert=True, ce qui
+        provoquait une IntegrityError (PK existant) avant correction.
+        """
+        centre = Centre.objects.create(nom="Centre reuse test", code_postal="75001")
+        a = self.create_instance(
+            Partenaire,
+            nom="Boulangerie Dupont",
+            type=Partenaire.TYPE_ENTREPRISE,
+            default_centre=centre,
+            city="Paris",
+            zip_code="75001",
+        )
+        b = self.create_instance(
+            Partenaire,
+            nom="boulangerie dupont",
+            type=Partenaire.TYPE_ENTREPRISE,
+            default_centre=centre,
+            city="Lyon",
+            zip_code="69001",
+        )
+        b.refresh_from_db()
+        self.assertEqual(a.id, b.id, "Même fiche, pas une nouvelle ligne")
+        self.assertTrue(getattr(b, "_was_reused", False))
+        self.assertEqual(b.city, "Lyon")
 
     def test_slug_auto_generated(self):
         self.assertEqual(self.partenaire.slug, slugify(self.partenaire.nom))

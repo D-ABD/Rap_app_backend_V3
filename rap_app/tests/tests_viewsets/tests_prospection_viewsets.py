@@ -23,6 +23,13 @@ from ..factories import UserFactory
 from ..test_utils import AuthenticatedTestCase
 
 
+def _mark_rgpd_ok(user: CustomUser) -> None:
+    """Déverrouille l'API pr les tests côté rôle candidat (gate RGPD en prod)."""
+    user.consent_rgpd = True
+    user.consent_date = timezone.now()
+    user.save(update_fields=["consent_rgpd", "consent_date"])
+
+
 class ProspectionViewSetTestCase(AuthenticatedTestCase):
     """Cas de test pour Prospection View Set Test Case."""
     def setUp(self):
@@ -235,6 +242,7 @@ def test_candidate_create_prospection_infers_owner_formation_and_centre():
         formation=formation,
         compte_utilisateur=candidate_user,
     )
+    _mark_rgpd_ok(candidate_user)
 
     client.force_authenticate(user=candidate_user)
 
@@ -306,6 +314,7 @@ def test_candidate_cannot_change_prospection_owner_or_formation_on_update():
         formation=formation_a,
         compte_utilisateur=candidate_user,
     )
+    _mark_rgpd_ok(candidate_user)
 
     prospection = Prospection.objects.create(
         partenaire=partenaire,
@@ -381,6 +390,7 @@ def test_staff_create_prospection_with_candidate_owner_uses_owner_formation():
         formation=formation_owner,
         compte_utilisateur=candidate_user,
     )
+    _mark_rgpd_ok(candidate_user)
 
     client.force_authenticate(user=staff)
 

@@ -4,11 +4,23 @@ from django.utils import timezone
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from ...api.candidat_error_messages import (
+    CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE,
+    CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE,
+    CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE,
+)
 from ...models.atelier_tre import AtelierTRE
 from ...models.candidat import Candidat
 from ...models.centres import Centre
 from ...models.custom_user import CustomUser
 from ...models.formations import Formation
+
+
+def _grant_user_rgpd(user: CustomUser) -> None:
+    """Déverrouille le gate API RGPD pour les rôles parcours en tests."""
+    user.consent_rgpd = True
+    user.consent_date = timezone.now()
+    user.save(update_fields=["consent_rgpd", "consent_date"])
 
 
 @pytest.mark.django_db
@@ -232,6 +244,92 @@ def test_staff_creer_compte_refuse_si_deja_compte():
 
 
 @pytest.mark.django_db
+def test_staff_retirer_compte_action():
+    """POST /candidats/{id}/retirer-compte/ enlève le lien fiche / compte sans supprimer l'utilisateur."""
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre Retirer Compte", code_postal="75120")
+    formation = Formation.objects.create(
+        nom="Formation Retirer Compte",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_retirer@example.com",
+        username="staff_retirer",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    u = CustomUser.objects.create_user_with_role(
+        email="retirer@example.com",
+        username="retirer_user",
+        password="password123",
+        role=CustomUser.ROLE_CANDIDAT_USER,
+    )
+    cand = Candidat.objects.create(
+        nom="Retirer",
+        prenom="Liaison",
+        email="retirer@example.com",
+        formation=formation,
+        compte_utilisateur=u,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    url = reverse("candidat-retirer-compte", args=[cand.id])
+    resp = client.post(url)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["success"] is True
+    assert payload["data"]["candidat_id"] == cand.id
+    assert payload["data"]["unlinked_user_id"] == u.id
+
+    cand.refresh_from_db()
+    u.refresh_from_db()
+    assert cand.compte_utilisateur_id is None
+    assert CustomUser.objects.filter(pk=u.id).exists()
+
+
+@pytest.mark.django_db
+def test_staff_retirer_compte_refuse_sans_liaison():
+    """POST retirer-compte renvoie 400 si aucun compte n'est lié."""
+    client = APIClient()
+    centre = Centre.objects.create(nom="Centre Retirer Sans", code_postal="75121")
+    formation = Formation.objects.create(
+        nom="Formation Retirer Sans",
+        centre=centre,
+        prevus_crif=5,
+        prevus_mp=5,
+    )
+    staff = CustomUser.objects.create_user_with_role(
+        email="staff_retirer_sans@example.com",
+        username="staff_retirer_sans",
+        password="password123",
+        role=CustomUser.ROLE_STAFF,
+    )
+    staff.centres.add(centre)
+    client.force_authenticate(user=staff)
+
+    cand = Candidat.objects.create(
+        nom="SansLien",
+        prenom="Candidat",
+        email="sanslien@example.com",
+        formation=formation,
+        created_by=staff,
+        updated_by=staff,
+    )
+
+    resp = client.post(reverse("candidat-retirer-compte", args=[cand.id]))
+    assert resp.status_code == 400
+    payload = resp.json()
+    assert payload["message"] == CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE
+    assert payload["errors"]["non_field_errors"] == [CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE]
+
+
+@pytest.mark.django_db
 def test_demande_compte_candidat_flow():
     """Une demande valide passe en attente, mais la validation staff échoue si un compte est déjà lié."""
     client = APIClient()
@@ -265,6 +363,7 @@ def test_demande_compte_candidat_flow():
         created_by=staff,
         updated_by=staff,
     )
+    _grant_user_rgpd(user_cand)
 
     client.force_authenticate(user=user_cand)
     url_demande = reverse("demande_compte_candidat")
@@ -305,6 +404,7 @@ def test_demande_compte_candidat_duplicate_pending_uses_non_field_errors():
         compte_utilisateur=user_cand,
         demande_compte_statut=Candidat.DemandeCompteStatut.EN_ATTENTE,
     )
+    _grant_user_rgpd(user_cand)
 
     client.force_authenticate(user=user_cand)
     response = client.post(reverse("demande_compte_candidat"))
@@ -312,9 +412,9 @@ def test_demande_compte_candidat_duplicate_pending_uses_non_field_errors():
     assert response.status_code == 400
     payload = response.json()
     assert payload["success"] is False
-    assert payload["message"] == "Une demande de compte est déjà en attente."
+    assert payload["message"] == CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE
     assert payload["data"] is None
-    assert payload["errors"]["non_field_errors"] == ["Une demande de compte est déjà en attente."]
+    assert payload["errors"]["non_field_errors"] == [CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE]
     assert payload["error_code"] == "candidate_account_request_already_pending"
 
 
@@ -397,8 +497,8 @@ def test_staff_valider_demande_compte_without_pending_request_uses_non_field_err
     assert resp.status_code == 400
     payload = resp.json()
     assert payload["success"] is False
-    assert payload["message"] == "Aucune demande de compte en attente pour ce candidat."
-    assert payload["errors"]["non_field_errors"] == ["Aucune demande de compte en attente pour ce candidat."]
+    assert payload["message"] == CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE
+    assert payload["errors"]["non_field_errors"] == [CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE]
     assert payload["error_code"] == "candidate_account_request_missing"
 
 

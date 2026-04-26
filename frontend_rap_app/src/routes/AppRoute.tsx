@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ReactNode, useEffect } from "react";
 
+import { RgpdGateBridge } from "../components/RgpdGateBridge";
 import MainLayout from "../layout/MainLayout";
 import MainLayoutCandidat from "../layout/MainLayoutCandidat";
 import MainLayoutDeclic from "src/layout/MainLayoutDeclic";
@@ -297,7 +298,9 @@ export default function AppRoute() {
   }
 
   return (
-    <Routes>
+    <>
+      <RgpdGateBridge />
+      <Routes>
       {/* 🔓 Routes publiques */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -833,5 +836,6 @@ export default function AppRoute() {
       <Route path="/403" element={<ForbiddenPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </>
   );
 }

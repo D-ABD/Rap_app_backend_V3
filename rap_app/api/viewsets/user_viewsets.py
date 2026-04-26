@@ -16,7 +16,7 @@ from ...models.custom_user import CustomUser
 from ...models.formations import Formation
 from ...models.logs import LogUtilisateur
 from ...utils.filters import UserFilterSet
-from ..permissions import IsAdminLikeOnly, ReadWriteAdminReadStaff
+from ..permissions import CandidateRgpdGate, IsAdminLikeOnly, ReadWriteAdminReadStaff
 from ..roles import is_admin_like, is_staff_or_staffread
 from ..serializers.user_profil_serializers import (
     CustomUserSerializer,
@@ -155,7 +155,10 @@ class CustomUserViewSet(BaseApiViewSet):
     # -------------------------------------------------------
 
     @action(
-        detail=False, methods=["delete"], url_path="delete-account", permission_classes=[permissions.IsAuthenticated]
+        detail=False,
+        methods=["delete"],
+        url_path="delete-account",
+        permission_classes=[permissions.IsAuthenticated, CandidateRgpdGate],
     )
     @extend_schema(
         summary="Supprimer mon compte (RGPD)",
@@ -224,7 +227,12 @@ class CustomUserViewSet(BaseApiViewSet):
             status=status.HTTP_200_OK,  # ✅ cohérent avec le body
         )
 
-    @action(detail=False, methods=["post"], url_path="deactivate", permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="deactivate",
+        permission_classes=[permissions.IsAuthenticated, CandidateRgpdGate],
+    )
     def deactivate_self(self, request):
         """
         Désactive le compte de l'utilisateur connecté (sans suppression
@@ -347,7 +355,12 @@ class CustomUserViewSet(BaseApiViewSet):
             message="Utilisateur mis à jour avec succès.",
         )
 
-    @action(detail=False, methods=["get"], url_path="me", permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        permission_classes=[permissions.IsAuthenticated, CandidateRgpdGate],
+    )
     @extend_schema(
         summary="Mon profil utilisateur",
         description="Retourne les informations complètes de l’utilisateur actuellement connecté.",
@@ -365,7 +378,12 @@ class CustomUserViewSet(BaseApiViewSet):
             message="Profil utilisateur chargé avec succès.",
         )
 
-    @action(detail=False, methods=["get"], url_path="roles", permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="roles",
+        permission_classes=[permissions.IsAuthenticated, CandidateRgpdGate],
+    )
     @extend_schema(
         summary="Liste des rôles utilisateurs",
         description="Retourne tous les rôles disponibles dans l'application, sous forme clé/valeur.",

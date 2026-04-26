@@ -15,6 +15,15 @@ Règles de lecture à garder en tête :
 from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
+from .candidat_error_messages import (
+    CANDIDAT_MSG_AUTH_REQUIRED,
+    CANDIDAT_MSG_RGPD_APP_REQUIS,
+    CANDIDAT_PERM_ACCES_CANDIDAT_REFUSE,
+    CANDIDAT_PERM_ACTION_ROLES_CANDIDAT,
+    CANDIDAT_PERM_AUCUN_CENTRE_ASSIGNE,
+    CANDIDAT_PERM_CANDIDAT_HORS_CENTRE_STAFF,
+    CANDIDAT_PERM_NOT_YOUR_CANDIDAT,
+)
 from .roles import (
     get_staff_centre_ids_cached,
     is_admin_like,
@@ -26,6 +35,7 @@ from .roles import (
     is_staff_or_staffread,
     is_staff_read,
     is_staff_standard,
+    user_has_candidate_rgpd_access,
 )
 
 
@@ -255,6 +265,9 @@ class IsOwnerOrStaffOrAbove(BasePermission):
         user = request.user
         if not user or not getattr(user, "is_authenticated", False):
             return False
+        if user.is_candidat_or_stagiaire() and not user_has_candidate_rgpd_access(user):
+            self.message = CANDIDAT_MSG_RGPD_APP_REQUIS
+            return False
         role = str(getattr(user, "role", "")).lower()
         if role == "staff_read" and request.method not in SAFE_METHODS:
             return False
@@ -322,6 +335,26 @@ class UserVisibilityScopeMixin:
     def get_queryset(self):
         qs = super().get_queryset()
         return self.apply_user_scope(qs)
+
+
+class CandidateRgpdGate(BasePermission):
+    """
+    Refuse l'API aux rôles candidat / stagiaire / candidatuser tant qu'ils n'ont
+    pas (consentement compte accepté) ou (consentement fiche côté administrateur).
+    Combiner avec ``IsAuthenticated`` : positionner d'abord l'authentification.
+    La fiche « soi » et ``/me/`` restent gérés par d'autres classes (hors
+    combinaison sur ces vues) pour permettre l'enregistrement du consentement.
+    """
+
+    message = CANDIDAT_MSG_RGPD_APP_REQUIS
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user or not getattr(user, "is_authenticated", False):
+            return True
+        if user_has_candidate_rgpd_access(user):
+            return True
+        return False
 
 
 class IsStaffReadOnly(BasePermission):
@@ -422,7 +455,12 @@ class CanAccessCVTheque(BasePermission):
         Vérifie uniquement l'authentification avant résolution de l'objet.
         """
         user = request.user
-        return bool(user and getattr(user, "is_authenticated", False))
+        if not (user and getattr(user, "is_authenticated", False)):
+            return False
+        if user.is_candidat_or_stagiaire() and not user_has_candidate_rgpd_access(user):
+            self.message = CANDIDAT_MSG_RGPD_APP_REQUIS
+            return False
+        return True
 
     def has_object_permission(self, request, view, obj):
         """
@@ -479,13 +517,13 @@ class CanAccessCandidatObject(BasePermission):
     l'égalité `compte_utilisateur_id == request.user.id`.
     """
 
-    message = "Accès refusé."
+    message = CANDIDAT_PERM_ACCES_CANDIDAT_REFUSE
 
     def has_permission(self, request, view):
         """Autorisation préalable avant résolution de l'objet."""
         user = request.user
         if not user or not getattr(user, "is_authenticated", False):
-            self.message = "Authentification requise."
+            self.message = CANDIDAT_MSG_AUTH_REQUIRED
             return False
 
         # Les rôles internes staff-like peuvent entrer dans la vue ; le
@@ -497,12 +535,13 @@ class CanAccessCandidatObject(BasePermission):
         if is_candidate(user):
             if request.method in SAFE_METHODS + ("PUT", "PATCH"):
                 return True
+        self.message = CANDIDAT_PERM_ACTION_ROLES_CANDIDAT
         return False
 
     def has_object_permission(self, request, view, obj):
         user = request.user
         if not user or not getattr(user, "is_authenticated", False):
-            self.message = "Authentification requise."
+            self.message = CANDIDAT_MSG_AUTH_REQUIRED
             return False
 
         if is_admin_like(user):
@@ -514,13 +553,22 @@ class CanAccessCandidatObject(BasePermission):
             if centres is None:
                 return True
             if not centres:
+                self.message = CANDIDAT_PERM_AUCUN_CENTRE_ASSIGNE
                 return False
 
             formation = getattr(obj, "formation", None)
-            return formation is not None and getattr(formation, "centre_id", None) in centres
+            centre_id = getattr(formation, "centre_id", None) if formation else None
+            if centre_id in centres:
+                return True
+            self.message = CANDIDAT_PERM_CANDIDAT_HORS_CENTRE_STAFF
+            return False
 
         # Les candidats n'ont accès qu'à leur propre profil
         if is_candidate(user):
-            return getattr(obj, "compte_utilisateur_id", None) == user.id
+            if getattr(obj, "compte_utilisateur_id", None) == user.id:
+                return True
+            self.message = CANDIDAT_PERM_NOT_YOUR_CANDIDAT
+            return False
 
+        self.message = CANDIDAT_PERM_ACCES_CANDIDAT_REFUSE
         return False

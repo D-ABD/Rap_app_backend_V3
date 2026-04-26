@@ -408,6 +408,7 @@ export default function CandidatDetailModal({
   const {
     loading: accountLoading,
     createAccount,
+    detachAccount,
     approveAccountRequest,
     rejectAccountRequest,
   } = useCandidateAccountActions();
@@ -529,7 +530,7 @@ export default function CandidatDetailModal({
     }
   };
 
-  const handleAccountAction = async (action: "create" | "approve" | "reject") => {
+  const handleAccountAction = async (action: "create" | "detach" | "approve" | "reject") => {
     if (!candidat?.id) return;
 
     try {
@@ -538,6 +539,12 @@ export default function CandidatDetailModal({
         toast.success(
           result.message ||
             "Compte candidat créé ou lié. Le passage en stagiaire se fera uniquement à l'entrée en formation."
+        );
+      } else if (action === "detach") {
+        const result = await detachAccount(candidat.id);
+        toast.success(
+          result.message ||
+            "Liaison retirée : la fiche n'est plus liée au compte (le compte utilisateur n'est pas supprimé)."
         );
       } else if (action === "approve") {
         const result = await approveAccountRequest(candidat.id);
@@ -859,6 +866,26 @@ export default function CandidatDetailModal({
                                 Refuser la demande de compte
                               </Button>
                             </>
+                          )}
+                          {hasLinkedAccount && (
+                            <Button
+                              variant="outlined"
+                              color="warning"
+                              disabled={accountLoading}
+                              onClick={() => {
+                                if (
+                                  !window.confirm(
+                                    "Retirer la liaison entre cette fiche et le compte utilisateur ?\n" +
+                                      "Le compte ne sera pas supprimé ; le candidat ne pourra plus s'y connecter en tant que cette fiche."
+                                  )
+                                ) {
+                                  return;
+                                }
+                                void handleAccountAction("detach");
+                              }}
+                            >
+                              Retirer la liaison au compte
+                            </Button>
                           )}
                         </Stack>
                       </Stack>

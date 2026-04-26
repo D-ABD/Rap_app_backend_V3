@@ -1,5 +1,6 @@
 // src/hooks/usePartenaires.ts
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import api from "../api/axios";
 import {
   Partenaire,
@@ -20,6 +21,43 @@ function hasData(v: unknown): v is { data: unknown } {
 /** Accepte T ou {data:T} */
 function unwrap<T>(payload: unknown): T {
   return hasData(payload) ? (payload.data as T) : (payload as T);
+}
+
+/** Enveloppe API standard ``{ success, message, data }`` : refuser un 200 explicite en échec. */
+function assertEnvelopeSuccess(payload: unknown): void {
+  if (!isRecord(payload) || !("success" in payload)) return;
+  if (payload.success === false) {
+    const msg =
+      typeof payload.message === "string" && payload.message.trim()
+        ? payload.message
+        : "La requête a échoué.";
+    throw new Error(msg);
+  }
+}
+
+/** Texte affichable pour Toast / message utilisateur (Axios 4xx, réseau, etc.) */
+export function getApiErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const d = err.response?.data;
+    if (d && typeof d === "object" && d !== null) {
+      const o = d as Record<string, unknown>;
+      if (typeof o.message === "string" && o.message.trim()) return o.message.trim();
+      if (typeof o.detail === "string" && o.detail.trim()) return o.detail.trim();
+      if (Array.isArray(o.detail) && o.detail.length) {
+        const first = o.detail[0];
+        if (typeof first === "string") return first;
+      }
+    }
+    const s = err.response?.status;
+    if (s === 404) return "Ressource introuvable (404). Vérifiez que le partenaire existe et que vous y avez accès.";
+    if (s === 403) return "Accès refusé (403).";
+    if (s === 401) return "Session expirée — reconnectez-vous (401).";
+    if (err.message === "Network Error" || err.code === "ERR_NETWORK") {
+      return "Réseau : le serveur API n’a pas répondu. Vérifiez l’adresse, que Django tourne, et l’onglet Réseau (F12).";
+    }
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "";
 }
 const trimStr = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 const normalizePhone = (v: unknown) =>
@@ -305,6 +343,17 @@ export function useDesarchiverPartenaire() {
   };
 }
 
+export function useReafficherPartenaireDansMaListe() {
+  return {
+    /** Corps JSON minimal : certains parcours DRF/Axios n’apprécient pas un POST totalement vide. */
+    reafficher: async (id: number) => {
+      const res = await api.post<unknown>(`/partenaires/${id}/reafficher-dans-ma-liste/`, {});
+      assertEnvelopeSuccess(res.data);
+      return unwrap<Partenaire>(res.data);
+    },
+  };
+}
+
 export function useHardDeletePartenaire() {
   return {
     hardDelete: async (id: number) => {
@@ -334,7 +383,11 @@ export function usePartenaire(id?: number) {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get<unknown>(`/partenaires/${id}/`);
+        // Même champ que la liste « Inclure les archivés » : accès cohérent au détail
+        // (fiches inactives + pas d’exclusion retrait côté backend si ``avec_archivees``).
+        const res = await api.get<unknown>(`/partenaires/${id}/`, {
+          params: { avec_archivees: 1 },
+        });
         const payload = unwrap<Partenaire>(res.data);
         if (!alive) return;
         setData(payload);
@@ -373,7 +426,9 @@ export function usePartenaireWithRelations(id?: number) {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get<unknown>(`/partenaires/${id}/with-relations/`);
+        const res = await api.get<unknown>(`/partenaires/${id}/with-relations/`, {
+          params: { avec_archivees: 1 },
+        });
         const payload = unwrap<PartenaireWithRelations>(res.data);
         if (!alive) return;
         setData(payload);
@@ -416,7 +471,7 @@ export function useCreatePartenaire() {
         if (isRecord(err) && "response" in err) {
           const _r = (err as { response?: { status?: number; data?: unknown } }).response;
           // eslint-disable-next-line no-console
-          console.debug("Réponse backend :", _r);
+          console.debug("status / data :", _r?.status, _r?.data);
         }
         // eslint-disable-next-line no-console
         console.groupEnd();
@@ -544,10 +599,20 @@ export type PartenaireFiltersResponse = {
   users: UserFilterOption[];
 };
 
-export function usePartenaireFilters() {
+export function usePartenaireFilters(
+  listParams: Record<string, string | number | boolean> = {}
+) {
   const [data, setData] = useState<PartenaireFiltersResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const paramsKey = useMemo(() => {
+    try {
+      return JSON.stringify(listParams);
+    } catch {
+      return "{}";
+    }
+  }, [listParams]);
 
   useEffect(() => {
     let alive = true;
@@ -555,7 +620,10 @@ export function usePartenaireFilters() {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get<unknown>("/partenaires/filter-options/");
+        const parsed = JSON.parse(paramsKey) as Record<string, string | number | boolean>;
+        const res = await api.get<unknown>("/partenaires/filter-options/", {
+          params: Object.keys(parsed).length ? parsed : undefined,
+        });
         const payload = unwrap<PartenaireFiltersResponse>(res.data);
         if (!alive) return;
         setData(payload);
@@ -575,7 +643,7 @@ export function usePartenaireFilters() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [paramsKey]);
 
   return { data, loading, error };
 }

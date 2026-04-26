@@ -1,5 +1,5 @@
 // src/pages/users/MonProfil.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   TextField,
   Button,
@@ -24,6 +24,7 @@ import {
   Link,
 } from "@mui/material";
 import { toast } from "react-toastify";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMe } from "../../hooks/useUsers";
 import { MeUpdatePayload } from "../../types/User";
 import type { Candidat } from "../../types/candidat";
@@ -286,14 +287,29 @@ function mapCandidateToForm(candidat: Partial<Candidat> | null | undefined): Can
 }
 
 export default function MonProfil() {
-  const { user, loading, error } = useMe();
+  const { user, loading, error, refetch: refetchUser } = useMe();
   const { logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [showRgpdGateHint, setShowRgpdGateHint] = useState(false);
 
   const [formData, setFormData] = useState<MeUpdatePayload>({});
   const [candidateForm, setCandidateForm] = useState<CandidateCerfaForm>(EMPTY_CANDIDATE_FORM);
   const [candidateExists, setCandidateExists] = useState(false);
   const [candidateLoading, setCandidateLoading] = useState(true);
   const [candidateError, setCandidateError] = useState<string | null>(null);
+  /** Case à cocher : accepter la politique (champ compte /api/me/). */
+  const [acceptPolitiqueConfidentialite, setAcceptPolitiqueConfidentialite] = useState(false);
+  /** Métadonnées dossier : base légale + consentement déjà enregistré. */
+  const [rgpdDossier, setRgpdDossier] = useState<{
+    legalBasis: string | null;
+    consentObtained: boolean;
+  } | null>(null);
+  /** Candidat confirme le consentement explicite sur le dossier (base légale = consentement). */
+  const [confirmConsentDossier, setConfirmConsentDossier] = useState(false);
+  /** Suivi demande de compte (POST /api/me/demande-compte/). */
+  const [demandeCompteStatut, setDemandeCompteStatut] = useState<string | null>(null);
+  const [demandeCompteLoading, setDemandeCompteLoading] = useState(false);
   const [userErrors, setUserErrors] = useState<Record<string, string[]>>({});
   const [candidateErrors, setCandidateErrors] = useState<Record<string, string[]>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -301,6 +317,21 @@ export default function MonProfil() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
+  /** Candidat / stagiaire : champs contrat, suivi, RQTH en lecture seule côté API. */
+  const isSelfServiceCandidate = useMemo(() => {
+    const r = user?.role?.toLowerCase?.();
+    return r === "candidat" || r === "stagiaire" || r === "candidatuser";
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (location.pathname !== "/mon-profil") return;
+    const st = location.state as { rgpdRequired?: boolean } | null;
+    if (st?.rgpdRequired) {
+      setShowRgpdGateHint(true);
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, location.search, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -311,36 +342,54 @@ export default function MonProfil() {
         phone: user.phone || "",
         bio: user.bio || "",
       });
+      if (user.consent_rgpd) {
+        setAcceptPolitiqueConfidentialite(true);
+      }
     }
   }, [user]);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
+  const loadCandidateFiche = useCallback(async (opts?: { quiet?: boolean }) => {
+    const quiet = Boolean(opts?.quiet);
+    try {
+      if (!quiet) {
         setCandidateLoading(true);
-        setCandidateError(null);
-        const res = await api.get("/candidats/me/");
-        if (!alive) return;
-        setCandidateExists(true);
-        setCandidateForm(mapCandidateToForm(res.data as Partial<Candidat>));
-      } catch (err) {
-        if (!alive) return;
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        if (status === 404) {
-          setCandidateExists(false);
-        } else {
-          setCandidateError("Impossible de charger votre fiche candidat.");
-        }
-      } finally {
-        if (alive) setCandidateLoading(false);
       }
-    })();
-
-    return () => {
-      alive = false;
-    };
+      setCandidateError(null);
+      /* Sans fiche : API renvoie 200 + `null` ; 404 reste géré pour compatibilité. */
+      const res = await api.get("/candidats/me/", {
+        validateStatus: (s) => s === 200 || s === 404,
+      });
+      if (res.status === 404 || res.data == null) {
+        setCandidateExists(false);
+        setRgpdDossier(null);
+        setDemandeCompteStatut(null);
+        return;
+      }
+      setCandidateExists(true);
+      setCandidateForm(mapCandidateToForm(res.data as Partial<Candidat>));
+      const c = res.data as {
+        rgpd_legal_basis?: string | null;
+        rgpd_consent_obtained?: boolean;
+        demande_compte_statut?: string | null;
+      };
+      setRgpdDossier({
+        legalBasis: c.rgpd_legal_basis ?? null,
+        consentObtained: !!c.rgpd_consent_obtained,
+      });
+      setDemandeCompteStatut(c.demande_compte_statut ?? null);
+      setConfirmConsentDossier(false);
+    } catch {
+      setCandidateError("Impossible de charger votre fiche candidat.");
+    } finally {
+      if (!quiet) {
+        setCandidateLoading(false);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    void loadCandidateFiche();
+  }, [loadCandidateFiche]);
 
   const handleChange = (field: keyof MeUpdatePayload, value: string) => {
     setUserErrors((prev) => ({ ...prev, [field]: [] }));
@@ -357,6 +406,14 @@ export default function MonProfil() {
       setAvatarFile(e.target.files[0]);
     }
   };
+
+  const resolvedServerAvatarUrl = useMemo(() => {
+    const url = user?.avatar_url;
+    if (!url || url.includes("default_avatar") || url.startsWith("/static/")) {
+      return undefined;
+    }
+    return url;
+  }, [user?.avatar_url]);
 
   const typeContratCerfaOptions = useMemo(() => {
     if (candidateForm.type_contrat === "professionnalisation") {
@@ -383,32 +440,44 @@ export default function MonProfil() {
       setUserErrors({});
       setCandidateErrors({});
 
+      /* Sans fiche candidat, l’identité n’est pas dans candidateForm (vide) : on prend formData alimenté par /me/. */
+      const userJsonBase: MeUpdatePayload = candidateExists
+        ? {
+            email: candidateForm.email,
+            first_name: candidateForm.prenom,
+            last_name: candidateForm.nom,
+            phone: candidateForm.telephone,
+            bio: formData.bio || "",
+          }
+        : {
+            email: formData.email ?? user?.email ?? "",
+            first_name: formData.first_name ?? user?.first_name ?? "",
+            last_name: formData.last_name ?? user?.last_name ?? "",
+            phone: formData.phone ?? user?.phone ?? "",
+            bio: formData.bio || "",
+          };
+      if (acceptPolitiqueConfidentialite && user && !user.consent_rgpd) {
+        userJsonBase.consent_rgpd = true;
+      }
+
       const userPayload =
         avatarFile !== null
           ? (() => {
               const fd = new FormData();
-              const mirroredUserForm: MeUpdatePayload = {
-                email: candidateForm.email,
-                first_name: candidateForm.prenom,
-                last_name: candidateForm.nom,
-                phone: candidateForm.telephone,
-                bio: formData.bio || "",
-              };
-              Object.entries(mirroredUserForm).forEach(([k, v]) => {
-                if (v !== undefined && v !== null) fd.append(k, v as string);
+              Object.entries(userJsonBase).forEach(([k, v]) => {
+                if (v !== undefined && v !== null && k !== "consent_rgpd") {
+                  fd.append(k, v as string);
+                }
               });
+              if (userJsonBase.consent_rgpd) {
+                fd.append("consent_rgpd", "true");
+              }
               fd.append("avatar", avatarFile);
               return fd;
             })()
-          : {
-              email: candidateForm.email,
-              first_name: candidateForm.prenom,
-              last_name: candidateForm.nom,
-              phone: candidateForm.telephone,
-              bio: formData.bio || "",
-            };
+          : userJsonBase;
 
-      const candidatePayload = {
+      const rawCandidatePayload: Record<string, unknown> = {
         nom: candidateForm.nom || null,
         prenom: candidateForm.prenom || null,
         nom_naissance: candidateForm.nom_naissance || null,
@@ -452,6 +521,29 @@ export default function MonProfil() {
         representant_zip_code: candidateForm.representant_zip_code || null,
         representant_city: candidateForm.representant_city || null,
       };
+      const selfServiceReadonlyKeys = new Set<string>([
+        "type_contrat",
+        "type_contrat_code",
+        "situation_avant_contrat_code",
+        "inscrit_france_travail",
+        "numero_inscription_france_travail",
+        "duree_inscription_france_travail_mois",
+        "rqth",
+      ]);
+      let candidatePayload: Record<string, unknown> = isSelfServiceCandidate
+        ? (Object.fromEntries(
+            Object.entries(rawCandidatePayload).filter(([k]) => !selfServiceReadonlyKeys.has(k))
+          ) as typeof rawCandidatePayload)
+        : rawCandidatePayload;
+
+      if (
+        candidateExists &&
+        confirmConsentDossier &&
+        rgpdDossier?.legalBasis === "consentement" &&
+        !rgpdDossier.consentObtained
+      ) {
+        candidatePayload = { ...candidatePayload, rgpd_consent_obtained: true };
+      }
 
       await api.patch("/me/", userPayload, {
         headers: avatarFile ? { "Content-Type": "multipart/form-data" } : {},
@@ -460,13 +552,18 @@ export default function MonProfil() {
         await api.patch("/candidats/me/", candidatePayload);
       }
 
+      await refetchUser();
+      if (candidateExists) {
+        await loadCandidateFiche({ quiet: true });
+      }
+
       toast.success("✅ Profil mis à jour !");
     } catch (err) {
       const allErrors = extractErrors(err);
       const nextUserErrors: Record<string, string[]> = {};
       const nextCandidateErrors: Record<string, string[]> = {};
       Object.entries(allErrors).forEach(([key, value]) => {
-        if (["email", "first_name", "last_name", "phone", "bio", "avatar"].includes(key)) {
+        if (["email", "first_name", "last_name", "phone", "bio", "avatar", "consent_rgpd"].includes(key)) {
           nextUserErrors[key] = value;
         } else {
           nextCandidateErrors[key] = value;
@@ -480,6 +577,26 @@ export default function MonProfil() {
       toast.error("❌ Erreur lors de la mise à jour");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDemandeCompte = async () => {
+    try {
+      setDemandeCompteLoading(true);
+      const res = await api.post("/me/demande-compte/");
+      const data = res.data as { message?: string; success?: boolean };
+      toast.success(
+        data.message || "Demande enregistrée. L'équipe la traitera sous peu."
+      );
+      await loadCandidateFiche({ quiet: true });
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      const msg =
+        ax.response?.data?.message ||
+        "Impossible d'enregistrer la demande. Réessayez ou contactez l'équipe.";
+      toast.error(msg);
+    } finally {
+      setDemandeCompteLoading(false);
     }
   };
 
@@ -513,6 +630,17 @@ export default function MonProfil() {
         </Alert>
       )}
 
+      {showRgpdGateHint && isSelfServiceCandidate && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setShowRgpdGateHint(false)}
+        >
+          L&apos;application a refusé une action : cochez et enregistrez le consentement RGPD sur votre compte
+          (et le cas échéant sur le dossier) pour retrouver l&apos;accès complet aux parcours concernés.
+        </Alert>
+      )}
+
       {candidateError && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {candidateError}
@@ -522,10 +650,14 @@ export default function MonProfil() {
       {/* ✅ Avatar actuel */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
         <Avatar
-          src={avatarFile ? URL.createObjectURL(avatarFile) : user.avatar_url || ""}
+          src={avatarFile ? URL.createObjectURL(avatarFile) : resolvedServerAvatarUrl}
           alt={user.full_name || user.email}
           sx={{ width: 64, height: 64 }}
-        />
+        >
+          {!avatarFile && !resolvedServerAvatarUrl
+            ? (user.full_name || user.email || "?").trim().charAt(0).toUpperCase() || "?"
+            : null}
+        </Avatar>
         <Button variant="outlined" component="label">
           Changer l’avatar
           <input type="file" hidden accept="image/*" onChange={handleAvatarChange} />
@@ -564,7 +696,11 @@ export default function MonProfil() {
                 fullWidth
                 value={formationSummary || "Aucune formation liée"}
                 disabled
-                helperText="Cette information vient de votre dossier candidat et sert au préremplissage des CERFA."
+                helperText={
+                  candidateExists
+                    ? "Ces indications viennent de votre fiche candidat et servent au préremplissage des CERFA."
+                    : "Indicateurs de contexte issus de votre compte. La fiche candidat détaillée (identité, CERFA) s’affichera ci-dessous une fois le dossier lié et accessible."
+                }
               />
             </Grid>
             <Grid item xs={12}>
@@ -579,9 +715,117 @@ export default function MonProfil() {
                 helperText={userErrors.bio?.[0]}
               />
             </Grid>
+            {!candidateExists && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Coordonnées du compte (sans fiche candidat rattachée, ces champs alimentent la sauvegarde, y
+                    compris le consentement RGPD)
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Email"
+                    fullWidth
+                    type="email"
+                    value={formData.email ?? ""}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    error={!!userErrors.email?.length}
+                    helperText={userErrors.email?.[0]}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Téléphone"
+                    fullWidth
+                    value={formData.phone ?? ""}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    error={!!userErrors.phone?.length}
+                    helperText={userErrors.phone?.[0]}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Prénom"
+                    fullWidth
+                    value={formData.first_name ?? ""}
+                    onChange={(e) => handleChange("first_name", e.target.value)}
+                    error={!!userErrors.first_name?.length}
+                    helperText={userErrors.first_name?.[0]}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Nom"
+                    fullWidth
+                    value={formData.last_name ?? ""}
+                    onChange={(e) => handleChange("last_name", e.target.value)}
+                    error={!!userErrors.last_name?.length}
+                    helperText={userErrors.last_name?.[0]}
+                  />
+                </Grid>
+              </>
+            )}
           </Grid>
         </CardContent>
       </Card>
+
+      {candidateExists && isSelfServiceCandidate && (
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardHeader
+            title="Accès et compte candidat"
+            subheader="Demande adressée à l'équipe (recrutement / administrateur). La création directe du compte est réservée au staff."
+          />
+          <CardContent>
+            {demandeCompteStatut === "en_attente" && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Votre demande de prise en charge du compte est <strong>en attente</strong> auprès de
+                l'équipe.
+              </Alert>
+            )}
+            {demandeCompteStatut === "acceptee" && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Votre demande a été <strong>acceptée</strong>. En cas de difficulté de connexion,
+                contactez l'organisme.
+              </Alert>
+            )}
+            {demandeCompteStatut === "refusee" && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Une demande précédente a été <strong>refusée</strong>. Vous pouvez déposer une nouvelle
+                demande si votre situation a changé, ou contacter directement l'équipe.
+              </Alert>
+            )}
+            {(!demandeCompteStatut ||
+              demandeCompteStatut === "aucune" ||
+              demandeCompteStatut === "refusee") && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  Si l'équipe doit valider ou finaliser l'accès lié à votre fiche, vous pouvez enregistrer une
+                  demande officielle. Pour un <strong>premier rattachement</strong> (sans fiche liée), il faut
+                  passer par l'équipe, qui pourra lier le dossier et utiliser l'action « Créer ou lier le compte
+                  candidat » dans l'interface staff.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  disabled={demandeCompteLoading}
+                  onClick={handleDemandeCompte}
+                >
+                  {demandeCompteLoading
+                    ? "Enregistrement…"
+                    : "Enregistrer une demande de compte auprès de l'équipe"}
+                </Button>
+              </Box>
+            )}
+            {demandeCompteStatut === "en_attente" && (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                Vous serez notifié selon le processus de l'organisme. Pas besoin d'envoyer une seconde demande
+                tant que celle-ci est en cours.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {candidateExists && (
         <>
@@ -765,12 +1009,19 @@ export default function MonProfil() {
               subheader="Seulement les éléments personnels repris dans les CERFA apprentissage et professionnalisation."
             />
             <CardContent>
+              {isSelfServiceCandidate && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Type de contrat, situation avant contrat, indicateurs France Travail et RQTH sont affichés à titre
+                  informatif (saisis ou validés par l&apos;organisation).
+                </Alert>
+              )}
               <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
                   <TextField
                     select
                     label="Type de contrat"
                     fullWidth
+                    disabled={isSelfServiceCandidate}
                     value={candidateForm.type_contrat}
                     onChange={(e) => {
                       const nextType = e.target.value;
@@ -808,7 +1059,7 @@ export default function MonProfil() {
                     fullWidth
                     value={candidateForm.type_contrat_code}
                     onChange={(e) => handleCandidateChange("type_contrat_code", e.target.value)}
-                    disabled={typeContratCerfaOptions.length === 0}
+                    disabled={isSelfServiceCandidate || typeContratCerfaOptions.length === 0}
                     error={!!candidateErrors.type_contrat_code?.length}
                     helperText={
                       candidateErrors.type_contrat_code?.[0] ||
@@ -848,6 +1099,7 @@ export default function MonProfil() {
                     fullWidth
                     value={candidateForm.situation_avant_contrat_code}
                     onChange={(e) => handleCandidateChange("situation_avant_contrat_code", e.target.value)}
+                    disabled={isSelfServiceCandidate}
                   >
                     <MenuItem value="">Non définie</MenuItem>
                     {SITUATION_OPTIONS.map((option) => (
@@ -919,6 +1171,7 @@ export default function MonProfil() {
                     fullWidth
                     value={candidateForm.numero_inscription_france_travail}
                     onChange={(e) => handleCandidateChange("numero_inscription_france_travail", e.target.value)}
+                    disabled={isSelfServiceCandidate}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>
@@ -931,6 +1184,7 @@ export default function MonProfil() {
                       handleCandidateChange("duree_inscription_france_travail_mois", e.target.value)
                     }
                     inputProps={{ min: 0 }}
+                    disabled={isSelfServiceCandidate}
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -940,6 +1194,7 @@ export default function MonProfil() {
                         <Checkbox
                           checked={candidateForm.rqth}
                           onChange={(e) => handleCandidateChange("rqth", e.target.checked)}
+                          disabled={isSelfServiceCandidate}
                         />
                       }
                       label="RQTH"
@@ -967,6 +1222,7 @@ export default function MonProfil() {
                         <Checkbox
                           checked={candidateForm.inscrit_france_travail}
                           onChange={(e) => handleCandidateChange("inscrit_france_travail", e.target.checked)}
+                          disabled={isSelfServiceCandidate}
                         />
                       }
                       label="Inscrit France Travail"
@@ -1064,9 +1320,12 @@ export default function MonProfil() {
         </>
       )}
 
-      {!candidateExists && (
+      {!candidateExists && !candidateError && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Aucun profil candidat enrichi n'est rattaché à votre compte pour le moment.
+          Aucune fiche candidat détaillée n&apos;a pu être chargée (aucun dossier rattaché à ce compte, ou accès
+          indisponible). Vous pouvez tout de même enregistrer le consentement RGPD (case ci-dessous + bouton
+          Enregistrer) : la sauvegarde s&apos;applique à votre compte via les coordonnées affichées dans
+          « Compte ». Pour lier un dossier candidat, contactez l&apos;équipe pédagogique.
         </Alert>
       )}
 
@@ -1096,8 +1355,23 @@ export default function MonProfil() {
                 : "."}
             </Typography>
           ) : (
-            <Typography variant="body2" color="error">
-              ❌ Vous n'avez pas encore accepté la politique de confidentialité.
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={acceptPolitiqueConfidentialite}
+                  onChange={(e) => {
+                    setAcceptPolitiqueConfidentialite(e.target.checked);
+                    setUserErrors((prev) => ({ ...prev, consent_rgpd: [] }));
+                  }}
+                />
+              }
+              label="J'ai lu et j'accepte la politique de confidentialité (compte & plateforme). Cochez cette case puis enregistrez le profil."
+            />
+          )}
+
+          {userErrors.consent_rgpd?.[0] && (
+            <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+              {userErrors.consent_rgpd[0]}
             </Typography>
           )}
 
@@ -1114,6 +1388,40 @@ export default function MonProfil() {
             </Link>{" "}
             pour plus d’informations.
           </Typography>
+
+          {candidateExists &&
+            rgpdDossier?.legalBasis === "consentement" &&
+            !rgpdDossier.consentObtained && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Dossier candidat : la base légale enregistrée par l&apos;organisme est le consentement. Vous pouvez
+                  confirmer ici que vous validez ce consentement explicite.
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={confirmConsentDossier}
+                      onChange={(e) => {
+                        setConfirmConsentDossier(e.target.checked);
+                        setCandidateErrors((prev) => ({ ...prev, rgpd_consent_obtained: [] }));
+                      }}
+                    />
+                  }
+                  label="Je confirme le consentement explicite lié à mon dossier (l&apos;équipe a renseigné la base légale « consentement »)."
+                />
+                {candidateErrors.rgpd_consent_obtained?.[0] && (
+                  <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                    {candidateErrors.rgpd_consent_obtained[0]}
+                  </Typography>
+                )}
+              </Box>
+            )}
+
+          {candidateExists && rgpdDossier?.consentObtained && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Consentement explicite sur le dossier : enregistré.
+            </Typography>
+          )}
         </Box>
       )}
 

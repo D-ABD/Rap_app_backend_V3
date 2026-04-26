@@ -217,6 +217,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
         "rap_app.api.permissions.IsStaffReadOnly",
+        "rap_app.api.permissions.CandidateRgpdGate",
     ],
     "EXCEPTION_HANDLER": "rap_app.api.exception_handler.api_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

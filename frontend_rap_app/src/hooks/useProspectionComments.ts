@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../api/axios";
 import axios from "axios";
+import { toDisplayError } from "../api/errorMessage";
 import type {
   ProspectionCommentDTO,
   ProspectionCommentCreateInput,
@@ -128,8 +129,7 @@ export function useListProspectionComments(
       })
       .catch((err) => {
         if (!axios.isCancel(err)) {
-          if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-          else setError(err as Error);
+          setError(toDisplayError(err));
           setData(null);
         }
       })
@@ -174,8 +174,7 @@ export function useProspectionComment(id: number | string | null) {
       .then((res) => setData(extractObject<ProspectionCommentDTO>(res.data)))
       .catch((err) => {
         if (!axios.isCancel(err)) {
-          if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-          else setError(err as Error);
+          setError(toDisplayError(err));
           setData(null);
         }
       })
@@ -201,8 +200,7 @@ export function useCreateProspectionComment() {
       const res = await api.post<ApiObjectShape<ProspectionCommentDTO>>(BASE, payload);
       return extractObject<ProspectionCommentDTO>(res.data);
     } catch (err) {
-      if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-      else setError(err as Error);
+      setError(toDisplayError(err));
       throw err;
     } finally {
       setLoading(false);
@@ -230,8 +228,7 @@ export function useUpdateProspectionComment(id: number | string) {
         );
         return extractObject<ProspectionCommentDTO>(res.data);
       } catch (err) {
-        if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-        else setError(err as Error);
+        setError(toDisplayError(err));
         throw err;
       } finally {
         setLoading(false);
@@ -256,8 +253,7 @@ export function useDeleteProspectionComment(id: number | string) {
     try {
       await api.delete<void>(`${BASE}${id}/`);
     } catch (err) {
-      if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-      else setError(err as Error);
+      setError(toDisplayError(err));
       throw err;
     } finally {
       setLoading(false);
@@ -295,8 +291,7 @@ export function useProspectionCommentFilterOptions(reloadKey = 0) {
       .then((res) => setData(extractObject<ProspectionCommentFilterOptions>(res.data)))
       .catch((err) => {
         if (!axios.isCancel(err)) {
-          if (axios.isAxiosError(err)) setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-          else setError(err as Error);
+          setError(toDisplayError(err));
           setData(null);
         }
       })
@@ -331,11 +326,7 @@ export function useArchiveProspectionComment(id: number | string) {
         // ✅ Renvoie les bons codes alignés avec le backend & DTO
         return isArchived ? "actif" : "archive";
       } catch (err) {
-        if (axios.isAxiosError(err)) {
-          setError(new Error(`HTTP ${err.response?.status ?? "?"}`));
-        } else {
-          setError(err as Error);
-        }
+        setError(toDisplayError(err));
         throw err;
       } finally {
         setLoading(false);

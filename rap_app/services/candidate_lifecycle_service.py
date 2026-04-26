@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from ..api.candidat_error_messages import CANDIDAT_MSG_FORMATION_AFFECTATION_REQUISE
+
 from ..models.candidat import Candidat
 from ..models.formations import Formation
 from ..models.types_offre import TypeOffre
@@ -146,7 +148,7 @@ class CandidateLifecycleService:
         l'inscription GESPERS, qui reste une décision manuelle.
         """
         if not candidate.formation_id:
-            raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
+            raise ValidationError({"formation": [CANDIDAT_MSG_FORMATION_AFFECTATION_REQUISE]})
 
         was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()
@@ -209,7 +211,7 @@ class CandidateLifecycleService:
         rôle utilisateur en `stagiaire`.
         """
         if not candidate.formation_id:
-            raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
+            raise ValidationError({"formation": [CANDIDAT_MSG_FORMATION_AFFECTATION_REQUISE]})
 
         was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()
@@ -280,7 +282,7 @@ class CandidateLifecycleService:
     @transaction.atomic
     def complete_formation(cls, candidate: Candidat, actor=None) -> Candidat:
         if not candidate.formation_id:
-            raise ValidationError({"formation": ["Le candidat doit être affecté à une formation."]})
+            raise ValidationError({"formation": [CANDIDAT_MSG_FORMATION_AFFECTATION_REQUISE]})
 
         was_counted = cls._counts_in_formation_inscrits(candidate)
         now = timezone.now()

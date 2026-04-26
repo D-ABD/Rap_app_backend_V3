@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../api/axios";
 import { getRoleChoices, getUserProfile } from "../api/auth";
 import {
@@ -14,9 +14,19 @@ export function useMe() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const refetch = useCallback(() => {
+    return getUserProfile()
+      .then((data) => {
+        setUser(data);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err);
+      });
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-
     getUserProfile()
       .then((data) => {
         if (isMounted) setUser(data);
@@ -27,13 +37,12 @@ export function useMe() {
       .finally(() => {
         if (isMounted) setLoading(false);
       });
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  return { user, loading, error };
+  return { user, loading, error, refetch };
 }
 
 // 📄 Tous les utilisateurs (liste complète)

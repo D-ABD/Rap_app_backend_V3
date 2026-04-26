@@ -61,9 +61,16 @@ export default function ProspectionLastCommentRow({
         )}
 
         {!loading && error && (
-          <Typography variant="body2" color="error">
-            Erreur de chargement des commentaires.
-          </Typography>
+          <Box>
+            <Typography variant="body2" color="error" component="p" sx={{ m: 0 }}>
+              Erreur de chargement des commentaires.
+            </Typography>
+            {error.message ? (
+              <Typography variant="caption" color="error" display="block" sx={{ mt: 0.25 }}>
+                {error.message}
+              </Typography>
+            ) : null}
+          </Box>
         )}
 
         {!loading && !error && !effectiveLastBody && (

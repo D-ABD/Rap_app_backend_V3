@@ -879,6 +879,26 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("user_id", response.data["data"])
         self.assertIn("user_role", response.data["data"])
 
+    def test_candidat_retirer_compte_uses_standard_envelope(self):
+        compte = CustomUser.objects.create_user_with_role(
+            email="retirer-envelope@example.com",
+            username="retirer_envelope",
+            password="password123",
+            role=CustomUser.ROLE_CANDIDAT_USER,
+        )
+        self.candidat.compte_utilisateur = compte
+        self.candidat.save(update_fields=["compte_utilisateur"])
+
+        response = self.client.post(reverse("candidat-retirer-compte", args=[self.candidat.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertIn("candidat_id", response.data["data"])
+        self.assertIn("unlinked_user_id", response.data["data"])
+        self.assertEqual(response.data["data"]["candidat_id"], self.candidat.id)
+        self.assertEqual(response.data["data"]["unlinked_user_id"], compte.id)
+
     def test_candidat_valider_demande_compte_uses_standard_envelope(self):
         self.candidat.demande_compte_statut = Candidat.DemandeCompteStatut.EN_ATTENTE
         self.candidat.save(update_fields=["demande_compte_statut"])

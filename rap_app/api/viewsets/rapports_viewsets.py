@@ -14,7 +14,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ...api.paginations import RapAppPagination
-from ...api.permissions import IsStaffOrAbove
+from ...api.permissions import CandidateRgpdGate, IsStaffOrAbove
 from ...api.serializers.rapports_serializers import (
     RapportChoiceGroupSerializer,
     RapportSerializer,
@@ -439,7 +439,7 @@ class RapportChoicesView(APIView):
     Expose les choix front pour `type_rapport`, `periode` et `format`.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CandidateRgpdGate]
 
     @extend_schema(
         summary="Liste des choix possibles pour les rapports",

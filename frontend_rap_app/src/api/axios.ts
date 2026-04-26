@@ -2,6 +2,11 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "ax
 import { triggerGlobalLogout } from "./globalLogout";
 import { getTokens, storeTokens, clearTokens } from "./tokenStorage";
 import { env } from "../config/env";
+import {
+  isCandidateRgpdConsentRequired,
+  isRgpdBootstrapRequestPath,
+  notifyCandidateRgpdRequired,
+} from "./rgpdGateHandler";
 
 function buildApiBaseUrl(): string {
   if (import.meta.env.DEV) {
@@ -79,6 +84,16 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    if (error.response && isCandidateRgpdConsentRequired(error.response.status, error.response.data)) {
+      const data = error.response.data as { message?: string };
+      const rel = (originalRequest?.url || "").split("?")[0];
+      if (rel && !isRgpdBootstrapRequestPath(rel)) {
+        notifyCandidateRgpdRequired(
+          data?.message || "Vous devez d'abord valider le consentement RGPD pour continuer."
+        );
+      }
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       const { refresh } = getTokens();

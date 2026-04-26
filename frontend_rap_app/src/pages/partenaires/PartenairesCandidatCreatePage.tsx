@@ -2,10 +2,12 @@
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { Box, Typography, CircularProgress, Alert } from "@mui/material";
 
 import { useCreatePartenaire, usePartenaireChoices } from "../../hooks/usePartenaires";
 import { useAuth } from "../../hooks/useAuth";
+import { getTokens } from "../../api/tokenStorage";
+import { toApiError } from "../../api/httpClient";
 import type { Partenaire, PartenaireChoicesResponse } from "../../types/partenaire";
 import PostCreateChoiceModal from "../../components/modals/PostCreateChoiceModal";
 import PageTemplate from "../../components/PageTemplate";
@@ -37,7 +39,7 @@ function _logDevError(...args: unknown[]) {
 export default function PartenaireCandidatCreatePage() {
   const { create, loading, error } = useCreatePartenaire();
   const { data: rawChoices } = usePartenaireChoices();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [lastCreated, setLastCreated] = useState<{ id: number; nom: string } | null>(null);
@@ -61,6 +63,12 @@ export default function PartenaireCandidatCreatePage() {
   const handleSubmit = useCallback(
     async (values: Partial<Partenaire>) => {
       try {
+        if (!getTokens().access) {
+          toast.error(
+            "Session expirée ou non authentifié : reconnectez-vous, puis réessayez."
+          );
+          return;
+        }
         if (!user?.centre?.id) {
           toast.error(
             "❌ Votre compte n’est rattaché à aucun centre. Contactez un administrateur."
@@ -85,25 +93,40 @@ export default function PartenaireCandidatCreatePage() {
         let message = "❌ Erreur lors de la création du partenaire.";
 
         if (axios.isAxiosError(e)) {
-          // ✅ Typage explicite des champs possibles renvoyés par l'API
-          const data = e.response?.data as
-            | { detail?: string; non_field_errors?: string[] }
-            | undefined;
-
-          const detail = data?.detail;
-          const nonField = data?.non_field_errors;
-
-          if (typeof detail === "string") {
-            if (detail.toLowerCase().includes("centre")) {
-              message = `❌ ${detail} — contactez votre centre ou un administrateur.`;
-            } else if (detail.toLowerCase().includes("périmètre")) {
-              message = `❌ ${detail} — partenaire hors de votre périmètre.`;
-            } else {
-              message = `❌ ${detail}`;
+          const status = e.response?.status;
+          if (status === 401) {
+            message =
+              "Non authentifié (401). Reconnectez-vous : la requête n’a pas de session valide pour l’API.";
+          } else {
+            const apiMsg = toApiError(e).message;
+            if (apiMsg && apiMsg !== "Erreur inconnue") {
+              message = `❌ ${apiMsg}`;
             }
-          } else if (Array.isArray(nonField) && nonField.length > 0) {
-            const joined = nonField.filter((x): x is string => typeof x === "string").join(", ");
-            if (joined) message = `❌ ${joined}`;
+          }
+          if (status && status !== 401) {
+            // ✅ Typage explicite des champs possibles renvoyés par l'API
+            const data = e.response?.data as
+              | { detail?: string; non_field_errors?: string[]; message?: string }
+              | undefined;
+
+            const detail = data?.detail;
+            const nonField = data?.non_field_errors;
+            const envMsg = data?.message;
+
+            if (status !== 500 && typeof detail === "string") {
+              if (detail.toLowerCase().includes("centre")) {
+                message = `❌ ${detail} — contactez votre centre ou un administrateur.`;
+              } else if (detail.toLowerCase().includes("périmètre")) {
+                message = `❌ ${detail} — partenaire hors de votre périmètre.`;
+              } else {
+                message = `❌ ${detail}`;
+              }
+            } else if (Array.isArray(nonField) && nonField.length > 0) {
+              const joined = nonField.filter((x): x is string => typeof x === "string").join(", ");
+              if (joined) message = `❌ ${joined}`;
+            } else if (typeof envMsg === "string" && envMsg) {
+              message = `❌ ${envMsg}`;
+            }
           }
 
           _logDevError("[PartenaireCandidatCreatePage] Erreur Axios :", e);
@@ -119,6 +142,18 @@ export default function PartenaireCandidatCreatePage() {
 
   return (
     <PageTemplate title="🤝 Créer un nouveau partenaire (Candidat)" backButton>
+      {!isAuthenticated && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Vous n&apos;êtes pas authentifié. Les appels <code>/api/me/</code> et les enregistrements peuvent
+          échouer (401) : connectez-vous d&apos;abord.
+        </Alert>
+      )}
+      {isAuthenticated && !user?.centre?.id && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Aucun centre n&apos;est lié à votre compte (formation / fiche). La création de partenaire sera
+          refusée par l&apos;API tant qu&apos;un centre n&apos;est pas connu. Contactez l&apos;équipe si besoin.
+        </Alert>
+      )}
       {loading && <CircularProgress sx={{ mb: 2 }} />}
 
       <Box>

@@ -28,6 +28,7 @@ from ..serializers.partenaires_serializers import PartenaireSerializer
 from ..serializers.statut_serializers import StatutSerializer
 from ..serializers.types_offre_serializers import TypeOffreSerializer
 from ..mixins import ApiResponseMixin
+from ..permissions import CandidateRgpdGate
 
 
 class SmallPagination(PageNumberPagination):
@@ -96,7 +97,7 @@ class SearchView(ApiResponseMixin, APIView):
     utilisateurs authentifiés, avec filtrage par rôle et centres.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CandidateRgpdGate]
 
     def get(self, request):
         """

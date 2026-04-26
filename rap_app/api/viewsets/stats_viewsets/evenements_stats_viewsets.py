@@ -15,8 +15,8 @@ from rest_framework.viewsets import GenericViewSet
 from rap_app.api.serializers.base_serializers import EmptySerializer
 from rap_app.models.evenements import Evenement
 
-from ...permissions import is_staff_or_staffread
-from ...roles import get_staff_centre_ids_cached, is_admin_like
+from ...permissions import CandidateRgpdGate
+from ...roles import get_staff_centre_ids_cached, is_admin_like, is_staff_or_staffread
 
 GroupKey = Literal["centre", "formation", "type", "statut"]
 
@@ -31,7 +31,7 @@ class EvenementStatsViewSet(GenericViewSet):
     """
 
     serializer_class = EmptySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CandidateRgpdGate]
 
     def _status_annotation(self):
         today = timezone.now().date()

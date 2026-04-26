@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ...api.paginations import RapAppPagination
-from ...api.permissions import IsAdminLikeOnly
+from ...api.permissions import CandidateRgpdGate, IsAdminLikeOnly
 from ...api.serializers.logs_serializers import (
     LogChoicesSerializer,
     LogUtilisateurSerializer,
@@ -183,7 +183,7 @@ class LogUtilisateurViewSet(viewsets.ReadOnlyModelViewSet):
 class LogChoicesView(APIView):
     """GET : liste des actions possibles pour les logs dans l'enveloppe API standard."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CandidateRgpdGate]
 
     def get(self, request):
         label_map = {

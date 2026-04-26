@@ -26,9 +26,11 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import api from "../../api/axios";
 
 import {
+  getApiErrorMessage,
   useListPartenaires,
   useDeletePartenaire,
   useDesarchiverPartenaire,
+  useReafficherPartenaireDansMaListe,
   useHardDeletePartenaire,
   usePartenaireChoices,
   usePartenaireFilters,
@@ -107,6 +109,7 @@ export default function PartenairesPage() {
   const { user, loading: userLoading, error: userError } = useMe();
   const { remove } = useDeletePartenaire();
   const { restore } = useDesarchiverPartenaire();
+  const { reafficher } = useReafficherPartenaireDansMaListe();
   const { hardDelete } = useHardDeletePartenaire();
   const { data: partenaireChoices } = usePartenaireChoices();
   const { data: filterOptions, loading: filtersLoading } = usePartenaireFilters();
@@ -300,8 +303,22 @@ export default function PartenairesPage() {
       await restore(id);
       toast.success("Partenaire restauré");
       setReloadKey((k) => k + 1);
-    } catch {
-      toast.error("Erreur lors de la restauration");
+    } catch (err) {
+      const msg = getApiErrorMessage(err);
+      toast.error(msg || "Erreur lors de la restauration");
+      if (import.meta.env.DEV) console.error("[restore partenaire]", err);
+    }
+  };
+
+  const handleReafficherDansMaListe = async (id: number) => {
+    try {
+      await reafficher(id);
+      toast.success("Fiche de nouveau affichée dans votre liste");
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      const msg = getApiErrorMessage(err);
+      toast.error(msg || "Erreur lors du réaffichage");
+      if (import.meta.env.DEV) console.error("[reafficher partenaire]", err);
     }
   };
 
@@ -703,9 +720,11 @@ export default function PartenairesPage() {
               setShowConfirm(true);
             }}
             onRestoreClick={(id) => handleRestore(id)}
+            onReafficherClick={handleReafficherDansMaListe}
             onHardDeleteClick={(id) => setHardDeleteId(id)}
             visibleColumnKeys={visibleColumnKeys}
             showActionsColumn={showActionsColumn}
+            labeledArchiveActions
           />
         </Box>
       )}

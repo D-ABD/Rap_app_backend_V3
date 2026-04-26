@@ -5,6 +5,10 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 
+from rap_app.api.candidat_error_messages import (
+    CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE,
+    CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE,
+)
 from rap_app.models.candidat import Candidat
 from rap_app.models.centres import Centre
 from rap_app.models.custom_user import CustomUser
@@ -118,7 +122,10 @@ class CandidateAccountServiceTests(TestCase):
             CandidateAccountService.request_account(candidate, requester=self.actor)
         except ValidationError as exc:
             self.assertIn("non_field_errors", exc.message_dict)
-            self.assertEqual(exc.message_dict["non_field_errors"], ["Une demande de compte est déjà en attente."])
+            self.assertEqual(
+                exc.message_dict["non_field_errors"],
+                [CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE],
+            )
 
     def test_reject_account_request_marks_candidate_refused(self):
         candidate = Candidat.objects.create(
@@ -137,3 +144,43 @@ class CandidateAccountServiceTests(TestCase):
         self.assertEqual(candidate.demande_compte_statut, Candidat.DemandeCompteStatut.REFUSEE)
         self.assertEqual(candidate.demande_compte_traitee_par_id, self.actor.id)
         self.assertIsNotNone(candidate.demande_compte_traitee_le)
+
+    def test_detach_compte_clears_link_and_leaves_user(self):
+        u = CustomUser.objects.create_user_with_role(
+            email="detach@example.com",
+            username="detach_user",
+            password="password123",
+            role=CustomUser.ROLE_CANDIDAT_USER,
+        )
+        candidate = Candidat.objects.create(
+            nom="Detach",
+            prenom="Candidate",
+            email="detach@example.com",
+            formation=self.formation,
+            compte_utilisateur=u,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+
+        c2, unlinked = CandidateAccountService.detach_compte_from_candidate(candidate, actor=self.actor)
+        self.assertEqual(unlinked, u.id)
+        c2.refresh_from_db()
+        u.refresh_from_db()
+        self.assertIsNone(c2.compte_utilisateur_id)
+        self.assertTrue(CustomUser.objects.filter(pk=u.id).exists())
+
+    def test_detach_compte_rejects_without_link(self):
+        candidate = Candidat.objects.create(
+            nom="NoLink",
+            prenom="Candidate",
+            email="nolink@example.com",
+            formation=self.formation,
+            created_by=self.actor,
+            updated_by=self.actor,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            CandidateAccountService.detach_compte_from_candidate(candidate, actor=self.actor)
+        self.assertEqual(
+            ctx.exception.message_dict.get("non_field_errors"),
+            [CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE],
+        )

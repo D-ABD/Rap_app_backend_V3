@@ -10,6 +10,16 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from ..api.candidat_error_messages import (
+    CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE,
+    CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE,
+    CANDIDAT_ACCOUNT_CANDIDAT_A_DEJA_UN_COMPTE,
+    CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE,
+    CANDIDAT_ACCOUNT_EMAIL_LIE_AUTRE_CANDIDAT,
+    CANDIDAT_ACCOUNT_EMAIL_REQUIS,
+    CANDIDAT_ACCOUNT_NOT_ADMISSIBLE,
+    CANDIDAT_ACCOUNT_UN_COMPTE_DEJA_LIE,
+)
 from ..models.candidat import Candidat
 from ..models.custom_user import CustomUser
 
@@ -70,15 +80,13 @@ class CandidateAccountService:
         if candidate.compte_utilisateur_id:
             if candidate.compte_utilisateur_id == user.id:
                 return user
-            raise ValidationError({"compte_utilisateur": ["Ce candidat a déjà un compte utilisateur lié."]})
+            raise ValidationError({"compte_utilisateur": [CANDIDAT_ACCOUNT_CANDIDAT_A_DEJA_UN_COMPTE]})
 
         linked_candidate = getattr(user, "candidat_associe", None)
         if linked_candidate and linked_candidate.pk != candidate.pk:
             raise ValidationError(
                 {
-                    "email": [
-                        f"Cette adresse email est déjà utilisée par un autre candidat (pk={linked_candidate.pk})."
-                    ]
+                    "email": [CANDIDAT_ACCOUNT_EMAIL_LIE_AUTRE_CANDIDAT],
                 }
             )
 
@@ -103,7 +111,7 @@ class CandidateAccountService:
 
         email = (candidate.email or "").strip().lower()
         if not email:
-            raise ValidationError({"email": ["Le candidat doit avoir une adresse email définie."]})
+            raise ValidationError({"email": [CANDIDAT_ACCOUNT_EMAIL_REQUIS]})
 
         User = get_user_model()
         user = User.objects.filter(email__iexact=email).first()
@@ -113,9 +121,7 @@ class CandidateAccountService:
             if linked_candidate and linked_candidate.pk != candidate.pk:
                 raise ValidationError(
                     {
-                        "email": [
-                            f"Cette adresse email est déjà utilisée par un autre candidat (pk={linked_candidate.pk})."
-                        ]
+                        "email": [CANDIDAT_ACCOUNT_EMAIL_LIE_AUTRE_CANDIDAT],
                     }
                 )
             return cls.link_user_to_candidate(user=user, candidate=candidate, actor=actor)
@@ -148,7 +154,7 @@ class CandidateAccountService:
         compte vers le rôle `stagiaire`.
         """
         if not candidate.admissible:
-            raise cls._global_error("Ce candidat n'est pas admissible.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_NOT_ADMISSIBLE)
 
         user = candidate.compte_utilisateur or cls.provision_candidate_account(candidate, actor=actor)
 
@@ -232,10 +238,10 @@ class CandidateAccountService:
         Place une demande de compte en attente pour un candidat.
         """
         if candidate.compte_utilisateur_id and candidate.compte_utilisateur_id != requester.id:
-            raise cls._global_error("Un compte utilisateur est déjà lié à ce candidat.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_UN_COMPTE_DEJA_LIE)
 
         if candidate.demande_compte_statut == candidate.DemandeCompteStatut.EN_ATTENTE:
-            raise cls._global_error("Une demande de compte est déjà en attente.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_DEMANDE_DEJA_EN_ATTENTE)
 
         candidate.demande_compte_statut = candidate.DemandeCompteStatut.EN_ATTENTE
         candidate.demande_compte_date = timezone.now()
@@ -263,9 +269,9 @@ class CandidateAccountService:
         Approuve une demande de compte en attente puis crée ou lie le compte.
         """
         if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise cls._global_error("Aucune demande de compte en attente pour ce candidat.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE)
         if candidate.compte_utilisateur_id:
-            raise cls._global_error("Un compte utilisateur est déjà lié à ce candidat.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_UN_COMPTE_DEJA_LIE)
 
         user = cls.provision_candidate_account(candidate, actor=actor)
         candidate.demande_compte_statut = Candidat.DemandeCompteStatut.ACCEPTEE
@@ -292,7 +298,7 @@ class CandidateAccountService:
         Refuse une demande de compte en attente.
         """
         if candidate.demande_compte_statut != Candidat.DemandeCompteStatut.EN_ATTENTE:
-            raise cls._global_error("Aucune demande de compte en attente pour ce candidat.")
+            raise cls._global_error(CANDIDAT_ACCOUNT_AUCUNE_DEMANDE_EN_ATTENTE)
 
         candidate.demande_compte_statut = Candidat.DemandeCompteStatut.REFUSEE
         candidate.demande_compte_traitee_par = actor
@@ -306,6 +312,27 @@ class CandidateAccountService:
             ],
         )
         return candidate
+
+    @classmethod
+    @transaction.atomic
+    def detach_compte_from_candidate(
+        cls,
+        candidate: Candidat,
+        actor: CustomUser | None = None,
+    ) -> tuple[Candidat, int | None]:
+        """
+        Enlève le lien fiche → compte : le compte utilisateur reste en base, sans
+        accès implicite à ce dossier via le OneToOne candidat.
+        """
+        if not candidate.compte_utilisateur_id:
+            raise cls._global_error(CANDIDAT_ACCOUNT_AUCUN_COMPTE_LIE)
+
+        unlinked_id = candidate.compte_utilisateur_id
+        with defer_candidate_user_sync():
+            candidate.compte_utilisateur = None
+            candidate.full_clean()
+            candidate.save(user=actor, update_fields=["compte_utilisateur"])
+        return candidate, unlinked_id
 
     @staticmethod
     def _build_unique_username(base: str) -> str:

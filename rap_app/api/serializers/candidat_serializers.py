@@ -10,7 +10,6 @@ from drf_spectacular.utils import (
 from rest_framework import exceptions, serializers
 import unicodedata
 from django.utils import timezone
-
 from ...models.appairage import Appairage
 from ...models.atelier_tre import AtelierTRE
 from ...models.candidat import (
@@ -24,13 +23,78 @@ from ...models.formations import Formation
 from ...services.candidate_lifecycle_service import CandidateLifecycleService
 from ...services.french_text_normalizer import normalize_candidate_payload
 from ..mixins import FieldMaskingMixin
-from ..roles import is_admin_like, is_centre_scoped_staff
+from ..candidat_error_messages import (
+    CANDIDAT_MSG_AUTH_REQUIRED,
+    CANDIDAT_MSG_CERFA_INCOMPATIBLE,
+    CANDIDAT_MSG_CHAMP_RESERVE_ADMIN,
+    CANDIDAT_MSG_CHAMP_RESERVE_STAFF,
+    CANDIDAT_MSG_EMAIL_REQUISE_SI_COMPTE,
+    CANDIDAT_MSG_FORMATION_STAFF_UNIQUEMENT,
+    CANDIDAT_MSG_NUMERO_OSIA_INTERDIT,
+    CANDIDAT_MSG_NUMERO_OSIA_REQUIS_CONTRAT_SIGN,
+    CANDIDAT_MSG_NUMERO_OSIA_VERROUILLE,
+    CANDIDAT_MSG_RGPD_CONSENT_REQUIS,
+    CANDIDAT_MSG_RGPD_LEGAL_BASIS_REQUIS,
+    CANDIDAT_MSG_RGPD_SELF_CHAMPS_INTERDITS,
+    CANDIDAT_MSG_RGPD_SELF_CONSENT_PAS_BAL_CONSENTEMENT,
+    CANDIDAT_MSG_RGPD_SELF_CONSENT_UNIQUEMENT_OUI,
+    CANDIDAT_MSG_SELF_READ_ONLY,
+)
+from ..roles import is_admin_like, is_centre_scoped_staff, is_candidate
 from ..serializers.commentaires_appairage_serializers import (
     CommentaireAppairageSerializer,
 )
 
 APPRENTISSAGE_TYPE_CONTRAT_CODES = {"11", "21", "22", "23", "31", "32", "33", "34", "35", "36", "37", "38"}
 PROFESSIONNALISATION_TYPE_CONTRAT_CODES = {"11", "12", "21", "22", "23", "24", "30"}
+
+# Retirés de la réponse API pour profils non staff (candidat / visite) — aligné CandidatSerializer / self-service.
+CANDIDAT_NON_STAFF_RESPONSE_EXCLUDED = (
+    "notes",
+    "resultat_placement",
+    "responsable_placement",
+    "date_placement",
+    "entreprise_placement",
+    "contrat_signe",
+    "entreprise_validee",
+    "courrier_rentree",
+    "vu_par",
+    "admissible",
+    "inscrit_gespers",
+    "en_accompagnement_tre",
+    "en_appairage",
+    "entretien_done",
+    "test_is_ok",
+    "communication",
+    "experience",
+    "csp",
+    "nb_appairages",
+    "nb_prospections",
+)
+
+# Candidat / stagiaire (auto-édition) : champs visibles le cas échéant mais non modifiables.
+CANDIDATE_SELF_SERVICE_READ_ONLY = frozenset(
+    {
+        "formation",
+        "type_contrat",
+        "type_contrat_code",
+        "contrat_signe",
+        "numero_osia",
+        "permis_b",
+        "rqth",
+        "communication",
+        "csp",
+        "experience",
+        "situation_avant_contrat_code",
+        "inscrit_france_travail",
+        "numero_inscription_france_travail",
+        "duree_inscription_france_travail_mois",
+        "demande_compte_statut",
+        "demande_compte_date",
+        "demande_compte_traitee_par",
+        "demande_compte_traitee_le",
+    }
+)
 
 
 def _normalize_nom_prenom(instance):
@@ -735,29 +799,7 @@ class CandidatListSerializer(serializers.ModelSerializer):
         is_staff_or_admin = user and _can_manage_candidate_record(user)
 
         if not is_staff_or_admin:
-            RESERVED = [
-                "notes",
-                "resultat_placement",
-                "responsable_placement",
-                "date_placement",
-                "entreprise_placement",
-                "contrat_signe",
-                "entreprise_validee",
-                "courrier_rentree",
-                "vu_par",
-                "admissible",
-                "inscrit_gespers",
-                "en_accompagnement_tre",
-                "en_appairage",
-                "entretien_done",
-                "test_is_ok",
-                "communication",
-                "experience",
-                "csp",
-                "nb_appairages",
-                "nb_prospections",
-            ]
-            for f in RESERVED:
+            for f in CANDIDAT_NON_STAFF_RESPONSE_EXCLUDED:
                 data.pop(f, None)
 
         can_see_nir = user and (
@@ -831,6 +873,15 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             return None
         return {"id": centre.id, "nom": centre.nom}
 
+    def to_representation(self, instance):
+        """Pour candidat / stagiaire : même filtrage que CandidatSerializer (pas d’assignation, pas de com / CSP / exp)."""
+        data = super().to_representation(instance)
+        user = getattr(self.context.get("request"), "user", None)
+        if user and is_candidate(user):
+            for f in CANDIDAT_NON_STAFF_RESPONSE_EXCLUDED:
+                data.pop(f, None)
+        return data
+
     def create(self, validated_data):
         validated_data.pop("compte_utilisateur", None)
         self._apply_rgpd_defaults(validated_data)
@@ -845,7 +896,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         user = request.user if request else None
 
         if not request or not user or not user.is_authenticated:
-            raise exceptions.PermissionDenied("Authentification requise.")
+            raise exceptions.PermissionDenied(CANDIDAT_MSG_AUTH_REQUIRED)
 
         restricted_fields = [
             "notes",
@@ -862,22 +913,22 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             for field in restricted_fields:
                 if field in data:
                     raise serializers.ValidationError(
-                        {field: "Ce champ ne peut être modifié que par un administrateur."}
+                        {field: CANDIDAT_MSG_CHAMP_RESERVE_ADMIN}
                     )
 
         if not _can_manage_candidate_record(user):
             for field in ["admissible", "inscrit_gespers", "en_accompagnement_tre", "en_appairage"]:
                 if field in data:
                     raise serializers.ValidationError(
-                        {field: "Ce champ ne peut être modifié que par un membre du staff."}
+                        {field: CANDIDAT_MSG_CHAMP_RESERVE_STAFF}
                     )
 
         if "numero_osia" in data:
             if not _can_manage_candidate_record(user):
-                raise serializers.ValidationError({"numero_osia": "Non autorisé."})
+                raise serializers.ValidationError({"numero_osia": CANDIDAT_MSG_NUMERO_OSIA_INTERDIT})
 
             if self.instance and self.instance.numero_osia and data["numero_osia"] != self.instance.numero_osia:
-                raise serializers.ValidationError({"numero_osia": "Déjà attribué et non modifiable."})
+                raise serializers.ValidationError({"numero_osia": CANDIDAT_MSG_NUMERO_OSIA_VERROUILLE})
 
         # Cohérence obligatoire entre contrat signé et OSIA
         contrat_signe_val = data.get("contrat_signe", getattr(self.instance, "contrat_signe", None))
@@ -886,25 +937,25 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         SIGNED_VALUES = {"oui", "signed", "valide"}
 
         if isinstance(contrat_signe_val, str) and contrat_signe_val.lower() in SIGNED_VALUES and not numero_osia_val:
-            raise serializers.ValidationError({"numero_osia": "Requis quand le contrat est signé."})
+            raise serializers.ValidationError({"numero_osia": CANDIDAT_MSG_NUMERO_OSIA_REQUIS_CONTRAT_SIGN})
 
         cu = getattr(self.instance, "compte_utilisateur", None)
         email = data.get("email") or getattr(self.instance, "email", None)
 
         if cu and not email:
-            raise serializers.ValidationError({"email": "Un compte utilisateur nécessite une adresse email."})
+            raise serializers.ValidationError({"email": CANDIDAT_MSG_EMAIL_REQUISE_SI_COMPTE})
 
         if self.instance is None and _can_manage_candidate_record(user):
             if not data.get("rgpd_legal_basis"):
                 raise serializers.ValidationError(
-                    {"rgpd_legal_basis": "Ce champ est requis pour une création manuelle de fiche candidat."}
+                    {"rgpd_legal_basis": CANDIDAT_MSG_RGPD_LEGAL_BASIS_REQUIS}
                 )
             if (
                 data.get("rgpd_legal_basis") == Candidat.RgpdLegalBasis.CONSENTEMENT
                 and not data.get("rgpd_consent_obtained")
             ):
                 raise serializers.ValidationError(
-                    {"rgpd_consent_obtained": "Le consentement explicite est requis avec cette base légale."}
+                    {"rgpd_consent_obtained": CANDIDAT_MSG_RGPD_CONSENT_REQUIS}
                 )
 
         type_contrat = data.get("type_contrat", getattr(self.instance, "type_contrat", None))
@@ -919,11 +970,35 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
             if code not in allowed_codes:
                 raise serializers.ValidationError(
                     {
-                        "type_contrat_code": (
-                            "Code CERFA incompatible avec le type de contrat choisi."
-                        )
+                        "type_contrat_code": CANDIDAT_MSG_CERFA_INCOMPATIBLE,
                     }
                 )
+
+        if is_candidate(user):
+            rgpd_in = {k: v for k, v in data.items() if k.startswith("rgpd_")}
+            if rgpd_in:
+                if set(rgpd_in) - {"rgpd_consent_obtained"}:
+                    off = next(iter(set(rgpd_in) - {"rgpd_consent_obtained"}))
+                    raise serializers.ValidationError({off: CANDIDAT_MSG_RGPD_SELF_CHAMPS_INTERDITS})
+                if "rgpd_consent_obtained" in rgpd_in:
+                    inst = self.instance
+                    if not inst:
+                        raise serializers.ValidationError(
+                            {"rgpd_consent_obtained": CANDIDAT_MSG_RGPD_SELF_CHAMPS_INTERDITS}
+                        )
+                    if inst.rgpd_legal_basis != Candidat.RgpdLegalBasis.CONSENTEMENT:
+                        raise serializers.ValidationError(
+                            {"rgpd_consent_obtained": CANDIDAT_MSG_RGPD_SELF_CONSENT_PAS_BAL_CONSENTEMENT}
+                        )
+                    if rgpd_in["rgpd_consent_obtained"] is not True:
+                        raise serializers.ValidationError(
+                            {"rgpd_consent_obtained": CANDIDAT_MSG_RGPD_SELF_CONSENT_UNIQUEMENT_OUI}
+                        )
+            for field in CANDIDATE_SELF_SERVICE_READ_ONLY:
+                if field in data:
+                    raise serializers.ValidationError(
+                        {field: CANDIDAT_MSG_SELF_READ_ONLY}
+                    )
 
         return data
 
@@ -932,10 +1007,11 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         previous_was_counted = CandidateLifecycleService._counts_in_formation_inscrits(instance)
         previous_was_crif = CandidateLifecycleService._is_crif_formation(instance) if previous_formation_id else False
         validated_data.pop("compte_utilisateur", None)
-        self._apply_rgpd_notice_tracking(validated_data)
-        instance = super().update(instance, validated_data)
         request = self.context.get("request")
         actor = request.user if request and request.user.is_authenticated else None
+        self._apply_rgpd_consent_tracking(validated_data, actor=actor)
+        self._apply_rgpd_notice_tracking(validated_data, actor=actor)
+        instance = super().update(instance, validated_data)
         CandidateLifecycleService.sync_candidate_formation_inscrits(
             instance,
             previous_formation_id=previous_formation_id,
@@ -950,7 +1026,7 @@ class CandidatCreateUpdateSerializer(serializers.ModelSerializer):
         user = request.user if request and request.user.is_authenticated else None
 
         if not user or not _can_manage_candidate_record(user):
-            raise serializers.ValidationError("Seul le staff peut créer/modifier la formation d’un candidat.")
+            raise serializers.ValidationError(CANDIDAT_MSG_FORMATION_STAFF_UNIQUEMENT)
 
         return value
 

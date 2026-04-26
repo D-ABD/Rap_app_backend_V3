@@ -351,9 +351,14 @@ export default function ProspectionPageCandidat() {
         </Stack>
       ) : error ? (
         <Box sx={{ textAlign: "center", py: 4 }}>
-          <Typography color="error">
+          <Typography color="error" component="p" sx={{ m: 0 }}>
             Erreur lors du chargement des prospections.
           </Typography>
+          {error.message ? (
+            <Typography color="error" variant="body2" sx={{ mt: 0.5 }}>
+              {error.message}
+            </Typography>
+          ) : null}
         </Box>
       ) : !hasResults ? (
         <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>

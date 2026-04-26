@@ -1,8 +1,17 @@
 // src/pages/partenaires/PartenairesTable.tsx
-import { Checkbox, IconButton, Link, Typography } from "@mui/material";
+import {
+  Button,
+  Checkbox,
+  Chip,
+  IconButton,
+  Link,
+  Stack,
+  Typography,
+} from "@mui/material";
 import BlockIcon from "@mui/icons-material/Block";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
+import UndoIcon from "@mui/icons-material/Undo";
 import type { Partenaire } from "../../types/partenaire";
 import ResponsiveTableTemplate, {
   type TableColumn,
@@ -44,6 +53,7 @@ type ExtendedPartenaire = Partenaire & {
 
   updated_by?: { id: number; full_name: string } | null;
   updated_by_nom?: string | null;
+  retrait_dans_ma_liste?: boolean;
 };
 
 interface Props {
@@ -68,6 +78,10 @@ interface Props {
 
   visibleColumnKeys?: string[];
   showActionsColumn?: boolean;
+  /**
+   * Libellés + pastille d’état (Archivé) au lieu d’icônes seules pour archiver / désarchiver.
+   */
+  labeledArchiveActions?: boolean;
 }
 
 export default function PartenairesTable({
@@ -77,6 +91,7 @@ export default function PartenairesTable({
   onRowClick,
   onDeleteClick,
   onRestoreClick,
+  onReafficherClick,
   onHardDeleteClick,
   buildProspectionsUrl,
   buildAppairagesUrl,
@@ -88,6 +103,7 @@ export default function PartenairesTable({
   onClickCandidats,
   visibleColumnKeys,
   showActionsColumn = true,
+  labeledArchiveActions = false,
 }: Props) {
   type Kind = "prospections" | "appairages" | "formations" | "candidats";
 
@@ -339,48 +355,145 @@ export default function PartenairesTable({
       cardTitle={(p) => p.nom}
       visibleColumnKeys={visibleColumnKeys}
       showActionsColumn={showActionsColumn}
-      actions={(p) => (
-        <>
-          {p.is_active ? (
-            <IconButton
-              color="error"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteClick(p.id);
-              }}
-              aria-label={`Archiver ${p.nom}`}
-            >
-              <DeleteIcon />
-            </IconButton>
-          ) : null}
-
-          {!p.is_active && onRestoreClick ? (
-            <IconButton
-              color="success"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRestoreClick(p.id);
-              }}
-              aria-label={`Restaurer ${p.nom}`}
-            >
-              <RestoreFromTrashIcon />
-            </IconButton>
-          ) : null}
-
-          {!p.is_active && onHardDeleteClick ? (
-            <IconButton
-              color="error"
-              onClick={(e) => {
-                e.stopPropagation();
-                onHardDeleteClick(p.id);
-              }}
-              aria-label={`Supprimer définitivement ${p.nom}`}
-            >
-              <BlockIcon />
-            </IconButton>
-          ) : null}
-        </>
-      )}
+      actions={(p) => {
+        const inactifGlobal = !p.is_active;
+        const retraitPerso = Boolean(p.retrait_dans_ma_liste);
+        return labeledArchiveActions ? (
+          <Stack
+            component="div"
+            direction="row"
+            spacing={0.5}
+            flexWrap="wrap"
+            useFlexGap
+            alignItems="center"
+            justifyContent="flex-end"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {inactifGlobal ? (
+              <>
+                <Chip size="small" label="Archivé" color="default" variant="outlined" />
+                {onRestoreClick ? (
+                  <Button
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestoreClick(p.id);
+                    }}
+                    aria-label={`Désarchiver ${p.nom}`}
+                  >
+                    Désarchiver
+                  </Button>
+                ) : null}
+                {onHardDeleteClick ? (
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHardDeleteClick(p.id);
+                    }}
+                    aria-label={`Supprimer définitivement ${p.nom}`}
+                  >
+                    Suppr. déf.
+                  </Button>
+                ) : null}
+              </>
+            ) : retraitPerso && onReafficherClick ? (
+              <>
+                <Chip
+                  size="small"
+                  label="Hors de ma liste"
+                  color="default"
+                  variant="outlined"
+                />
+                <Button
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReafficherClick(p.id);
+                  }}
+                  aria-label={`Remettre ${p.nom} dans ma liste`}
+                >
+                  Remettre dans la liste
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="small"
+                color="error"
+                variant="outlined"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  onDeleteClick(p.id);
+                }}
+                aria-label={`Archiver ${p.nom}`}
+              >
+                Archiver
+              </Button>
+            )}
+          </Stack>
+        ) : (
+          <>
+            {inactifGlobal ? (
+              <>
+                {onRestoreClick ? (
+                  <IconButton
+                    color="success"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestoreClick(p.id);
+                    }}
+                    aria-label={`Désarchiver ${p.nom}`}
+                  >
+                    <RestoreFromTrashIcon />
+                  </IconButton>
+                ) : null}
+                {onHardDeleteClick ? (
+                  <IconButton
+                    color="error"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHardDeleteClick(p.id);
+                    }}
+                    aria-label={`Supprimer définitivement ${p.nom}`}
+                  >
+                    <BlockIcon />
+                  </IconButton>
+                ) : null}
+              </>
+            ) : retraitPerso && onReafficherClick ? (
+              <IconButton
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReafficherClick(p.id);
+                }}
+                aria-label={`Remettre ${p.nom} dans ma liste`}
+              >
+                <UndoIcon />
+              </IconButton>
+            ) : (
+              <IconButton
+                color="error"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  onDeleteClick(p.id);
+                }}
+                aria-label={`Archiver ${p.nom}`}
+              >
+                <DeleteIcon />
+              </IconButton>
+            )}
+          </>
+        );
+      }}
       onRowClick={(p) => onRowClick(p.id)}
     />
   );

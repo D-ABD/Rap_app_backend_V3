@@ -20,6 +20,7 @@ from ..serializers.user_profil_serializers import (
 )
 from ..mixins import ApiResponseMixin
 from ..exception_handler import MESSAGE_ERROR_CODE_MAP
+from ..permissions import CandidateRgpdGate
 
 
 class MeAPIView(APIView):
@@ -172,7 +173,7 @@ class DemandeCompteCandidatView(ApiResponseMixin, APIView):
       - Si un compte est déjà lié au candidat, la demande est refusée.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CandidateRgpdGate]
     serializer_class = EmptySerializer
 
     @extend_schema(

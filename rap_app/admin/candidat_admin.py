@@ -141,7 +141,6 @@ class CandidatAdmin(admin.ModelAdmin):
         "updated_at",
         "nb_appairages",
         "rgpd_creation_source",
-        "rgpd_consent_obtained_at",
         "rgpd_consent_recorded_by",
         "rgpd_notice_sent_at",
         "rgpd_notice_sent_by",

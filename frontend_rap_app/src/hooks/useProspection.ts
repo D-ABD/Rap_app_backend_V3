@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import api from "../api/axios";
+import { toDisplayError } from "../api/errorMessage";
 import type {
   Prospection,
   ProspectionFiltresValues,
@@ -204,7 +205,7 @@ export function useProspections(params: ProspectionFiltresValues = {}, reloadKey
       })
       .catch((err) => {
         logAxiosError("useProspections", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         setPageData(null);
       })
       .finally(() => {
@@ -246,7 +247,7 @@ export function useProspection(id: number | string | null) {
       })
       .catch((err) => {
         logAxiosError("useProspection", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         setData((current) => current ?? null);
       })
       .finally(() => setLoading(false));
@@ -276,7 +277,7 @@ export function useCreateProspection() {
       return created;
     } catch (err) {
       logAxiosError("useCreateProspection", err);
-      setError(err as Error);
+      setError(toDisplayError(err));
       throw err;
     } finally {
       setLoading(false);
@@ -309,7 +310,7 @@ export function useUpdateProspection(id: number | string) {
         return updated;
       } catch (err) {
         logAxiosError("useUpdateProspection", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         throw err;
       } finally {
         setLoading(false);
@@ -336,7 +337,7 @@ export function useDeleteProspection(id: number | string) {
       await api.delete(url); // ✅ res supprimé car inutilisé
     } catch (err) {
       logAxiosError("useDeleteProspection", err);
-      setError(err as Error);
+      setError(toDisplayError(err));
       throw err;
     } finally {
       setLoading(false);
@@ -365,7 +366,7 @@ export function useChangerStatut(id: number | string) {
         return updated;
       } catch (err) {
         logAxiosError("useChangerStatut", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         throw err;
       } finally {
         setLoading(false);
@@ -406,7 +407,7 @@ export function useHistoriqueProspections(id: number | string | null) {
       })
       .catch((err) => {
         logAxiosError("useHistoriqueProspections", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         setData(null);
       })
       .finally(() => setLoading(false));
@@ -443,7 +444,7 @@ export function useProspectionChoices() {
       })
       .catch((err) => {
         logAxiosError("useProspectionChoices", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         setChoices(null);
       })
       .finally(() => setLoading(false));
@@ -504,7 +505,7 @@ export default function useFiltresProspections() {
         }
       } catch (err) {
         logAxiosError("useFiltresProspections", err);
-        setError(err as Error);
+        setError(toDisplayError(err));
         setFiltres(null);
       } finally {
         setLoading(false);

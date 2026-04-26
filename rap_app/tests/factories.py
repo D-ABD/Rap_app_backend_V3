@@ -6,6 +6,7 @@ Utilisation : UserFactory(), LogUtilisateurFactory(), UserFactory(role=CustomUse
 
 import factory
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 
 from ..models.logs import LogUtilisateur
@@ -34,12 +35,22 @@ class UserFactory(factory.django.DjangoModelFactory):
         Crée l'utilisateur via le manager create_user pour que le mot de passe
         soit défini avant le premier save() (évite ValidationError 'password vide').
         """
+        had_explicit_rgpd = "consent_rgpd" in kwargs
         password = kwargs.pop("password", "password123")
         email = kwargs.pop("email", None) or "user@example.com"
         username = kwargs.pop("username", None) or (email.split("@")[0] if email else "user")
-        return CustomUser.objects.create_user(
+        user = CustomUser.objects.create_user(
             email=email, username=username, password=password or "password123", **kwargs
         )
+        if (
+            user.is_candidat_or_stagiaire()
+            and not had_explicit_rgpd
+            and not getattr(user, "consent_rgpd", False)
+        ):
+            user.consent_rgpd = True
+            user.consent_date = timezone.now()
+            user.save(update_fields=["consent_rgpd", "consent_date"])
+        return user
 
 
 class LogUtilisateurFactory(factory.django.DjangoModelFactory):

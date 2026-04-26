@@ -419,9 +419,16 @@ export default function ProspectionCommentPage() {
           <CircularProgress />
         </Box>
       ) : error ? (
-        <Typography color="error" align="center" py={4}>
-          Erreur lors du chargement des commentaires.
-        </Typography>
+        <Box textAlign="center" py={4}>
+          <Typography color="error" component="p" sx={{ m: 0 }}>
+            Erreur lors du chargement des commentaires.
+          </Typography>
+          {error.message ? (
+            <Typography color="error" variant="body2" sx={{ mt: 0.5 }}>
+              {error.message}
+            </Typography>
+          ) : null}
+        </Box>
       ) : enrichedRows.length === 0 ? (
         <Typography color="text.secondary" align="center" py={4}>
           Aucun commentaire trouvé.

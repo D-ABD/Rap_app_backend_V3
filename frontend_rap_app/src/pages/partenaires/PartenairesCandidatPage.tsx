@@ -18,12 +18,17 @@ import {
   useMediaQuery,
   useTheme,
   Menu,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import {
+  getApiErrorMessage,
   useListPartenaires,
   useDeletePartenaire,
+  useDesarchiverPartenaire,
+  useReafficherPartenaireDansMaListe,
   usePartenaireChoices,
   usePartenaireFilters,
 } from "../../hooks/usePartenaires";
@@ -94,6 +99,8 @@ export default function PartenairesCandidatPage() {
 
   const { user, loading: userLoading, error: userError } = useMe();
   const { remove } = useDeletePartenaire();
+  const { restore } = useDesarchiverPartenaire();
+  const { reafficher } = useReafficherPartenaireDansMaListe();
   const { data: partenaireChoices } = usePartenaireChoices();
   const { data: filterOptions, loading: filtersLoading } = usePartenaireFilters();
 
@@ -128,6 +135,17 @@ export default function PartenairesCandidatPage() {
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  const [includeArchived, setIncludeArchived] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("partenaires.candidat.avecArchives") === "1";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("partenaires.candidat.avecArchives", includeArchived ? "1" : "0");
+    }
+  }, [includeArchived]);
+
   const {
     page,
     setPage,
@@ -146,6 +164,8 @@ export default function PartenairesCandidatPage() {
       reloadKey,
     };
 
+    if (includeArchived) base.avec_archivees = 1;
+
     if (isStaff && filters.created_by) base.created_by = filters.created_by as number;
     if (filters.city) base.city = filters.city;
     if (filters.secteur_activite) base.secteur_activite = filters.secteur_activite;
@@ -154,7 +174,7 @@ export default function PartenairesCandidatPage() {
     if (filters.has_prospections) base.has_prospections = filters.has_prospections;
 
     return base;
-  }, [filters, page, pageSize, reloadKey, isStaff]);
+  }, [filters, page, pageSize, reloadKey, isStaff, includeArchived]);
 
   const { data, loading, error } = useListPartenaires(queryParams);
 
@@ -186,6 +206,30 @@ export default function PartenairesCandidatPage() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Partenaire restauré");
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      const msg = getApiErrorMessage(err);
+      toast.error(msg || "Erreur lors de la restauration");
+      if (import.meta.env.DEV) console.error("[restore partenaire]", err);
+    }
+  };
+
+  const handleReafficherDansMaListe = async (id: number) => {
+    try {
+      await reafficher(id);
+      toast.success("Fiche de nouveau affichée dans votre liste");
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      const msg = getApiErrorMessage(err);
+      toast.error(msg || "Erreur lors du réaffichage");
+      if (import.meta.env.DEV) console.error("[reafficher partenaire]", err);
     }
   };
 
@@ -288,6 +332,29 @@ export default function PartenairesCandidatPage() {
             {showFilters ? "Masquer filtres" : "Afficher filtres"}
             {activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
           </Button>
+
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={includeArchived}
+                onChange={(_, checked) => {
+                  setIncludeArchived(checked);
+                  setPage(1);
+                }}
+                color="primary"
+              />
+            }
+            label="Inclure les archivés"
+            sx={{
+              m: 0,
+              px: 1,
+              borderRadius: 2,
+              border: 1,
+              borderColor: "divider",
+              bgcolor: includeArchived ? "action.selected" : "transparent",
+            }}
+          />
 
           <Button
             variant="outlined"
@@ -474,6 +541,9 @@ export default function PartenairesCandidatPage() {
               setSelectedId(id);
               setShowConfirm(true);
             }}
+            onRestoreClick={handleRestore}
+            onReafficherClick={handleReafficherDansMaListe}
+            labeledArchiveActions
           />
         </Box>
       )}

@@ -89,6 +89,8 @@ export interface Partenaire {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  /** Fiche retirée de la liste du compte courant (retrait perso, sans archivage global) */
+  retrait_dans_ma_liste?: boolean;
 
   created_by?: {
     id: number;

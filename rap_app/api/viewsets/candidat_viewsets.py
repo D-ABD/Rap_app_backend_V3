@@ -22,7 +22,7 @@ from openpyxl.utils import get_column_letter
 from rest_framework import filters, serializers
 from rest_framework.decorators import action
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -54,7 +54,17 @@ from ..openapi_docs import (
 )
 from ..paginations import RapAppPagination
 from ..permissions import CanAccessCandidatObject, IsStaffOrAbove
-from ..roles import is_admin_like, is_centre_scoped_staff, staff_centre_ids
+from ..roles import is_admin_like, is_candidate, is_centre_scoped_staff, staff_centre_ids
+from ..candidat_error_messages import (
+    CANDIDAT_MSG_ATELIER_TRE_HORS_PERIMETRE,
+    CANDIDAT_MSG_AUTH_REQUIRED,
+    CANDIDAT_MSG_BULK_ATELIER_TRE_ID,
+    CANDIDAT_MSG_BULK_CANDIDATE_IDS,
+    CANDIDAT_MSG_CANDIDAT_NOT_FOUND,
+    CANDIDAT_MSG_FORMATION_HORS_CENTRE,
+    CANDIDAT_MSG_FORMATION_OBLIGATOIRE_CREATION,
+    CANDIDAT_MSG_NO_CANDIDAT_ON_ACCOUNT,
+)
 from ..exception_handler import MESSAGE_ERROR_CODE_MAP
 from .scoped_viewset import ScopedModelViewSet
 from ..serializers.candidat_serializers import (
@@ -74,7 +84,7 @@ def _parse_candidate_ids(payload) -> list[int]:
     """Normalise une liste d'identifiants candidats issue d'un payload bulk."""
     ids = payload.get("candidate_ids") or payload.get("candidats") or []
     if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
-        raise ValidationError({"candidate_ids": ["Ce champ doit être une liste d'identifiants entiers."]})
+        raise ValidationError({"candidate_ids": [CANDIDAT_MSG_BULK_CANDIDATE_IDS]})
     return ids
 
 
@@ -229,6 +239,7 @@ class CandidatViewSet(ScopedModelViewSet):
     - actions métier majeures :
       - `meta`
       - `creer-compte`
+      - `retirer-compte`
       - `validate-inscription`
       - `set-admissible` / `clear-admissible`
       - `set-gespers` / `clear-gespers`
@@ -253,6 +264,8 @@ class CandidatViewSet(ScopedModelViewSet):
     pagination_class = RapAppPagination
     scope_mode = "centre"
     centre_lookup_paths = ("formation__centre_id",)
+    # Permet /candidats/me/ en plus des identifiants numériques.
+    lookup_value_regex = r"[0-9]+|me"
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CandidatFilter
@@ -297,6 +310,49 @@ class CandidatViewSet(ScopedModelViewSet):
     ]
     ordering = ["-date_inscription"]
 
+    def get_permissions(self):
+        """
+        Les candidats / stagiaires accèdent uniquement à leur fiche (GET/PUT/PATCH
+        sur le détail, ex. ``/candidats/me/``) ; le reste de l’API reste staff.
+        """
+        if self.action in ("retrieve", "update", "partial_update"):
+            user = self.request.user
+            if user and getattr(user, "is_authenticated", False) and is_candidate(user):
+                return [IsAuthenticated(), CanAccessCandidatObject()]
+        return [IsStaffOrAbove(), CanAccessCandidatObject()]
+
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        if str(lookup_value) == "me":
+            user = self.request.user
+            if not getattr(user, "is_authenticated", False):
+                raise PermissionDenied(CANDIDAT_MSG_AUTH_REQUIRED)
+            inst = getattr(user, "candidat_associe", None)
+            if inst is None:
+                raise NotFound(CANDIDAT_MSG_NO_CANDIDAT_ON_ACCOUNT)
+            self.check_object_permissions(self.request, inst)
+            return inst
+        return super().get_object()
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        ``GET /candidats/me/`` sans fiche liée : 200 + corps ``null`` (évite un 404 bruyant
+        côté navigateur). Les autres accès détail (PATCH, actions) passent par ``get_object()``
+        et continuent d’utiliser 404 / erreurs explicites.
+        """
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        if str(lookup_value) == "me":
+            user = request.user
+            if not getattr(user, "is_authenticated", False):
+                raise PermissionDenied(CANDIDAT_MSG_AUTH_REQUIRED)
+            if getattr(user, "candidat_associe", None) is None:
+                return Response(None)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def _qp_dict(self, request):
         qp = {}
         for k in request.query_params.keys():
@@ -336,7 +392,7 @@ class CandidatViewSet(ScopedModelViewSet):
         if is_centre_scoped_staff(user):
             allowed = set(user.centres.values_list("id", flat=True))
             if getattr(formation, "centre_id", None) not in allowed:
-                raise PermissionDenied("Formation hors de votre périmètre (centre).")
+                raise PermissionDenied(CANDIDAT_MSG_FORMATION_HORS_CENTRE)
 
     def get_base_queryset(self):
         """
@@ -442,6 +498,15 @@ class CandidatViewSet(ScopedModelViewSet):
         `avec_archivees=true` permet de les réinclure, et
         `archives_seules=true` de n'afficher que les archivés.
         """
+        user = getattr(self.request, "user", None)
+        if (
+            user
+            and getattr(user, "is_authenticated", False)
+            and is_candidate(user)
+            and self.action in ("retrieve", "update", "partial_update", "destroy")
+        ):
+            return self.get_base_queryset().filter(compte_utilisateur_id=user.id)
+
         qs = super().get_queryset()
 
         if self.action in {"retrieve", "update", "partial_update", "destroy"}:
@@ -473,7 +538,7 @@ class CandidatViewSet(ScopedModelViewSet):
         queryset = super().get_queryset()
         obj = queryset.filter(**{self.lookup_field: lookup_value}).first()
         if obj is None:
-            raise NotFound("Candidat introuvable.")
+            raise NotFound(CANDIDAT_MSG_CANDIDAT_NOT_FOUND)
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -537,7 +602,7 @@ class CandidatViewSet(ScopedModelViewSet):
 
         formation = data.get("formation")
         if not formation:
-            raise ValidationError({"formation": ["La formation est obligatoire."]})
+            raise ValidationError({"formation": [CANDIDAT_MSG_FORMATION_OBLIGATOIRE_CREATION]})
 
         self._assert_staff_can_use_formation(formation)
 
@@ -655,6 +720,42 @@ class CandidatViewSet(ScopedModelViewSet):
                 "user_role": user.role,
             },
             message="Compte candidat créé ou lié avec succès.",
+        )
+
+    @extend_schema(
+        summary="Retirer la liaison fiche / compte utilisateur",
+        description="Supprime uniquement le lien `candidat → utilisateur` ; le compte reste gérable ailleurs (utilisateurs).",
+        responses={
+            200: api_action_data_serializer(
+                "CandidatRetirerCompteResponse",
+                {
+                    "candidat_id": serializers.IntegerField(),
+                    "unlinked_user_id": serializers.IntegerField(allow_null=True),
+                },
+            ),
+            400: api_object_envelope_serializer("CandidatRetirerCompteErrorResponse"),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="retirer-compte")
+    def retirer_compte(self, request, pk=None):
+        """POST : retire le lien fiche / compte sans supprimer l'utilisateur."""
+        candidat = self.get_object()
+        try:
+            _cand, unlinked_id = CandidateAccountService.detach_compte_from_candidate(
+                candidat, actor=request.user
+            )
+        except (ValidationError, DjangoValidationError) as e:
+            message, errors = _extract_validation_payload(e)
+            return self.error_response(
+                message=message,
+                errors=errors,
+                error_code=_resolve_error_code(message),
+                status_code=400,
+            )
+
+        return self.success_response(
+            data={"candidat_id": candidat.id, "unlinked_user_id": unlinked_id},
+            message="Liaison fiche / compte retirée. Le compte utilisateur n'a pas été supprimé.",
         )
 
     @extend_schema(
@@ -1253,7 +1354,7 @@ class CandidatViewSet(ScopedModelViewSet):
         candidate_ids = _parse_candidate_ids(request.data)
         atelier_id = request.data.get("atelier_tre_id")
         if not isinstance(atelier_id, int):
-            raise ValidationError({"atelier_tre_id": ["Ce champ est obligatoire et doit être un entier."]})
+            raise ValidationError({"atelier_tre_id": [CANDIDAT_MSG_BULK_ATELIER_TRE_ID]})
 
         atelier_qs = atelier_tre.AtelierTRE.objects.select_related("centre")
         user = request.user
@@ -1262,7 +1363,7 @@ class CandidatViewSet(ScopedModelViewSet):
             atelier_qs = atelier_qs.filter(centre_id__in=centre_ids)
         atelier = atelier_qs.filter(id=atelier_id).first()
         if not atelier:
-            raise PermissionDenied("Atelier TRE hors de votre périmètre.")
+            raise PermissionDenied(CANDIDAT_MSG_ATELIER_TRE_HORS_PERIMETRE)
 
         qs = self.filter_queryset(self.get_queryset()).filter(id__in=candidate_ids)
         result = CandidateBulkService.bulk_assign_atelier_tre(qs, atelier=atelier)

@@ -176,6 +176,8 @@ export interface MeUpdatePayload {
   last_name?: string;
   phone?: string;
   bio?: string;
+  /** Acceptation de la politique de confidentialité (compte) — API /me/ */
+  consent_rgpd?: boolean;
   avatar?: File | null;
 
   // ----- Champs Candidat (profil enrichi) -----

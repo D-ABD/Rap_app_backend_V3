@@ -9,19 +9,29 @@ from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
+from .candidat_error_messages import CANDIDAT_MSG_RGPD_APP_REQUIS
+
 
 MESSAGE_ERROR_CODE_MAP = {
+    # Compte candidat (anciens libellés + messages détaillés)
     "Une demande de compte est déjà en attente.": "candidate_account_request_already_pending",
     "Aucune demande de compte en attente pour ce candidat.": "candidate_account_request_missing",
     "Un compte utilisateur est déjà lié à ce candidat.": "candidate_account_already_linked",
     "Ce candidat n'est pas admissible.": "candidate_not_admissible",
     "Le candidat doit être affecté à une formation.": "candidate_requires_formation",
+    "Une demande de compte est déjà en attente. Patientez jusqu'au traitement par l'équipe, ou annulez via un administrateur.": "candidate_account_request_already_pending",
+    "Aucune demande de compte n'est en attente sur cette fiche. Vérifiez le statut (déjà traitée, refusée ou jamais demandée).": "candidate_account_request_missing",
+    "Un compte utilisateur est déjà rattaché à ce candidat. Cette opération n'a pas d'effet (doublon évité).": "candidate_account_already_linked",
+    "Aucun compte utilisateur n'est lié à cette fiche : il n'y a pas de liaison à retirer.": "candidate_account_not_linked",
+    "Le candidat n'est pas en état « admissible ». Cette opération n'est possible qu'une fois l'admission validée côté recrutement.": "candidate_not_admissible",
+    "Le candidat doit être affecté à une formation. Indiquez d'abord une session sur la fiche, puis relancez l'opération (validation, entrée, fin de parcours, etc.).": "candidate_requires_formation",
     "Un appairage existe déjà pour ce candidat, ce partenaire et cette formation.": "duplicate_appairage",
     "Déjà archivé.": "already_archived",
     "Déjà actif.": "already_active",
     "Cet appairage n’est pas archivé.": "appairage_not_archived",
     "La prospection n’est pas archivée.": "prospection_not_archived",
     "La prospection est déjà archivée.": "prospection_already_archived",
+    CANDIDAT_MSG_RGPD_APP_REQUIS: "candidate_rgpd_consent_required",
 }
 
 

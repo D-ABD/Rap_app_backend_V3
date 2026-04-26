@@ -11,6 +11,9 @@ import { Box, CircularProgress, Typography, useTheme } from "@mui/material";
 import type { AppTheme } from "../theme";
 import logo from "../assets/logo.png"; // ✅ ton logo
 
+/** Évite 2x GET /me/ en parallèle (ex. React StrictMode) = 401/refresh inutile dans la console. */
+let sessionUserInflight: Promise<User | null> | null = null;
+
 // ✅ Fonction helper pour enrichir l'objet user
 function normalizeUser(userData: User): User {
   const role = userData.role?.toLowerCase() || "";
@@ -35,6 +38,28 @@ function normalizeUser(userData: User): User {
     is_staff: isStaff,
     is_superuser: isSuperuser,
   };
+}
+
+function loadSessionUserDeduped(): Promise<User | null> {
+  if (sessionUserInflight) {
+    return sessionUserInflight;
+  }
+  sessionUserInflight = (async () => {
+    try {
+      const { access } = getTokens();
+      if (!access) {
+        return null;
+      }
+      const userData = await getUserProfile();
+      return normalizeUser(userData);
+    } catch {
+      clearTokens();
+      return null;
+    } finally {
+      sessionUserInflight = null;
+    }
+  })();
+  return sessionUserInflight;
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -87,20 +112,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     registerLogoutCallback(() => logout(true, true));
 
     const restoreSession = async () => {
-      try {
-        const { access } = getTokens();
-        if (access) {
-          const userData = await getUserProfile();
-          setUser(normalizeUser(userData));
-        }
-      } catch {
-        clearTokens();
-      } finally {
-        setIsLoading(false);
+      const u = await loadSessionUserDeduped();
+      if (u) {
+        setUser(u);
       }
+      setIsLoading(false);
     };
 
-    restoreSession();
+    void restoreSession();
   }, [logout]); // ✅ ajouté proprement
 
   // ⏳ Splash screen pendant restauration session

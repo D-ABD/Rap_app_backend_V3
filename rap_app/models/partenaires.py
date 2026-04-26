@@ -2,6 +2,7 @@
 
 import logging
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -144,6 +145,29 @@ class Partenaire(BaseModel):
         blank=True,
         related_name="partenaires_default",
         verbose_name="Centre par défaut",
+    )
+
+    # Comptes (candidats, etc.) qui ont créé, réouvert (doublon) ou saisi cette fiche — visibilité multi-utilisateurs.
+    saisi_par = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="partenaires_saisi",
+        blank=True,
+        verbose_name=_("Fiche saisie par"),
+        help_text=_(
+            "Tout compte qui a enregistré ce partenaire (création ou réutilisation d’un doublon). "
+            "Permet à plusieurs candidats d’accéder à la même fiche sans se connaître."
+        ),
+    )
+
+    retrait_de_vue_par = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="partenaires_masques_pour_moi",
+        blank=True,
+        verbose_name=_("Retiré de la liste de"),
+        help_text=_(
+            "Comptes non créateurs qui ont retiré cette fiche de leur vue sans archivage global "
+            "(le partenaire reste actif et visible pour les autres)."
+        ),
     )
 
     type = models.CharField(
@@ -483,16 +507,21 @@ class Partenaire(BaseModel):
 
         existing = None
         if is_new and self.nom:
-            try:
-                existing = Partenaire.objects.get(nom__iexact=self.nom)
-            except Partenaire.DoesNotExist:
-                existing = None
+            # .first() : évite MultipleObjectsReturned si doublons de casse en base
+            existing = Partenaire.objects.filter(nom__iexact=self.nom).order_by("pk").first()
             if existing:
                 logger.info(f"Réutilisation du partenaire existant : {existing.nom} (ID: {existing.pk})")
                 self._was_reused = True
                 self.pk = existing.pk
                 self.slug = existing.slug
                 is_new = False
+                # Aligner l’état ORM : sinon Django peut croire que l’objet est « en création » (_state.adding)
+                # et appliquer un mauvais chemin save (500 / IntegrityError malgré force_update).
+                self._state.adding = False
+                # objects.create() appelle save(force_insert=True) : avec self.pk existant, un INSERT
+                # lève une IntegrityError. Ici c’est une mise à jour des champs (réutilisation métier).
+                kwargs.pop("force_insert", None)
+                kwargs["force_update"] = True
 
         if not self.slug:
             base_slug = slugify(self.nom)
@@ -516,7 +545,9 @@ class Partenaire(BaseModel):
             self._user = user
 
         self.full_clean()
-        super().save(*args, **kwargs)
+        # Faire suivre l’utilisateur vers BaseModel : get_current_user() (middleware) peut être
+        # encore Anonymous si l’auth JWT/DRF n’a pas encore tourné au moment du thread local.
+        super().save(*args, user=user, **kwargs)
 
         logger.info(f"{'Création' if is_new else 'Mise à jour'} du partenaire : {self.nom} (ID: {self.pk})")
 

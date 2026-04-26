@@ -34,6 +34,29 @@ def is_candidate(u) -> bool:
     return False
 
 
+def user_has_candidate_rgpd_access(u) -> bool:
+    """
+    Indique si un compte « parcours candidat / stagiaire » peut utiliser l'API
+    hors accueil consentement : oui si le consentement est enregistré sur le
+    compte (`consent_rgpd`) ou sur la fiche par l'administration
+    (`rgpd_consent_obtained`).
+    """
+    if not getattr(u, "is_authenticated", False):
+        return False
+    fn = getattr(u, "is_candidat_or_stagiaire", None)
+    if not callable(fn) or not fn():
+        return True
+    if getattr(u, "consent_rgpd", False):
+        return True
+    try:
+        cand = getattr(u, "candidat_associe", None)
+    except Exception:
+        cand = None
+    if cand is not None and getattr(cand, "rgpd_consent_obtained", False):
+        return True
+    return False
+
+
 def is_staff_read(u) -> bool:
     """
     Retourne True si l'utilisateur est authentifié et a pour rôle 'staff_read'.

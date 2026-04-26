@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -18,7 +19,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 
@@ -26,7 +27,7 @@ from ...api.permissions import (
     IsOwnerOrStaffOrAbove,
     UserVisibilityScopeMixin,
 )
-from ...api.roles import is_admin_like, is_centre_scoped_staff, is_staff_read
+from ...api.roles import is_admin_like, is_candidate, is_centre_scoped_staff, is_staff_read
 from ...models.logs import LogUtilisateur
 from ...models.partenaires import Partenaire
 from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
@@ -34,6 +35,38 @@ from ..serializers.partenaires_serializers import (
     PartenaireChoicesResponseSerializer,
     PartenaireSerializer,
 )
+
+# -------------------- helpers accès candidat (alignés sur ``get_queryset``) --------------------
+
+
+def _request_cible_reafficher_dans_ma_liste(request, view) -> bool:
+    """
+    DRF n’alimente parfois pas ``view.action`` assez tôt : on complète par le path.
+    """
+    if getattr(view, "action", None) == "reafficher_dans_ma_liste":
+        return True
+    path = (getattr(request, "path", "") or "").lower()
+    return "reafficher-dans-ma-liste" in path
+
+
+def _candidat_lie_pour_fiche_liste(user, partenaire: Partenaire) -> bool:
+    """
+    Même idée de rattachement que le filtre candidat (sans exclusion retrait) :
+    créateur, prospections, dernière maj, saisi_par.
+    Sert retrait de liste, réaffichage, et cohérence des permissions.
+    """
+    if not (user and getattr(user, "is_authenticated", False) and getattr(user, "pk", None)):
+        return False
+    if partenaire.created_by_id == user.id:
+        return True
+    if partenaire.updated_by_id == user.id:
+        return True
+    if partenaire.saisi_par.filter(id=user.id).exists():
+        return True
+    if partenaire.prospections.filter(owner_id=user.id).exists():
+        return True
+    return False
+
 
 # -------------------- permission locale --------------------
 
@@ -55,10 +88,20 @@ class PartenaireAccessPermission(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
-        # Ferme explicitement la création et les écritures globales aux profils
-        # non-staff et au rôle staff_read (y compris import Excel §2.15).
-        if getattr(view, "action", None) in ("create", "import_xlsx"):
+        action = getattr(view, "action", None)
+
+        # Import Excel : réservé au staff (même règle qu’avant, y compris §2.15).
+        if action == "import_xlsx":
             return is_admin_like(user) or (is_centre_scoped_staff(user) and not is_staff_read(user))
+
+        # Création : staff inchangé ; candidats / stagiaires alignés sur `perform_create`
+        # (centre issu de la formation via `user.centre`, obligatoire).
+        if action == "create":
+            if is_admin_like(user) or (is_centre_scoped_staff(user) and not is_staff_read(user)):
+                return True
+            if is_candidate(user) and getattr(user, "centre", None) is not None:
+                return True
+            return False
 
         return True
 
@@ -76,12 +119,30 @@ class PartenaireAccessPermission(BasePermission):
         if getattr(obj, "created_by_id", None) == user.id:
             return True
 
+        # Candidat / parcours : a « réouvert » une fiche existante (réutilisation doublon) → updated_by
+        # ou enregistrement explicite dans saisi_par (plusieurs candidats, même fiche)
+        if getattr(obj, "updated_by_id", None) == user.id:
+            return True
+        if hasattr(obj, "saisi_par") and obj.saisi_par.filter(id=user.id).exists():
+            return True
+
         # Accès en lecture seule si utilisateur propriétaire d'une prospection liée à ce partenaire
         if request.method in SAFE_METHODS and hasattr(obj, "prospections"):
             try:
                 return obj.prospections.filter(owner=user).exists()
             except Exception:
                 return False
+
+        # Retrait de liste (DELETE) / retour de liste (POST) : toute personne
+        # « liée » comme en liste (p. ex. seulement un propriétaire de prospection)
+        if not (is_admin_like(user) or is_centre_scoped_staff(user)) and _candidat_lie_pour_fiche_liste(
+            user, obj
+        ):
+            act = getattr(view, "action", None)
+            if (request.method == "DELETE" and act == "destroy") or (
+                request.method == "POST" and _request_cible_reafficher_dans_ma_liste(request, view)
+            ):
+                return True
 
         return False
 
@@ -244,6 +305,15 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         """
         Restreint un queryset de partenaires au périmètre des centres
         accessibles à l'utilisateur staff ou staff_read.
+
+        Règles (pas d’extension via ``saisi_par``) :
+        - appairage / prospection seulement si la **formation** liée a son centre
+          dans le périmètre du staff ;
+        - ``default_centre`` dans le périmètre ;
+        - partenaire créé par l’utilisateur staff.
+
+        Le partage multi-candidats (``saisi_par``) n’ouvre **pas** la fiche côté staff
+        hors de ces liens, pour ne pas outrepasser le scope centre.
         """
         centre_ids = self._staff_centre_ids(user)
 
@@ -255,7 +325,6 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         if not centre_ids:
             return qs.filter(created_by=user)
 
-        # Scoping principal
         scoped = qs.filter(
             Q(appairages__formation__centre_id__in=centre_ids)
             | Q(prospections__formation__centre_id__in=centre_ids)
@@ -263,8 +332,7 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
             | Q(created_by=user)
         ).distinct()
 
-        # 🔒 Exclut explicitement les partenaires sans centre,
-        # sauf s’ils ont été créés par le staff lui-même
+        # 🔒 Fiches sans default_centre : exclues si aucun lien de périmètre (voir docstring)
         return scoped.exclude(
             Q(default_centre_id__isnull=True)
             & ~Q(created_by=user)
@@ -292,6 +360,19 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         )
         return linked or (partenaire.created_by_id == user.id)
 
+    def _exclut_retrait_liste_perso(self, qs, user):
+        """
+        Retire les partenaires marqués « hors de ma liste » pour cet utilisateur.
+
+        On évite ``.exclude(retrait_de_vue_par=user)`` sur un queryset déjà annoté
+        (Count, OR sur saisi_par, etc.) : certaines bases lèvent une erreur SQL.
+        ``exclude(pk__in= sous-requête)`` est suffisant et stable.
+        """
+        if not getattr(user, "is_authenticated", False) or not getattr(user, "pk", None):
+            return qs
+        hidden_qs = user.partenaires_masques_pour_moi.values_list("pk", flat=True)
+        return qs.exclude(pk__in=hidden_qs)
+
     # -------------------- queryset --------------------
 
     def get_queryset(self):
@@ -309,6 +390,7 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         qs = (
             Partenaire.objects.all()
             .select_related("created_by", "default_centre")  # ✅ pas de N+1 sur centre
+            .prefetch_related("retrait_de_vue_par")  # ``retrait_dans_ma_liste`` au sérialiseur
             .annotate(
                 prospections_count=Count("prospections", distinct=True),
                 appairages_count=Count("appairages", distinct=True),
@@ -344,7 +426,22 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         if archives_seules:
             qs = qs.filter(is_active=False)
         elif not include_archived:
-            qs = qs.filter(is_active=True)
+            # Par défaut : fiches actives. Exception : fiches archivées globales visibles pour
+            # le créateur **ou** un compte en co-saisie (``saisi_par``) — accès détail / édition
+            # + désarchivage, aligné sur la liste « inclure archivés » et l’action ``desarchiver``.
+            if getattr(user, "is_authenticated", False) and getattr(user, "pk", None):
+                qs = (
+                    qs.filter(
+                        Q(is_active=True)
+                        | (
+                            Q(is_active=False)
+                            & (Q(created_by=user) | Q(saisi_par=user))
+                        )
+                    )
+                    .distinct()
+                )
+            else:
+                qs = qs.filter(is_active=True)
 
         # ✅ Admins : tout voir
         if self._is_admin_like(user):
@@ -354,19 +451,44 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         if is_centre_scoped_staff(user):
             return self._scoped_for_user(qs, user)
 
-        # ✅ Candidat·e : créés par lui/elle ou associés via prospections
-        return qs.filter(Q(created_by=user) | Q(prospections__owner=user)).distinct()
+        # ✅ Candidat·e : créés par lui/elle, prospections, last update, saisi_par
+        cand = (
+            qs.filter(
+                Q(created_by=user)
+                | Q(prospections__owner=user)
+                | Q(updated_by=user)
+                | Q(saisi_par=user)
+            )
+            .distinct()
+        )
+        # Retrait de liste perso : uniquement pour la **liste** (et options de filtres), pas pour
+        # retrieve/update/… — sinon un GET /partenaires/{id}/ sans ``?avec_archivees=1`` renvoie
+        # 404 alors que la même fiche apparaît avec « inclure archivés » (retrait ignoré en liste).
+        #
+        # Ne pas faire ``or "list"`` : si ``action`` est encore None (certaines actions custom
+        # ou le chaînage vers ``get_object``), on ne doit pas appliquer l’exclusion retrait,
+        # sinon ``POST …/reafficher-dans-ma-liste/`` ne trouve pas la fiche (404) pour l’utilisateur
+        # qui l’a justement retirée de sa liste.
+        action = getattr(self, "action", None)
+        retrait_pour_cette_action = action in ("list", "filter_options")
+        if not include_archived and retrait_pour_cette_action:
+            cand = self._exclut_retrait_liste_perso(cand, user)
+        return cand
 
     def get_archived_aware_object(self):
         """
-        Récupère un partenaire en incluant les archives tout en respectant le
-        scope utilisateur déjà appliqué sur la liste.
+        Récupère un partenaire (y compris archivé) pour ``desarchiver``.
+
+        Pas d’exclusion « retrait de liste perso » ici : un POST sans query string
+        doit rester résolvable comme le détail (sinon 404 alors que la ligne est
+        visible avec « inclure archivés »).
         """
         lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         user = self.request.user
         queryset = (
             Partenaire.objects.all()
             .select_related("created_by", "default_centre")
+            .prefetch_related("retrait_de_vue_par")
             .annotate(
                 prospections_count=Count("prospections", distinct=True),
                 appairages_count=Count("appairages", distinct=True),
@@ -391,7 +513,15 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         elif is_centre_scoped_staff(user):
             scoped_qs = self._scoped_for_user(queryset, user)
         else:
-            scoped_qs = queryset.filter(Q(created_by=user) | Q(prospections__owner=user)).distinct()
+            scoped_qs = (
+                queryset.filter(
+                    Q(created_by=user)
+                    | Q(prospections__owner=user)
+                    | Q(updated_by=user)
+                    | Q(saisi_par=user)
+                )
+                .distinct()
+            )
 
         return get_object_or_404(scoped_qs, **{self.lookup_field: lookup_value})
 
@@ -416,28 +546,32 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         filtre (villes, secteurs, auteurs, centres) pour les partenaires
         visibles de l'utilisateur.
         """
-        qs = self.filter_queryset(self.get_queryset())
+        scoped = self.filter_queryset(self.get_queryset())
+        # Ne pas enchaîner .values() / .distinct() sur le queryset scopé avec annotations
+        # et jointures (saisi_par, retrait, etc.) : erreurs SQL 500 sur certains moteurs.
+        # On repart des pk du périmètre puis un queryset « léger » sur Partenaire.
+        base = Partenaire.objects.filter(pk__in=scoped).select_related("created_by", "default_centre")
 
         villes = (
-            qs.exclude(city__isnull=True)
+            base.exclude(city__isnull=True)
             .exclude(city="")  # ✅ évite l’avertissement Pylance
             .values_list("city", flat=True)
             .distinct()
         )
         secteurs = (
-            qs.exclude(secteur_activite__isnull=True)
+            base.exclude(secteur_activite__isnull=True)
             .exclude(secteur_activite="")  # ✅ évite l’avertissement Pylance
             .values_list("secteur_activite", flat=True)
             .distinct()
         )
         users = (
-            qs.exclude(created_by__isnull=True)
+            base.exclude(created_by__isnull=True)
             .values("created_by")
             .distinct()
             .values("created_by", "created_by__first_name", "created_by__last_name")
         )
         # ✅ centres par défaut disponibles
-        centres = qs.filter(default_centre__isnull=False).values("default_centre_id", "default_centre__nom").distinct()
+        centres = base.filter(default_centre__isnull=False).values("default_centre_id", "default_centre__nom").distinct()
 
         return self.success_response(
             data={
@@ -525,7 +659,16 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
             raise PermissionDenied("❌ Le centre associé est obligatoire pour créer un partenaire.")
 
         # ✅ Création de l’objet
-        instance = serializer.save(created_by=user, default_centre=default_centre)
+        # full_clean() sur le modèle lève des DjangoValidationError (non 400 côté DRF si on ne les trappe pas ici)
+        try:
+            instance = serializer.save(created_by=user, default_centre=default_centre)
+        except DjangoValidationError as exc:
+            if getattr(exc, "message_dict", None):
+                raise DRFValidationError(detail=exc.message_dict) from exc
+            msgs = getattr(exc, "messages", None)
+            if msgs is not None:
+                raise DRFValidationError(detail=list(msgs)) from exc
+            raise DRFValidationError(detail=str(exc)) from exc
 
         LogUtilisateur.log_action(
             instance=instance,
@@ -544,9 +687,13 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         instance = self.get_object()
         user = request.user
 
-        # 🔒 Vérifications d’accès
+        # 🔒 Candidat : créateur, dernier auteur, ou toute saisie (doublon / co-saisie)
         if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
-            if instance.created_by_id != user.id:
+            if (
+                instance.created_by_id != user.id
+                and instance.updated_by_id != user.id
+                and not instance.saisi_par.filter(id=user.id).exists()
+            ):
                 raise PermissionDenied("Vous ne pouvez modifier que vos propres partenaires.")
 
         if is_centre_scoped_staff(user) and not self._is_admin_like(user):
@@ -572,7 +719,15 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
                 if not default_centre:
                     raise PermissionDenied("Impossible de modifier un partenaire sans centre associé.")
 
-        instance = serializer.save(default_centre=default_centre)
+        try:
+            instance = serializer.save(default_centre=default_centre)
+        except DjangoValidationError as exc:
+            if getattr(exc, "message_dict", None):
+                raise DRFValidationError(detail=exc.message_dict) from exc
+            msgs = getattr(exc, "messages", None)
+            if msgs is not None:
+                raise DRFValidationError(detail=list(msgs)) from exc
+            raise DRFValidationError(detail=str(exc)) from exc
 
         LogUtilisateur.log_action(
             instance=instance,
@@ -588,30 +743,77 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
 
     def destroy(self, request, *args, **kwargs):
         """
-        Effectue un archivage logique du partenaire (désactivation)
-        avec vérification des droits liés au rôle et au périmètre.
+        - Staff / superuser : archivage global (``is_active=False``) selon le périmètre.
+        - Créateur (non staff) : archivage global.
+        - Autre compte ayant saisi / réouvert le doublon (``saisi_par``) : retrait
+          **uniquement** de sa liste (``retrait_de_vue_par``) ; le partenaire reste
+          actif et visible pour les autres.
         """
         instance = self.get_object()  # respecte le scope
         user = request.user
 
-        if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
-            if instance.created_by_id != user.id:
-                raise PermissionDenied("Vous ne pouvez supprimer que vos propres partenaires.")
-
         if is_centre_scoped_staff(user) and not self._is_admin_like(user):
             if not self._user_can_access_partenaire(instance, user):
                 raise PermissionDenied("Partenaire hors de votre périmètre (centres).")
+            instance.is_active = False
+            instance.save()
+            LogUtilisateur.log_action(
+                instance=instance,
+                action=LogUtilisateur.ACTION_DELETE,
+                user=user,
+                details="Archivage logique d'un partenaire",
+            )
+            return Response(
+                {"success": True, "message": "Partenaire archivé avec succès.", "data": None},
+                status=status.HTTP_200_OK,
+            )
 
-        instance.is_active = False
-        instance.save()
+        if getattr(user, "is_superuser", False) or self._is_admin_like(user):
+            instance.is_active = False
+            instance.save()
+            LogUtilisateur.log_action(
+                instance=instance,
+                action=LogUtilisateur.ACTION_DELETE,
+                user=user,
+                details="Archivage logique d'un partenaire",
+            )
+            return Response(
+                {"success": True, "message": "Partenaire archivé avec succès.", "data": None},
+                status=status.HTTP_200_OK,
+            )
+
+        is_creator = instance.created_by_id == user.id
+        if not is_creator and not _candidat_lie_pour_fiche_liste(user, instance):
+            raise PermissionDenied("Vous ne pouvez pas retirer ce partenaire de votre liste.")
+
+        if is_creator:
+            instance.is_active = False
+            instance.save()
+            LogUtilisateur.log_action(
+                instance=instance,
+                action=LogUtilisateur.ACTION_DELETE,
+                user=user,
+                details="Archivage logique d'un partenaire",
+            )
+            return Response(
+                {"success": True, "message": "Partenaire archivé avec succès.", "data": None},
+                status=status.HTTP_200_OK,
+            )
+
+        # Co-saisie : retrait de liste perso seulement
+        instance.retrait_de_vue_par.add(user)
         LogUtilisateur.log_action(
             instance=instance,
             action=LogUtilisateur.ACTION_DELETE,
-            user=request.user,
-            details="Archivage logique d'un partenaire",
+            user=user,
+            details="Retrait de la liste personnelle (fiche partagée toujours active)",
         )
         return Response(
-            {"success": True, "message": "Partenaire archivé avec succès.", "data": None},
+            {
+                "success": True,
+                "message": "Cette fiche a été retirée de votre liste. Elle reste visible pour les autres comptes concernés.",
+                "data": None,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -625,8 +827,13 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         user = request.user
 
         if not is_centre_scoped_staff(user) and not getattr(user, "is_superuser", False):
-            if instance.created_by_id != user.id:
-                raise PermissionDenied("Vous ne pouvez restaurer que vos propres partenaires.")
+            is_creator = instance.created_by_id == user.id
+            in_saisi = instance.saisi_par.filter(id=user.id).exists()
+            if not is_creator and not in_saisi:
+                raise PermissionDenied(
+                    "Vous ne pouvez restaurer qu'une fiche que vous avez créée "
+                    "ou sur laquelle vous êtes en co-saisie."
+                )
 
         if is_centre_scoped_staff(user) and not self._is_admin_like(user):
             if not self._user_can_access_partenaire(instance, user):
@@ -649,6 +856,49 @@ class PartenaireViewSet(HardDeleteArchivedMixin, ApiResponseMixin, UserVisibilit
         return self.success_response(
             data=self.get_serializer(instance).data,
             message="Partenaire désarchivé avec succès.",
+        )
+
+    @extend_schema(
+        summary="Réafficher une fiche dans ma liste (annuler retrait perso)",
+        description="Réservé à un compte listé dans « saisi » (hors seul archivage global) : "
+        "retire l’utilisateur de `retrait_de_vue_par` (la fiche reste active pour les autres).",
+        tags=["Partenaires"],
+    )
+    @action(detail=True, methods=["post"], url_path="reafficher-dans-ma-liste")
+    def reafficher_dans_ma_liste(self, request, pk=None):
+        """
+        Après un DELETE « retrait de liste seul », l’enregistrement n’apparaît plus
+        au ``get_queryset`` classique : cet endpoint restaure l’affichage pour l’utilisateur.
+
+        Candidat·e : même rattachement que la liste (prospection, saisi, etc.), pas
+        seulement co-saisie. Staff / admin : périmètre via ``get_object``.
+        """
+        user = request.user
+        if not (user and getattr(user, "is_authenticated", False)):
+            raise PermissionDenied("Authentification requise.")
+        p = self.get_object()
+        if not p.is_active:
+            raise PermissionDenied("Partenaire archivé globalement : voir le désarchivage staff ou créateur.")
+        staffish = (
+            is_centre_scoped_staff(user) and not is_staff_read(user)
+        ) or self._is_admin_like(user) or getattr(user, "is_superuser", False)
+        if not staffish and not _candidat_lie_pour_fiche_liste(user, p):
+            raise PermissionDenied("Accès refusé.")
+        if not p.retrait_de_vue_par.filter(id=user.id).exists():
+            return self.success_response(
+                data=self.get_serializer(p).data,
+                message="Cette fiche est déjà dans votre liste.",
+            )
+        p.retrait_de_vue_par.remove(user)
+        LogUtilisateur.log_action(
+            instance=p,
+            action=LogUtilisateur.ACTION_UPDATE,
+            user=user,
+            details="Réaffichage dans la liste personnelle (annulation retrait de vue)",
+        )
+        return self.success_response(
+            data=self.get_serializer(p).data,
+            message="Fiche de nouveau affichée dans votre liste.",
         )
 
     # -------------------- détail enrichi --------------------

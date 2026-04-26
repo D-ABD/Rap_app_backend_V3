@@ -352,6 +352,8 @@ type CandidateAccountActionResponse = {
     user_id?: number;
     user_email?: string;
     user_role?: string;
+    candidat_id?: number;
+    unlinked_user_id?: number | null;
   } | null;
 };
 
@@ -463,10 +465,15 @@ export function useCandidateBulkActions() {
   };
 }
 
-type CandidateAccountActionKey = "create_account" | "approve_account_request" | "reject_account_request";
+type CandidateAccountActionKey =
+  | "create_account"
+  | "detach_account"
+  | "approve_account_request"
+  | "reject_account_request";
 
 const ACCOUNT_ACTION_PATHS: Record<CandidateAccountActionKey, string> = {
   create_account: "creer-compte",
+  detach_account: "retirer-compte",
   approve_account_request: "valider-demande-compte",
   reject_account_request: "refuser-demande-compte",
 };
@@ -490,6 +497,7 @@ export function useCandidateAccountActions() {
   return {
     loading,
     createAccount: (candidateId: number) => runAction(candidateId, "create_account"),
+    detachAccount: (candidateId: number) => runAction(candidateId, "detach_account"),
     approveAccountRequest: (candidateId: number) => runAction(candidateId, "approve_account_request"),
     rejectAccountRequest: (candidateId: number) => runAction(candidateId, "reject_account_request"),
   };
