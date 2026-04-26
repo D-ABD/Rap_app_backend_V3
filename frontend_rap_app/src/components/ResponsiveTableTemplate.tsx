@@ -247,6 +247,8 @@ export default function ResponsiveTableTemplate<T>({
     },
   };
 
+  const actionsColWidth = theme.spacing(tableTokens.actionsColumn.maxWidth);
+
   const actionCellSx: SxProps<Theme> = {
     position: "sticky",
     right: 0,
@@ -255,11 +257,13 @@ export default function ResponsiveTableTemplate<T>({
     borderBottom: tableCellBorder,
     px: cellPaddingX,
     py: cellPaddingY,
+    boxSizing: "border-box",
     minWidth: theme.spacing(tableTokens.actionsColumn.minWidth),
-    maxWidth: theme.spacing(tableTokens.actionsColumn.maxWidth),
-    width: 1,
+    maxWidth: actionsColWidth,
+    width: actionsColWidth,
     minHeight: rowMinHeight,
-    verticalAlign: "top",
+    verticalAlign: "middle",
+    whiteSpace: "nowrap",
     boxShadow: stickyColumnShadow,
   };
 
@@ -273,10 +277,12 @@ export default function ResponsiveTableTemplate<T>({
     zIndex: theme.zIndex.appBar + 3,
     px: headerPaddingX,
     py: headerPaddingY,
+    boxSizing: "border-box",
     minWidth: theme.spacing(tableTokens.actionsColumn.minWidth),
-    maxWidth: theme.spacing(tableTokens.actionsColumn.maxWidth),
-    width: 1,
+    maxWidth: actionsColWidth,
+    width: actionsColWidth,
     whiteSpace: "nowrap",
+    verticalAlign: "middle",
     boxShadow: stickyColumnShadow,
   };
 

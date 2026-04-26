@@ -277,6 +277,7 @@ export default function CommentairesTable({
       onRowClick={handleRowNavigate}
       isRowSelected={(c) => selectedIds.includes(c.id)}
       cardTitle={(c) => c.formation_label || c.formation_nom || `Commentaire #${c.id}`}
+      actionsAlign="right"
       actions={(c) => {
         const isArchived = c.statut_commentaire === "archive" || c.is_archived;
         return (
