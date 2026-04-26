@@ -9,6 +9,7 @@ import logging
 import sys
 
 from django.apps import apps
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -30,27 +31,42 @@ def skip_during_migrations() -> bool:
     return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
+def _safe_related(instance, field_name: str):
+    """Retourne une relation encore accessible, sinon None."""
+    if not getattr(instance, f"{field_name}_id", None):
+        return None
+    try:
+        return getattr(instance, field_name)
+    except ObjectDoesNotExist:
+        logger.debug("Relation %s introuvable pour %s #%s", field_name, instance.__class__.__name__, instance.pk)
+        return None
+
+
 def get_user_from_instance(instance):
     """
     Retourne l'utilisateur associé à l'instance.
     """
-    return getattr(instance, "updated_by", None) or getattr(instance, "created_by", None) or get_current_user()
+    return _safe_related(instance, "updated_by") or _safe_related(instance, "created_by") or get_current_user()
 
 
-def maj_nombre_evenements(formation: Formation, operation: str, user=None):
+def maj_nombre_evenements(formation_id: int | None, operation: str, user=None):
     """
     Met à jour `Formation.nombre_evenements` et crée l'entrée d'historique liée.
     """
+    if not formation_id:
+        return
+
     try:
         with transaction.atomic():
-            nouveau_total = Evenement.objects.filter(formation=formation).count()
-            ancien_total = Formation.objects.only("nombre_evenements").get(pk=formation.pk).nombre_evenements or 0
+            formation = Formation._base_manager.only("pk", "nombre_evenements").get(pk=formation_id)
+            nouveau_total = Evenement.objects.filter(formation_id=formation_id).count()
+            ancien_total = formation.nombre_evenements or 0
 
             if ancien_total != nouveau_total:
-                Formation.objects.filter(pk=formation.pk).update(nombre_evenements=nouveau_total, updated_at=now())
+                Formation._base_manager.filter(pk=formation_id).update(nombre_evenements=nouveau_total, updated_at=now())
 
                 logger.info(
-                    f"MAJ nombre_evenements pour Formation #{formation.pk} : {ancien_total} → {nouveau_total} ({operation})"
+                    f"MAJ nombre_evenements pour Formation #{formation_id} : {ancien_total} → {nouveau_total} ({operation})"
                 )
 
                 HistoriqueFormation.objects.create(
@@ -62,11 +78,13 @@ def maj_nombre_evenements(formation: Formation, operation: str, user=None):
                     created_by=user,
                 )
             else:
-                logger.debug(f"Aucun changement de nombre_evenements sur Formation #{formation.pk} ({nouveau_total})")
+                logger.debug(f"Aucun changement de nombre_evenements sur Formation #{formation_id} ({nouveau_total})")
 
+    except Formation.DoesNotExist:
+        logger.debug("Formation #%s introuvable pendant la MAJ du nombre_evenements", formation_id)
     except Exception as e:
         logger.error(
-            f"Erreur lors de la MAJ du nombre_evenements pour Formation #{formation.pk} : {str(e)}", exc_info=True
+            f"Erreur lors de la MAJ du nombre_evenements pour Formation #{formation_id} : {str(e)}", exc_info=True
         )
 
 
@@ -84,7 +102,7 @@ def evenement_post_save(sender, instance, created, **kwargs):
 
     operation = "créé" if created else "modifié"
     user = get_user_from_instance(instance)
-    maj_nombre_evenements(instance.formation, operation, user=user)
+    maj_nombre_evenements(instance.formation_id, operation, user=user)
 
 
 @receiver(post_delete, sender=Evenement, dispatch_uid="rap_app.evenements_signals.evenement_post_delete")
@@ -100,4 +118,4 @@ def evenement_post_delete(sender, instance, **kwargs):
         return
 
     user = get_user_from_instance(instance)
-    maj_nombre_evenements(instance.formation, "supprimé", user=user)
+    maj_nombre_evenements(instance.formation_id, "supprimé", user=user)
