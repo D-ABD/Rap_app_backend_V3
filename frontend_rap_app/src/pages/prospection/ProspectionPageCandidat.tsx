@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import {
+  Alert,
   Box,
   Stack,
   Button,
@@ -86,7 +87,11 @@ export default function ProspectionPageCandidat() {
     }).length;
   }, [effectiveFilters]);
 
-  const { filtres, loading: filtresLoading } = useFiltresProspections();
+  const {
+    filtres,
+    loading: filtresLoading,
+    error: filtresError,
+  } = useFiltresProspections();
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -319,9 +324,15 @@ export default function ProspectionPageCandidat() {
             }}
           />
         ) : (
-          <Typography color="error">
-            ⚠️ Impossible de charger les filtres
-          </Typography>
+          <Alert severity="error" variant="outlined">
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              Impossible de charger les filtres de prospection.
+            </Typography>
+            <Typography variant="body2">
+              {filtresError?.message ||
+                "Les filtres ne sont pas disponibles pour le moment."}
+            </Typography>
+          </Alert>
         ))
       }
       footer={
@@ -350,16 +361,15 @@ export default function ProspectionPageCandidat() {
           <CircularProgress />
         </Stack>
       ) : error ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
-          <Typography color="error" component="p" sx={{ m: 0 }}>
-            Erreur lors du chargement des prospections.
+        <Alert severity="error" variant="outlined">
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Impossible de charger les prospections.
           </Typography>
-          {error.message ? (
-            <Typography color="error" variant="body2" sx={{ mt: 0.5 }}>
-              {error.message}
-            </Typography>
-          ) : null}
-        </Box>
+          <Typography variant="body2">
+            {error.message ||
+              "Le chargement de la liste a échoué. Réessayez dans un instant."}
+          </Typography>
+        </Alert>
       ) : !hasResults ? (
         <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
           <Box sx={{ fontSize: 48, mb: 1 }}>📭</Box>

@@ -1,5 +1,6 @@
 // src/pages/users/MonProfil.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import {
   TextField,
   Button,
@@ -440,22 +441,14 @@ export default function MonProfil() {
       setUserErrors({});
       setCandidateErrors({});
 
-      /* Sans fiche candidat, l’identité n’est pas dans candidateForm (vide) : on prend formData alimenté par /me/. */
-      const userJsonBase: MeUpdatePayload = candidateExists
-        ? {
-            email: candidateForm.email,
-            first_name: candidateForm.prenom,
-            last_name: candidateForm.nom,
-            phone: candidateForm.telephone,
-            bio: formData.bio || "",
-          }
-        : {
-            email: formData.email ?? user?.email ?? "",
-            first_name: formData.first_name ?? user?.first_name ?? "",
-            last_name: formData.last_name ?? user?.last_name ?? "",
-            phone: formData.phone ?? user?.phone ?? "",
-            bio: formData.bio || "",
-          };
+      /* Les champs compte doivent toujours venir de /me/, jamais de la fiche candidat. */
+      const userJsonBase: MeUpdatePayload = {
+        email: formData.email ?? user?.email ?? "",
+        first_name: formData.first_name ?? user?.first_name ?? "",
+        last_name: formData.last_name ?? user?.last_name ?? "",
+        phone: formData.phone ?? user?.phone ?? "",
+        bio: formData.bio || "",
+      };
       if (acceptPolitiqueConfidentialite && user && !user.consent_rgpd) {
         userJsonBase.consent_rgpd = true;
       }
@@ -549,7 +542,16 @@ export default function MonProfil() {
         headers: avatarFile ? { "Content-Type": "multipart/form-data" } : {},
       });
       if (candidateExists) {
-        await api.patch("/candidats/me/", candidatePayload);
+        try {
+          await api.patch("/candidats/me/", candidatePayload);
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response?.status === 404) {
+            setCandidateExists(false);
+            setCandidateError("Aucune fiche candidat liée à ce compte n'a été trouvée.");
+          } else {
+            throw err;
+          }
+        }
       }
 
       await refetchUser();

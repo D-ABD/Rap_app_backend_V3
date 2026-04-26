@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import api from "../api/axios";
 import { toDisplayError } from "../api/errorMessage";
+import { toApiError } from "../api/httpClient";
 import type {
   Prospection,
   ProspectionFiltresValues,
@@ -141,6 +142,52 @@ function logAxiosError(ns: string, err: unknown) {
   }
 }
 
+function buildProspectionLoadError(
+  err: unknown,
+  target: "list" | "filters"
+): Error {
+  const apiError = toApiError(err);
+  const technicalMessage =
+    !apiError.message ||
+    apiError.message === "Erreur inconnue" ||
+    apiError.message === "Network Error" ||
+    /^Request failed with status code \d+$/.test(apiError.message);
+
+  if (!technicalMessage) {
+    return new Error(apiError.message);
+  }
+
+  if (apiError.code === "ERR_NETWORK") {
+    return new Error(
+      "Le serveur ne répond pas pour le moment. Vérifiez votre connexion puis réessayez."
+    );
+  }
+
+  if (apiError.status === 401) {
+    return new Error(
+      "Votre session a expiré. Reconnectez-vous pour accéder aux prospections."
+    );
+  }
+
+  if (apiError.status === 403) {
+    return new Error(
+      target === "filters"
+        ? "Vous n'avez pas l'autorisation nécessaire pour afficher les filtres de prospection."
+        : "Vous n'avez pas l'autorisation nécessaire pour afficher ces prospections."
+    );
+  }
+
+  if (apiError.status === 404) {
+    return new Error(
+      target === "filters"
+        ? "Le service des filtres de prospection est introuvable."
+        : "Le service des prospections est introuvable."
+    );
+  }
+
+  return toDisplayError(err);
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    Normalisation des filtres: convertit number[] -> "1,2,3" pour certains champs
    (le back accepte un id simple OU une CSV)
@@ -205,7 +252,7 @@ export function useProspections(params: ProspectionFiltresValues = {}, reloadKey
       })
       .catch((err) => {
         logAxiosError("useProspections", err);
-        setError(toDisplayError(err));
+        setError(buildProspectionLoadError(err, "list"));
         setPageData(null);
       })
       .finally(() => {
@@ -505,7 +552,7 @@ export default function useFiltresProspections() {
         }
       } catch (err) {
         logAxiosError("useFiltresProspections", err);
-        setError(toDisplayError(err));
+        setError(buildProspectionLoadError(err, "filters"));
         setFiltres(null);
       } finally {
         setLoading(false);

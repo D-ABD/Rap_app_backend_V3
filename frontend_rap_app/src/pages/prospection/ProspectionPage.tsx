@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
+  Alert,
   Box,
   Stack,
   Button,
@@ -199,7 +200,11 @@ export default function ProspectionPage() {
     }).length;
   }, [effectiveFilters]);
 
-  const { filtres, loading: filtresLoading } = useFiltresProspections();
+  const {
+    filtres,
+    loading: filtresLoading,
+    error: filtresError,
+  } = useFiltresProspections();
 
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -567,7 +572,15 @@ export default function ProspectionPage() {
             }}
           />
         ) : (
-          <Typography color="error">⚠️ Impossible de charger les filtres</Typography>
+          <Alert severity="error" variant="outlined">
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              Impossible de charger les filtres de prospection.
+            </Typography>
+            <Typography variant="body2">
+              {filtresError?.message ||
+                "Les filtres ne sont pas disponibles pour le moment."}
+            </Typography>
+          </Alert>
         ))
       }
       footer={
@@ -594,16 +607,15 @@ export default function ProspectionPage() {
       {loading ? (
         <CircularProgress />
       ) : error ? (
-        <Box>
-          <Typography color="error" component="p" sx={{ m: 0 }}>
-            Erreur lors du chargement des prospections.
+        <Alert severity="error" variant="outlined">
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Impossible de charger les prospections.
           </Typography>
-          {error.message ? (
-            <Typography color="error" variant="body2" sx={{ mt: 0.5 }}>
-              {error.message}
-            </Typography>
-          ) : null}
-        </Box>
+          <Typography variant="body2">
+            {error.message ||
+              "Le chargement de la liste a échoué. Réessayez dans un instant."}
+          </Typography>
+        </Alert>
       ) : prospections.length === 0 ? (
         <Box textAlign="center" color="text.secondary" my={4}>
           <Box fontSize={48} mb={1}>
