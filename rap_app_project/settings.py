@@ -70,14 +70,13 @@ ALLOWED_HOSTS = csv("ALLOWED_HOSTS", default="localhost,127.0.0.1")
 
 
 INSTALLED_APPS = [
-    "jazzmin",
+#   "jazzmin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rap_app",
 
     "rest_framework",

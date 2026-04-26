@@ -21,7 +21,7 @@ python3 manage.py migrate
 python3 manage.py runserver 0.0.0.0:8000
 
 
-
+ 
 
 python3 manage.py check     
 python3 manage.py makemigrations 
@@ -140,7 +140,11 @@ Si tu te rends compte 1 heure plus tard que tu as cassé quelque chose, tu pourr
 # Configuration initiale 
 git init
 git add .
-git commit -m "add rapapp setup script"
+git commit -m "add ..."
+git push -u origin main
+
+git add .
+git commit -m "add module plan d'action formation"
 git push -u origin main
 
 

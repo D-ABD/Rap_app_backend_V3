@@ -8,6 +8,7 @@ import logging
 import sys
 
 from django.apps import apps
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
@@ -25,9 +26,20 @@ def skip_during_migrations() -> bool:
     return not apps.ready or "migrate" in sys.argv or "makemigrations" in sys.argv
 
 
+def _safe_related_user(instance, field_name: str):
+    """Retourne un FK utilisateur si la relation existe encore, sinon None."""
+    if not getattr(instance, f"{field_name}_id", None):
+        return None
+    try:
+        return getattr(instance, field_name)
+    except ObjectDoesNotExist:
+        logger.debug("Relation %s introuvable pour %s #%s", field_name, instance.__class__.__name__, instance.pk)
+        return None
+
+
 def get_user_from_instance(instance):
     """Retourne l'utilisateur associé à l'instance ou au contexte courant."""
-    return getattr(instance, "updated_by", None) or getattr(instance, "created_by", None) or get_current_user()
+    return _safe_related_user(instance, "updated_by") or _safe_related_user(instance, "created_by") or get_current_user()
 
 
 def maj_nombre_candidats(formation_id: int | None, operation: str, user=None):

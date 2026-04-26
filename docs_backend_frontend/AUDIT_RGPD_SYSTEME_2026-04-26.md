@@ -4,376 +4,606 @@ Date: 2026-04-26
 
 Statut: audit technique du code et de la configuration visible dans ce depot. Ce document n'est pas un avis juridique.
 
-## 1. Perimetre examine
+## Resume
 
-- Backend Django / DRF
-- Frontend React
-- Configuration de securite applicative
-- Gestion des comptes, candidats, documents, logs et exports
-- Politique de confidentialite affichee dans l'application
+Le systeme a deja plusieurs briques utiles:
 
-## 2. Resume executif
-
-Le systeme a deja un socle RGPD reel:
-
-- champs RGPD dedies sur `Candidat` (`base legale`, `source de creation`, `statut de notification`, `consentement`, horodatages, auteur) ;
-- garde-fou d'acces pour les comptes candidats tant que le consentement n'est pas renseigne ;
+- champs RGPD sur `Candidat` ;
+- blocage partiel des comptes candidats sans consentement ;
 - scoping par centre sur plusieurs modules ;
-- archivage logique sur une grande partie des ressources ;
-- configuration HTTPS / cookies securises / CORS / JWT cote API.
+- archivage logique sur une partie du metier ;
+- base de configuration HTTPS correcte.
 
-En revanche, j'ai releve plusieurs ecarts importants entre l'intention RGPD et la mise en oeuvre:
+En revanche, les principaux risques RGPD techniques se regroupent mieux en 5 lots distincts. Le but de ce document est de separer ces chantiers pour qu'ils puissent etre traites l'un apres l'autre sans melanger les sujets.
 
-1. les fichiers media semblent exposables directement sans controle d'authentification ;
-2. la suppression "RGPD" d'un compte n'efface pas l'ensemble des donnees personnelles rattachees ;
-3. les logs et certains exports peuvent contenir des donnees personnelles sensibles en clair ;
-4. les tokens JWT sont stockes dans le `localStorage` ;
-5. la politique de confidentialite publiee ne decrit pas fidelement les donnees reellement traitees.
+## Lot RGPD 0 — Audit des flux de donnees
 
-## 3. Forces deja en place
+Objectif : cartographier ou circule la donnee personnelle et ou elle est dupliquee.
 
-### 3.1 Traceabilite RGPD sur les candidats
+### Constat
 
-Le modele `Candidat` contient un vrai debut de modele de conformite:
+Le risque RGPD ne vient pas seulement du stockage principal. Dans RAP_APP, une meme donnee peut circuler entre plusieurs couches:
 
-- `rgpd_creation_source`
-- `rgpd_legal_basis`
-- `rgpd_consent_obtained`
-- `rgpd_consent_obtained_at`
-- `rgpd_consent_recorded_by`
-- `rgpd_notice_status`
-- `rgpd_notice_sent_at`
-- `rgpd_notice_sent_by`
-- `rgpd_data_reviewed_at`
-- `rgpd_data_reviewed_by`
+- base metier ;
+- API JSON ;
+- frontend ;
+- exports Excel/CSV/PDF ;
+- logs ;
+- documents ;
+- traces d'import ;
+- sauvegardes.
 
-Sources:
+Sans cartographie prealable, les lots suivants risquent de corriger un point visible tout en laissant une fuite sur un autre canal.
 
-- `rap_app/models/candidat.py`
-- `rap_app/api/serializers/candidat_serializers.py`
+### Risque
 
-### 3.2 Blocage applicatif pour les comptes candidats sans consentement
+- corriger `/media/` sans corriger l'API ;
+- corriger les logs sans corriger les exports ;
+- corriger la suppression live sans traiter les backups ;
+- oublier les duplications frontend et fichiers intermediaires.
 
-Le backend et le frontend cooperent pour bloquer certaines actions tant que le consentement n'est pas enregistre.
+### Perimetre a cartographier
 
-Sources:
+- quelles donnees personnelles existent ;
+- dans quelles tables elles vivent ;
+- quels endpoints les exposent ;
+- quels serializers et `to_serializable_dict()` les republient ;
+- quels exports les dupliquent ;
+- quels logs les recopient ;
+- quelles sauvegardes les conservent.
 
-- `rap_app/api/permissions.py`
-- `rap_app/api/roles.py`
-- `rap_app/api/exception_handler.py`
-- `frontend_rap_app/src/components/RgpdGateBridge.tsx`
+### Resultat attendu
 
-### 3.3 Scoping par centre
+- une cartographie claire des flux de donnees ;
+- une liste des points de duplication ;
+- une base solide pour prioriser les autres lots sans angle mort.
 
-Le scoping par centre est une bonne mesure de minimisation d'acces pour les profils internes non admin.
+### Taches
 
-Sources:
+- recenser les categories de donnees personnelles par module ;
+- lister les tables et champs sensibles ;
+- lister les endpoints qui exposent ces donnees ;
+- lister les serializers et `to_serializable_dict()` qui les republient ;
+- lister les exports, logs, traces d'import et supports de sauvegarde.
 
-- `rap_app/api/viewsets/scoped_viewset.py`
-- `rap_app/api/roles.py`
-- `rap_app/api/viewsets/documents_viewsets.py`
-- `rap_app/api/viewsets/candidat_viewsets.py`
+### Livrables
 
-### 3.4 Durcissement HTTP et serveur
+- matrice `donnee -> table -> endpoint -> serializer -> export -> log -> backup` ;
+- liste des points de duplication a risque ;
+- perimetre cible des lots 1 a 5 valide.
 
-Des protections utiles sont presentes:
+### Criteres d'acceptation
 
-- `SECURE_SSL_REDIRECT`
-- `SESSION_COOKIE_SECURE`
-- `CSRF_COOKIE_SECURE`
-- `X_FRAME_OPTIONS`
-- proxy HTTPS
+- chaque donnee sensible a au moins un chemin de circulation documente ;
+- chaque duplication importante est identifiee ;
+- aucun lot suivant ne part sur un perimetre flou.
 
-Sources:
+## Lot RGPD 1 — Securisation documents/media
 
-- `rap_app_project/settings.py`
-- `deploy/nginx_rap_app.conf`
+Objectif : empecher tout acces direct non authentifie aux documents.
 
-## 4. Constat detaille et priorites
+### Constat
 
-## 4.1 Critique / tres prioritaire
+- les documents exposes par l'API ont un `download_url` base sur l'URL media ;
+- nginx sert `/media/` directement par `alias` ;
+- le endpoint API `documents/<id>/download/` existe bien, mais il peut etre contourne si l'URL brute du fichier est connue.
 
-### A. Les documents media peuvent contourner les controles d'acces
+### Risque
 
-Constat:
+- acces direct a des documents potentiellement nominatifs sans controle d'authentification ;
+- absence de verification de role et de scope centre au moment du telechargement direct ;
+- absence de trace applicative fiable sur ces acces directs.
 
-- le serializer expose `download_url` qui pointe sur `/media/...` ;
-- nginx sert `/media/` par `alias` directement ;
-- cela contourne potentiellement le controle metier du endpoint API `documents/<id>/download/`.
-
-Impact RGPD:
-
-- acces direct a des documents potentiellement nominatifs ou contractuels par simple URL ;
-- risque de fuite de pieces jointes sans journalisation applicative ni verification de role.
-
-Sources:
+### Sources concernees
 
 - `rap_app/api/serializers/documents_serializers.py`
 - `rap_app/models/documents.py`
-- `deploy/nginx_rap_app.conf`
 - `rap_app/api/viewsets/documents_viewsets.py`
+- `deploy/nginx_rap_app.conf`
+- `rap_app_project/settings.py`
 
-Recommendation:
+### Recommandation
 
-- ne plus exposer de lien direct `/media/...` pour les documents sensibles ;
-- servir les fichiers uniquement via un endpoint authentifie et scope ;
-- si besoin de performance, utiliser `X-Accel-Redirect` ou un stockage prive ;
-- auditer aussi les autres usages de `MEDIA_URL`.
+- ne plus exposer publiquement les fichiers sensibles via `/media/` ;
+- forcer le passage par un endpoint applicatif authentifie ;
+- si besoin, utiliser un mecanisme de type `X-Accel-Redirect` ou stockage prive ;
+- revoir tous les usages de `download_url` pour eviter qu'un lien direct soit diffuse au front.
 
-### B. La suppression "RGPD" du compte n'efface pas l'ensemble des donnees personnelles
+### Resultat attendu
 
-Constat:
+- un utilisateur non connecte ne peut jamais recuperer un document ;
+- un utilisateur connecte hors perimetre ne peut pas contourner le scope ;
+- tous les telechargements passent par une couche de controle metier.
 
-- `delete-account` desactive et anonymise `CustomUser` ;
-- mais je n'ai pas trouve de purge associee de la fiche `Candidat`, des documents, des commentaires, des logs, ni des relations metier ;
-- le message de l'endpoint annonce pourtant une suppression definitive de toutes les donnees personnelles.
+### Taches
 
-Impact RGPD:
+- identifier tous les usages de `download_url` et des URLs media exposees au front ;
+- verifier le comportement nginx actuel sur `/media/` ;
+- definir la strategie cible de telechargement protege ;
+- verifier les impacts sur les documents existants et sur le front.
 
-- ecart entre promesse utilisateur et traitement reel ;
-- risque de non-conformite sur le droit a l'effacement ;
-- maintien de donnees identifiantes dans d'autres tables.
+### Livrables
 
-Sources:
+- decision technique de protection des medias ;
+- liste des points de code et de config a modifier ;
+- scenarii de test d'acces anonyme, authentifie hors scope, authentifie dans scope.
 
-- `rap_app/api/viewsets/user_viewsets.py`
-- `rap_app/models/custom_user.py`
-- `rap_app/models/candidat.py`
+### Criteres d'acceptation
 
-Recommendation:
+- aucun document sensible n'est recuperable sans authentification ;
+- aucun document sensible n'est recuperable hors scope ;
+- tous les acces documentes passent par un controle metier explicite.
 
-- definir une vraie strategie d'effacement par categorie de donnees :
-  - suppression,
-  - anonymisation irreversible,
-  - conservation obligatoire justifiee,
-  - archivage restreint ;
-- remplacer le message actuel par une formulation exacte tant que la purge transverse n'existe pas ;
-- creer un service central de suppression RGPD qui traite toutes les relations.
+## Lot RGPD 1 bis — Audit des scopes API
 
-### C. Les logs peuvent contenir des donnees personnelles sensibles en clair
+Objectif : verifier que tous les ViewSets respectent centre, role et perimetre utilisateur.
 
-Constat:
+### Constat
 
-- `_log_changes()` sur `Candidat` journalise les anciennes et nouvelles valeurs champ par champ ;
-- cela inclut potentiellement `nir`, email, telephone, adresse, RQTH, infos France Travail, representant legal ;
-- la sanitation actuelle masque certains secrets techniques (`password`, `token`, etc.) mais pas les donnees personnelles metier ;
-- les logs sont exportables en CSV/XLSX/PDF.
+Le risque de fuite ne passe pas seulement par les fichiers ou `/media/`. Il passe aussi par les endpoints JSON eux-memes.
 
-Impact RGPD:
+Exemples de risque typique:
 
-- sur-collecte et sur-conservation de donnees personnelles dans les journaux ;
-- risque de diffusion secondaire via exports de logs ;
-- augmentation forte de la surface de fuite.
+- serializers trop riches ;
+- `to_serializable_dict()` qui republie des champs sensibles ;
+- queryset mal scope ;
+- action custom qui contourne `get_queryset()` ;
+- endpoint detail qui re-expose une ressource hors centre ou hors proprietaire.
 
-Sources:
+Meme avec des medias prives, une fuite reste possible si l'API retourne encore:
+
+- auteur ;
+- contenu ;
+- formation ;
+- identite ;
+- metadonnees nominatives ;
+- relations utilisateur.
+
+### Risque
+
+- fuite de donnees via API JSON sans aucun telechargement de fichier ;
+- exposition transversale entre centres ;
+- exposition d'objets lies via actions custom, endpoints detail ou exports adosses a des querysets imparfaits.
+
+### Sources concernees
+
+- tous les `ViewSet` DRF ;
+- tous les serializers sensibles ;
+- tous les `to_serializable_dict()` ;
+- toutes les actions custom `@action` ;
+- tous les mixins de scope et permissions.
+
+### Recommandation
+
+- auditer systematiquement chaque module sur 3 axes:
+  - role ;
+  - centre ;
+  - ownership / perimetre utilisateur ;
+- verifier que toutes les actions custom reappliquent bien le meme scope que les listes ;
+- verifier qu'aucun serializer detail ne republie plus d'informations que prevu ;
+- verifier les objets lies et champs calcules.
+
+### Resultat attendu
+
+- aucun endpoint JSON ne fuit de donnee hors perimetre ;
+- les regles de scope sont coherentes entre list, detail, actions et exports ;
+- les serializers deviennent alignes avec le besoin reel d'affichage.
+
+### Taches
+
+- auditer chaque ViewSet sur `list`, `retrieve`, `@action`, `export` ;
+- verifier les querysets et les contournements eventuels de `get_queryset()` ;
+- auditer les serializers detail et les champs calcules ;
+- auditer les `to_serializable_dict()` utilises en reponse API.
+
+### Livrables
+
+- checklist par ViewSet : role, centre, ownership, objets lies, actions custom ;
+- liste des endpoints non conformes ou a risque ;
+- plan de correction priorise par module.
+
+### Criteres d'acceptation
+
+- tous les endpoints sensibles ont ete passes en revue ;
+- chaque endpoint a une regle de scope explicite ;
+- les ecarts restants sont listes, qualifies et priorises.
+
+## Lot RGPD 2 — Logs sensibles
+
+Objectif : empecher la duplication de donnees personnelles dans les journaux.
+
+### Constat
+
+- les changements de `Candidat` sont journalises champ par champ dans `_log_changes()` ;
+- cela peut inclure des donnees sensibles: `nir`, email, telephone, adresse, RQTH, informations France Travail, representant legal ;
+- la sanitation actuelle protege surtout les secrets techniques comme `password` ou `token`, pas les donnees metier personnelles ;
+- les logs sont ensuite consultables et exportables.
+
+### Risque
+
+- duplication de donnees personnelles dans plusieurs couches du systeme ;
+- augmentation de la surface de fuite ;
+- export secondaire de donnees sensibles via les pages et fichiers de logs.
+
+### Sources concernees
 
 - `rap_app/models/candidat.py`
 - `rap_app/models/logs.py`
 - `rap_app/api/viewsets/logs_viewsets.py`
+- `rap_app/api/serializers/logs_serializers.py`
+- `rap_app_project/settings.py`
 
-Recommendation:
+### Recommandation
 
-- interdire la journalisation en clair des champs sensibles metier ;
-- remplacer les valeurs par des traces du type `champ modifie` ou `masque` ;
-- separer journaux techniques et journaux d'audit metier ;
-- restreindre ou supprimer l'export des details de logs ;
-- ajouter une duree de retention specifique pour les journaux.
+- ne plus ecrire les anciennes et nouvelles valeurs en clair pour les champs sensibles ;
+- journaliser l'evenement, pas le contenu detaille ;
+- separer clairement:
+  - logs techniques,
+  - logs d'audit metier,
+  - traces d'erreur ;
+- ajouter un audit XSS oriente fuite de tokens et fuite de donnees :
+  - sanitation backend,
+  - rendu frontend,
+  - commentaires HTML,
+  - CSP ;
+- limiter fortement l'export des details de logs ;
+- definir une duree de retention propre aux journaux.
 
-## 4.2 Haute priorite
+### Resultat attendu
 
-### D. Les tokens JWT sont stockes dans le `localStorage`
+- les logs prouvent qu'une action a eu lieu sans recopier la donnee personnelle ;
+- un export de logs ne reconstitue pas une fiche candidat ;
+- la retention des traces est maitrisee.
+- le frontend ne devient pas une voie indirecte d'exfiltration via XSS.
 
-Constat:
+### Taches
 
-- `access` et `refresh` sont stockes dans `localStorage`.
+- identifier tous les points de journalisation de donnees metier ;
+- classer les champs a masquer ou a ne jamais logger ;
+- distinguer logs techniques, audit metier et erreurs ;
+- auditer le rendu HTML et le risque XSS ;
+- definir la retention cible des journaux.
 
-Impact RGPD / securite:
+### Livrables
 
-- en cas de faille XSS, exfiltration possible des tokens ;
-- acces illicite a des donnees personnelles via reuse de session.
+- politique de journalisation des donnees personnelles ;
+- liste des champs interdits en clair dans les logs ;
+- rapport court sur le risque XSS et les mesures attendues ;
+- politique de retention des journaux.
 
-Sources:
+### Criteres d'acceptation
 
-- `frontend_rap_app/src/api/tokenStorage.ts`
-- `frontend_rap_app/src/api/axios.ts`
+- aucun champ personnel sensible n'est recopie en clair dans les logs cibles ;
+- les exports de logs ne permettent plus de reconstituer une fiche ;
+- le risque XSS critique lie aux donnees et aux tokens est traite ou documente.
 
-Recommendation:
+## Lot RGPD 3 — Exports candidats
 
-- migrer idealement vers cookies `HttpOnly`, `Secure`, `SameSite` ;
-- sinon, au minimum renforcer la politique CSP, reduire la duree de vie et auditer les surfaces XSS ;
-- documenter ce risque dans le registre technique si la migration est differee.
+Objectif : reduire la fuite massive possible via Excel/CSV.
 
-### E. La politique de confidentialite ne correspond pas au traitement reel
+### Constat
 
-Constat:
+- l'export candidats contient un volume important de donnees personnelles ;
+- des donnees tres sensibles sont presentes dans les exports, notamment `NIR`, coordonnees, donnees de naissance, RQTH et autres attributs forts ;
+- l'export semble pense comme export complet, pas comme export minimal par usage.
 
-- la page publique indique surtout des donnees de compte ;
-- l'application traite en realite des donnees bien plus larges: NIR, adresse, date et lieu de naissance, RQTH, France Travail, representant legal, donnees de placement, documents, CERFA ;
-- la mention "derniere mise a jour" est calculee dynamiquement au rendu, pas versionnee ;
-- la politique dit que les donnees peuvent etre supprimees apres 24 mois d'inactivite, mais je n'ai pas trouve de mecanisme automatique correspondant.
+### Risque
 
-Impact RGPD:
+- une seule extraction peut diffuser massivement des donnees nominatives ;
+- une fois le fichier sorti de l'application, la maitrise est tres faible ;
+- le principe de minimisation n'est pas respecte par defaut.
 
-- information incomplete ou inexacte de la personne concernee ;
-- risque sur les obligations de transparence.
-
-Sources:
-
-- `frontend_rap_app/src/pages/PolitiqueConfidentialite.tsx`
-- `rap_app/models/candidat.py`
-- `rap_app/models/documents.py`
-
-Recommendation:
-
-- reecrire la politique a partir des traitements reels ;
-- distinguer donnees compte, donnees candidat, donnees contractuelles, documents, logs ;
-- preciser finalites, bases legales, durees de conservation, destinataires, droits et point de contact ;
-- versionner la date de mise a jour en dur.
-
-### F. Les exports candidats sont tres riches et incluent des donnees sensibles
-
-Constat:
-
-- l'export XLSX candidats contient notamment `NIR`, coordonnees, donnees de naissance, RQTH et autres informations fortes.
-
-Impact RGPD:
-
-- risque de diffusion massive en dehors de l'application ;
-- difficulte de maitriser la circulation des fichiers exportes ;
-- besoin de forte justification metier et de restriction de role.
-
-Sources:
+### Sources concernees
 
 - `rap_app/api/viewsets/candidat_viewsets.py`
-
-Recommendation:
-
-- segmenter les exports par niveau de sensibilite ;
-- creer un export "operationnel minimal" par defaut ;
-- reserver les champs tres sensibles a un role restreint ;
-- ajouter une trace d'export plus precise ;
-- envisager un filigrane nominatif ou au minimum un rappel de confidentialite dans le fichier.
-
-## 4.3 Priorite moyenne
-
-### G. Le retrait du consentement n'est pas symetrique a son octroi
-
-Constat:
-
-- pour la fiche candidat, l'auto-edition n'autorise que le passage a `true` du consentement explicite, pas son retrait ;
-- cela peut etre acceptable si la base legale n'est pas le consentement, mais pas si elle l'est.
-
-Sources:
-
-- `rap_app/api/serializers/candidat_serializers.py`
-- `frontend_rap_app/src/pages/users/MonProfil.tsx`
-
-Recommendation:
-
-- prevoir une vraie gestion du retrait de consentement quand il constitue la base legale ;
-- associer ce retrait a une consequence metier explicite: blocage, purge, bascule de statut, notification equipe.
-
-### H. Pas de mecanisme visible de retention automatique
-
-Constat:
-
-- je n'ai pas trouve de job de purge/retention pour les logs, imports, comptes inactifs, exports ou medias ;
-- plusieurs assertions documentaires parlent d'archivage/suppression, mais sans mecanisme technique visible dans le depot.
-
-Sources:
-
-- `rap_app/models/import_job.py`
-- `rap_app/models/logs.py`
-- `frontend_rap_app/src/pages/PolitiqueConfidentialite.tsx`
-
-Recommendation:
-
-- definir des durees par type de donnees ;
-- ajouter des commandes/cron de purge ou anonymisation ;
-- documenter ce qui est supprime, archive ou conserve legalement.
-
-### I. Les pieces et traces d'import peuvent contenir de la donnee personnelle
-
-Constat:
-
-- `ImportJob` conserve `original_filename`, `summary`, `error_payload` ;
-- selon les erreurs retournees par les handlers, des donnees personnelles peuvent remonter dans les traces.
-
-Sources:
-
-- `rap_app/models/import_job.py`
 - `rap_app/api/import_export/views.py`
+- `rap_app/models/import_job.py`
 
-Recommendation:
+### Recommandation
 
-- encadrer strictement ce qui peut etre stocke dans `summary` et `error_payload` ;
-- proscrire les snapshots de lignes source contenant des donnees nominatives ;
-- ajouter une retention courte sur ces traces.
+- creer au moins deux niveaux d'exports:
+  - export operationnel minimal ;
+  - export complet reserve a des roles plus restreints ;
+- exclure par defaut les champs les plus sensibles ;
+- revoir la justification metier de chaque colonne exportee ;
+- tracer plus precisement qui exporte quoi ;
+- verifier que les exports ne contournent pas le scope API reel ;
+- ajouter un rappel de confidentialite dans les fichiers exportes.
 
-## 4.4 Priorite basse
+### Resultat attendu
 
-### J. La minimisation des champs candidats merite une revue metier
+- l'export par defaut sert au travail courant sans exposer tout le dossier candidat ;
+- les donnees les plus sensibles ne sortent que sur besoin justifie ;
+- le risque de fuite massive par tableur est reduit.
 
-Constat:
+### Taches
 
-- la fiche candidat stocke un volume important de donnees ;
-- certaines sont probablement justifiees par les workflows CERFA et placement, mais il faut une base legale et une duree de conservation explicites par bloc fonctionnel.
+- inventorier tous les exports candidats et leurs colonnes ;
+- classer les colonnes par niveau de sensibilite ;
+- definir un export minimal et un export complet ;
+- verifier les roles autorises et le scope reel des exports ;
+- definir la trace d'audit liee aux exports.
 
-Sources:
+### Livrables
 
+- matrice `colonne -> justification metier -> niveau de sensibilite -> export cible` ;
+- specification des niveaux d'export ;
+- liste des roles habilites par type d'export.
+
+### Criteres d'acceptation
+
+- un export minimal est clairement defini ;
+- les colonnes sensibles sont reservees aux cas justifies ;
+- aucun export ne contourne les regles de scope API.
+
+## Lot RGPD 4 — Suppression/anonymisation
+
+Objectif : rendre la promesse utilisateur exacte et techniquement fiable.
+
+### Constat
+
+- l'endpoint `delete-account` desactive et anonymise le `CustomUser` ;
+- en revanche, je n'ai pas trouve de traitement transverse garantissant l'effacement ou l'anonymisation du reste:
+  - fiche `Candidat`,
+  - documents,
+  - commentaires,
+  - logs,
+  - traces d'import,
+  - autres relations metier ;
+- le message utilisateur annonce pourtant une suppression conforme RGPD beaucoup plus large.
+
+### Risque
+
+- ecart entre la promesse fonctionnelle et la realite technique ;
+- droit a l'effacement incomplet ;
+- conservation de donnees identifiantes residuelles dans d'autres tables.
+
+### Sources concernees
+
+- `rap_app/api/viewsets/user_viewsets.py`
+- `rap_app/models/custom_user.py`
 - `rap_app/models/candidat.py`
+- `rap_app/models/logs.py`
+- `rap_app/models/import_job.py`
+- modules relies aux documents et commentaires
 
-Recommendation:
+### Recommandation
 
-- classer les champs par finalite :
-  - recrutement,
-  - suivi formation,
-  - contractualisation,
-  - obligations legales ;
-- identifier ceux qui devraient etre conditionnels, archives ou purges plus tot.
+- imposer une regle technique par type de donnee pour eviter de casser le metier :
+  - identite directe (`nom`, `prenom`, `email`, `telephone`, `nir`, adresse) : suppression ou anonymisation irreversible ;
+  - relation metier (`formation`, rattachements statistiques, liens de parcours) : conservation si necessaire au fonctionnement et au reporting ;
+  - logs : anonymisation ;
+  - documents : suppression physique ou anonymisation selon le besoin legal ;
+  - historiques metier : conservation minimale sans identite directe ;
+- definir une doctrine explicite par type de donnee:
+  - suppression physique,
+  - anonymisation irreversible,
+  - conservation legale,
+  - archivage restreint ;
+- aligner le message utilisateur avec le traitement reel tant que le workflow complet n'existe pas ;
+- centraliser la suppression/anonymisation dans un service unique ;
+- prevoir des tests de non-regression sur ce parcours.
 
-## 5. Niveau de maturite RGPD estime
+### Resultat attendu
 
-Evaluation technique globale: intermediaire.
+- la promesse affichée a l'utilisateur devient exacte ;
+- chaque type de donnee a un traitement explicite ;
+- le parcours de suppression peut etre audite techniquement.
+- la suppression RGPD ne casse pas les relations metier qui doivent survivre sous forme non identifiante.
 
-- Gouvernance RGPD dans le modele candidat: plutot bonne
-- Controle d'acces applicatif: bon socle
-- Transparence utilisateur: insuffisante
-- Effacement / retention: insuffisant
-- Protection des fichiers et des journaux: insuffisant a corriger vite
+### Taches
 
-## 6. Plan d'action recommande
+- recenser toutes les relations autour de `CustomUser` et `Candidat` ;
+- definir la regle de traitement par type de donnee ;
+- definir le workflow cible de suppression/anonymisation ;
+- aligner les messages utilisateur et admin avec le traitement reel ;
+- definir les tests de non-regression.
 
-### Sous 7 jours
+### Livrables
 
-1. Fermer l'acces direct a `/media/` pour les documents sensibles.
-2. Corriger la promesse de suppression RGPD dans les messages et la documentation.
-3. Stopper la journalisation des valeurs de champs sensibles.
-4. Lancer une revue de tous les exports contenant NIR, RQTH, adresse, documents.
+- matrice `type de donnee -> action RGPD` ;
+- specification du workflow de suppression/anonymisation ;
+- liste des objets a supprimer, anonymiser, conserver ou archiver.
 
-### Sous 30 jours
+### Criteres d'acceptation
 
-1. Mettre en place une politique de confidentialite conforme au traitement reel.
-2. Definir une matrice de retention:
-   - comptes,
-   - fiches candidats,
-   - documents,
-   - logs,
-   - imports,
-   - exports.
-3. Concevoir un vrai workflow d'effacement RGPD transverse.
-4. Reduire le contenu des exports par defaut.
+- chaque type de donnee a une regle claire ;
+- la promesse utilisateur correspond au comportement reel ;
+- les relations metier necessaires survivent sans identite directe.
 
-### Sous 60 jours
+## Lot RGPD 4 bis — Backups
 
-1. Migrer l'auth front vers cookies `HttpOnly` si possible.
-2. Ajouter des jobs automatiques de purge/anonymisation.
-3. Mettre en place des tests de non-regression RGPD:
-   - acces document scope,
-   - suppression compte,
-   - masquage logs,
-   - blocage consentement.
+Objectif : traiter la retention des donnees personnelles dans les sauvegardes.
 
-## 7. Conclusion
+### Constat
 
-Le projet n'est pas "hors sujet" sur le RGPD: il y a deja des briques serieuses et une vraie intention de conformite. En revanche, il existe aujourd'hui plusieurs points a risque eleve, surtout sur les fichiers, les logs, les exports et la suppression des donnees. Le chantier prioritaire n'est pas d'ajouter plus de champs RGPD, mais de fiabiliser la protection effective, la retention et la veracite des engagements affiches a l'utilisateur.
+La suppression ou l'anonymisation en production ne suffit pas si les donnees restent presentes dans:
+
+- backups PostgreSQL ;
+- snapshots VPS ;
+- dumps manuels ;
+- sauvegardes fichiers ;
+- archives de restauration.
+
+### Risque
+
+- une donnee supprimee du live reste recuperable pendant longtemps ;
+- l'organisation croit etre conforme alors que les sauvegardes conservent encore les donnees ;
+- absence de politique de rotation claire.
+
+### Sources concernees
+
+- scripts de backup/deploiement ;
+- documentation d'exploitation ;
+- infrastructure VPS ;
+- procedures manuelles hors code si elles existent.
+
+### Recommandation
+
+- definir une politique de rotation backup ;
+- fixer une duree maximale de retention ;
+- documenter ce qui est sauvegarde:
+  - base,
+  - media,
+  - logs,
+  - exports temporaires ;
+- aligner cette retention avec la promesse RGPD et les contraintes legales ;
+- documenter les limites: une suppression RGPD peut rester presente dans une sauvegarde jusqu'a expiration de la rotation.
+
+### Resultat attendu
+
+- la retention des sauvegardes est connue, limitee et documentee ;
+- le discours RGPD devient exact sur le sujet des restores et snapshots ;
+- le lot 4 n'oublie plus la couche backup.
+
+### Taches
+
+- identifier les sauvegardes existantes : base, media, logs, snapshots, dumps ;
+- documenter leur frequence et leur retention ;
+- definir la rotation cible ;
+- aligner la communication RGPD avec la realite de restauration.
+
+### Livrables
+
+- politique de backup et de retention ;
+- inventaire des sauvegardes existantes ;
+- note d'alignement entre suppression live et expiration backup.
+
+### Criteres d'acceptation
+
+- chaque sauvegarde connue a une duree de retention definie ;
+- les limites de la suppression RGPD sur backup sont documentees ;
+- la doctrine backup est exploitable par l'equipe d'exploitation.
+
+## Lot RGPD 5 — Politique de confidentialite
+
+Objectif : aligner le texte public avec le traitement reel.
+
+### Constat
+
+- la page actuelle parle surtout des donnees de compte ;
+- l'application traite en realite des donnees bien plus riches:
+  - identite,
+  - contact,
+  - date et lieu de naissance,
+  - NIR,
+  - RQTH,
+  - informations France Travail,
+  - representant legal,
+  - donnees de placement,
+  - documents,
+  - CERFA,
+  - logs et traces d'import ;
+- la date de mise a jour est calculee dynamiquement au rendu ;
+- la politique annonce des regles de conservation qui ne semblent pas toutes implementees techniquement.
+
+### Risque
+
+- information incomplete ou inexacte de la personne concernee ;
+- decalage entre le texte public et les traitements reels ;
+- fragilite sur les obligations de transparence.
+
+### Sources concernees
+
+- `frontend_rap_app/src/pages/PolitiqueConfidentialite.tsx`
+- `frontend_rap_app/src/pages/users/MonProfil.tsx`
+- `frontend_rap_app/src/pages/auth/RegisterPage.tsx`
+- `rap_app/models/candidat.py`
+- `rap_app/models/documents.py`
+- `rap_app/models/logs.py`
+- `rap_app/models/import_job.py`
+
+### Recommandation
+
+- reecrire la politique a partir des traitements reels du depot ;
+- distinguer clairement:
+  - donnees de compte,
+  - donnees candidat,
+  - donnees contractuelles,
+  - documents,
+  - logs,
+  - exports ;
+- preciser pour chaque bloc:
+  - finalite,
+  - base legale,
+  - destinataires,
+  - duree de conservation,
+  - droits de la personne ;
+- remplacer la date calculee au runtime par une date de version explicite.
+
+### Resultat attendu
+
+- la page publique decrit fidelement les traitements reels ;
+- les engagements affiches sont defendables techniquement ;
+- le texte devient une reference stable pour le produit.
+
+### Taches
+
+- reprendre la cartographie du lot 0 ;
+- lister les traitements reels a declarer ;
+- ecrire une version structuree de la politique ;
+- aligner la date de version et la gouvernance de mise a jour.
+
+### Livrables
+
+- texte cible de politique de confidentialite ;
+- tableau de correspondance `traitement reel -> section du texte` ;
+- version datee et stable de la politique.
+
+### Criteres d'acceptation
+
+- toutes les categories de donnees reellement traitees sont mentionnees ;
+- les finalites, bases legales et durees sont coherentes avec le systeme ;
+- la politique est versionnee et maintenable.
+
+## Gouvernance projet
+
+### Ordre d'implementation recommande
+
+1. Lot 0
+2. Lot 1
+3. Lot 1 bis
+4. Lot 2
+5. Lot 3
+6. Lot 4
+7. Lot 4 bis
+8. Lot 5
+
+### Dependances
+
+- le lot 0 alimente tous les autres ;
+- le lot 1 bis doit etre mené avant de considerer les lots 1 et 3 comme vraiment securises ;
+- le lot 4 bis complete obligatoirement le lot 4 ;
+- le lot 5 doit etre finalise apres stabilisation des regles des lots precedents.
+
+### Pilotage
+
+- traiter chaque lot comme un mini-chantier autonome ;
+- fermer un lot uniquement si ses criteres d'acceptation sont verifies ;
+- conserver une trace de decision technique pour chaque arbitrage RGPD sensible ;
+- privilegier des livrables courts, verificables et relies au code reel.
+
+## Priorisation conseillee
+
+Ordre recommande:
+
+1. Lot RGPD 0 — Audit des flux de donnees
+2. Lot RGPD 1 — Securisation documents/media
+3. Lot RGPD 1 bis — Audit des scopes API
+4. Lot RGPD 2 — Logs sensibles
+5. Lot RGPD 3 — Exports candidats
+6. Lot RGPD 4 — Suppression/anonymisation
+7. Lot RGPD 4 bis — Backups
+8. Lot RGPD 5 — Politique de confidentialite
+
+Raison:
+
+- le lot 0 evite les angles morts avant implementation ;
+- les lots 1 et 1 bis reduisent les fuites par fichier et par API ;
+- les lots 2 et 3 reduisent la duplication et l'exfiltration secondaire ;
+- les lots 4 et 4 bis rendent la suppression credible sur le live et sur les sauvegardes ;
+- le lot 5 doit idealement etre finalise apres clarification technique des lots precedents, pour que le texte public soit exact.
+
+## Conclusion
+
+Le chantier RGPD doit etre traite en blocs separes et non comme un seul sujet global. Dans RAP_APP, les priorites les plus urgentes sont la cartographie des flux, la protection des fichiers, la verification des scopes API, la reduction de la donnee personnelle dans les logs et la minimisation des exports. Ensuite seulement, il devient pertinent de stabiliser la suppression/anonymisation complete, d'inclure les backups dans la doctrine de retention, puis de rewriter la politique de confidentialite sur une base technique fiable.
