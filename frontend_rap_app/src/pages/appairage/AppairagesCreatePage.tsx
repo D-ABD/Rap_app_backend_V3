@@ -38,6 +38,15 @@ export default function AppairagesCreatePage() {
   const presetPartenaire = useMemo(() => toNum(searchParams.get("partenaire")), [searchParams]);
   const presetFormation = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
 
+  const returnUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (presetCandidat) params.set("candidat", String(presetCandidat));
+    if (presetPartenaire) params.set("partenaire", String(presetPartenaire));
+    if (presetFormation) params.set("formation", String(presetFormation));
+    const query = params.toString();
+    return query ? `/appairages?${query}` : "/appairages";
+  }, [presetCandidat, presetFormation, presetPartenaire]);
+
   // labels transmis en URL
   const paramCandidatNom = searchParams.get("candidat_nom")?.trim() || null;
   const paramPartenaireNom = searchParams.get("partenaire_nom")?.trim() || null;
@@ -91,7 +100,7 @@ export default function AppairagesCreatePage() {
     try {
       await create(formData);
       toast.success("✅ Appairage créé avec succès");
-      navigate("/appairages");
+      navigate(returnUrl);
     } catch {
       toast.error("❌ Erreur lors de la création");
     }

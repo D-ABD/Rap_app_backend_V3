@@ -2007,6 +2007,37 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(response.data["message"], "Stagiaire Prépa désarchivé avec succès.")
         self.assertTrue(response.data["data"]["is_active"])
 
+    def test_stagiaire_prepa_synthese_parcours_uses_standard_envelope(self):
+        from rap_app.models.prepa import StagiairePrepa
+
+        StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="EnAttente",
+            prenom="Mila",
+            created_by=self.user,
+        )
+        StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Oriente",
+            prenom="Sam",
+            atelier_1_realise=True,
+            orientation_finale=StagiairePrepa.OrientationFinale.AFPA,
+            centre_afpa_cible=self.centre,
+            formation_afpa_cible="TP Assistant RH",
+            date_orientation=timezone.now().date(),
+            created_by=self.user,
+        )
+
+        response = self.client.get(reverse("stagiaire-prepa-synthese-parcours"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Synthèse des parcours Prépa récupérée avec succès.")
+        self.assertEqual(response.data["data"]["entrees_atelier_1"], 1)
+        self.assertEqual(response.data["data"]["orientes_afpa"], 1)
+        self.assertEqual(response.data["data"]["taux_transformation_vers_afpa"], 100.0)
+
     def test_participant_declic_list_uses_standard_paginated_envelope(self):
         from rap_app.models.declic import ParticipantDeclic
 

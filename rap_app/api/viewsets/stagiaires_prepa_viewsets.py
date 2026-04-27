@@ -39,7 +39,12 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     serializer_class = StagiairePrepaSerializer
     permission_classes = [IsPrepaStaffOrAbove]
     hard_delete_enabled = True
-    queryset = StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
+    queryset = StagiairePrepa.objects.select_related(
+        "centre",
+        "prepa_origine",
+        "prepa_origine__centre",
+        "centre_afpa_cible",
+    ).all()
 
     def _admin_like(self, user) -> bool:
         return is_admin_like(user)
@@ -91,7 +96,12 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = self._scope_qs(
-            StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
+            StagiairePrepa.objects.select_related(
+                "centre",
+                "prepa_origine",
+                "prepa_origine__centre",
+                "centre_afpa_cible",
+            ).all()
         )
         params = self.request.query_params
         truthy = {"1", "true", "yes", "on"}
@@ -110,6 +120,10 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         prepa_origine = params.get("prepa_origine")
         annee = params.get("annee")
         type_atelier = params.get("type_atelier")
+        statut_positionnement = params.get("statut_positionnement")
+        orientation_finale = params.get("orientation_finale")
+        centre_afpa_cible = params.get("centre_afpa_cible")
+        entree_formation_confirmee = params.get("entree_formation_confirmee")
         ordering = params.get("ordering") or "nom"
 
         if search:
@@ -132,6 +146,16 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             flag_field = StagiairePrepa.atelier_flag_map().get(type_atelier, (None, None))[0]
             if flag_field:
                 qs = qs.filter(**{flag_field: True})
+        if statut_positionnement:
+            qs = qs.filter(statut_positionnement=statut_positionnement)
+        if orientation_finale:
+            qs = qs.filter(orientation_finale=orientation_finale)
+        if centre_afpa_cible:
+            qs = qs.filter(centre_afpa_cible_id=centre_afpa_cible)
+        if str(entree_formation_confirmee).lower() in truthy:
+            qs = qs.filter(entree_formation_confirmee=True)
+        elif str(entree_formation_confirmee).lower() in {"0", "false", "no", "off"}:
+            qs = qs.filter(entree_formation_confirmee=False)
 
         if ordering in {
             "nom",
@@ -154,7 +178,12 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
     def get_archived_aware_object(self):
         lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
         base_qs = self._scope_qs(
-            StagiairePrepa.objects.select_related("centre", "prepa_origine", "prepa_origine__centre").all()
+            StagiairePrepa.objects.select_related(
+                "centre",
+                "prepa_origine",
+                "prepa_origine__centre",
+                "centre_afpa_cible",
+            ).all()
         )
         return get_object_or_404(base_qs, **{self.lookup_field: lookup_value})
 
@@ -308,10 +337,21 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     "statut_parcours": [
                         {"value": value, "label": label} for value, label in StagiairePrepa.StatutParcours.choices
                     ],
+                    "statut_positionnement": [
+                        {"value": value, "label": label}
+                        for value, label in StagiairePrepa.StatutPositionnement.choices
+                    ],
+                    "orientation_finale": [
+                        {"value": value, "label": label} for value, label in StagiairePrepa.OrientationFinale.choices
+                    ],
                     "type_atelier": [
                         {"value": value, "label": label}
                         for value, label in Prepa.TypePrepa.choices
                         if value.startswith("atelier") or value == Prepa.TypePrepa.AUTRE
+                    ],
+                    "centres_afpa_cible": [
+                        {"id": c.id, "nom": c.nom, "departement": c.departement, "code_postal": c.code_postal}
+                        for c in Centre.objects.order_by("nom")
                     ],
                     "prepas_origine": [
                         {
@@ -322,6 +362,30 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                         for p in prepas_origine
                     ],
                     "annees": annees or [localdate().year],
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="synthese-parcours")
+    def synthese_parcours(self, request):
+        """
+        Retourne les indicateurs de pilotage du parcours individuel Prépa.
+        """
+        qs = self.get_queryset()
+        synthese = qs.synthese_parcours()
+        return Response(
+            {
+                "success": True,
+                "message": "Synthèse des parcours Prépa récupérée avec succès.",
+                "data": {
+                    **synthese,
+                    "filtres": {
+                        "centre": request.query_params.get("centre"),
+                        "annee": request.query_params.get("annee"),
+                        "prepa_origine": request.query_params.get("prepa_origine"),
+                        "orientation_finale": request.query_params.get("orientation_finale"),
+                    },
                 },
             },
             status=status.HTTP_200_OK,
@@ -351,6 +415,14 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                 "Centre",
                 "Prépa d'origine",
                 "Statut",
+                "Statut calculé",
+                "Positionnement",
+                "Prochain atelier attendu",
+                "Orientation finale",
+                "Centre AFPA cible",
+                "Formation AFPA cible",
+                "Date orientation",
+                "Entrée AFPA confirmée",
                 "Ateliers réalisés",
                 "Dernier atelier",
                 "Date d'entrée",
@@ -369,6 +441,14 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     getattr(obj.centre, "nom", ""),
                     str(obj.prepa_origine) if obj.prepa_origine else "",
                     obj.get_statut_parcours_display(),
+                    obj.get_statut_parcours_calcule_display(),
+                    obj.get_statut_positionnement_display() if obj.statut_positionnement else "",
+                    obj.prochain_atelier_attendu_label or "",
+                    obj.get_orientation_finale_display() if obj.orientation_finale else "",
+                    getattr(obj.centre_afpa_cible, "nom", ""),
+                    obj.formation_afpa_cible or "",
+                    obj.date_orientation.strftime("%d/%m/%Y") if obj.date_orientation else "",
+                    "Oui" if obj.entree_formation_confirmee else "Non",
                     ", ".join(obj.ateliers_realises_labels),
                     obj.dernier_atelier_label or "",
                     obj.date_entree_parcours.strftime("%d/%m/%Y") if obj.date_entree_parcours else "",

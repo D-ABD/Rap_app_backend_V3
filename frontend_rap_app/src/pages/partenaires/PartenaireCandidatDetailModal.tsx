@@ -78,9 +78,9 @@ export default function PartenaireCandidatDetailModal({
   const prospectionsCount = partenaire.prospections_count ?? partenaire.prospections?.count ?? 0;
   const appairagesCount = partenaire.appairages_count ?? partenaire.appairages?.count ?? 0;
   const partenaireNom = encodeURIComponent(partenaire.nom);
-  const prospectionsUrl = `/prospections?partenaire=${partenaire.id}`;
+  const prospectionsUrl = `/prospections/candidat?partenaire=${partenaire.id}`;
   const appairagesUrl = `/appairages?partenaire=${partenaire.id}`;
-  const createProspectionUrl = `/prospections/create?partenaire=${partenaire.id}&partenaire_nom=${partenaireNom}`;
+  const createProspectionUrl = `/prospections/create/candidat?partenaire=${partenaire.id}&partenaire_nom=${partenaireNom}`;
   const createAppairageUrl = `/appairages/create?partenaire=${partenaire.id}&partenaire_nom=${partenaireNom}`;
 
   return (

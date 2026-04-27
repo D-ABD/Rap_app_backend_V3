@@ -25,6 +25,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
@@ -774,6 +775,46 @@ class ProspectionViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                 "data": serializer.data,
             },
             status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Supprimer définitivement une prospection archivée",
+        description=(
+            "Autorise la suppression physique d'une prospection déjà archivée. "
+            "Les admins/superadmins peuvent supprimer toute prospection archivée visible ; "
+            "un candidat peut supprimer définitivement sa propre prospection archivée."
+        ),
+        responses={200: OpenApiResponse(description="Suppression définitive effectuée avec succès.")},
+    )
+    @action(detail=True, methods=["post"], url_path="hard-delete", permission_classes=[IsAuthenticated])
+    def hard_delete(self, request, *args, **kwargs):
+        if not getattr(self, "hard_delete_enabled", False):
+            raise NotFound("Action indisponible sur cette ressource.")
+
+        instance = self.get_hard_delete_object()
+        self.check_object_permissions(request, instance)
+
+        user = request.user
+        if not is_admin_like(user):
+            if not is_candidate(user) or getattr(instance, "owner_id", None) != getattr(user, "id", None):
+                raise PermissionDenied("Vous n’avez pas le droit de supprimer définitivement cette prospection.")
+
+        if not self.is_instance_archived_for_hard_delete(instance):
+            return self._hard_delete_response(
+                success=False,
+                message=self.get_hard_delete_requires_archive_message(instance),
+                data=None,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = self.build_hard_delete_payload(instance)
+        success_message = self.get_hard_delete_success_message(instance)
+        self.perform_hard_delete(instance, user=user)
+        return self._hard_delete_response(
+            success=True,
+            message=success_message,
+            data=payload,
+            status_code=status.HTTP_200_OK,
         )
 
     # -------------------------------------------------------------------------

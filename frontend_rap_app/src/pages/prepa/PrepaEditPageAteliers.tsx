@@ -65,7 +65,7 @@ export default function PrepaEditPageAteliers() {
 
       await update(id, payload);
       toast.success("Séance Prepa mise à jour avec succès.");
-      navigate("/prepa");
+      navigate("/prepa/ateliers");
     } catch (e) {
       const axiosErr = e as AxiosError<unknown>;
       const parsed = axiosErr.response?.data ? extractApiMessage(axiosErr.response.data) : null;
@@ -84,7 +84,7 @@ export default function PrepaEditPageAteliers() {
     try {
       await remove(id);
       toast.success("Séance Prepa archivée avec succès.");
-      navigate("/prepa");
+      navigate("/prepa/ateliers");
     } catch {
       toast.error("La séance Prepa n'a pas pu être archivée.");
     }

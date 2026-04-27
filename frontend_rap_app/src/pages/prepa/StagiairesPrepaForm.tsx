@@ -56,6 +56,14 @@ export default function StagiairesPrepaForm({
     centre_id: initialValues?.centre_id ?? initialValues?.centre?.id ?? undefined,
     prepa_origine_id: initialValues?.prepa_origine_id ?? undefined,
     statut_parcours: initialValues?.statut_parcours ?? "en_attente",
+    statut_positionnement: initialValues?.statut_positionnement ?? null,
+    prochain_atelier_prevu: initialValues?.prochain_atelier_prevu ?? null,
+    orientation_finale: initialValues?.orientation_finale ?? null,
+    centre_afpa_cible_id:
+      initialValues?.centre_afpa_cible_id ?? initialValues?.centre_afpa_cible?.id ?? undefined,
+    formation_afpa_cible: initialValues?.formation_afpa_cible ?? "",
+    date_orientation: initialValues?.date_orientation ?? "",
+    entree_formation_confirmee: initialValues?.entree_formation_confirmee ?? false,
     date_entree_parcours: initialValues?.date_entree_parcours ?? "",
     date_sortie_parcours: initialValues?.date_sortie_parcours ?? "",
     commentaire_suivi: initialValues?.commentaire_suivi ?? "",
@@ -91,6 +99,22 @@ export default function StagiairesPrepaForm({
     () => ((meta?.prepas_origine as Array<{ id: number; label: string }>) ?? []),
     [meta]
   );
+  const statutsPositionnement = useMemo(
+    () => ((meta?.statut_positionnement as Array<{ value: string; label: string }>) ?? []),
+    [meta]
+  );
+  const orientationsFinales = useMemo(
+    () => ((meta?.orientation_finale as Array<{ value: string; label: string }>) ?? []),
+    [meta]
+  );
+  const typeAteliers = useMemo(
+    () => ((meta?.type_atelier as Array<{ value: string; label: string }>) ?? []),
+    [meta]
+  );
+  const centresAfpa = useMemo(
+    () => ((meta?.centres_afpa_cible as Array<{ id: number; nom: string }>) ?? centres),
+    [meta, centres]
+  );
 
   const update = <K extends keyof StagiairePrepa>(key: K, value: StagiairePrepa[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -101,6 +125,8 @@ export default function StagiairesPrepaForm({
   };
 
   const isAbandon = form.statut_parcours === "abandon";
+  const isOrientationAfpa =
+    form.orientation_finale === "afpa" || form.orientation_finale === "autre_centre_afpa";
   const ateliersRealisesLive = useMemo(
     () =>
       atelierFields
@@ -190,6 +216,24 @@ export default function StagiairesPrepaForm({
               ))}
             </TextField>
           </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              label="Positionnement"
+              value={form.statut_positionnement ?? ""}
+              onChange={(e) =>
+                update("statut_positionnement", (e.target.value || null) as StagiairePrepa["statut_positionnement"])
+              }
+            >
+              <MenuItem value="">—</MenuItem>
+              {statutsPositionnement.map((statut) => (
+                <MenuItem key={statut.value} value={statut.value}>
+                  {statut.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
           <Grid item xs={12} md={2}>
             <TextField
               fullWidth
@@ -209,6 +253,29 @@ export default function StagiairesPrepaForm({
               value={form.date_sortie_parcours ?? ""}
               onChange={(e) => update("date_sortie_parcours", e.target.value)}
             />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              select
+              fullWidth
+              label="Prochain atelier prévu"
+              value={form.prochain_atelier_prevu ?? ""}
+              onChange={(e) =>
+                update("prochain_atelier_prevu", (e.target.value || null) as StagiairePrepa["prochain_atelier_prevu"])
+              }
+              helperText={
+                initialValues?.prochain_atelier_attendu_display
+                  ? `Attendu actuellement : ${initialValues.prochain_atelier_attendu_display}`
+                  : undefined
+              }
+            >
+              <MenuItem value="">—</MenuItem>
+              {typeAteliers.map((atelier) => (
+                <MenuItem key={atelier.value} value={atelier.value}>
+                  {atelier.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
@@ -233,6 +300,81 @@ export default function StagiairesPrepaForm({
               value={form.commentaire_suivi ?? ""}
               onChange={(value) => update("commentaire_suivi", value)}
               placeholder="Ajouter un commentaire de suivi enrichi…"
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" mb={2}>
+          Orientation
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <TextField
+              select
+              fullWidth
+              label="Orientation finale"
+              value={form.orientation_finale ?? ""}
+              onChange={(e) =>
+                update("orientation_finale", (e.target.value || null) as StagiairePrepa["orientation_finale"])
+              }
+            >
+              <MenuItem value="">—</MenuItem>
+              {orientationsFinales.map((orientation) => (
+                <MenuItem key={orientation.value} value={orientation.value}>
+                  {orientation.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              select
+              fullWidth
+              label="Centre AFPA cible"
+              value={form.centre_afpa_cible_id ?? ""}
+              onChange={(e) =>
+                update("centre_afpa_cible_id", e.target.value === "" ? undefined : Number(e.target.value))
+              }
+              required={isOrientationAfpa}
+            >
+              <MenuItem value="">—</MenuItem>
+              {centresAfpa.map((centre) => (
+                <MenuItem key={centre.id} value={centre.id}>
+                  {centre.nom}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              fullWidth
+              label="Formation AFPA cible"
+              value={form.formation_afpa_cible ?? ""}
+              required={isOrientationAfpa}
+              onChange={(e) => update("formation_afpa_cible", e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Date d'orientation"
+              InputLabelProps={{ shrink: true }}
+              value={form.date_orientation ?? ""}
+              onChange={(e) => update("date_orientation", e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} md={5}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={Boolean(form.entree_formation_confirmee)}
+                  onChange={(e) => update("entree_formation_confirmee", e.target.checked)}
+                />
+              }
+              label="Entrée en formation AFPA confirmée"
             />
           </Grid>
         </Grid>

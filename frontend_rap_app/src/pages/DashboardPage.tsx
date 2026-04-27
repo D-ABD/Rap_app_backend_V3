@@ -53,6 +53,7 @@ import ProspectionCommentStatsDashboard from "./widgets/commentsDahboard/Prospec
 import DeclicStatsSummary from "./declic/DeclicStatsSummary";
 import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
 import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
+import PrepaStatsParcours from "./prepa/PrepaStatsParcours";
 import DeclicGroupedWidget from "./widgets/groupeddashboard/DeclicGroupedWidget";
 import PrepaGroupedWidget from "./widgets/groupeddashboard/PrepaGroupedWidget";
 
@@ -182,9 +183,7 @@ export default function DashboardPage() {
       {/* 🎯 WIDGETS STRATÉGIQUES — VERSION CARRÉE (4 BLOCS) */}
       {/* ===================================================== */}
       <DashboardGrid sx={{ mb: 10 }}>
-        <Grid item xs={8} md={6} lg={4}>
-          <DeclicStatsSummary title="Declic - Synthese" />
-        </Grid>
+
 
         <Grid item xs={8} md={6} lg={4}>
           <PrepaStatsSummary title="Prepa - Synthese" />
@@ -192,6 +191,14 @@ export default function DashboardPage() {
 
         <Grid item xs={8} md={6} lg={4}>
           <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
+        </Grid>
+
+        <Grid item xs={8} md={6} lg={4}>
+          <PrepaStatsParcours title="Parcours Prepa" />
+        </Grid>
+
+        <Grid item xs={8} md={6} lg={4}>
+          <DeclicStatsSummary title="Declic - Synthese" />
         </Grid>
       </DashboardGrid>
 

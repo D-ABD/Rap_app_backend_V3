@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "src/api/axios";
 import axios from "axios";
-import type { StagiairePrepa } from "src/types/prepa";
+import type { StagiairePrepa, StagiairePrepaSynthese } from "src/types/prepa";
+import { useQuery } from "@tanstack/react-query";
 
 const isAbort = (e: unknown) =>
   (e instanceof DOMException && e.name === "AbortError") ||
@@ -129,6 +130,18 @@ export function useStagiairesPrepaMeta() {
   }, []);
 
   return { data, loading, error };
+}
+
+export function useStagiairesPrepaSynthese(filters: Partial<StagiairePrepaFilters> = {}) {
+  return useQuery<StagiairePrepaSynthese, Error>({
+    queryKey: ["stagiaires-prepa-synthese", JSON.stringify(filters)],
+    queryFn: async () => {
+      const res = await api.get("/stagiaires-prepa/synthese-parcours/", { params: filters });
+      return (res.data?.data ?? res.data) as StagiairePrepaSynthese;
+    },
+    staleTime: 0,
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useCreateStagiairePrepa() {

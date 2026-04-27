@@ -39,9 +39,32 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
               <Field label="Email" value={stagiaire.email} />
               <Field label="Centre" value={stagiaire.centre_nom ?? stagiaire.centre?.nom} />
               <Field label="Statut" value={stagiaire.statut_parcours_display ?? stagiaire.statut_parcours} />
+              <Field
+                label="Statut calculé"
+                value={stagiaire.statut_parcours_calcule_display ?? stagiaire.statut_parcours_calcule}
+              />
               <Field label="Prépa d'origine" value={stagiaire.prepa_origine_label} />
               <Field label="Date d'entrée" value={stagiaire.date_entree_parcours} />
               <Field label="Date de sortie" value={stagiaire.date_sortie_parcours} />
+              <Field
+                label="Positionnement"
+                value={stagiaire.statut_positionnement_display ?? stagiaire.statut_positionnement}
+              />
+              <Field
+                label="Prochain atelier attendu"
+                value={stagiaire.prochain_atelier_attendu_display ?? stagiaire.prochain_atelier_attendu}
+              />
+              <Field
+                label="Orientation finale"
+                value={stagiaire.orientation_finale_display ?? stagiaire.orientation_finale}
+              />
+              <Field label="Centre AFPA cible" value={stagiaire.centre_afpa_cible_nom ?? stagiaire.centre_afpa_cible?.nom} />
+              <Field label="Formation AFPA cible" value={stagiaire.formation_afpa_cible} />
+              <Field label="Date d'orientation" value={stagiaire.date_orientation} />
+              <Field
+                label="Entrée AFPA confirmée"
+                value={stagiaire.entree_formation_confirmee ? "Oui" : "Non"}
+              />
               <Field label="Ateliers réalisés" value={stagiaire.ateliers_realises_labels?.join(", ") || "—"} />
               <Field label="Dernier atelier" value={stagiaire.dernier_atelier_label} />
               <Field label="Motif abandon" value={stagiaire.motif_abandon} />

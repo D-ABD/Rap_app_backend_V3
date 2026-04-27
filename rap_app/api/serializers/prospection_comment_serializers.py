@@ -9,7 +9,23 @@ from rest_framework import serializers
 from ...models.prospection import Prospection
 from ...models.prospection_comments import ProspectionComment
 
-ALLOWED_TAGS = ["a", "b", "i", "strong", "em", "u", "strike", "span", "p", "br", "ul", "ol", "li"]
+# Inclut `s` : Quill (texte barré) émet `<s>`, pas seulement `<strike>`.
+ALLOWED_TAGS = [
+    "a",
+    "b",
+    "i",
+    "strong",
+    "em",
+    "u",
+    "s",
+    "strike",
+    "span",
+    "p",
+    "br",
+    "ul",
+    "ol",
+    "li",
+]
 ALLOWED_ATTRIBUTES = {
     "a": ["href", "title", "target", "rel"],
     "span": ["style"],

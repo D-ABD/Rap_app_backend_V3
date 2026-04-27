@@ -77,6 +77,16 @@ export default function StagiairesPrepaTable({
         render: (item) => item.dernier_atelier_label ?? "—",
       },
       {
+        key: "prochain",
+        label: "Prochain attendu",
+        render: (item) => item.prochain_atelier_attendu_display ?? item.prochain_atelier_attendu ?? "—",
+      },
+      {
+        key: "orientation",
+        label: "Orientation",
+        render: (item) => item.orientation_finale_display ?? item.orientation_finale ?? "—",
+      },
+      {
         key: "prepa_origine",
         label: "Prépa d'origine",
         noWrap: false,

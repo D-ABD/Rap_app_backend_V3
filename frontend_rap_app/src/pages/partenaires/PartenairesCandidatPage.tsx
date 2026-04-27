@@ -524,7 +524,7 @@ export default function PartenairesCandidatPage() {
             partenaires={partenaires}
             selectedIds={selectedIds}
             buildProspectionsUrl={(partenaireId) =>
-              `/prospections?partenaire=${partenaireId}`
+              `/prospections/candidat?partenaire=${partenaireId}`
             }
             buildAppairagesUrl={(partenaireId) =>
               `/appairages?partenaire=${partenaireId}`

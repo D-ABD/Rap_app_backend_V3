@@ -62,7 +62,7 @@ export default function PartenaireCandidatEditPage() {
   const partenaireNom = data?.nom ?? null;
 
   const newProspectionUrl = useMemo(() => {
-    const base = `/prospections/create?partenaire=${partenaireId}`;
+    const base = `/prospections/create/candidat?partenaire=${partenaireId}`;
     return partenaireNom ? `${base}&partenaire_nom=${enc(partenaireNom)}` : base;
   }, [partenaireId, partenaireNom]);
 

@@ -52,6 +52,8 @@ function CommentaireContent({ html }: { html: string }) {
       "b",
       "i",
       "u",
+      "s",
+      "strike",
       "em",
       "strong",
       "p",

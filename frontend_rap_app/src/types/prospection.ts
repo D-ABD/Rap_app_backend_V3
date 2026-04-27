@@ -22,6 +22,7 @@ export type ProspectionObjectif =
   | "prise_contact"
   | "rendez_vous"
   | "presentation_offre"
+  | "candidature"
   | "contrat"
   | "partenariat"
   | "autre";

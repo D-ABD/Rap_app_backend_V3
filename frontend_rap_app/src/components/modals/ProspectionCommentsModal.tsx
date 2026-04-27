@@ -28,6 +28,7 @@ import type { AppTheme } from "../../theme";
 import api from "../../api/axios";
 import ProspectionCommentForm from "../../pages/prospection/prospectioncomments/ProspectionCommentForm";
 import SearchInput from "../SearchInput";
+import CommentaireContent from "../../pages/commentaires/CommentaireContent";
 import { toast } from "react-toastify";
 
 /* ---------- Types ---------- */
@@ -147,7 +148,10 @@ export default function ProspectionCommentsModal({
       if (visibility === "public" && c.is_internal) return false;
       if (visibility === "internal" && !c.is_internal) return false;
       if (!q) return true;
-      return c.body.toLowerCase().includes(q) || c.created_by_username.toLowerCase().includes(q);
+      return (
+        (c.body || "").toLowerCase().includes(q) ||
+        (c.created_by_username || "").toLowerCase().includes(q)
+      );
     });
   }, [rows, search, visibility]);
 
@@ -317,14 +321,12 @@ export default function ProspectionCommentsModal({
                             </Typography>
                           }
                           secondary={
-                            <Typography
-                              variant="body2"
+                            <Box
                               component="div"
-                              color="text.secondary"
-                              sx={{ mt: 0.5, whiteSpace: "pre-wrap" }}
+                              sx={{ mt: 0.5, color: "text.secondary", maxWidth: "100%" }}
                             >
-                              {c.body}
-                            </Typography>
+                              <CommentaireContent html={c.body || "<em>—</em>"} />
+                            </Box>
                           }
                         />
                       </ListItem>

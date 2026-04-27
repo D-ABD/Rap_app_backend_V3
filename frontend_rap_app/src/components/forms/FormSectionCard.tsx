@@ -8,6 +8,8 @@ import {
   useTheme,
   Box,
   Stack,
+  type SxProps,
+  type Theme,
 } from "@mui/material";
 import type { ReactNode } from "react";
 import type { AppTheme } from "../../theme";
@@ -22,6 +24,7 @@ export default function FormSectionCard({
   title,
   subtitle,
   children,
+  sx: sxProp,
   ...cardProps
 }: FormSectionCardProps) {
   const theme = useTheme<AppTheme>();
@@ -30,6 +33,17 @@ export default function FormSectionCard({
 
   const background = isLight ? tokens.background.light : tokens.background.dark;
   const border = isLight ? tokens.border.light : tokens.border.dark;
+
+  const baseSx: SxProps<Theme> = {
+    borderRadius: tokens.borderRadius,
+    background,
+    border,
+    p: tokens.padding,
+  };
+  const mergedSx: SxProps<Theme> = [
+    baseSx,
+    ...(Array.isArray(sxProp) ? sxProp : sxProp ? [sxProp] : []),
+  ];
 
   const titleNode =
     typeof title === "string" ? (
@@ -50,16 +64,7 @@ export default function FormSectionCard({
     );
 
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderRadius: tokens.borderRadius,
-        background,
-        border,
-        p: tokens.padding,
-      }}
-      {...cardProps}
-    >
+    <Card variant="outlined" sx={mergedSx} {...cardProps}>
       <Stack spacing={tokens.titleGap}>
         <CardHeader
           title={titleNode}

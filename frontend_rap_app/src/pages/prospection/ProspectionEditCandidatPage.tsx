@@ -21,6 +21,7 @@ import PageSection from "../../components/PageSection";
 import type { ProspectionFormData } from "../../types/prospection";
 
 import api from "../../api/axios";
+import { toApiError } from "../../api/httpClient";
 import {
   useProspection,
   useUpdateProspection,
@@ -71,7 +72,8 @@ export default function ProspectionEditCandidatPage() {
   const location = useLocation();
 
   const [openComments, setOpenComments] = useState(false);
-  const [openDelete, setOpenDelete] = useState(false);
+  const [openArchiveDialog, setOpenArchiveDialog] = useState(false);
+  const [openHardDeleteDialog, setOpenHardDeleteDialog] = useState(false);
 
   const prospectionId = useMemo(() => {
     const n = Number(id);
@@ -137,9 +139,40 @@ export default function ProspectionEditCandidatPage() {
     try {
       await remove();
       toast.success("📦 Prospection archivée");
-      navigate("/prospections");
-    } catch {
-      toast.error("❌ Échec de l'archivage");
+      navigate("/prospections/candidat");
+    } catch (err) {
+      toast.error(toApiError(err).message || "❌ Échec de l'archivage");
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!prospectionId || !detail) return;
+    try {
+      await api.post(`/prospections/${prospectionId}/desarchiver/`);
+      setDetail({
+        ...detail,
+        activite: "active",
+        activite_display: "Active",
+      });
+      toast.success("♻️ Prospection désarchivée");
+    } catch (err) {
+      toast.error(
+        toApiError(err).message || "Impossible de désarchiver cette prospection."
+      );
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!prospectionId) return;
+    try {
+      await api.post(`/prospections/${prospectionId}/hard-delete/`);
+      toast.success("🗑️ Prospection supprimée définitivement");
+      navigate("/prospections/candidat");
+    } catch (err) {
+      toast.error(
+        toApiError(err).message ||
+          "Impossible de supprimer définitivement cette prospection."
+      );
     }
   };
 
@@ -235,6 +268,7 @@ export default function ProspectionEditCandidatPage() {
   const isStaff = ["admin", "staff", "superuser"].includes(
     String(detail.user_role ?? "").toLowerCase()
   );
+  const isArchived = detail.activite === "archivee";
 
   return (
     <PageTemplate
@@ -244,14 +278,37 @@ export default function ProspectionEditCandidatPage() {
       backButton
       onBack={() => navigate(-1)}
       actions={
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={() => setOpenDelete(true)}
-          disabled={removing}
-        >
-          {removing ? "Archivage…" : "Archiver"}
-        </Button>
+        <>
+          {isArchived ? (
+            <>
+              <Button
+                variant="outlined"
+                color="success"
+                onClick={handleRestore}
+                disabled={removing || saving}
+              >
+                Désarchiver
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => setOpenHardDeleteDialog(true)}
+                disabled={removing || saving}
+              >
+                Supprimer définitivement
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setOpenArchiveDialog(true)}
+              disabled={removing || saving}
+            >
+              {removing ? "Archivage…" : "Archiver"}
+            </Button>
+          )}
+        </>
       }
     >
       {/* Modal commentaires */}
@@ -320,7 +377,10 @@ export default function ProspectionEditCandidatPage() {
       </PageSection>
 
       {/* Modal archivage */}
-      <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
+      <Dialog
+        open={openArchiveDialog}
+        onClose={() => setOpenArchiveDialog(false)}
+      >
         <DialogTitle>Archiver la prospection</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -328,9 +388,38 @@ export default function ProspectionEditCandidatPage() {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDelete(false)}>Annuler</Button>
-          <Button onClick={handleDelete} color="error" variant="contained" autoFocus>
+          <Button onClick={() => setOpenArchiveDialog(false)}>Annuler</Button>
+          <Button
+            onClick={handleDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
             Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openHardDeleteDialog}
+        onClose={() => setOpenHardDeleteDialog(false)}
+      >
+        <DialogTitle>Supprimer définitivement la prospection</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Confirmer la suppression définitive de la prospection #
+            {prospectionId} ? Cette action est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenHardDeleteDialog(false)}>Annuler</Button>
+          <Button
+            onClick={handleHardDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

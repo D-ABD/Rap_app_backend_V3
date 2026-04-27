@@ -223,7 +223,31 @@ export default function CandidatsTable({
         [c.nom, c.prenom].filter(Boolean).join(" ").trim() ||
         "Candidat"
       }
-      containerSx={{ maxHeight, borderRadius: 2, position: "relative" }}
+      rowSx={(c) => ({
+        opacity: c.is_active === false ? 0.78 : 1,
+        "& td": {
+          transition: "background-color 160ms ease, border-color 160ms ease",
+        },
+      })}
+      containerSx={{
+        maxHeight,
+        position: "relative",
+        borderRadius: 3,
+        boxShadow: (theme) =>
+          theme.palette.mode === "light"
+            ? "0 16px 40px rgba(15,23,42,0.06)"
+            : "0 16px 40px rgba(0,0,0,0.26)",
+        "& .MuiTableCell-head": {
+          backdropFilter: "blur(10px)",
+          letterSpacing: "0.02em",
+        },
+        "& .MuiTableRow-root:hover td": {
+          backgroundColor: (theme) =>
+            theme.palette.mode === "light"
+              ? "rgba(248,250,252,0.96)"
+              : "rgba(30,41,59,0.62)",
+        },
+      }}
     />
   );
 }

@@ -21,6 +21,8 @@ export default function CommentaireContent({ html }: Props) {
       "b",
       "i",
       "u",
+      "s",
+      "strike",
       "em",
       "strong",
       "p",

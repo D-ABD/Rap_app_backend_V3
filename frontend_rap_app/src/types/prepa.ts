@@ -30,8 +30,26 @@ export interface StagiairePrepa {
   centre?: CentreLight | null;
   centre_id?: number | null;
   centre_nom?: string;
+  centre_afpa_cible?: CentreLight | null;
+  centre_afpa_cible_id?: number | null;
+  centre_afpa_cible_nom?: string;
   statut_parcours?: StagiairePrepaStatut;
   statut_parcours_display?: string;
+  statut_parcours_calcule?: StagiairePrepaStatut;
+  statut_parcours_calcule_display?: string;
+  prochain_atelier_prevu?: TypePrepa | null;
+  prochain_atelier_prevu_display?: string | null;
+  prochain_atelier_attendu?: TypePrepa | null;
+  prochain_atelier_attendu_display?: string | null;
+  statut_positionnement?: "a_positionner" | "positionne" | "en_attente" | null;
+  statut_positionnement_display?: string | null;
+  orientation_finale?: "afpa" | "autre_centre_afpa" | "hors_afpa" | null;
+  orientation_finale_display?: string | null;
+  formation_afpa_cible?: string | null;
+  date_orientation?: string | null;
+  entree_formation_confirmee?: boolean;
+  est_oriente_afpa?: boolean;
+  est_oriente_vers_autre_centre_afpa?: boolean;
   date_entree_parcours?: string | null;
   date_sortie_parcours?: string | null;
   commentaire_suivi?: string | null;
@@ -52,6 +70,7 @@ export interface StagiairePrepa {
   date_atelier_autre?: string | null;
   ateliers_realises_count?: number;
   ateliers_realises_labels?: string[];
+  ateliers_realises_ordonnes?: Array<{ value: string; label: string; date?: string | null }>;
   dernier_atelier_label?: string | null;
   dernier_atelier_date?: string | null;
   created_at?: string;
@@ -239,6 +258,26 @@ export interface StagiairePrepaFiltersValues {
   page?: number;
   avec_archivees?: boolean;
   archives_seules?: boolean;
+}
+
+export interface StagiairePrepaSynthese {
+  en_attente_entree: number;
+  a_integrer_atelier_1: number;
+  en_attente_prochain_atelier: number;
+  en_parcours: number;
+  termines: number;
+  abandons: number;
+  orientes_afpa: number;
+  orientes_autre_centre_afpa: number;
+  entrees_atelier_1: number;
+  sorties_atelier_6: number;
+  taux_transformation_vers_afpa: number;
+  filtres?: {
+    centre?: string | null;
+    annee?: string | null;
+    prepa_origine?: string | null;
+    orientation_finale?: string | null;
+  };
 }
 
 // -----------------------------------------------------------------------------

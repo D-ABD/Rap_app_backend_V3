@@ -361,10 +361,77 @@ class Prepa(BaseModel):
         return cls.objects.ic().filter(**filters)
 
 
+class StagiairePrepaQuerySet(models.QuerySet):
+    """
+    QuerySet métier pour piloter le parcours individuel Prépa.
+    """
+
+    def en_attente_entree(self):
+        return self.filter(atelier_1_realise=False, date_entree_parcours__isnull=True)
+
+    def a_integrer_atelier_1(self):
+        return self.en_attente_entree().filter(
+            models.Q(prepa_origine__type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE) | models.Q(prepa_origine__isnull=False)
+        )
+
+    def en_attente_prochain_atelier(self):
+        return self.filter(atelier_1_realise=True, atelier_6_realise=False).exclude(statut_parcours="abandon")
+
+    def en_parcours(self):
+        return self.filter(statut_parcours="en_parcours")
+
+    def termines(self):
+        return self.filter(models.Q(statut_parcours="parcours_termine") | models.Q(atelier_6_realise=True))
+
+    def abandons(self):
+        return self.filter(statut_parcours="abandon")
+
+    def orientes_afpa(self):
+        return self.filter(orientation_finale__in=["afpa", "autre_centre_afpa"])
+
+    def orientes_vers_autre_centre_afpa(self):
+        return self.filter(orientation_finale="autre_centre_afpa")
+
+    def entrants_atelier_1(self):
+        return self.filter(atelier_1_realise=True)
+
+    def sortants_atelier_6(self):
+        return self.filter(atelier_6_realise=True)
+
+    def synthese_parcours(self) -> Dict[str, Any]:
+        entrants = self.entrants_atelier_1().count()
+        orientes_afpa = self.orientes_afpa().count()
+        return {
+            "en_attente_entree": self.en_attente_entree().count(),
+            "a_integrer_atelier_1": self.a_integrer_atelier_1().count(),
+            "en_attente_prochain_atelier": self.en_attente_prochain_atelier().count(),
+            "en_parcours": self.en_parcours().count(),
+            "termines": self.termines().count(),
+            "abandons": self.abandons().count(),
+            "orientes_afpa": orientes_afpa,
+            "orientes_autre_centre_afpa": self.orientes_vers_autre_centre_afpa().count(),
+            "entrees_atelier_1": entrants,
+            "sorties_atelier_6": self.sortants_atelier_6().count(),
+            "taux_transformation_vers_afpa": round((orientes_afpa / entrants) * 100, 1) if entrants else 0,
+        }
+
+
 class StagiairePrepa(BaseModel):
     """
     Personne suivie dans un parcours Prépa sans compte utilisateur ni fiche candidat.
     """
+
+    objects = StagiairePrepaQuerySet.as_manager()
+
+    class StatutPositionnement(models.TextChoices):
+        A_POSITIONNER = "a_positionner", _("A positionner")
+        POSITIONNE = "positionne", _("Positionné")
+        EN_ATTENTE = "en_attente", _("En attente")
+
+    class OrientationFinale(models.TextChoices):
+        AFPA = "afpa", _("Orienté AFPA")
+        AUTRE_CENTRE_AFPA = "autre_centre_afpa", _("Orienté vers un autre centre AFPA")
+        HORS_AFPA = "hors_afpa", _("Autre orientation")
 
     class StatutParcours(models.TextChoices):
         EN_ATTENTE = "en_attente", _("En attente de parcours")
@@ -401,6 +468,49 @@ class StagiairePrepa(BaseModel):
     )
     date_entree_parcours = models.DateField(blank=True, null=True, verbose_name=_("Date d'entrée parcours"))
     date_sortie_parcours = models.DateField(blank=True, null=True, verbose_name=_("Date de sortie parcours"))
+    prochain_atelier_prevu = models.CharField(
+        max_length=40,
+        choices=Prepa.TypePrepa.choices,
+        blank=True,
+        null=True,
+        verbose_name=_("Prochain atelier prévu"),
+        help_text=_("Atelier explicitement attendu ensuite, si le parcours a déjà été positionné."),
+    )
+    statut_positionnement = models.CharField(
+        max_length=24,
+        choices=StatutPositionnement.choices,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name=_("Statut de positionnement"),
+    )
+    orientation_finale = models.CharField(
+        max_length=32,
+        choices=OrientationFinale.choices,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name=_("Orientation finale"),
+    )
+    centre_afpa_cible = models.ForeignKey(
+        Centre,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stagiaires_prepa_orientes",
+        verbose_name=_("Centre AFPA cible"),
+    )
+    formation_afpa_cible = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Formation AFPA cible"),
+    )
+    date_orientation = models.DateField(blank=True, null=True, verbose_name=_("Date d'orientation"))
+    entree_formation_confirmee = models.BooleanField(
+        default=False,
+        verbose_name=_("Entrée en formation AFPA confirmée"),
+    )
     commentaire_suivi = models.TextField(blank=True, null=True, verbose_name=_("Commentaire de suivi"))
     motif_abandon = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Motif d'abandon"))
 
@@ -428,6 +538,8 @@ class StagiairePrepa(BaseModel):
             models.Index(fields=["prepa_origine"]),
             models.Index(fields=["centre"]),
             models.Index(fields=["statut_parcours"]),
+            models.Index(fields=["statut_positionnement"]),
+            models.Index(fields=["orientation_finale"]),
             models.Index(fields=["nom", "prenom"]),
         ]
 
@@ -440,10 +552,17 @@ class StagiairePrepa(BaseModel):
 
     def save(self, *args, user=None, **kwargs):
         """
-        Aligne le centre avec la Prépa d'origine quand il n'est pas renseigné explicitement.
+        Aligne les champs de pilotage dérivés sans écraser les saisies existantes.
         """
         if self.prepa_origine and not self.centre:
             self.centre = self.prepa_origine.centre
+        for flag_field, date_field in self.atelier_flag_map().values():
+            if getattr(self, date_field) and not getattr(self, flag_field):
+                setattr(self, flag_field, True)
+        if self.date_atelier_1 and not self.date_entree_parcours:
+            self.date_entree_parcours = self.date_atelier_1
+        if self.date_atelier_6 and not self.date_sortie_parcours:
+            self.date_sortie_parcours = self.date_atelier_6
         super().save(*args, user=user, **kwargs)
 
     @classmethod
@@ -511,6 +630,92 @@ class StagiairePrepa(BaseModel):
         """
         return bool(self.date_entree_parcours or self.ateliers_realises_count)
 
+    @property
+    def statut_parcours_calcule(self) -> str:
+        """
+        Statut métier recalculé à partir des ateliers réalisés et de l'orientation.
+        """
+        if self.statut_parcours == self.StatutParcours.ABANDON:
+            return self.StatutParcours.ABANDON
+        if self.atelier_6_realise or self.date_sortie_parcours:
+            return self.StatutParcours.PARCOURS_TERMINE
+        if self.atelier_1_realise or self.date_entree_parcours:
+            return self.StatutParcours.EN_PARCOURS
+        return self.StatutParcours.EN_ATTENTE
+
+    def get_statut_parcours_calcule_display(self) -> str:
+        """
+        Libellé lisible du statut de parcours recalculé.
+        """
+        return dict(self.StatutParcours.choices).get(self.statut_parcours_calcule, self.statut_parcours_calcule)
+
+    @property
+    def prochain_atelier_attendu(self) -> Optional[str]:
+        """
+        Atelier attendu selon les règles métier, avec priorité à la planification explicite.
+        """
+        if self.atelier_6_realise or self.statut_parcours_calcule in {
+            self.StatutParcours.PARCOURS_TERMINE,
+            self.StatutParcours.ABANDON,
+        }:
+            return None
+        if self.prochain_atelier_prevu:
+            flag_field = self.atelier_flag_map().get(self.prochain_atelier_prevu, (None, None))[0]
+            if flag_field and not getattr(self, flag_field):
+                return self.prochain_atelier_prevu
+        if not self.atelier_1_realise:
+            return Prepa.TypePrepa.ATELIER1
+        return Prepa.TypePrepa.ATELIER6
+
+    @property
+    def prochain_atelier_attendu_label(self) -> Optional[str]:
+        """
+        Libellé lisible du prochain atelier attendu.
+        """
+        if not self.prochain_atelier_attendu:
+            return None
+        return Prepa.TypePrepa(self.prochain_atelier_attendu).label
+
+    @property
+    def est_oriente_afpa(self) -> bool:
+        """
+        Indique si la sortie visée est une orientation AFPA.
+        """
+        return self.orientation_finale in {
+            self.OrientationFinale.AFPA,
+            self.OrientationFinale.AUTRE_CENTRE_AFPA,
+        }
+
+    @property
+    def est_oriente_vers_autre_centre_afpa(self) -> bool:
+        """
+        Indique si le stagiaire est orienté vers un autre centre AFPA.
+        """
+        if self.orientation_finale == self.OrientationFinale.AUTRE_CENTRE_AFPA:
+            return True
+        if self.est_oriente_afpa and self.centre and self.centre_afpa_cible:
+            return self.centre_id != self.centre_afpa_cible_id
+        return False
+
+    @property
+    def ateliers_realises_ordonnes(self) -> list[dict[str, Any]]:
+        """
+        Liste ordonnée des ateliers réalisés avec leur date quand elle est connue.
+        """
+        data = []
+        for type_prepa, (flag_field, date_field) in self.atelier_flag_map().items():
+            if getattr(self, flag_field):
+                data.append(
+                    {
+                        "value": type_prepa,
+                        "label": Prepa.TypePrepa(type_prepa).label,
+                        "date": getattr(self, date_field),
+                    }
+                )
+        return sorted(
+            data,
+            key=lambda item: (item["date"] is None, item["date"] or date.min, item["label"]),
+        )
 
 class ObjectifPrepa(BaseModel):
     """

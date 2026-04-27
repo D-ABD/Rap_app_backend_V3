@@ -6,6 +6,7 @@ import ChartCard from "../components/dashboard/ChartCard";
 
 import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
 import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
+import PrepaStatsParcours from "./prepa/PrepaStatsParcours";
 
 export default function DashboardPrepaStaffPage() {
   const { user } = useAuth();
@@ -55,11 +56,7 @@ export default function DashboardPrepaStaffPage() {
         </Grid>
 
         <Grid item xs={12} lg={6}>
-          <ChartCard title="À venir">
-            <Typography color="text.secondary" textAlign="center">
-              (Prochain widget — Graphiques, tendances, rétention…)
-            </Typography>
-          </ChartCard>
+          <PrepaStatsParcours title="Parcours individuels — Stagiaires Prépa" />
         </Grid>
 
         <Grid item xs={12} lg={6}>

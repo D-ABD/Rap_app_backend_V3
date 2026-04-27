@@ -125,6 +125,7 @@ export default function ProspectionPageCandidat() {
   // ── archivage via DELETE legacy
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
   const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
 
   const handleDelete = async () => {
@@ -133,7 +134,7 @@ export default function ProspectionPageCandidat() {
 
     try {
       await Promise.all(
-        idsToDelete.map((id) => api.delete(`/prospections/${id}/candidat`))
+        idsToDelete.map((id) => api.delete(`/prospections/${id}/`))
       );
       toast.success(`📦 ${idsToDelete.length} prospection(s) archivée(s)`);
       setShowConfirm(false);
@@ -142,6 +143,20 @@ export default function ProspectionPageCandidat() {
       setReloadKey((k) => k + 1);
     } catch {
       toast.error("Impossible d'archiver une ou plusieurs prospections.");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+    try {
+      await api.post(`/prospections/${hardDeleteId}/hard-delete/`);
+      toast.success("🗑️ Prospection supprimée définitivement");
+      setHardDeleteId(null);
+      setSelectedId(null);
+      setSelectedIds([]);
+      setReloadKey((k) => k + 1);
+    } catch {
+      toast.error("Impossible de supprimer définitivement cette prospection.");
     }
   };
 
@@ -385,6 +400,8 @@ export default function ProspectionPageCandidat() {
             onRowHover={handleRowHover}
             onDeleteClick={handleDeleteClick}
             onRestoreClick={handleRestoreClick}
+            onHardDeleteClick={(id) => setHardDeleteId(id)}
+            canHardDelete
           />
         </Box>
       )}
@@ -411,6 +428,26 @@ export default function ProspectionPageCandidat() {
           <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
           <Button color="error" variant="contained" onClick={handleDelete}>
             Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={hardDeleteId !== null} onClose={() => setHardDeleteId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="error" />
+          Suppression définitive
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {hardDeleteId
+              ? `Supprimer définitivement la prospection #${hardDeleteId} ? Cette action est irréversible.`
+              : "Supprimer définitivement cette prospection ?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button color="error" variant="contained" onClick={handleHardDelete}>
+            Supprimer définitivement
           </Button>
         </DialogActions>
       </Dialog>

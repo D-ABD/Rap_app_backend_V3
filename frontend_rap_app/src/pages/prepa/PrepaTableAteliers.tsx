@@ -45,6 +45,7 @@ type Props = {
   items: Prepa[];
   selectedIds: number[];
   onSelectionChange: (ids: number[]) => void;
+  onView?: (id: number) => void;
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
   onToggleArchive?: (id: number, archived: boolean) => void;
@@ -57,6 +58,7 @@ export default function PrepaTableAteliers({
   items,
   selectedIds,
   onSelectionChange,
+  onView,
   onEdit,
   onDelete,
   onToggleArchive,
@@ -334,7 +336,7 @@ export default function PrepaTableAteliers({
 
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <Stack direction="row" spacing={1}>
-                    <IconButton size="small" onClick={() => onRowClick?.(d.id)}>
+                    <IconButton size="small" onClick={() => (onView ? onView(d.id) : onRowClick?.(d.id))}>
                       <VisibilityIcon fontSize="inherit" />
                     </IconButton>
 

@@ -11,7 +11,7 @@ import PrepaFormAteliers from "./PrepaFormAteliers";
 
 /**
  * Page : Création directe d’une activité Prépa
- * → redirige vers /prepa après enregistrement
+ * → redirige vers /prepa/ateliers après enregistrement
  */
 export default function PrepaCreatePageAteliers() {
   const navigate = useNavigate();
@@ -55,7 +55,7 @@ export default function PrepaCreatePageAteliers() {
 
       await create(payload);
       toast.success("✅ Activité Prépa créée avec succès");
-      navigate("/prepa"); // 👉 redirection directe
+      navigate("/prepa/ateliers");
     } catch (error) {
       const axiosErr = error as AxiosError<unknown>;
       const data = axiosErr.response?.data;
@@ -89,7 +89,7 @@ export default function PrepaCreatePageAteliers() {
         <PrepaFormAteliers
           meta={meta ?? null}
           onSubmit={handleSubmit}
-          onCancel={() => navigate("/prepa")}
+          onCancel={() => navigate("/prepa/ateliers")}
           submitting={submitting}
           onCentreChange={(nom) => setSelectedCentre(nom)} // ✅ remonte le nom du centre depuis le formulaire
         />

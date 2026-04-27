@@ -10,6 +10,7 @@ import ProspectionFormCandidat from "./ProspectionFormCandidat";
 import api from "../../api/axios";
 import { useCreateProspection } from "../../hooks/useProspection";
 import { usePartenaire } from "../../hooks/usePartenaires";
+import { useMe } from "../../hooks/useUsers";
 
 import type {
   ProspectionFormData,
@@ -38,38 +39,97 @@ function extractCreatedId(value: unknown): number | null {
 export default function ProspectionCreatePageCandidat() {
   const navigate = useNavigate();
   const { create, loading: creating, error: createError } = useCreateProspection();
+  const { user: me } = useMe();
   const [searchParams] = useSearchParams();
 
   const presetPartenaire = useMemo(() => toNum(searchParams.get("partenaire")), [searchParams]);
-  const presetFormation = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
+  /** Formation explicite dans l’URL (lien filtré). */
+  const formationFromUrl = useMemo(() => toNum(searchParams.get("formation")), [searchParams]);
+  const formationNomFromUrl = useMemo(
+    () => searchParams.get("formation_nom")?.trim() || null,
+    [searchParams]
+  );
+
+  const profileFormationId = useMemo(
+    () => me?.formation?.id ?? me?.formation_info?.id ?? null,
+    [me]
+  );
+  const profileFormationNom = useMemo(
+    () => me?.formation?.nom ?? me?.formation_info?.nom ?? null,
+    [me]
+  );
+  const profileNumOffre = useMemo(
+    () => (me?.formation?.num_offre ?? me?.formation_info?.num_offre ?? null) as string | null,
+    [me]
+  );
+
+  /** Fiche associée : priorité à l’URL, sinon formation liée au compte (fiche candidat / stagiaire). */
+  const effectiveFormationId = useMemo(
+    () => formationFromUrl ?? profileFormationId,
+    [formationFromUrl, profileFormationId]
+  );
+
+  const returnUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (presetPartenaire) params.set("partenaire", String(presetPartenaire));
+    if (effectiveFormationId) params.set("formation", String(effectiveFormationId));
+    const query = params.toString();
+    return query ? `/prospections/candidat?${query}` : "/prospections/candidat";
+  }, [effectiveFormationId, presetPartenaire]);
 
   // 🔎 partenaire
   const { data: partenaireData } = usePartenaire(presetPartenaire ?? undefined);
   const partenaireNom = partenaireData?.nom ?? null;
 
-  // 🔎 formation
-  const [formationNom, setFormationNom] = useState<string | null>(null);
+  // 🔎 libellé formation (les comptes candidat n’ont pas accès à GET /formations/ — on s’appuie sur l’URL + le profil /me)
+  const [fetchedNomForUrlFormation, setFetchedNomForUrlFormation] = useState<string | null>(null);
   useEffect(() => {
+    if (!formationFromUrl) {
+      setFetchedNomForUrlFormation(null);
+      return;
+    }
+    if (formationNomFromUrl) {
+      setFetchedNomForUrlFormation(null);
+      return;
+    }
+    if (profileFormationId === formationFromUrl && profileFormationNom) {
+      setFetchedNomForUrlFormation(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      if (!presetFormation) {
-        setFormationNom(null);
-        return;
-      }
       try {
-        const res = await api.get<{ id: number; nom: string }>(`/formations/${presetFormation}/`);
-        const nom =
-          res.data?.nom ??
-          (isRecord(res.data) && typeof res.data.nom === "string" ? res.data.nom : null);
-        if (!cancelled) setFormationNom(nom ?? null);
+        const res = await api.get<unknown>(`/formations/${formationFromUrl}/`);
+        const root = (isRecord(res.data) && isRecord((res.data as { data?: unknown }).data)
+          ? (res.data as { data: unknown }).data
+          : res.data) as unknown;
+        const nom = isRecord(root) && typeof root.nom === "string" ? root.nom : null;
+        if (!cancelled) setFetchedNomForUrlFormation(nom);
       } catch {
-        if (!cancelled) setFormationNom(null);
+        if (!cancelled) setFetchedNomForUrlFormation(null);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [presetFormation]);
+  }, [formationFromUrl, formationNomFromUrl, profileFormationId, profileFormationNom]);
+
+  const resolvedFormationNom = useMemo(() => {
+    if (formationFromUrl) {
+      if (formationNomFromUrl) return formationNomFromUrl;
+      if (fetchedNomForUrlFormation) return fetchedNomForUrlFormation;
+      if (profileFormationId === formationFromUrl) return profileFormationNom;
+      return null;
+    }
+    if (profileFormationId) return profileFormationNom;
+    return null;
+  }, [
+    formationFromUrl,
+    formationNomFromUrl,
+    fetchedNomForUrlFormation,
+    profileFormationId,
+    profileFormationNom,
+  ]);
 
   // ✅ valeurs par défaut
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -82,7 +142,7 @@ export default function ProspectionCreatePageCandidat() {
     return {
       partenaire: presetPartenaire ?? null,
       partenaire_nom: partenaireNom,
-      formation: presetFormation ?? null,
+      formation: effectiveFormationId,
       date_prospection: today,
       type_prospection: defaultType,
       motif: defaultMotif,
@@ -92,9 +152,12 @@ export default function ProspectionCreatePageCandidat() {
       relance_prevue: null,
       owner: null,
       owner_username: null,
-      formation_nom: formationNom,
+      formation_nom: resolvedFormationNom,
       centre_nom: null,
-      num_offre: null,
+      num_offre:
+        effectiveFormationId && profileFormationId === effectiveFormationId
+          ? profileNumOffre
+          : null,
       partenaire_ville: null,
       partenaire_tel: null,
       partenaire_email: null,
@@ -109,7 +172,15 @@ export default function ProspectionCreatePageCandidat() {
       last_comment_id: null,
       comments_count: undefined,
     };
-  }, [presetPartenaire, partenaireNom, presetFormation, formationNom, today]);
+  }, [
+    effectiveFormationId,
+    partenaireNom,
+    presetPartenaire,
+    profileFormationId,
+    profileNumOffre,
+    resolvedFormationNom,
+    today,
+  ]);
 
   const handleSubmit = async (formData: ProspectionFormData) => {
     try {
@@ -123,7 +194,7 @@ export default function ProspectionCreatePageCandidat() {
       if (wantsComment && createdId) {
         navigate(`/prospection-commentaires/create/${createdId}`);
       } else {
-        navigate("/prospections");
+        navigate(returnUrl);
       }
     } catch {
       toast.error("❌ Erreur lors de la création");
@@ -143,14 +214,14 @@ export default function ProspectionCreatePageCandidat() {
       ) : (
         <PageSection>
           <ProspectionFormCandidat
-            key={["create-cand", presetPartenaire, partenaireNom, presetFormation, formationNom].join(
+            key={["create-cand", presetPartenaire, partenaireNom, effectiveFormationId, resolvedFormationNom, profileFormationId].join(
               "-"
             )}
             mode="create"
             initialValues={initialValues}
             onSubmit={handleSubmit}
             loading={creating}
-            fixedFormationId={presetFormation ?? undefined}
+            fixedFormationId={formationFromUrl ?? undefined}
           />
         </PageSection>
       )}

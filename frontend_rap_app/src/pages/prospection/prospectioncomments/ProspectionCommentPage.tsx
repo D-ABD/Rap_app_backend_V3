@@ -444,7 +444,11 @@ export default function ProspectionCommentPage() {
           onHardDelete={(r) => setHardDeleteRow(r)}
           canHardDelete={canHardDelete}
           onEdit={(r) => navigate(`/prospection-commentaires/${r.id}/edit`)}
-          linkToProspection={(id) => `/prospections/${id}`}
+          linkToProspection={(id) =>
+            role === "candidat" || role === "stagiaire"
+              ? `/prospections/${id}/edit/candidat`
+              : `/prospections/${id}/edit`
+          }
         />
       )}
 

@@ -2,7 +2,17 @@
  * Colonnes table candidats (ResponsiveTableTemplate) — logique d’affichage inchangée.
  */
 import type { RefObject, MutableRefObject } from "react";
-import { Box, Checkbox, Link, IconButton, Tooltip, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Checkbox,
+  Chip,
+  IconButton,
+  Link,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -45,6 +55,18 @@ export type CandidatColumnFactoryArgs = {
   onRestore?: (id: number) => void;
   onHardDelete?: (id: number) => void;
 };
+
+function getCandidateInitials(c: Candidat): string {
+  const source = fullName(c);
+  const parts = source
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) return "C";
+  return parts.map((part) => part.charAt(0).toUpperCase()).join("");
+}
 
 export function renderCandidatRowActions(
   c: Candidat,
@@ -174,14 +196,70 @@ export function buildCandidatTableColumns(
       stickyLeftOffsetPx: a.nameLeftPx,
       noWrap: false,
       render: (c) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600}>
-            {fullName(c)}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {c.nom} {c.prenom}
-          </Typography>
-        </Box>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 240 }}>
+          <Avatar
+            sx={{
+              width: 36,
+              height: 36,
+              fontSize: 13,
+              fontWeight: 700,
+              bgcolor: (theme) =>
+                theme.palette.mode === "light" ? "grey.900" : "grey.100",
+              color: (theme) =>
+                theme.palette.mode === "light" ? "common.white" : "grey.900",
+              boxShadow: (theme) =>
+                theme.palette.mode === "light"
+                  ? "0 10px 24px rgba(15,23,42,0.10)"
+                  : "0 10px 24px rgba(0,0,0,0.32)",
+            }}
+          >
+            {getCandidateInitials(c)}
+          </Avatar>
+
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={700} noWrap>
+              {fullName(c)}
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              useFlexGap
+              flexWrap="wrap"
+              sx={{ mt: 0.5 }}
+            >
+              <Chip
+                size="small"
+                label={`#${c.id}`}
+                variant="outlined"
+                sx={{ height: 22, fontSize: 11, fontWeight: 600 }}
+              />
+              {typeof c.age === "number" && (
+                <Chip
+                  size="small"
+                  label={`${c.age} ans`}
+                  variant="outlined"
+                  sx={{ height: 22, fontSize: 11 }}
+                />
+              )}
+              {c.centre_nom && (
+                <Chip
+                  size="small"
+                  label={c.centre_nom}
+                  variant="outlined"
+                  sx={{
+                    height: 22,
+                    fontSize: 11,
+                    maxWidth: 160,
+                    "& .MuiChip-label": {
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    },
+                  }}
+                />
+              )}
+            </Stack>
+          </Box>
+        </Stack>
       ),
     },
     {
@@ -194,10 +272,36 @@ export function buildCandidatTableColumns(
       label: "📧 Contact",
       noWrap: false,
       render: (c) => (
-        <Box onClick={(e) => e.stopPropagation()}>
+        <Stack
+          spacing={0.75}
+          onClick={(e) => e.stopPropagation()}
+          sx={{ minWidth: 220 }}
+        >
           {c.email ? (
-            <Link href={`mailto:${c.email}`} display="block">
-              {c.email}
+            <Link
+              href={`mailto:${c.email}`}
+              underline="none"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                width: "fit-content",
+                px: 1,
+                py: 0.45,
+                borderRadius: 999,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "light" ? "grey.100" : "grey.900",
+                color: "text.primary",
+                fontWeight: 500,
+                maxWidth: "100%",
+              }}
+            >
+              <Typography
+                variant="body2"
+                noWrap
+                sx={{ maxWidth: 210, fontWeight: 500 }}
+              >
+                {c.email}
+              </Typography>
             </Link>
           ) : (
             <Typography color="text.disabled">—</Typography>
@@ -205,44 +309,79 @@ export function buildCandidatTableColumns(
           {c.telephone && (
             <Link
               href={`tel:${c.telephone}`}
-              display="block"
-              variant="body2"
-              color="text.secondary"
+              underline="none"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                width: "fit-content",
+                px: 1,
+                py: 0.45,
+                borderRadius: 999,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "light" ? "rgba(2,132,199,0.10)" : "rgba(125,211,252,0.14)",
+                color: "text.secondary",
+                fontWeight: 500,
+              }}
             >
-              {c.telephone}
+              <Typography variant="body2" color="inherit">
+                {c.telephone}
+              </Typography>
             </Link>
           )}
-        </Box>
+        </Stack>
       ),
     },
     {
       key: "localisation",
       label: "📍 Localisation",
+      noWrap: false,
       render: (c) =>
-        c.ville || c.code_postal
-          ? `${c.ville ?? ""}${
-              c.ville && c.code_postal ? " (" + c.code_postal + ")" : c.code_postal ?? ""
-            }`
-          : "—",
+        c.ville || c.code_postal ? (
+          <Box>
+            <Typography variant="body2" fontWeight={600}>
+              {c.ville || "—"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {c.code_postal || "Code postal non renseigné"}
+            </Typography>
+          </Box>
+        ) : (
+          "—"
+        ),
     },
     {
       key: "formation_complete",
       label: "🎓 Formation complète",
       noWrap: false,
       render: (c) => (
-        <Box>
-          <Typography variant="body2" fontWeight={500}>
+        <Box sx={{ minWidth: 250 }}>
+          <Typography variant="body2" fontWeight={700}>
             {formatFormation(c)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {[
-              c.formation_info?.num_offre,
-              c.formation_info?.centre?.nom,
-              typeOffreLabel(c),
-            ]
+          <Stack
+            direction="row"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+            sx={{ mt: 0.5 }}
+          >
+            {[c.formation_info?.num_offre, c.formation_info?.centre?.nom, typeOffreLabel(c)]
               .filter(Boolean)
-              .join(" · ") || "—"}
-          </Typography>
+              .map((value) => (
+                <Chip
+                  key={String(value)}
+                  size="small"
+                  label={String(value)}
+                  variant="outlined"
+                  sx={{
+                    height: 22,
+                    fontSize: 11,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "light" ? "grey.50" : "grey.900",
+                  }}
+                />
+              ))}
+          </Stack>
         </Box>
       ),
     },
@@ -353,10 +492,19 @@ export function buildCandidatTableColumns(
         return la?.last_commentaire ? (
           <Box
             sx={{
-              backgroundColor: (theme) => theme.palette.action.hover,
-              p: 0.6,
-              borderRadius: 1,
+              background: (theme) =>
+                theme.palette.mode === "light"
+                  ? "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.92) 100%)"
+                  : "linear-gradient(180deg, rgba(30,41,59,0.65) 0%, rgba(15,23,42,0.82) 100%)",
+              p: 1,
+              borderRadius: 2,
               maxWidth: 260,
+              border: (theme) =>
+                `1px solid ${
+                  theme.palette.mode === "light"
+                    ? "rgba(148,163,184,0.20)"
+                    : "rgba(148,163,184,0.18)"
+                }`,
             }}
           >
             <Typography

@@ -54,6 +54,15 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     centre_nom = serializers.CharField(source="centre.nom", read_only=True)
+    centre_afpa_cible = PrepaCentreLightSerializer(read_only=True)
+    centre_afpa_cible_id = serializers.PrimaryKeyRelatedField(
+        queryset=Centre.objects.all(),
+        source="centre_afpa_cible",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    centre_afpa_cible_nom = serializers.CharField(source="centre_afpa_cible.nom", read_only=True)
     prepa_origine_id = serializers.PrimaryKeyRelatedField(
         queryset=Prepa.objects.select_related("centre").all(),
         source="prepa_origine",
@@ -63,10 +72,20 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     )
     prepa_origine_label = serializers.SerializerMethodField()
     statut_parcours_display = serializers.CharField(source="get_statut_parcours_display", read_only=True)
+    statut_parcours_calcule = serializers.SerializerMethodField()
+    statut_parcours_calcule_display = serializers.SerializerMethodField()
+    statut_positionnement_display = serializers.CharField(source="get_statut_positionnement_display", read_only=True)
+    orientation_finale_display = serializers.CharField(source="get_orientation_finale_display", read_only=True)
     ateliers_realises_count = serializers.SerializerMethodField()
     ateliers_realises_labels = serializers.SerializerMethodField()
+    ateliers_realises_ordonnes = serializers.SerializerMethodField()
     dernier_atelier_label = serializers.SerializerMethodField()
     dernier_atelier_date = serializers.SerializerMethodField()
+    prochain_atelier_attendu = serializers.SerializerMethodField()
+    prochain_atelier_attendu_display = serializers.SerializerMethodField()
+    prochain_atelier_prevu_display = serializers.CharField(source="get_prochain_atelier_prevu_display", read_only=True)
+    est_oriente_afpa = serializers.SerializerMethodField()
+    est_oriente_vers_autre_centre_afpa = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -79,12 +98,30 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "centre",
             "centre_id",
             "centre_nom",
+            "centre_afpa_cible",
+            "centre_afpa_cible_id",
+            "centre_afpa_cible_nom",
             "nom",
             "prenom",
             "telephone",
             "email",
             "statut_parcours",
             "statut_parcours_display",
+            "statut_parcours_calcule",
+            "statut_parcours_calcule_display",
+            "prochain_atelier_prevu",
+            "prochain_atelier_prevu_display",
+            "prochain_atelier_attendu",
+            "prochain_atelier_attendu_display",
+            "statut_positionnement",
+            "statut_positionnement_display",
+            "orientation_finale",
+            "orientation_finale_display",
+            "formation_afpa_cible",
+            "date_orientation",
+            "entree_formation_confirmee",
+            "est_oriente_afpa",
+            "est_oriente_vers_autre_centre_afpa",
             "date_entree_parcours",
             "date_sortie_parcours",
             "commentaire_suivi",
@@ -105,6 +142,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "date_atelier_autre",
             "ateliers_realises_count",
             "ateliers_realises_labels",
+            "ateliers_realises_ordonnes",
             "dernier_atelier_label",
             "dernier_atelier_date",
             "created_at",
@@ -119,9 +157,20 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "updated_by",
             "prepa_origine_label",
             "centre_nom",
+            "centre_afpa_cible_nom",
             "statut_parcours_display",
+            "statut_parcours_calcule",
+            "statut_parcours_calcule_display",
+            "prochain_atelier_prevu_display",
+            "prochain_atelier_attendu",
+            "prochain_atelier_attendu_display",
+            "statut_positionnement_display",
+            "orientation_finale_display",
+            "est_oriente_afpa",
+            "est_oriente_vers_autre_centre_afpa",
             "ateliers_realises_count",
             "ateliers_realises_labels",
+            "ateliers_realises_ordonnes",
             "dernier_atelier_label",
             "dernier_atelier_date",
         ]
@@ -145,6 +194,17 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_ateliers_realises_labels(self, obj) -> list[str]:
         return obj.ateliers_realises_labels
 
+    @extend_schema_field(
+        serializers.ListField(
+            child=serializers.DictField(
+                child=serializers.CharField(allow_null=True),
+            ),
+            allow_empty=True,
+        )
+    )
+    def get_ateliers_realises_ordonnes(self, obj) -> list[dict]:
+        return obj.ateliers_realises_ordonnes
+
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_dernier_atelier_label(self, obj) -> str | None:
         return obj.dernier_atelier_label
@@ -153,15 +213,56 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_dernier_atelier_date(self, obj) -> str | None:
         return obj.dernier_atelier_date
 
+    @extend_schema_field(serializers.CharField())
+    def get_statut_parcours_calcule(self, obj) -> str:
+        return obj.statut_parcours_calcule
+
+    @extend_schema_field(serializers.CharField())
+    def get_statut_parcours_calcule_display(self, obj) -> str:
+        return obj.get_statut_parcours_calcule_display()
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prochain_atelier_attendu(self, obj) -> str | None:
+        return obj.prochain_atelier_attendu
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prochain_atelier_attendu_display(self, obj) -> str | None:
+        return obj.prochain_atelier_attendu_label
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_est_oriente_afpa(self, obj) -> bool:
+        return obj.est_oriente_afpa
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_est_oriente_vers_autre_centre_afpa(self, obj) -> bool:
+        return obj.est_oriente_vers_autre_centre_afpa
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
         statut = attrs.get("statut_parcours", getattr(self.instance, "statut_parcours", None))
         motif = attrs.get("motif_abandon", getattr(self.instance, "motif_abandon", None))
+        orientation = attrs.get("orientation_finale", getattr(self.instance, "orientation_finale", None))
+        centre_afpa_cible = attrs.get("centre_afpa_cible", getattr(self.instance, "centre_afpa_cible", None))
+        formation_afpa_cible = attrs.get("formation_afpa_cible", getattr(self.instance, "formation_afpa_cible", None))
+        date_orientation = attrs.get("date_orientation", getattr(self.instance, "date_orientation", None))
+        errors = {}
 
         if statut == StagiairePrepa.StatutParcours.ABANDON and not motif:
-            raise serializers.ValidationError(
-                {"motif_abandon": "Le motif d'abandon est requis quand le statut est Abandon."}
+            errors["motif_abandon"] = "Le motif d'abandon est requis quand le statut est Abandon."
+        if orientation in {
+            StagiairePrepa.OrientationFinale.AFPA,
+            StagiairePrepa.OrientationFinale.AUTRE_CENTRE_AFPA,
+        }:
+            if not centre_afpa_cible:
+                errors["centre_afpa_cible_id"] = "Le centre AFPA cible est requis pour une orientation AFPA."
+            if not formation_afpa_cible:
+                errors["formation_afpa_cible"] = "La formation AFPA cible est requise pour une orientation AFPA."
+        if orientation and not date_orientation:
+            errors["date_orientation"] = (
+                "La date d'orientation est requise lorsqu'une orientation finale est renseignée."
             )
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return attrs
 

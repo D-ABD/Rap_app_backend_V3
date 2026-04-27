@@ -31,6 +31,7 @@ class ProspectionChoices:
     OBJECTIF_PRISE_CONTACT = "prise_contact"  # Prise de contact
     OBJECTIF_RENDEZ_VOUS = "rendez_vous"  # Obtenir un rendez-vous
     OBJECTIF_PRESENTATION = "presentation_offre"  # Présentation d'une offre
+    OBJECTIF_CANDIDATURE = "candidature"  # Déposer une candidature
     OBJECTIF_CONTRAT = "contrat"  # Signer un contrat
     OBJECTIF_PARTENARIAT = "partenariat"  # Établir un partenariat
     OBJECTIF_AUTRE = "autre"  # Autre
@@ -39,6 +40,7 @@ class ProspectionChoices:
         (OBJECTIF_PRISE_CONTACT, _("Prise de contact")),
         (OBJECTIF_RENDEZ_VOUS, _("Obtenir un rendez-vous")),
         (OBJECTIF_PRESENTATION, _("Présentation d'une offre")),
+        (OBJECTIF_CANDIDATURE, _("Candidature")),
         (OBJECTIF_CONTRAT, _("Signer un contrat")),
         (OBJECTIF_PARTENARIAT, _("Établir un partenariat")),
         (OBJECTIF_AUTRE, _("Autre")),
@@ -53,7 +55,7 @@ class ProspectionChoices:
 
     PROSPECTION_MOTIF_CHOICES = [
         (MOTIF_POEI, _("POEI")),
-        (MOTIF_APPRENTISSAGE, _("Apprentissage")),
+        (MOTIF_APPRENTISSAGE, _("Alternance")),
         (MOTIF_VAE, _("VAE")),
         (MOTIF_PARTENARIAT, _("Établir un partenariat")),
         (MOTIF_AUTRE, _("Autre")),

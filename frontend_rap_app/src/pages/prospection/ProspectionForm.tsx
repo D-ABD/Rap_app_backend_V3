@@ -3,17 +3,14 @@ import {
   Alert,
   Box,
   Button,
-  Grid,
+  Divider,
+  FormHelperText,
   MenuItem,
   CircularProgress,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
-import {
-  Business as BusinessIcon,
-  Assignment as AssignmentIcon,
-  Send as SendIcon,
-} from "@mui/icons-material";
 import type { SelectChangeEvent } from "@mui/material";
 import { toast } from "react-toastify";
 import { toApiError } from "../../api/httpClient";
@@ -35,13 +32,7 @@ import CandidatsSelectModal, {
 import type { Partenaire } from "../../types/partenaire";
 import PartenaireSelectModal from "../../components/modals/PartenairesSelectModal";
 import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
-import FormSectionCard from "../../components/forms/FormSectionCard";
 import FormActionsBar from "../../components/forms/FormActionsBar";
-import type { Theme } from "@mui/material/styles";
-import type { AppTheme } from "../../theme";
-import AppDateField from "../../components/forms/fields/AppDateField";
-import AppSelectField from "../../components/forms/fields/AppSelectField";
-import EntityPickerField from "../../components/forms/fields/EntityPickerField";
 
 const TERMINAUX: ProspectionStatut[] = ["acceptee", "refusee", "annulee"];
 type Mode = "create" | "edit";
@@ -85,6 +76,20 @@ function extractCandidateDisplayName(candidate: CandidatPick): string {
     `${candidate.prenom ?? ""} ${candidate.nom ?? ""}`.trim() ||
     `Candidat #${candidate.id}`
   );
+}
+
+function extractFormationFromCandidate(candidate: CandidatPick): {
+  id: number | null;
+  nom: string | null;
+} {
+  const formationId =
+    candidate.formation && typeof candidate.formation.id === "number"
+      ? candidate.formation.id
+      : null;
+  const formationNom =
+    candidate.formation_nom ?? candidate.formation?.nom ?? null;
+
+  return { id: formationId, nom: formationNom };
 }
 
 export default function ProspectionForm({
@@ -135,6 +140,13 @@ export default function ProspectionForm({
   const { choices, loading: loadingChoices, error } = useProspectionChoices();
 
   const hasCandidateOwner = !!form.owner;
+  const submitLabel = loading
+    ? mode === "create"
+      ? "⏳ Création…"
+      : "⏳ Sauvegarde…"
+    : mode === "create"
+      ? "✅ Créer la prospection"
+      : "✅ Enregistrer les modifications";
 
   useEffect(() => {
     setForm({
@@ -240,235 +252,257 @@ export default function ProspectionForm({
     }
   };
 
-  if (loadingChoices) return <CircularProgress />;
-  if (error) return <Typography color="error">❌ Erreur lors du chargement des choix.</Typography>;
-
-  const sectionTitle = (icon: React.ReactNode, text: string) => (
-    <Stack direction="row" alignItems="center" spacing={1}>
-      {icon}
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: "primary.main" }}>
-        {text}
-      </Typography>
-    </Stack>
-  );
-
-  const cardSx = {
-    mb: 3,
-    background: (theme: Theme) =>
-      theme.palette.mode === "light"
-        ? (theme as AppTheme).custom.form.section.paperBackground.light
-        : (theme as AppTheme).custom.form.section.paperBackground.dark,
-  };
+  if (loadingChoices) {
+    return (
+      <Stack alignItems="center" justifyContent="center" spacing={1.5} py={5} px={2}>
+        <CircularProgress size={36} />
+        <Typography variant="body2" color="text.secondary">
+          Chargement des listes de prospection…
+        </Typography>
+      </Stack>
+    );
+  }
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 1 }}>
+        Erreur lors du chargement des choix. Réessayez plus tard.
+      </Alert>
+    );
+  }
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%" }}>
       {generalError ? (
         <Alert severity="error" sx={{ mb: 2 }}>
           {generalError}
         </Alert>
       ) : null}
 
-      <FormSectionCard
-        sx={cardSx}
-        title={sectionTitle(
-          <BusinessIcon color="primary" />,
-          "Entités liées (Partenaire, Formation, Candidat)"
-        )}
-      >
-        <Grid container spacing={2} alignItems="stretch">
-          <Grid item xs={12}>
-            <EntityPickerField
+      <Stack spacing={3}>
+        <Stack spacing={1}>
+          <Typography variant="h6">Sélection</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Associez un partenaire, un candidat et vérifiez la formation retenue.
+          </Typography>
+        </Stack>
+
+        <Divider />
+
+        <Stack spacing={2.5}>
+          <Stack spacing={1}>
+            <TextField
               label="Partenaire"
-              displayValue={partenaireNom ?? ""}
-              placeholder="— Non défini"
-              onOpen={() => setShowPartenaireModal(true)}
-              required
-              helperText="Sélectionnez le partenaire lié à cette prospection."
+              value={partenaireNom ?? "Partenaire inconnu"}
+              fullWidth
+              InputProps={{ readOnly: true }}
             />
-          </Grid>
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={() => setShowPartenaireModal(true)}
+                disabled={loading}
+              >
+                🔍 {partenaireNom ? "Changer de partenaire" : "Sélectionner un partenaire"}
+              </Button>
+            </Box>
+          </Stack>
 
-          {!fixedFormationId ? (
-            <Grid item xs={12}>
-              <EntityPickerField
-                label="Formation"
-                displayValue={formationNom ?? ""}
-                placeholder="— Non définie"
-                onOpen={() => setShowFormationModal(true)}
-                disabled={hasCandidateOwner}
-                helperText={
-                  hasCandidateOwner ? (
-                    "La formation du candidat sélectionné sera utilisée automatiquement."
-                  ) : (
-                    <>
-                      Numéro d&apos;offre : <strong>{numOffre ?? "— Non défini"}</strong>
-                    </>
-                  )
-                }
-              />
-            </Grid>
-          ) : null}
-
-          <Grid item xs={12}>
-            <EntityPickerField
+          <Stack spacing={1}>
+            <TextField
               label="Candidat"
-              displayValue={ownerUsername ?? ""}
-              placeholder="— Aucun"
-              onOpen={() => setShowOwnerModal(true)}
-              helperText={
-                !form.owner ? (
-                  "Vous pouvez attribuer cette prospection à un candidat existant."
-                ) : form.formation_nom ? (
-                  <>
-                    Cette prospection sera liée au candidat sélectionné. Formation :{" "}
-                    <strong>{form.formation_nom}</strong> (automatique)
-                  </>
-                ) : (
-                  "Cette prospection sera liée au candidat sélectionné."
-                )
-              }
+              value={ownerUsername ?? "Aucun candidat sélectionné"}
+              fullWidth
+              InputProps={{ readOnly: true }}
             />
-          </Grid>
-        </Grid>
-      </FormSectionCard>
-
-      <FormSectionCard
-        sx={cardSx}
-        title={sectionTitle(<AssignmentIcon color="primary" />, "Informations de prospection")}
-      >
-        <Grid container spacing={2} alignItems="flex-start">
-          <Grid item xs={12} md={6}>
-            <Stack spacing={2}>
-              <AppDateField
-                name="date_prospection"
-                label="Date de prospection"
-                value={form.date_prospection}
-                onChange={handleInputChange}
-                required
-              />
-
-              <AppSelectField
-                label="Type"
-                labelId="prospection-type-prospection"
-                name="type_prospection"
-                value={form.type_prospection}
-                onChange={handleSelectChange}
-                required
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={() => setShowOwnerModal(true)}
+                disabled={loading}
               >
-                {choices!.type_prospection.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </AppSelectField>
+                🔍 {form.owner ? "Changer de candidat" : "Sélectionner un candidat"}
+              </Button>
+            </Box>
+            <FormHelperText>
+              {!form.owner
+                ? "Vous pouvez attribuer cette prospection à un candidat existant."
+                : "La formation du candidat sélectionné sera reprise automatiquement si elle existe."}
+            </FormHelperText>
+          </Stack>
 
-              <AppSelectField
-                label="Motif"
-                labelId="prospection-motif"
-                name="motif"
-                value={form.motif}
-                onChange={handleSelectChange}
-                required
-              >
-                {choices!.motif.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </AppSelectField>
-            </Stack>
-          </Grid>
+          <Stack spacing={1}>
+            <TextField
+              label="Formation"
+              value={formationNom ?? (fixedFormationId ? `#${fixedFormationId}` : "Formation inconnue")}
+              fullWidth
+              InputProps={{ readOnly: true }}
+            />
+            {!fixedFormationId ? (
+              <Box>
+                <Button
+                  variant="outlined"
+                  onClick={() => setShowFormationModal(true)}
+                  disabled={loading}
+                >
+                  🔍 {formationNom ? "Changer de formation" : "Sélectionner une formation"}
+                </Button>
+              </Box>
+            ) : null}
+            <FormHelperText>
+              {hasCandidateOwner
+                ? "La formation du candidat a été préremplie, mais vous pouvez la modifier."
+                : typeof fixedFormationId === "number"
+                  ? `Formation fixée (#${fixedFormationId}).`
+                  : `Numéro d'offre : ${numOffre ?? "— Non défini"}`}
+            </FormHelperText>
+          </Stack>
+        </Stack>
 
-          <Grid item xs={12} md={6}>
-            <Stack spacing={2}>
-              <AppSelectField
-                label="Moyen de contact"
-                labelId="prospection-moyen-contact"
-                name="moyen_contact"
-                value={form.moyen_contact ?? ""}
-                onChange={handleSelectChange}
-              >
-                <MenuItem value="">—</MenuItem>
-                {choices!.moyen_contact.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </AppSelectField>
+        <Divider />
 
-              <AppSelectField
-                label="Statut"
-                labelId="prospection-statut"
-                name="statut"
-                value={form.statut}
-                onChange={handleSelectChange}
-                required
-              >
-                {choices!.statut.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </AppSelectField>
+        <Stack spacing={1}>
+          <Typography variant="h6">Suivi</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Définissez le cadre de la prospection, son statut et la relance éventuelle.
+          </Typography>
+        </Stack>
 
-              <AppDateField
-                name="relance_prevue"
-                label="Relance prévue"
-                value={form.relance_prevue ?? ""}
-                onChange={handleInputChange}
-                inputProps={{ min: todayStr }}
-                helperText="Définit automatiquement le statut 'À relancer'."
-              />
-            </Stack>
-          </Grid>
+        <Stack spacing={2.5}>
+          <TextField
+            label="Date de prospection"
+            type="date"
+            name="date_prospection"
+            value={form.date_prospection}
+            onChange={handleInputChange}
+            fullWidth
+            required
+            InputLabelProps={{ shrink: true }}
+            disabled={loading}
+          />
 
-          <Grid item xs={12}>
-            <AppSelectField
-              label="Objectif"
-              labelId="prospection-objectif"
-              name="objectif"
-              value={form.objectif}
-              onChange={handleSelectChange}
-              required
-            >
-              {choices!.objectif.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </AppSelectField>
-          </Grid>
-        </Grid>
-      </FormSectionCard>
+          <TextField
+            select
+            label="Type"
+            name="type_prospection"
+            value={form.type_prospection}
+            onChange={handleSelectChange}
+            fullWidth
+            required
+            disabled={loading}
+          >
+            {choices!.type_prospection.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
 
-      <FormSectionCard
-        sx={cardSx}
-        title={sectionTitle(<AssignmentIcon color="primary" />, "Commentaire libre")}
-      >
+          <TextField
+            select
+            label="Motif"
+            name="motif"
+            value={form.motif}
+            onChange={handleSelectChange}
+            fullWidth
+            required
+            disabled={loading}
+          >
+            {choices!.motif.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Moyen de contact"
+            name="moyen_contact"
+            value={form.moyen_contact ?? ""}
+            onChange={handleSelectChange}
+            fullWidth
+            disabled={loading}
+          >
+            <MenuItem value="">—</MenuItem>
+            {choices!.moyen_contact.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Statut"
+            name="statut"
+            value={form.statut}
+            onChange={handleSelectChange}
+            fullWidth
+            required
+            disabled={loading}
+          >
+            {choices!.statut.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            select
+            label="Objectif"
+            name="objectif"
+            value={form.objectif}
+            onChange={handleSelectChange}
+            fullWidth
+            required
+            disabled={loading}
+          >
+            {choices!.objectif.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Relance prévue"
+            type="date"
+            name="relance_prevue"
+            value={form.relance_prevue ?? ""}
+            onChange={handleInputChange}
+            fullWidth
+            disabled={loading}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: todayStr }}
+            helperText="Définit automatiquement le statut « À relancer »."
+          />
+        </Stack>
+
+        <Divider />
+
+        <Stack spacing={1}>
+          <Typography variant="h6">Commentaire</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Texte enrichi : gras, couleurs, listes, etc.
+          </Typography>
+        </Stack>
+
         <RichHtmlEditorField
           label="Commentaire"
           value={form.commentaire ?? ""}
           onChange={(value) => setForm((prev) => ({ ...prev, commentaire: value }))}
           placeholder="Ajouter un commentaire enrichi : gras, couleur, listes…"
         />
-      </FormSectionCard>
 
-      <FormActionsBar sx={{ mt: 2 }}>
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          endIcon={loading ? <CircularProgress size={18} /> : <SendIcon />}
-          disabled={loading}
-        >
-          {loading
-            ? mode === "create"
-              ? "Création..."
-              : "Mise à jour..."
-            : mode === "create"
-              ? "Créer la prospection"
-              : "Mettre à jour"}
-        </Button>
-      </FormActionsBar>
+        <Divider />
+
+        <FormActionsBar>
+          <Button type="submit" variant="contained" disabled={loading}>
+            {submitLabel}
+          </Button>
+        </FormActionsBar>
+      </Stack>
 
       <PartenaireSelectModal
         show={showPartenaireModal}
@@ -503,6 +537,7 @@ export default function ProspectionForm({
               formation_nom: null,
             }));
             setOwnerUsername(null);
+            setFormationNom(null);
             toast.info("Prospection non attribuée à un candidat.");
             setShowOwnerModal(false);
             return;
@@ -515,13 +550,17 @@ export default function ProspectionForm({
           }
 
           const name = extractCandidateDisplayName(cand);
+          const candidateFormation = extractFormationFromCandidate(cand);
           setForm((fm) => ({
             ...fm,
             owner: ownerId,
-            formation: cand.formation?.id ?? fm.formation,
-            formation_nom: cand.formation?.nom ?? fm.formation_nom,
+            formation: candidateFormation.id ?? fm.formation,
+            formation_nom: candidateFormation.nom ?? fm.formation_nom,
           }));
           setOwnerUsername(name);
+          if (candidateFormation.nom) {
+            setFormationNom(candidateFormation.nom);
+          }
           setShowOwnerModal(false);
         }}
       />

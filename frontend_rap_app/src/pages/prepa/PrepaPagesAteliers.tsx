@@ -157,12 +157,16 @@ export default function PrepaPageAteliers() {
   const [selectedPrepa, setSelectedPrepa] = useState<Prepa | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  const handleRowClick = (id: number) => {
+  const handleView = (id: number) => {
     const d = items.find((i) => i.id === id);
     if (d) {
       setSelectedPrepa(d);
       setShowDetail(true);
     }
+  };
+
+  const handleEditAtelier = (id: number) => {
+    navigate(`/prepa/${id}/edit/Ateliers`);
   };
 
   const hasArchiveFilter = Boolean(
@@ -376,13 +380,15 @@ export default function PrepaPageAteliers() {
           items={items}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
+          onView={handleView}
+          onEdit={handleEditAtelier}
           onDelete={(id) => {
             setSelectedId(id);
             setShowConfirm(true);
           }}
           onToggleArchive={(id) => handleRestore(id)}
           onHardDelete={(id) => setHardDeleteId(id)}
-          onRowClick={handleRowClick}
+          onRowClick={handleEditAtelier}
         />
       )}
 
@@ -391,7 +397,7 @@ export default function PrepaPageAteliers() {
         open={showDetail}
         onClose={() => setShowDetail(false)}
         prepa={selectedPrepa}
-        onEdit={(id) => navigate(`/prepa/${id}/edit`)}
+        onEdit={handleEditAtelier}
       />
 
       {/* Confirmation Archivage */}

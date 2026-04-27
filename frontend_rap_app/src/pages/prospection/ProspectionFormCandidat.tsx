@@ -34,7 +34,6 @@ import type {
   ProspectionTypeProspection,
 } from "../../types/prospection";
 
-import FormationSelectModal from "../../components/modals/FormationSelectModal";
 import CandidatsSelectModal, {
   type CandidatPick,
 } from "../../components/modals/CandidatsSelectModal";
@@ -128,7 +127,6 @@ export default function ProspectionFormCandidat({
   );
 
   const [showPartenaireModal, setShowPartenaireModal] = useState(false);
-  const [showFormationModal, setShowFormationModal] = useState(false);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
 
   const { choices, loading: loadingChoices, error } = useProspectionChoices();
@@ -248,20 +246,36 @@ export default function ProspectionFormCandidat({
             </Button>
           </Box>
 
-          {!fixedFormationId && (
-            <Box>
-              <Typography variant="body2" gutterBottom>
-                🎓 Formation : <strong>{formationNom ?? "— Non définie"}</strong>
+          <Box>
+            <Typography variant="body2" gutterBottom>
+              🎓 Formation :{" "}
+              <strong>
+                {formationNom ??
+                  (form.formation != null ? `Formation #${form.formation}` : "— Non définie")}
+              </strong>
+            </Typography>
+            <Typography variant="body2" gutterBottom>
+              🧾 Numéro d’offre : <strong>{numOffre ?? "— Non défini"}</strong>
+            </Typography>
+            {fixedFormationId ? (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                Formation imposée par le lien d’accès.
               </Typography>
-              <Typography variant="body2" gutterBottom>
-                🧾 Numéro d’offre : <strong>{numOffre ?? "— Non défini"}</strong>
+            ) : form.formation != null ? (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                Proposition issue de votre fiche (compte) ou des paramètres d’URL.
               </Typography>
-            </Box>
-          )}
+            ) : (
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                Aucune formation n’est liée à votre compte : renseignez-la sur la fiche, ou ouvrez cette page
+                via un lien de l’équipe.
+              </Typography>
+            )}
+          </Box>
 
           <Box>
             <Typography variant="body2" gutterBottom>
-              👤 Candidat : <strong>{ownerUsername ?? "— Aucun"}</strong>
+              👤 Candidat : <strong>{ownerUsername ?? " Vous"}</strong>
             </Typography>
           </Box>
         </Stack>
@@ -413,16 +427,6 @@ export default function ProspectionFormCandidat({
           setForm((fm) => ({ ...fm, partenaire: p.id }));
           setPartenaireNom(p.nom ?? null);
           setShowPartenaireModal(false);
-        }}
-      />
-
-      <FormationSelectModal
-        show={showFormationModal}
-        onClose={() => setShowFormationModal(false)}
-        onSelect={(f) => {
-          setForm((fm) => ({ ...fm, formation: f.id }));
-          setFormationNom(f.nom);
-          setShowFormationModal(false);
         }}
       />
 

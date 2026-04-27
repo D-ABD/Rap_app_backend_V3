@@ -13,7 +13,23 @@ from rest_framework import serializers
 
 from ...models.commentaires_appairage import CommentaireAppairage
 
-ALLOWED_TAGS = ["a", "b", "i", "strong", "em", "u", "strike", "span", "p", "br", "ul", "ol", "li"]
+# Aligné prospection CERFA / Quill : le barré est souvent émis en `<s>`.
+ALLOWED_TAGS = [
+    "a",
+    "b",
+    "i",
+    "strong",
+    "em",
+    "u",
+    "s",
+    "strike",
+    "span",
+    "p",
+    "br",
+    "ul",
+    "ol",
+    "li",
+]
 ALLOWED_ATTRIBUTES = {
     "a": ["href", "title", "target", "rel"],
     "span": ["style"],
