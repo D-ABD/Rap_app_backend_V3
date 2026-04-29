@@ -1,404 +1,427 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Box,
-  Grid,
-  Button,
   Stack,
-  FormControl,
-  InputLabel,
+  Button,
+  CircularProgress,
+  Typography,
   Select,
   MenuItem,
-  FormHelperText,
-  Alert,
-  Typography,
-  useTheme,
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Menu,
 } from "@mui/material";
-import { Prepa, CentreLight } from "src/types/prepa";
-import CentresSelectModal from "src/components/modals/CentresSelectModal";
-import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
-import AppTextField from "src/components/forms/fields/AppTextField";
-import FormSectionCard from "src/components/forms/FormSectionCard";
-import type { AppTheme } from "../../theme";
-import { useAuth } from "src/hooks/useAuth";
-import { isAdminLikeRole } from "src/utils/roleGroups";
-import { buildCentreLabel, extractScopedCentres } from "./prepaCentreScope";
+
+import PageTemplate from "src/components/PageTemplate";
+import usePagination from "src/hooks/usePagination";
+
 import {
-  Event as EventIcon,
-  Comment as CommentIcon,
-} from "@mui/icons-material";
+  usePrepaFiltersOptions,
+  usePrepaList,
+  useDeletePrepa,
+  useDesarchiverPrepa,
+  useHardDeletePrepa,
+} from "src/hooks/usePrepa";
 
-interface Props {
-  initialValues?: Partial<Prepa>;
-  meta?: {
-    type_prepa_choices?: Array<{ value: string; label: string }>;
-    centre_choices?: Array<{ value: number; label: string }>;
-  } | null;
-  submitting?: boolean;
-  onSubmit: (values: Partial<Prepa>) => void | Promise<void>;
-  onCancel?: () => void;
-  onCentreChange?: (nom: string) => void;
-}
+import { Prepa } from "src/types/prepa";
+import type { PrepaFiltresValues } from "src/types/prepa";
 
-const TYPE_PREPA_CHOICES_FALLBACK = [
-  { value: "info_collective", label: "Information collective" },
-];
+import PrepaTableIC from "./PrepaTableIC";
+import PrepaDetailModal from "./PrepaDetailModal";
 
-function Section({
-  icon,
-  title,
-  subtitle,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <FormSectionCard
-      title={
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Box sx={{ display: "inline-flex", color: "primary.main" }}>{icon}</Box>
-          <Box component="span">{title}</Box>
-        </Stack>
-      }
-      subtitle={subtitle}
-    >
-      {children}
-    </FormSectionCard>
-  );
-}
+import ExportButtonPrepa from "src/components/export_buttons/ExportButtonPrepa";
+import FiltresPrepaPanel from "src/components/filters/FiltresPrepaPanel";
+import SearchInput from "src/components/SearchInput";
+import { useAuth } from "src/hooks/useAuth";
+import { canWritePrepaRole } from "src/utils/roleGroups";
 
-export default function PrepaFormIC({
-  initialValues,
-  meta,
-  submitting = false,
-  onSubmit,
-  onCancel,
-  onCentreChange,
-}: Props) {
-  const theme = useTheme<AppTheme>();
+export default function PrepaPageIC() {
   const { user } = useAuth();
-  const isAdminLike = isAdminLikeRole(user?.role);
+  const navigate = useNavigate();
+  const canWritePrepa = canWritePrepaRole(user?.role);
 
-  const [form, setForm] = useState<Partial<Prepa>>({
-    type_prepa: initialValues?.type_prepa ?? "info_collective",
-    date_prepa: initialValues?.date_prepa ?? "",
-    centre_id: initialValues?.centre_id ?? undefined,
-    formateur_animateur: initialValues?.formateur_animateur ?? "",
-    commentaire: initialValues?.commentaire ?? "",
-    nombre_places_ouvertes: initialValues?.nombre_places_ouvertes ?? 0,
-    nombre_prescriptions: initialValues?.nombre_prescriptions ?? 0,
-    nb_presents_info: initialValues?.nb_presents_info ?? 0,
-    nb_absents_info: initialValues?.nb_absents_info ?? 0,
-    nb_adhesions: initialValues?.nb_adhesions ?? 0,
+  // Filtres
+  const [filters, setFilters] = useState<PrepaFiltresValues>({
+    ordering: "-date_prepa",
+    page: 1,
   });
 
-  const [centreLabel, setCentreLabel] = useState<string>("");
-  const [showCentreModal, setShowCentreModal] = useState(false);
-  const scopedCentres = useMemo(() => extractScopedCentres((meta as Record<string, unknown> | null) ?? null), [meta]);
-  const hasSingleScopedCentre = !isAdminLike && scopedCentres.length === 1;
+  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions("ic");
 
-  const typeChoices = useMemo(() => {
-    const source = meta?.type_prepa_choices?.length
-      ? meta.type_prepa_choices
-      : TYPE_PREPA_CHOICES_FALLBACK;
-    return source.filter((choice) => choice.value === "info_collective");
-  }, [meta?.type_prepa_choices]);
-
-  const handleChange = <K extends keyof Prepa>(key: K, value: Prepa[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  // Toggle panneau filtres
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    const saved = localStorage.getItem("prepa.showFilters");
+    return saved === "1";
+  });
 
   useEffect(() => {
-    if (form.nombre_prescriptions !== undefined && form.nb_presents_info !== undefined) {
-      const nextAbsents = Math.max(
-        0,
-        (form.nombre_prescriptions ?? 0) - (form.nb_presents_info ?? 0)
-      );
-      if (form.nb_absents_info === nextAbsents) return;
-      setForm((prev) => ({
-        ...prev,
-        nb_absents_info: nextAbsents,
-      }));
-    }
-  }, [form.nombre_prescriptions, form.nb_presents_info, form.nb_absents_info]);
+    localStorage.setItem("prepa.showFilters", showFilters ? "1" : "0");
+  }, [showFilters]);
+
+  // Pagination
+  const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
+    usePagination();
+
+  // 🔵 Filtre automatique : IC uniquement
+  const effectiveFilters = useMemo(() => {
+    const { type_prepa: _ignore, ...rest } = filters;
+
+    return {
+      ...rest,
+      page,
+      page_size: pageSize,
+      type_prepa: "info_collective",
+    };
+  }, [filters, page, pageSize]);
+
+  // Données API
+  const { data, loading, error } = usePrepaList(effectiveFilters);
+  const { remove } = useDeletePrepa();
+  const { restore } = useDesarchiverPrepa();
+  const { hardDelete } = useHardDeletePrepa();
+
+  const items: Prepa[] = useMemo(() => data?.results ?? [], [data]);
 
   useEffect(() => {
-    if (!form.centre_id && hasSingleScopedCentre) {
-      setForm((prev) => ({ ...prev, centre_id: scopedCentres[0].id }));
-      return;
-    }
-    if (form.centre_id && scopedCentres.length) {
-      const opt = scopedCentres.find((c) => c.id === form.centre_id);
-      const label = buildCentreLabel(opt) || `#${form.centre_id}`;
-      setCentreLabel((prev) => (prev === label ? prev : label));
-      onCentreChange?.(label);
-    } else {
-      setCentreLabel((prev) => (prev === "" ? prev : ""));
-      onCentreChange?.("");
-    }
-  }, [form.centre_id, hasSingleScopedCentre, onCentreChange, scopedCentres]);
+    setCount(data?.count ?? 0);
+  }, [data, setCount]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(form);
+  // Sélection
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  useEffect(() => {
+    const visible = new Set(items.map((i) => i.id));
+    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [items]);
+
+  // Archivage
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [hardDeleteId, setHardDeleteId] = useState<number | null>(null);
+  const [anchorOptions, setAnchorOptions] = useState<null | HTMLElement>(null);
+
+  const handleDelete = async () => {
+    const idsToDelete = selectedId ? [selectedId] : selectedIds;
+    if (!idsToDelete.length) return;
+
+    try {
+      await Promise.all(idsToDelete.map((id) => remove(id)));
+      toast.success(`📦 ${idsToDelete.length} séance(s) archivée(s)`);
+      setShowConfirm(false);
+      setSelectedId(null);
+      setSelectedIds([]);
+      setPage((p) => (items.length - idsToDelete.length <= 0 && p > 1 ? p - 1 : p));
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur d'archivage");
+    }
   };
 
-  const actionGap = theme.custom.page.template.header.actions.gap.default;
+  const handleRestore = async (id: number) => {
+    try {
+      await restore(id);
+      toast.success("Séance restaurée");
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur de restauration");
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardDeleteId) return;
+
+    try {
+      await hardDelete(hardDeleteId);
+      toast.success("Séance supprimée définitivement");
+      setHardDeleteId(null);
+      setFilters((f) => ({ ...f }));
+    } catch {
+      toast.error("Erreur de suppression définitive");
+    }
+  };
+
+  // Détail
+  const [selectedPrepa, setSelectedPrepa] = useState<Prepa | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+
+  const handleRowClick = (id: number) => {
+    const item = items.find((i) => i.id === id);
+    if (item) {
+      setSelectedPrepa(item);
+      setShowDetail(true);
+    }
+  };
+
+  const handleEditIC = (id: number) => {
+    navigate(`/prepa/${id}/edit/IC`);
+  };
+
+  const hasArchiveFilter = Boolean(
+    filters.avec_archivees || filters.archives_seules
+  );
+
+  const hasResults = items.length > 0;
 
   return (
-    <>
-      <Box component="form" onSubmit={handleSubmit}>
-        <Stack spacing={0.75}>
-            <Section
-            icon={<EventIcon color="primary" />}
-            title="Informations principales"
-            subtitle="Type, date, centre et animateur de la séance Prépa."
+    <PageTemplate
+      backButton
+      onBack={() => navigate(-1)}
+      refreshButton
+      onRefresh={() => setFilters({ ...filters })}
+      headerExtra={
+        <SearchInput
+          placeholder="🔍 Rechercher une séance Prépa..."
+          value={filters.search ?? ""}
+          onChange={(e) => {
+            setFilters((prev) => ({
+              ...prev,
+              search: e.target.value || undefined,
+            }));
+            setPage(1);
+          }}
+        />
+      }
+      filters={
+        showFilters && (
+          <FiltresPrepaPanel
+            options={loadingFilters ? undefined : filterOptions}
+            values={filters}
+            hideSearch
+            hideType
+            dateLabelPrefix="Date IC"
+            onChange={(next) => {
+              setFilters(next);
+              setPage(1);
+            }}
+            onRefresh={() => setFilters({ ...filters })}
+          />
+        )
+      }
+      showFilters={showFilters}
+      actions={
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} useFlexGap flexWrap="wrap">
+          <Button variant="outlined" onClick={() => setShowFilters((v) => !v)}>
+            {showFilters ? "🫣 Masquer filtres" : "🔎 Afficher filtres"}
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={(event) => setAnchorOptions(event.currentTarget)}
           >
-          <Grid container spacing={1.25} rowSpacing={0.75}>
-            <Grid item xs={12} md={6}>
-              <Alert severity="info" sx={{ py: 0.5 }}>
-                Une information collective reste purement chiffrée : aucun stagiaire nominatif n'est saisi ici.
-              </Alert>
-            </Grid>
+            Options
+          </Button>
 
-            {hasSingleScopedCentre ? (
-              <Grid item xs={12} md={6}>
-                <Alert severity="success" sx={{ py: 0.5 }}>
-                  Le centre est prérempli automatiquement depuis votre périmètre.
-                </Alert>
-              </Grid>
-            ) : null}
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required size="small">
-                <InputLabel id="type-prepa-ic-label">Type d’activité</InputLabel>
-                <Select
-                  labelId="type-prepa-ic-label"
-                  label="Type d’activité"
-                  value={form.type_prepa ?? ""}
-                  onChange={(e) => handleChange("type_prepa", e.target.value as string)}
-                >
-                  {typeChoices.map((opt) => (
-                    <MenuItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>Type d’activité Prépa.</FormHelperText>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <AppTextField
-                size="small"
-                type="date"
-                fullWidth
-                required
-                label="Date"
-                InputLabelProps={{ shrink: true }}
-                value={form.date_prepa ?? ""}
-                onChange={(e) => handleChange("date_prepa", e.target.value)}
-                helperText="Date prévue de la séance."
-              />
-            </Grid>
-
-            <Grid item xs={12} md={5}>
-              <AppTextField
-                size="small"
-                fullWidth
-                label="Centre"
-                placeholder="— Aucun centre sélectionné —"
-                value={centreLabel || (form.centre_id ? `#${form.centre_id}` : "")}
-                InputProps={{ readOnly: true }}
-                helperText="Centre rattaché."
-              />
-            </Grid>
-
-            <Grid item xs={12} md={3}>
-              <Stack direction="row" spacing={1}>
-                {!hasSingleScopedCentre ? (
-                  <Button
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setShowCentreModal(true)}
-                    sx={{ minHeight: 40 }}
-                  >
-                    Sélectionner
-                  </Button>
-                ) : null}
-
-                {form.centre_id && !hasSingleScopedCentre ? (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      handleChange("centre_id", undefined as any);
-                      setCentreLabel("");
-                      onCentreChange?.("");
-                    }}
-                    sx={{ minHeight: 40 }}
-                  >
-                    Effacer
-                  </Button>
-                ) : null}
-              </Stack>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <AppTextField
-                size="small"
-                fullWidth
-                label="Formateur / animateur"
-                placeholder="Nom du formateur"
-                value={form.formateur_animateur ?? ""}
-                onChange={(e) => handleChange("formateur_animateur", e.target.value)}
-                helperText="Animateur."
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                sx={{
-                  mt: 0.25,
-                  mb: -0.25,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                }}
-              >
-                Information collective
-              </Typography>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <AppTextField
-                size="small"
-                type="number"
-                fullWidth
-                label="Places"
-                value={form.nombre_places_ouvertes ?? ""}
-                onChange={(e) =>
-                  handleChange("nombre_places_ouvertes", Number(e.target.value) as any)
-                }
-                helperText="Capacité."
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <AppTextField
-                size="small"
-                type="number"
-                fullWidth
-                label="Prescriptions"
-                value={form.nombre_prescriptions ?? ""}
-                onChange={(e) =>
-                  handleChange("nombre_prescriptions", Number(e.target.value) as any)
-                }
-                helperText="Reçues."
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <AppTextField
-                size="small"
-                type="number"
-                fullWidth
-                label="Présents"
-                value={form.nb_presents_info ?? ""}
-                onChange={(e) =>
-                  handleChange("nb_presents_info", Number(e.target.value) as any)
-                }
-                helperText="Participants."
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <AppTextField
-                size="small"
-                type="number"
-                fullWidth
-                label="Absents"
-                value={form.nb_absents_info ?? 0}
-                InputProps={{ readOnly: true }}
-                helperText="Auto."
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={2.4}>
-              <AppTextField
-                size="small"
-                type="number"
-                fullWidth
-                label="Adhésions"
-                value={form.nb_adhesions ?? ""}
-                onChange={(e) => handleChange("nb_adhesions", Number(e.target.value) as any)}
-                helperText="Constatées."
-              />
-            </Grid>
-          </Grid>
-          </Section>
-
-          <Section
-            icon={<CommentIcon color="primary" />}
-            title="Commentaire"
-            subtitle="Zone libre pour préciser le déroulé, le contexte ou les points de vigilance."
-          >
-            <RichHtmlEditorField
-              label="Commentaire"
-              value={form.commentaire ?? ""}
-              onChange={(value) => handleChange("commentaire", value)}
-              placeholder="Ajouter un commentaire enrichi…"
-            />
-          </Section>
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              width: "100%",
+          <Select
+            size="small"
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
             }}
           >
-            <Stack
-              direction={{ xs: "column-reverse", sm: "row" }}
-              spacing={actionGap}
-              useFlexGap
-              sx={{
-                width: { xs: "100%", sm: "auto" },
-                "& > *": {
-                  minWidth: { xs: "100%", sm: theme.spacing(18) },
-                },
-              }}
+            {[5, 10, 20, 50].map((s) => (
+              <MenuItem key={s} value={s}>
+                {s} / page
+              </MenuItem>
+            ))}
+          </Select>
+
+          {canWritePrepa && (
+            <Button variant="contained" onClick={() => navigate("/prepa/create/ic")}>
+              ➕ Nouvelle séance
+            </Button>
+          )}
+
+          <Button
+            variant={hasArchiveFilter ? "contained" : "outlined"}
+            onClick={() =>
+              setFilters((prev) =>
+                prev.avec_archivees || prev.archives_seules
+                  ? {
+                      ...prev,
+                      avec_archivees: undefined,
+                      archives_seules: undefined,
+                    }
+                  : {
+                      ...prev,
+                      avec_archivees: true,
+                      archives_seules: undefined,
+                    }
+              )
+            }
+          >
+            {hasArchiveFilter ? "Masquer archivées" : "Inclure archivées"}
+          </Button>
+
+          {hasArchiveFilter && (
+            <Button
+              variant={filters.archives_seules ? "contained" : "outlined"}
+              onClick={() =>
+                setFilters((prev) =>
+                  prev.archives_seules
+                    ? {
+                        ...prev,
+                        archives_seules: undefined,
+                        avec_archivees: undefined,
+                      }
+                    : {
+                        ...prev,
+                        archives_seules: true,
+                        avec_archivees: true,
+                      }
+                )
+              }
             >
-              {onCancel ? (
-                <Button variant="outlined" onClick={onCancel}>
-                  Annuler
-                </Button>
-              ) : null}
+              {filters.archives_seules ? "Voir tout" : "Archives seules"}
+            </Button>
+          )}
 
-              <Button variant="contained" type="submit" disabled={submitting}>
-                {submitting ? "Enregistrement…" : "Enregistrer"}
-              </Button>
+          <Menu
+            anchorEl={anchorOptions}
+            open={Boolean(anchorOptions)}
+            onClose={() => setAnchorOptions(null)}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                width: 320,
+                maxWidth: "calc(100vw - 32px)",
+                p: 1.25,
+              },
+            }}
+          >
+            <Box sx={{ px: 1, pt: 0.5, pb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Options
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Export et actions secondaires
+              </Typography>
+            </Box>
+
+            <Stack spacing={1} sx={{ px: 1, pb: 1 }}>
+              <ExportButtonPrepa data={items} selectedIds={selectedIds} />
             </Stack>
-          </Box>
-        </Stack>
-      </Box>
+          </Menu>
 
-      <CentresSelectModal
-        show={showCentreModal}
-        onClose={() => setShowCentreModal(false)}
-        onSelect={(centre) => {
-          const c = centre as unknown as CentreLight;
-          handleChange("centre_id", c.id);
-          const label = `${c.nom ?? "Centre"}${c.departement ? ` (${c.departement})` : ""}`;
-          setCentreLabel(label);
-          onCentreChange?.(label);
-          setShowCentreModal(false);
-        }}
+          {selectedIds.length > 0 && (
+            <>
+              <Button
+                color="error"
+                variant="contained"
+                onClick={() => setShowConfirm(true)}
+              >
+                📦 Archiver ({selectedIds.length})
+              </Button>
+
+              <Button
+                variant="outlined"
+                onClick={() => setSelectedIds(items.map((i) => i.id))}
+              >
+                ✅ Tout sélectionner
+              </Button>
+
+              <Button variant="outlined" onClick={() => setSelectedIds([])}>
+                ❌ Annuler
+              </Button>
+            </>
+          )}
+        </Stack>
+      }
+      footer={
+        count > 0 ? (
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={1}
+          >
+            <Typography variant="body2">
+              Page {page} / {totalPages} ({count} résultats)
+            </Typography>
+
+            <Pagination
+              page={page}
+              count={totalPages}
+              onChange={(_, v) => setPage(v)}
+              color="primary"
+            />
+          </Stack>
+        ) : null
+      }
+    >
+      {loading ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
+          <CircularProgress />
+        </Stack>
+      ) : error ? (
+        <Box sx={{ textAlign: "center", py: 4 }}>
+          <Typography color="error">⚠️ Erreur de chargement</Typography>
+        </Box>
+      ) : !hasResults ? (
+        <Box sx={{ textAlign: "center", color: "text.secondary", py: 4 }}>
+          <Typography>Aucune séance trouvée.</Typography>
+        </Box>
+      ) : (
+        <PrepaTableIC
+          items={items}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onEdit={handleEditIC}
+          onDelete={(id) => {
+            setSelectedId(id);
+            setShowConfirm(true);
+          }}
+          onToggleArchive={(id) => handleRestore(id)}
+          onHardDelete={(id) => setHardDeleteId(id)}
+          onRowClick={handleRowClick}
+        />
+      )}
+
+      {/* Modale Détail */}
+      <PrepaDetailModal
+        open={showDetail}
+        onClose={() => setShowDetail(false)}
+        prepa={selectedPrepa}
+        onEdit={handleEditIC}
       />
-    </>
+
+      {/* Confirm archive */}
+      <Dialog open={showConfirm} onClose={() => setShowConfirm(false)}>
+        <DialogTitle>Confirmation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {selectedId
+              ? "Archiver cette séance ?"
+              : `Archiver les ${selectedIds.length} séances sélectionnées ?`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowConfirm(false)}>Annuler</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Archiver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(hardDeleteId)} onClose={() => setHardDeleteId(null)}>
+        <DialogTitle>Suppression définitive</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Cette séance Prépa archivée sera supprimée définitivement.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHardDeleteId(null)}>Annuler</Button>
+          <Button onClick={handleHardDelete} color="error" variant="contained">
+            Supprimer définitivement
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageTemplate>
   );
 }
