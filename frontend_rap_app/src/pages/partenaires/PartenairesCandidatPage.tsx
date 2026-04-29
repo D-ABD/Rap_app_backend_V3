@@ -217,7 +217,7 @@ export default function PartenairesCandidatPage() {
     } catch (err) {
       const msg = getApiErrorMessage(err);
       toast.error(msg || "Erreur lors de la restauration");
-      if (import.meta.env.DEV) console.error("[restore partenaire]", err);
+      void err;
     }
   };
 
@@ -229,7 +229,7 @@ export default function PartenairesCandidatPage() {
     } catch (err) {
       const msg = getApiErrorMessage(err);
       toast.error(msg || "Erreur lors du réaffichage");
-      if (import.meta.env.DEV) console.error("[reafficher partenaire]", err);
+      void err;
     }
   };
 

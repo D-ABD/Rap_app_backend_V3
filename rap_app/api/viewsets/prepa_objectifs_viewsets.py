@@ -28,7 +28,7 @@ from ...api.roles import (
 from ...models.centres import Centre
 from ...models.prepa import ObjectifPrepa, Prepa
 from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
-from ..permissions import IsPrepaStaffOrAbove
+from ..permissions import IsAdminLikeOnly
 from ..serializers.prepa_objectifs_serializers import ObjectifPrepaSerializer
 
 
@@ -66,7 +66,7 @@ class ObjectifPrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.M
     """
 
     serializer_class = ObjectifPrepaSerializer
-    permission_classes = [IsAuthenticated, IsPrepaStaffOrAbove]
+    permission_classes = [IsAuthenticated, IsAdminLikeOnly]
     queryset = ObjectifPrepa.objects.select_related("centre").all()
     hard_delete_enabled = True
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

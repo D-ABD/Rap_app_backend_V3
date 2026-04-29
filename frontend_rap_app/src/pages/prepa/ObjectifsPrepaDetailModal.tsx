@@ -74,23 +74,40 @@ export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: P
       (sum: number, o: ObjectifPrepa) => sum + (o.valeur_objectif ?? 0),
       0
     );
+    const totalEngages = duDepartement.reduce(
+      (sum: number, o: ObjectifPrepa) => sum + (o.data_prepa?.atelier1_inscrits ?? 0),
+      0
+    );
     const totalRealisation = duDepartement.reduce(
+      (sum: number, o: ObjectifPrepa) => sum + (o.data_prepa?.atelier1_presents ?? o.data_prepa?.atelier1 ?? 0),
+      0
+    );
+    const totalAdhesions = duDepartement.reduce(
       (sum: number, o: ObjectifPrepa) => sum + (o.data_prepa?.adhesions ?? 0),
       0
     );
+    const totalResteEngages = duDepartement.reduce(
+      (sum: number, o: ObjectifPrepa) => sum + (o.reste_a_faire_inscrits ?? 0),
+      0
+    );
     const totalReste = duDepartement.reduce(
-      (sum: number, o: ObjectifPrepa) => sum + (o.reste_a_faire ?? 0),
+      (sum: number, o: ObjectifPrepa) => sum + (o.reste_a_faire_presents ?? o.reste_a_faire ?? 0),
       0
     );
 
+    const tauxAtteinteEngages = totalObjectif > 0 ? (totalEngages / totalObjectif) * 100 : null;
     const tauxAtteinte = totalObjectif > 0 ? (totalRealisation / totalObjectif) * 100 : null;
 
     return {
       departement: objectif.departement,
       nbCentres: duDepartement.length,
       totalObjectif,
+      totalEngages,
       totalRealisation,
+      totalAdhesions,
+      totalResteEngages,
       totalReste,
+      tauxAtteinteEngages,
       tauxAtteinte,
     };
   }, [objectif, objectifs]);
@@ -138,14 +155,22 @@ export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: P
     { label: "Département", value: objectif.departement ?? "—" },
     { label: "Objectif annuel", value: objectif.valeur_objectif },
     {
-      label: "Réalisation (adhésions)",
-      value: objectif.data_prepa?.adhesions ?? 0,
+      label: "Atelier 1 inscrits",
+      value: objectif.data_prepa?.atelier1_inscrits ?? 0,
     },
-    { label: "Taux d’atteinte", value: fmtTaux(objectif.taux_atteinte) },
-    { label: "Reste à faire", value: objectif.reste_a_faire ?? "—" },
+    {
+      label: "Atelier 1 présents",
+      value: objectif.data_prepa?.atelier1_presents ?? objectif.data_prepa?.atelier1 ?? 0,
+    },
+    { label: "Adhésions IC", value: objectif.data_prepa?.adhesions ?? 0 },
+    { label: "Taux objectif engagés", value: fmtTaux(objectif.taux_atteinte_inscrits) },
+    { label: "Taux objectif réels", value: fmtTaux(objectif.taux_atteinte_presents ?? objectif.taux_atteinte) },
+    { label: "Reste engagés", value: objectif.reste_a_faire_inscrits ?? "—" },
+    { label: "Reste réels", value: objectif.reste_a_faire_presents ?? objectif.reste_a_faire ?? "—" },
     { label: "Taux de prescription", value: fmtTaux(objectif.taux_prescription) },
     { label: "Taux de présence", value: fmtTaux(objectif.taux_presence) },
     { label: "Taux d’adhésion", value: fmtTaux(objectif.taux_adhesion) },
+    { label: "Taux rétention A1 → A6", value: fmtTaux(objectif.taux_retention) },
   ];
 
   const departementFields = departementStats
@@ -153,11 +178,18 @@ export default function ObjectifsPrepaDetailModal({ open, onClose, centreId }: P
         { label: "Département", value: departementStats.departement },
         { label: "Centres inclus", value: departementStats.nbCentres },
         { label: "Objectif cumulé", value: departementStats.totalObjectif },
-        { label: "Réalisation cumulée", value: departementStats.totalRealisation },
+        { label: "A1 inscrits cumulés", value: departementStats.totalEngages },
+        { label: "A1 présents cumulés", value: departementStats.totalRealisation },
+        { label: "Adhésions cumulées", value: departementStats.totalAdhesions },
         {
-          label: "Taux d’atteinte global",
+          label: "Taux atteinte engagés",
+          value: fmtTaux(departementStats.tauxAtteinteEngages),
+        },
+        {
+          label: "Taux atteinte réels",
           value: fmtTaux(departementStats.tauxAtteinte),
         },
+        { label: "Reste engagés total", value: departementStats.totalResteEngages },
         { label: "Reste à faire total", value: departementStats.totalReste },
       ]
     : [];

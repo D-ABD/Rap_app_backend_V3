@@ -19,6 +19,8 @@ import { Link as RouterLink } from "react-router-dom";
 import { Link } from "@mui/material";
 import type { Prepa } from "src/types/prepa";
 import type { AppTheme } from "src/theme";
+import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
@@ -39,6 +41,60 @@ function formatDateFR(iso?: string | null): string {
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return "—";
   return dtfDateFR ? dtfDateFR.format(d) : d.toLocaleDateString("fr-FR");
+}
+
+function getDisplayedAtelierCounts(prepa: Prepa) {
+  const participations = prepa.participations_prepa ?? [];
+  const horsListeInscrits = Number(prepa.nb_inscrits_prepa_hors_liste ?? 0);
+  const horsListePresents = Number(prepa.nb_presents_prepa_hors_liste ?? 0);
+  const horsListeAbsents = Number(prepa.nb_absents_prepa_hors_liste ?? 0);
+
+  if (participations.length > 0) {
+    const nominatifInscrits = participations.length;
+    const nominatifPresents = participations.filter(
+      (item) => item.statut === "present" || item.statut === "termine"
+    ).length;
+    const nominatifAbsents = participations.filter(
+      (item) =>
+        item.statut === "absent" ||
+        item.statut === "inscrit" ||
+        item.statut === "a_repositionner"
+    ).length;
+    const presents = nominatifPresents + horsListePresents;
+    const absents = nominatifAbsents + horsListeAbsents;
+    const inscritsBase = nominatifInscrits + horsListeInscrits;
+
+    return {
+      inscrits: Math.max(inscritsBase, presents + absents),
+      presents,
+      absents,
+    };
+  }
+
+  if (
+    prepa.nb_inscrits_prepa_nominatifs != null ||
+    prepa.nb_presents_prepa_nominatifs != null ||
+    prepa.nb_absents_prepa_nominatifs != null
+  ) {
+    const nominatifInscrits = Number(prepa.nb_inscrits_prepa_nominatifs ?? 0);
+    const nominatifPresents = Number(prepa.nb_presents_prepa_nominatifs ?? 0);
+    const nominatifAbsents = Number(prepa.nb_absents_prepa_nominatifs ?? 0);
+    const presents = nominatifPresents + horsListePresents;
+    const absents = nominatifAbsents + horsListeAbsents;
+    const inscritsBase = nominatifInscrits + horsListeInscrits;
+
+    return {
+      inscrits: Math.max(inscritsBase, presents + absents),
+      presents,
+      absents,
+    };
+  }
+
+  return {
+    inscrits: Number(prepa.nb_inscrits_prepa ?? 0),
+    presents: Number(prepa.nb_presents_prepa ?? 0),
+    absents: Number(prepa.nb_absents_prepa ?? 0),
+  };
 }
 
 type Props = {
@@ -67,6 +123,8 @@ export default function PrepaTableAteliers({
   maxHeight,
 }: Props) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canSeePrepaObjectifs = isAdminLikeRole(user?.role);
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
   const tableHeaderBackground = isLight
@@ -117,9 +175,9 @@ export default function PrepaTableAteliers({
   );
 
   /* ---------- Totaux globaux (ATELIERS) ---------- */
-  const totalInscrits = items.reduce((s, d) => s + (d.nb_inscrits_prepa ?? 0), 0);
-  const totalPresents = items.reduce((s, d) => s + (d.nb_presents_prepa ?? 0), 0);
-  const totalAbsents = items.reduce((s, d) => s + (d.nb_absents_prepa ?? 0), 0);
+  const totalInscrits = items.reduce((s, d) => s + getDisplayedAtelierCounts(d).inscrits, 0);
+  const totalPresents = items.reduce((s, d) => s + getDisplayedAtelierCounts(d).presents, 0);
+  const totalAbsents = items.reduce((s, d) => s + getDisplayedAtelierCounts(d).absents, 0);
 
   const tauxPresenceGlobal =
     totalPresents + totalAbsents > 0
@@ -218,10 +276,11 @@ export default function PrepaTableAteliers({
         <TableBody>
           {items.map((d) => {
             const dateTxt = formatDateFR(d.date_prepa);
+            const counts = getDisplayedAtelierCounts(d);
 
             const tauxPresence =
-              d.nb_presents_prepa + d.nb_absents_prepa > 0
-                ? (d.nb_presents_prepa / (d.nb_presents_prepa + d.nb_absents_prepa)) * 100
+              counts.presents + counts.absents > 0
+                ? (counts.presents / (counts.presents + counts.absents)) * 100
                 : null;
 
             return (
@@ -284,7 +343,7 @@ export default function PrepaTableAteliers({
                     borderBottom: tableCellBorder,
                   }}
                 >
-                  {d.centre?.id ? (
+                  {d.centre?.id && canSeePrepaObjectifs ? (
                     <Link
                       component={RouterLink}
                       to={`/prepa/objectifs?centre=${d.centre.id}`}
@@ -294,7 +353,7 @@ export default function PrepaTableAteliers({
                       {d.centre.nom}
                     </Link>
                   ) : (
-                    "—"
+                    d.centre?.nom ?? "—"
                   )}
                 </TableCell>
 
@@ -302,8 +361,8 @@ export default function PrepaTableAteliers({
                 <TableCell>
                   <Chip
                     size="small"
-                    color={d.nb_inscrits_prepa > 0 ? "info" : "default"}
-                    label={d.nb_inscrits_prepa ?? 0}
+                    color={counts.inscrits > 0 ? "info" : "default"}
+                    label={counts.inscrits}
                   />
                 </TableCell>
 
@@ -311,8 +370,8 @@ export default function PrepaTableAteliers({
                 <TableCell>
                   <Chip
                     size="small"
-                    color={d.nb_presents_prepa > 0 ? "primary" : "default"}
-                    label={d.nb_presents_prepa ?? 0}
+                    color={counts.presents > 0 ? "primary" : "default"}
+                    label={counts.presents}
                   />
                 </TableCell>
 
@@ -320,8 +379,8 @@ export default function PrepaTableAteliers({
                 <TableCell>
                   <Chip
                     size="small"
-                    color={d.nb_absents_prepa > 0 ? "warning" : "default"}
-                    label={d.nb_absents_prepa ?? 0}
+                    color={counts.absents > 0 ? "warning" : "default"}
+                    label={counts.absents}
                   />
                 </TableCell>
 

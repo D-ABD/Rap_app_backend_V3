@@ -14,10 +14,17 @@ export default function PrepaStatsParcours({
   const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
   const { data: meta } = useStagiairesPrepaMeta();
-  const annees = ((meta?.annees as number[] | undefined) ?? []).length
-    ? ((meta?.annees as number[]) ?? [])
-    : [new Date().getFullYear()];
-  const centres = ((meta?.centres as Array<{ id: number; nom: string }>) ?? []);
+  const annees = React.useMemo(
+    () =>
+      ((meta?.annees as number[] | undefined) ?? []).length
+        ? ((meta?.annees as number[]) ?? [])
+        : [new Date().getFullYear()],
+    [meta]
+  );
+  const centres = React.useMemo(
+    () => ((meta?.centres as Array<{ id: number; nom: string }>) ?? []),
+    [meta]
+  );
 
   const [filters, setFilters] = React.useState<{ annee?: number; centre?: number }>({
     annee: annees[0] ?? new Date().getFullYear(),
@@ -45,6 +52,7 @@ export default function PrepaStatsParcours({
   const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
 
   const stats = [
+    { label: "Total suivis", value: data.total_stagiaires ?? 0, color: theme.palette.text.primary },
     { label: "Entrées atelier 1", value: data.entrees_atelier_1, color: theme.palette.primary.main },
     { label: "Sorties atelier 6", value: data.sorties_atelier_6, color: theme.palette.success.main },
     { label: "Orientés AFPA", value: data.orientes_afpa, color: theme.palette.info.main },
@@ -52,6 +60,11 @@ export default function PrepaStatsParcours({
       label: "Transformation AFPA (%)",
       value: data.taux_transformation_vers_afpa,
       color: theme.palette.secondary.main,
+    },
+    {
+      label: "Taux abandon (%)",
+      value: data.taux_abandon_vers_entrees ?? 0,
+      color: theme.palette.error.dark,
     },
     { label: "En attente d'entrée", value: data.en_attente_entree, color: theme.palette.warning.dark },
     { label: "À intégrer atelier 1", value: data.a_integrer_atelier_1, color: theme.palette.warning.main },
@@ -61,6 +74,11 @@ export default function PrepaStatsParcours({
       color: theme.palette.info.dark,
     },
     { label: "Abandons", value: data.abandons, color: theme.palette.error.main },
+    {
+      label: "Orientés autre centre AFPA (%)",
+      value: data.taux_orientation_autre_centre_afpa ?? 0,
+      color: theme.palette.info.dark,
+    },
   ];
 
   return (

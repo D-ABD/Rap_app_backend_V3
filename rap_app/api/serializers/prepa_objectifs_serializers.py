@@ -72,7 +72,11 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
     taux_presence = serializers.SerializerMethodField()
     taux_adhesion = serializers.SerializerMethodField()
     taux_atteinte = serializers.SerializerMethodField()
+    taux_atteinte_inscrits = serializers.SerializerMethodField()
+    taux_atteinte_presents = serializers.SerializerMethodField()
     reste_a_faire = serializers.SerializerMethodField()
+    reste_a_faire_inscrits = serializers.SerializerMethodField()
+    reste_a_faire_presents = serializers.SerializerMethodField()
     taux_retention = serializers.SerializerMethodField()
 
     class Meta:
@@ -90,7 +94,11 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
             "taux_presence",
             "taux_adhesion",
             "taux_atteinte",
+            "taux_atteinte_inscrits",
+            "taux_atteinte_presents",
             "reste_a_faire",
+            "reste_a_faire_inscrits",
+            "reste_a_faire_presents",
             "taux_retention",
         ]
         read_only_fields = [
@@ -99,7 +107,11 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
             "taux_presence",
             "taux_adhesion",
             "taux_atteinte",
+            "taux_atteinte_inscrits",
+            "taux_atteinte_presents",
             "reste_a_faire",
+            "reste_a_faire_inscrits",
+            "reste_a_faire_presents",
         ]
 
     @extend_schema_field(serializers.JSONField())
@@ -131,6 +143,26 @@ class ObjectifPrepaSerializer(serializers.ModelSerializer):
     def get_reste_a_faire(self, obj) -> int | None:
         """Retourne la propriété reste_a_faire du modèle."""
         return getattr(obj, "reste_a_faire", None)
+
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_atteinte_inscrits(self, obj) -> float | None:
+        """Retourne la propriété taux_atteinte_inscrits du modèle."""
+        return getattr(obj, "taux_atteinte_inscrits", None)
+
+    @extend_schema_field(serializers.FloatField(allow_null=True))
+    def get_taux_atteinte_presents(self, obj) -> float | None:
+        """Retourne la propriété taux_atteinte_presents du modèle."""
+        return getattr(obj, "taux_atteinte_presents", None)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_reste_a_faire_inscrits(self, obj) -> int | None:
+        """Retourne la propriété reste_a_faire_inscrits du modèle."""
+        return getattr(obj, "reste_a_faire_inscrits", None)
+
+    @extend_schema_field(serializers.IntegerField(allow_null=True))
+    def get_reste_a_faire_presents(self, obj) -> int | None:
+        """Retourne la propriété reste_a_faire_presents du modèle."""
+        return getattr(obj, "reste_a_faire_presents", None)
 
     @extend_schema_field(serializers.FloatField())
     def get_taux_retention(self, obj) -> float:

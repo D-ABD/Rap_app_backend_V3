@@ -25,7 +25,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from ...models.centres import Centre
-from ...models.prepa import ObjectifPrepa, Prepa
+from ...models.prepa import ObjectifPrepa, Prepa, PrepaPresenceStatut
 from ..mixins import ApiResponseMixin, HardDeleteArchivedMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..roles import (
@@ -87,7 +87,10 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
     hard_delete_enabled = True
 
     # Par défaut, queryset complet, filtré ensuite dynamiquement (cf. get_queryset)
-    queryset = Prepa.objects.select_related("centre").prefetch_related("stagiaires_prepa").all()
+    queryset = Prepa.objects.select_related("centre").prefetch_related(
+        "stagiaires_prepa",
+        "participations_stagiaires_prepa__stagiaire_prepa",
+    ).all()
 
     # ---------------------------------------------------
     # 🔹 Options de filtres pour le frontend
@@ -110,10 +113,18 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
 
         # (aucun changement fonctionnel, docstring uniquement)
         # Cf. code source pour détail total des valeurs retournées.
-        annees = self._scope_qs_to_user_centres(Prepa.objects.all()).order_by().values_list("date_prepa__year", flat=True).distinct()
+        qs = self._scope_qs_to_user_centres(Prepa.objects.all())
+        only = request.query_params.get("only")
+        if only == "ateliers":
+            qs = qs.filter(Q(type_prepa__startswith="atelier") | Q(type_prepa=Prepa.TypePrepa.AUTRE))
+        elif only == "ic":
+            qs = qs.filter(type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE)
+
+        annees = qs.order_by().values_list("date_prepa__year", flat=True).distinct()
         annees = sorted([a for a in annees if a is not None], reverse=True)
 
-        centres_qs = self._scope_qs_to_user_centres(Centre.objects.all())
+        centre_ids = list(qs.exclude(centre_id__isnull=True).values_list("centre_id", flat=True).distinct())
+        centres_qs = self._scope_qs_to_user_centres(Centre.objects.filter(id__in=centre_ids))
         centres_data, departements_set = [], set()
 
         for c in centres_qs.order_by("nom"):
@@ -132,7 +143,8 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
             )
 
         departements = [{"value": d, "label": f"Département {d}"} for d in sorted(departements_set)]
-        types = [{"value": t[0], "label": t[1]} for t in Prepa.TypePrepa.choices]
+        available_types = set(qs.order_by().values_list("type_prepa", flat=True).distinct())
+        types = [{"value": t[0], "label": t[1]} for t in Prepa.TypePrepa.choices if t[0] in available_types]
 
         return self.success_response(
             data={
@@ -152,7 +164,10 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
         Retourne les séances Prépa visibles pour l'utilisateur
         après application du scope local par centre puis des filtres métier.
         """
-        qs = Prepa.objects.select_related("centre").prefetch_related("stagiaires_prepa")
+        qs = Prepa.objects.select_related("centre").prefetch_related(
+            "stagiaires_prepa",
+            "participations_stagiaires_prepa__stagiaire_prepa",
+        )
         qs = self._scope_qs_to_user_centres(qs)
 
         params = self.request.query_params
@@ -215,7 +230,10 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
         lookup_field = getattr(self, "lookup_field", "pk")
         lookup_url_kwarg = getattr(self, "lookup_url_kwarg", None) or lookup_field
         lookup_value = self.kwargs.get(lookup_url_kwarg)
-        queryset = Prepa.objects.select_related("centre").prefetch_related("stagiaires_prepa")
+        queryset = Prepa.objects.select_related("centre").prefetch_related(
+            "stagiaires_prepa",
+            "participations_stagiaires_prepa__stagiaire_prepa",
+        )
         queryset = self._scope_qs_to_user_centres(queryset)
         return get_object_or_404(queryset, **{lookup_field: lookup_value})
 
@@ -328,6 +346,7 @@ class PrepaViewSet(HardDeleteArchivedMixin, ApiResponseMixin, viewsets.ModelView
         data = {
             "type_prepa": types,
             "centres": centres,
+            "presence_statut_choices": [{"value": value, "label": label} for value, label in PrepaPresenceStatut.choices],
         }
         return self.success_response(data=data, message="Métadonnées Prépa récupérées avec succès.")
 

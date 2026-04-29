@@ -117,9 +117,7 @@ export default function ProspectionFormCandidat({
   const [partenaireNom, setPartenaireNom] = useState<string | null>(
     initialValues?.partenaire_nom ?? null
   );
-  const [formationNom, setFormationNom] = useState<string | null>(
-    initialValues?.formation_nom ?? null
-  );
+  const formationNom = initialValues?.formation_nom ?? null;
 
   const [numOffre] = useState<string | null>(initialValues?.num_offre ?? null);
   const [ownerUsername, setOwnerUsername] = useState<string | null>(

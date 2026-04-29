@@ -8,34 +8,11 @@ import type { Prepa } from "src/types/prepa";
 import { usePrepaDetail, useUpdatePrepa, useDeletePrepa, usePrepaMeta } from "src/hooks/usePrepa";
 import PageTemplate from "src/components/PageTemplate";
 import PrepaFormAteliers from "./PrepaFormAteliers";
+import { extractPrepaApiMessage } from "./prepaApiError";
 
 /* ─────────────────────────────── */
 /* 🔧 Helpers pour les erreurs API */
 /* ─────────────────────────────── */
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-const isStringArray = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((x) => typeof x === "string");
-
-function extractApiMessage(data: unknown): string | null {
-  if (!isRecord(data)) return null;
-
-  const maybeMessage = (data as { message?: unknown }).message;
-  if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
-
-  const maybeErrors = (data as { errors?: unknown }).errors;
-  const errorsObj = isRecord(maybeErrors) ? (maybeErrors as Record<string, unknown>) : data;
-
-  const parts: string[] = [];
-  for (const [field, val] of Object.entries(errorsObj)) {
-    if (typeof val === "string") {
-      parts.push(`${field}: ${val}`);
-    } else if (isStringArray(val)) {
-      parts.push(`${field}: ${val.join(" · ")}`);
-    }
-  }
-  return parts.length ? parts.join(" | ") : null;
-}
-
 /* ─────────────────────────────── */
 /* 🧩 Page : édition d’une séance Prépa */
 /* ─────────────────────────────── */
@@ -68,7 +45,9 @@ export default function PrepaEditPageAteliers() {
       navigate("/prepa/ateliers");
     } catch (e) {
       const axiosErr = e as AxiosError<unknown>;
-      const parsed = axiosErr.response?.data ? extractApiMessage(axiosErr.response.data) : null;
+      const parsed = axiosErr.response?.data
+        ? extractPrepaApiMessage(axiosErr.response.data, { rawFields: ["participations_prepa"] })
+        : null;
       toast.error(parsed ?? axiosErr.message ?? "La séance Prepa n'a pas pu être mise à jour.");
     } finally {
       setSubmitting(false);
@@ -132,6 +111,8 @@ export default function PrepaEditPageAteliers() {
   const initialValues: Partial<Prepa> = {
     type_prepa: data.type_prepa ?? "info_collective",
     date_prepa: data.date_prepa?.trim() ? data.date_prepa : "",
+    date_debut_atelier: data.date_debut_atelier ?? data.date_prepa ?? "",
+    date_fin_atelier: data.date_fin_atelier ?? data.date_prepa ?? "",
     centre_id: typeof data.centre_id === "number" ? data.centre_id : (data.centre?.id ?? undefined),
     formateur_animateur: data.formateur_animateur ?? "",
     commentaire: data.commentaire ?? "",
@@ -143,7 +124,11 @@ export default function PrepaEditPageAteliers() {
     nb_inscrits_prepa: data.nb_inscrits_prepa ?? 0,
     nb_presents_prepa: data.nb_presents_prepa ?? 0,
     nb_absents_prepa: data.nb_absents_prepa ?? 0,
+    nb_inscrits_prepa_hors_liste: data.nb_inscrits_prepa_hors_liste ?? 0,
+    nb_presents_prepa_hors_liste: data.nb_presents_prepa_hors_liste ?? 0,
+    nb_absents_prepa_hors_liste: data.nb_absents_prepa_hors_liste ?? 0,
     stagiaires_prepa: data.stagiaires_prepa ?? [],
+    participations_prepa: data.participations_prepa ?? [],
   };
 
   /* ─────────────────────────────── */

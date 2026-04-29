@@ -294,7 +294,7 @@ export default function PartenaireForm({
     value: Partenaire[K] | undefined
   ) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const typeOptionsList = choices?.types ?? [];
+  const typeOptionsList = useMemo(() => choices?.types ?? [], [choices?.types]);
   const rawPartenaireType = form.type ?? "";
   const partenaireTypeSelectValue = useMemo(() => {
     if (!rawPartenaireType) return "";

@@ -52,7 +52,7 @@ export default function PrepaPageAteliers() {
   });
 
   // Options filtres
-  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions();
+  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions("ateliers");
 
   // Toggle panneau filtres
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -70,13 +70,13 @@ export default function PrepaPageAteliers() {
 
   // Filtres appliqués pour ATELIERS
   const effectiveFilters = useMemo(() => {
-    const { type_prepa: _ignored, ...safeFilters } = filters;
+    const { type_prepa, ...safeFilters } = filters;
 
     return {
       ...safeFilters,
       page,
       page_size: pageSize,
-      type_prepa: [
+      type_prepa: type_prepa ?? [
         "atelier_1",
         "atelier_2",
         "atelier_3",
@@ -200,6 +200,7 @@ export default function PrepaPageAteliers() {
             options={loadingFilters ? undefined : filterOptions}
             values={filters}
             hideSearch
+            dateLabelPrefix="Date atelier"
             onChange={(next) => {
               setFilters(next);
               setPage(1);

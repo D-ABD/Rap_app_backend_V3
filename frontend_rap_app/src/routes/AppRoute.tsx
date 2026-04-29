@@ -768,17 +768,17 @@ export default function AppRoute() {
         <Route
           path="/prepa/objectifs"
           element={
-            <PrepaRoute>
+            <AdminRoute>
               <ObjectifPrepaPage />
-            </PrepaRoute>
+            </AdminRoute>
           }
         />
         <Route
           path="/prepa/objectifs/:id/edit"
           element={
-            <PrepaWriteRoute>
+            <AdminRoute>
               <ObjectifPrepaEditPage />
-            </PrepaWriteRoute>
+            </AdminRoute>
           }
         />
 

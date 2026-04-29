@@ -43,11 +43,11 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
                 label="Statut calculé"
                 value={stagiaire.statut_parcours_calcule_display ?? stagiaire.statut_parcours_calcule}
               />
-              <Field label="Prépa d'origine" value={stagiaire.prepa_origine_label} />
+              <Field label="Date IC" value={stagiaire.date_ic} />
               <Field label="Date d'entrée" value={stagiaire.date_entree_parcours} />
               <Field label="Date de sortie" value={stagiaire.date_sortie_parcours} />
               <Field
-                label="Positionnement"
+                label="Positionnement (historique)"
                 value={stagiaire.statut_positionnement_display ?? stagiaire.statut_positionnement}
               />
               <Field
@@ -67,6 +67,28 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
               />
               <Field label="Ateliers réalisés" value={stagiaire.ateliers_realises_labels?.join(", ") || "—"} />
               <Field label="Dernier atelier" value={stagiaire.dernier_atelier_label} />
+              <Field label="Atelier en cours" value={stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours} />
+              <Field label="Date atelier en cours" value={stagiaire.atelier_en_cours_date} />
+              <Field
+                label="Dernier statut participation"
+                value={stagiaire.dernier_statut_participation_display ?? stagiaire.dernier_statut_participation}
+              />
+              <Field
+                label="Libération atelier"
+                value={
+                  stagiaire.dernier_statut_participation_liberant
+                    ? stagiaire.dernier_statut_participation === "a_repositionner"
+                      ? "Libéré pour repositionnement"
+                      : "Libéré pour atelier suivant"
+                    : "Non"
+                }
+              />
+              <Field label="En attente d'entrée" value={stagiaire.est_en_attente_entree ? "Oui" : "Non"} />
+              <Field label="À intégrer atelier 1" value={stagiaire.est_a_integrer_atelier_1 ? "Oui" : "Non"} />
+              <Field
+                label="En attente atelier suivant"
+                value={stagiaire.est_en_attente_prochain_atelier ? "Oui" : "Non"}
+              />
               <Field label="Motif abandon" value={stagiaire.motif_abandon} />
               <Grid item xs={12}>
                 <Typography variant="body2" component="div">

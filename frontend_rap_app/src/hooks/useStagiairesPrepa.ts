@@ -42,12 +42,18 @@ function normalizeListResponse<T>(payload: unknown) {
 }
 
 export interface StagiairePrepaFilters {
+  _refresh?: number;
   search?: string;
   centre?: number;
-  statut_parcours?: string;
-  type_atelier?: string;
-  annee?: number;
+  statut_parcours_calcule?: string;
+  atelier_en_cours?: string;
+  prochain_atelier_attendu?: string;
+  orientation_finale?: string;
+  pilotage?: string;
+  date_ic_min?: string;
+  date_ic_max?: string;
   prepa_origine?: number;
+  prepa_participation?: number;
   page?: number;
   page_size?: number;
   ordering?: string;
@@ -67,7 +73,9 @@ export function useStagiairesPrepaList(filters: Partial<StagiairePrepaFilters> =
 
     (async () => {
       try {
-        const res = await api.get("/stagiaires-prepa/", { params: filters, signal: ctrl.signal });
+        const { _refresh, ...apiFilters } = filters;
+        void _refresh;
+        const res = await api.get("/stagiaires-prepa/", { params: apiFilters, signal: ctrl.signal });
         const normalized = normalizeListResponse<StagiairePrepa>(res.data);
         setData({ count: normalized.count, results: normalized.results });
       } catch (e) {
@@ -109,7 +117,7 @@ export function useStagiairePrepaDetail(id: number | null) {
   return { data, loading, error };
 }
 
-export function useStagiairesPrepaMeta() {
+export function useStagiairesPrepaMeta(params?: { for_filters?: boolean }) {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -118,7 +126,10 @@ export function useStagiairesPrepaMeta() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        const res = await api.get("/stagiaires-prepa/meta/", { signal: ctrl.signal });
+        const res = await api.get("/stagiaires-prepa/meta/", {
+          signal: ctrl.signal,
+          params: params?.for_filters ? { for_filters: 1 } : undefined,
+        });
         setData(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
@@ -127,7 +138,7 @@ export function useStagiairesPrepaMeta() {
       }
     })();
     return () => ctrl.abort();
-  }, []);
+  }, [params?.for_filters]);
 
   return { data, loading, error };
 }
@@ -183,6 +194,33 @@ export function useHardDeleteStagiairePrepa() {
   return {
     hardDelete: async (id: number) => {
       const res = await api.post(`/stagiaires-prepa/${id}/hard-delete/`);
+      return res.data;
+    },
+  };
+}
+
+export function useBulkArchiveStagiairesPrepa() {
+  return {
+    archiveMany: async (ids: number[]) => {
+      const res = await api.post("/stagiaires-prepa/bulk/archive/", { ids });
+      return res.data;
+    },
+  };
+}
+
+export function useBulkRestoreStagiairesPrepa() {
+  return {
+    restoreMany: async (ids: number[]) => {
+      const res = await api.post("/stagiaires-prepa/bulk/desarchiver/", { ids });
+      return res.data;
+    },
+  };
+}
+
+export function useBulkHardDeleteStagiairesPrepa() {
+  return {
+    hardDeleteMany: async (ids: number[]) => {
+      const res = await api.post("/stagiaires-prepa/bulk/hard-delete/", { ids });
       return res.data;
     },
   };

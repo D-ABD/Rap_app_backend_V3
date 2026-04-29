@@ -8,34 +8,11 @@ import type { Prepa } from "src/types/prepa";
 import { usePrepaDetail, useUpdatePrepa, useDeletePrepa, usePrepaMeta } from "src/hooks/usePrepa";
 import PageTemplate from "src/components/PageTemplate";
 import PrepaFormIC from "./PrepaFormIC";
+import { extractPrepaApiMessage } from "./prepaApiError";
 
 /* ─────────────────────────────── */
 /* 🔧 Helpers pour les erreurs API */
 /* ─────────────────────────────── */
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-const isStringArray = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((x) => typeof x === "string");
-
-function extractApiMessage(data: unknown): string | null {
-  if (!isRecord(data)) return null;
-
-  const maybeMessage = (data as { message?: unknown }).message;
-  if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage;
-
-  const maybeErrors = (data as { errors?: unknown }).errors;
-  const errorsObj = isRecord(maybeErrors) ? (maybeErrors as Record<string, unknown>) : data;
-
-  const parts: string[] = [];
-  for (const [field, val] of Object.entries(errorsObj)) {
-    if (typeof val === "string") {
-      parts.push(`${field}: ${val}`);
-    } else if (isStringArray(val)) {
-      parts.push(`${field}: ${val.join(" · ")}`);
-    }
-  }
-  return parts.length ? parts.join(" | ") : null;
-}
-
 /* ─────────────────────────────── */
 /* 🧩 Page : édition d’une séance Prépa */
 /* ─────────────────────────────── */
@@ -68,7 +45,7 @@ export default function PrepaEditPageIC() {
       navigate("/prepa");
     } catch (e) {
       const axiosErr = e as AxiosError<unknown>;
-      const parsed = axiosErr.response?.data ? extractApiMessage(axiosErr.response.data) : null;
+      const parsed = axiosErr.response?.data ? extractPrepaApiMessage(axiosErr.response.data) : null;
       toast.error(parsed ?? axiosErr.message ?? "Erreur lors de la mise à jour");
     } finally {
       setSubmitting(false);
@@ -140,10 +117,6 @@ export default function PrepaEditPageIC() {
     nb_presents_info: data.nb_presents_info ?? 0,
     nb_absents_info: data.nb_absents_info ?? 0,
     nb_adhesions: data.nb_adhesions ?? 0,
-    nb_inscrits_prepa: data.nb_inscrits_prepa ?? 0,
-    nb_presents_prepa: data.nb_presents_prepa ?? 0,
-    nb_absents_prepa: data.nb_absents_prepa ?? 0,
-    stagiaires_prepa: data.stagiaires_prepa ?? [],
   };
 
   /* ─────────────────────────────── */

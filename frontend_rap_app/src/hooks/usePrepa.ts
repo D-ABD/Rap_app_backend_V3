@@ -268,7 +268,7 @@ export function usePrepaMeta() {
     (async () => {
       try {
         const res = await api.get("/prepa/meta/", { signal: ctrl.signal });
-        setMeta(res.data);
+        setMeta(res.data?.data ?? res.data);
       } catch (e) {
         if (!isAbort(e)) setError(e as Error);
       } finally {
@@ -283,16 +283,20 @@ export function usePrepaMeta() {
 }
 
 export interface PrepaFiltersOptions {
+  annees?: number[];
+  departements?: Choice[];
   type_prepa: Choice[];
-  centre: Choice[];
+  centres?: (Choice & { departement?: string | null; code_postal?: string | null })[];
 }
 
-export function usePrepaFiltersOptions() {
+export function usePrepaFiltersOptions(scope?: "ic" | "ateliers") {
   return useQuery<PrepaFiltersOptions>({
-    queryKey: ["prepa-filters-options"],
+    queryKey: ["prepa-filters-options", scope ?? "all"],
     queryFn: async () => {
-      const res = await api.get("/prepa/filters/");
-      return res.data;
+      const res = await api.get("/prepa/filters/", {
+        params: scope ? { only: scope } : undefined,
+      });
+      return (res.data?.data ?? res.data) as PrepaFiltersOptions;
     },
     staleTime: 1000 * 60 * 10,
   });

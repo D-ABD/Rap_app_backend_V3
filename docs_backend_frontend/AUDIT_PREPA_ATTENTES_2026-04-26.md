@@ -55,6 +55,429 @@ Cette evolution doit enrichir `StagiairePrepa` sans remplacer brutalement les ca
 
 Les nouveaux indicateurs individuels doivent etre ajoutes en parallele, puis utilises progressivement.
 
+## Cadrage fonctionnel clarifie
+
+La lecture metier cible doit desormais etre la suivante.
+
+## Attentes metier finales
+
+Cette section doit etre consideree comme la formulation de reference des attentes utilisateur.
+
+### Principe general
+
+Le module Prepa doit etre separe en trois niveaux bien distincts:
+
+- `Information collective` = bloc amont, tres simple, non nominatif ;
+- `Atelier Prepa` = seance de travail avec participants et compteurs atelier ;
+- `StagiairePrepa` = suivi individuel du parcours ;
+- `ObjectifPrepa` = objectif annuel par centre, alimente principalement par `atelier_1`.
+
+Le but est d'eviter toute confusion entre:
+
+- les chiffres collectifs ;
+- la participation a une seance ;
+- le suivi individuel du parcours ;
+- les objectifs annuels ;
+- les statistiques de dashboard.
+
+### Attente 1 - Information collective
+
+`Information collective` doit etre tres simple.
+
+On n'ajoute pas de stagiaire sur une IC.
+
+On ne saisit que des chiffres.
+
+L'IC doit etre independante du suivi nominatif, mais elle doit alimenter les statistiques Prepa.
+
+Les donnees attendues sur une IC sont:
+
+- nombre de places ouvertes ;
+- nombre de prescriptions ;
+- taux de prescription ;
+- nombre de presents a l'IC ;
+- taux de presence a l'IC ;
+- nombre d'adhesions ;
+- taux d'adhesion.
+
+Regles:
+
+- aucune participation nominative sur une IC ;
+- aucune creation de `StagiairePrepa` depuis une IC ;
+- l'IC reste un module collectif pur ;
+- ses chiffres remontent dans le dashboard et les statistiques globales.
+
+### Attente 2 - Atelier Prepa
+
+`Atelier Prepa` doit etre la vraie seance nominative du parcours.
+
+Chaque atelier doit comporter:
+
+- type d'activite ;
+- date de debut ;
+- date de fin ;
+- centre ;
+- nom du formateur ;
+- participants nominativement saisis si besoin ;
+- totaux atelier ;
+- taux de presence atelier.
+
+Le centre doit etre gere ainsi:
+
+- si l'utilisateur n'a qu'un centre dans son perimetre, le centre doit etre transporte automatiquement ;
+- si l'utilisateur est admin, il doit selectionner le centre.
+
+### Attente 3 - Totaux atelier
+
+Les totaux atelier doivent etre presentes clairement en deux colonnes:
+
+- une colonne `hors liste` ;
+- une colonne `calculee automatiquement`.
+
+Le calcul attendu pour un atelier est:
+
+- nombre d'inscrits ;
+- nombre de presents ;
+- nombre d'absents ;
+- pourcentage de presence en atelier.
+
+Les regles attendues sont:
+
+- les participations nominatives alimentent automatiquement les compteurs calcules ;
+- l'utilisateur peut completer avec des hors liste ;
+- le total final doit toujours rester coherent ;
+- l'utilisateur doit garder de la souplesse s'il ne remplit pas tous les stagiaires nominativement.
+
+### Attente 4 - Parcours individuel
+
+Le pilotage du parcours individuel doit permettre de connaitre:
+
+- le nombre de personnes en attente d'un parcours ;
+- le nombre de personnes en attente d'un atelier suivant ;
+- le nombre d'abandons ;
+- le pourcentage d'abandon ;
+- le nombre de personnes orientees AFPA ;
+- le pourcentage d'orientes AFPA.
+
+`StagiairePrepa` doit etre la fiche centrale de ce suivi.
+
+Regles metier:
+
+- `atelier_1` correspond a l'entree reelle dans le parcours ;
+- `atelier_6` correspond a la fin du parcours ;
+- une personne ne doit pas etre active sur plusieurs ateliers a la fois ;
+- l'atelier en cours ou attendu doit etre visible ;
+- le tout doit respecter le scope utilisateur.
+
+### Attente 5 - Objectifs annuels
+
+Les objectifs doivent etre alimentes particulierement par `atelier_1`.
+
+L'objectif doit etre lu selon deux axes:
+
+- un axe `inscrits` ;
+- un axe `presents`.
+
+On doit donc pouvoir afficher:
+
+- l'objectif annuel ;
+- le nombre d'inscrits en `atelier_1` ;
+- le nombre de presents en `atelier_1` ;
+- le taux d'atteinte sur inscrits ;
+- le taux d'atteinte sur presents ;
+- le reste a faire sur inscrits ;
+- le reste a faire sur presents.
+
+Les adhesions issues des IC doivent rester un indicateur a part.
+
+Elles ne doivent pas etre confondues avec l'atteinte de l'objectif atelier.
+
+### Attente 6 - Dashboard Prepa
+
+Le dashboard Prepa doit etre structure clairement.
+
+Il doit comporter:
+
+- un bloc `Information collective` ;
+- un bloc `Atelier / Objectif` ;
+- un bloc `Parcours individuels`.
+
+#### Bloc Information collective
+
+Il doit afficher:
+
+- places ouvertes ;
+- prescriptions ;
+- taux de prescription ;
+- presents IC ;
+- taux de presence IC ;
+- adhesions ;
+- taux d'adhesion.
+
+#### Bloc Atelier / Objectif
+
+Il doit afficher:
+
+- objectif annuel ;
+- inscrits `atelier_1` ;
+- presents `atelier_1` ;
+- taux d'atteinte engage ;
+- taux d'atteinte reel ;
+- reste a faire engage ;
+- reste a faire reel ;
+- sorties `atelier_6` ;
+- taux de retention `atelier_1 -> atelier_6`.
+
+#### Bloc Parcours individuels
+
+Il doit afficher:
+
+- en attente d'entree ;
+- en attente d'un atelier suivant ;
+- abandons ;
+- pourcentage d'abandon ;
+- orientes AFPA ;
+- pourcentage d'orientes AFPA.
+
+### Attente 7 - Scope et perimetre
+
+Tout doit respecter le scope et le perimetre.
+
+Cela concerne:
+
+- les listes ;
+- les formulaires ;
+- les centres proposes ;
+- les statistiques ;
+- le dashboard ;
+- les exports.
+
+Regles:
+
+- scope centre pour les utilisateurs limites a leurs centres ;
+- scope departement si la logique departement est activee ;
+- vision globale reservee aux admins ;
+- centre preselectionne quand le perimetre ne laisse qu'un choix ;
+- centre selectionne explicitement pour les admins.
+
+### Attente 8 - Clarification de modelisation
+
+La modelisation cible a retenir est:
+
+- `Information collective` = chiffres seulement ;
+- `Atelier Prepa` = seance nominative + hors liste + totaux ateliers ;
+- `StagiairePrepa` = parcours individuel ;
+- `ObjectifPrepa` = objectif annuel ;
+- `prepa_origine` = information de tracabilite du point d'entree ;
+- `participation a la seance` = lien principal pour savoir qui est inscrit ou present a un atelier.
+
+En consequence:
+
+- pour les ateliers, on ne doit pas dependre de `prepa_origine` pour relire les participants ;
+- pour les ateliers, la reference principale doit etre la participation a la seance ;
+- `prepa_origine` peut rester en base, mais il ne doit pas piloter l'usage quotidien des ateliers.
+
+### 1. Information collective
+
+`Information collective` doit rester tres simple.
+
+Elle ne doit pas servir a ajouter des stagiaires nominativement.
+
+Elle doit etre independante du suivi individuel, mais ses donnees doivent alimenter les statistiques globales Prepa.
+
+Sur une `Information collective`, on ne saisit que des chiffres:
+
+- nombre de places ouvertes ;
+- nombre de prescriptions ;
+- taux de prescription ;
+- nombre de presents a l'IC ;
+- taux de presence a l'IC ;
+- nombre d'adhesions ;
+- taux d'adhesion.
+
+Regles:
+
+- aucun ajout de `StagiairePrepa` depuis une IC ;
+- aucune participation nominative sur une IC ;
+- l'IC reste un bloc amont purement collectif ;
+- l'IC alimente les stats, mais ne doit pas etre confondue avec le parcours individuel.
+
+### 2. Atelier Prepa
+
+`Atelier Prepa` est la vraie seance de travail du parcours.
+
+Sur un atelier, on doit retrouver:
+
+- type d'activite ;
+- date de debut ;
+- date de fin ;
+- centre ;
+- nom du formateur ;
+- suivi nominatif des participants ;
+- compteurs atelier ;
+- taux de presence atelier.
+
+Regles de saisie:
+
+- le centre doit etre automatiquement transporte s'il n'y a qu'un centre dans le perimetre utilisateur ;
+- pour un admin, le centre doit etre selectionne explicitement ;
+- les participants d'un atelier doivent etre geres par la participation a la seance ;
+- l'atelier ne doit pas se relire via `prepa_origine` mais via la participation nominative a la seance.
+
+### 3. Totaux atelier
+
+Les totaux atelier doivent etre presentes de maniere claire, avec deux logiques distinctes:
+
+- une partie `calculee automatiquement` a partir des participations nominatives ;
+- une partie `hors liste` renseignee manuellement quand tous les stagiaires ne sont pas saisis nominativement.
+
+Le systeme doit calculer pour chaque atelier:
+
+- nombre d'inscrits ;
+- nombre de presents ;
+- nombre d'absents ;
+- pourcentage de presence atelier.
+
+Regle de calcul:
+
+- `inscrits atelier` = nominatif calcule + hors liste ;
+- `presents atelier` = nominatif present + hors liste presents ;
+- `absents atelier` = nominatif absent + hors liste absents ;
+- `taux de presence atelier` = presents / inscrits.
+
+L'utilisateur doit conserver une souplesse de saisie:
+
+- il peut travailler completement en nominatif ;
+- il peut travailler partiellement en nominatif ;
+- il peut completer manuellement les hors liste ;
+- les totaux finaux doivent toujours rester coherents.
+
+### 4. StagiairePrepa
+
+`StagiairePrepa` est la fiche centrale du parcours individuel.
+
+Il ne doit pas etre confondu avec l'IC.
+
+Il doit permettre de piloter:
+
+- les personnes en attente d'un parcours ;
+- les personnes en attente d'un atelier suivant ;
+- les personnes en abandon ;
+- le pourcentage d'abandon ;
+- les personnes orientees AFPA ;
+- le pourcentage d'orientes AFPA ;
+- l'atelier en cours ou attendu ;
+- la progression globale du parcours.
+
+Regles:
+
+- `atelier_1` marque l'entree reelle dans le parcours ;
+- `atelier_6` marque la fin du parcours ;
+- les statuts doivent respecter le scope utilisateur ;
+- une meme personne ne doit pas etre active sur plusieurs ateliers a la fois.
+
+### 5. Objectifs Prepa
+
+Les objectifs annuels doivent etre alimentes particulierement par `atelier_1`.
+
+Ils doivent etre lisibles selon deux axes:
+
+- un axe `engage` base sur les inscrits a `atelier_1` ;
+- un axe `reel` base sur les presents a `atelier_1`.
+
+On doit donc distinguer:
+
+- objectif annuel ;
+- nombre d'inscrits `atelier_1` ;
+- nombre de presents `atelier_1` ;
+- taux d'atteinte sur inscrits ;
+- taux d'atteinte sur presents ;
+- reste a faire sur inscrits ;
+- reste a faire sur presents.
+
+`Adhesions IC` doit rester un indicateur a part.
+
+Il ne doit pas etre confondu avec l'objectif atelier.
+
+### 6. Dashboard Prepa
+
+Le dashboard Prepa doit etre structure en trois blocs logiques:
+
+- bloc `Information collective` ;
+- bloc `Atelier / Objectif` ;
+- bloc `Parcours individuels`.
+
+#### Bloc Information collective
+
+Il doit afficher:
+
+- places ouvertes ;
+- prescriptions ;
+- taux de prescription ;
+- presents IC ;
+- taux de presence IC ;
+- adhesions ;
+- taux d'adhesion.
+
+#### Bloc Atelier / Objectif
+
+Il doit afficher:
+
+- objectif annuel ;
+- inscrits `atelier_1` ;
+- presents `atelier_1` ;
+- taux d'atteinte engage ;
+- taux d'atteinte reel ;
+- reste a faire engage ;
+- reste a faire reel ;
+- sorties `atelier_6` ;
+- taux de retention `atelier_1 -> atelier_6`.
+
+#### Bloc Parcours individuels
+
+Il doit afficher:
+
+- nombre de personnes en attente d'entree ;
+- nombre de personnes en attente d'un atelier suivant ;
+- nombre d'abandons ;
+- pourcentage d'abandon ;
+- nombre d'orientes AFPA ;
+- pourcentage d'orientes AFPA.
+
+### 7. Scope et perimetre
+
+Toutes les donnees et tous les indicateurs doivent respecter strictement le scope utilisateur.
+
+Cela signifie:
+
+- scope centre pour les utilisateurs limites a leurs centres ;
+- scope departement si la logique metier de departement est activee ;
+- vision globale reservee aux admins ;
+- centre preselectionne automatiquement si le perimetre utilisateur ne laisse pas de choix ;
+- selection explicite du centre pour les admins.
+
+### 8. Consequence de modelisation
+
+La separation cible doit etre comprise ainsi:
+
+- `Information collective` = uniquement des chiffres, aucun stagiaire nominatif ;
+- `Atelier Prepa` = seance nominative + compteurs ateliers ;
+- `StagiairePrepa` = suivi individuel du parcours ;
+- `ObjectifPrepa` = pilotage annuel ;
+- `prepa_origine` = metadonnee de tracabilite du point d'entree, pas mecanisme principal de gestion des participants atelier ;
+- `participation a la seance` = lien principal pour savoir qui est inscrit ou present a un atelier.
+
+### 9. Resume executif
+
+La cible fonctionnelle a retenir est:
+
+- `IC = chiffres seulement`
+- `Atelier = suivi nominatif + hors liste + totaux automatiques`
+- `StagiairePrepa = parcours individuel`
+- `Objectif = atelier_1`
+- `Dashboard = separation claire IC / Atelier / Parcours`
+- `Scope = applique partout sans exception`
+
 ## Lots de realisation
 
 ### Lot 1 - Stabilisation et cadrage sans risque

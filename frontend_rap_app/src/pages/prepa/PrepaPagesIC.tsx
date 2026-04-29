@@ -52,7 +52,7 @@ export default function PrepaPageIC() {
     page: 1,
   });
 
-  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions();
+  const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions("ic");
 
   // Toggle panneau filtres
   const [showFilters, setShowFilters] = useState<boolean>(() => {
@@ -188,6 +188,8 @@ export default function PrepaPageIC() {
             options={loadingFilters ? undefined : filterOptions}
             values={filters}
             hideSearch
+            hideType
+            dateLabelPrefix="Date IC"
             onChange={(next) => {
               setFilters(next);
               setPage(1);

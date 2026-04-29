@@ -141,6 +141,7 @@ export default function MainLayout() {
   const canSeeDeclic = canAccessDeclicRole(role);
   const canSeePrepa = canAccessPrepaRole(role);
   const canSeeParametres = isAdminLikeRole(role);
+  const canSeePrepaObjectifs = isAdminLikeRole(role);
   const appBarTextColor = theme.palette.common.white;
   const topSurfaceBorderColor = alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.16 : 0.12);
   const topSurfaceBg = alpha(theme.palette.common.white, theme.palette.mode === "light" ? 0.08 : 0.05);
@@ -370,13 +371,15 @@ export default function MainLayout() {
                       <SchoolIcon fontSize="small" sx={{ mr: 1 }} /> Stagiaires Prépa
                     </MenuItem>
 
-                    <MenuItem
-                      component={Link}
-                      to="/prepa/objectifs"
-                      onClick={() => setAnchorPrepa(null)}
-                    >
-                      <BarChartIcon fontSize="small" sx={{ mr: 1 }} /> objectifs Prépa
-                    </MenuItem>
+                    {canSeePrepaObjectifs ? (
+                      <MenuItem
+                        component={Link}
+                        to="/prepa/objectifs"
+                        onClick={() => setAnchorPrepa(null)}
+                      >
+                        <BarChartIcon fontSize="small" sx={{ mr: 1 }} /> objectifs Prépa
+                      </MenuItem>
+                    ) : null}
                   </Menu>
                 </>
               )}

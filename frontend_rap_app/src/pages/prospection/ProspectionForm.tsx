@@ -11,7 +11,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material";
 import { toast } from "react-toastify";
 import { toApiError } from "../../api/httpClient";
 
@@ -191,7 +190,7 @@ export default function ProspectionForm({
     });
   };
 
-  const handleSelectChange = (e: SelectChangeEvent<unknown>) => {
+  const handleSelectChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setGeneralError("");
     setForm((prev) => {

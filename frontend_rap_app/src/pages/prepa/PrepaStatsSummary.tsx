@@ -1,35 +1,76 @@
-// -----------------------------------------------------------------------------
-// 📊 PrepaStatsSummary — version corrigée avec taux de rétention global
-// -----------------------------------------------------------------------------
 import * as React from "react";
-import { Card, Typography, Box, Grid, Alert, FormControl, Select, MenuItem, useTheme } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Card,
+  FormControl,
+  Grid,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import type { AppTheme } from "src/theme";
 import StatCardSkeleton from "../../components/ui/StatCardSkeleton";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useAuth } from "src/hooks/useAuth";
 import { isAdminLikeRole } from "src/utils/roleGroups";
-
 import {
-  usePrepaResume,
-  usePrepaGrouped,
   PrepaFilters,
   PrepaGroupRow,
   resolveGroupLabel,
+  usePrepaGrouped,
+  usePrepaResume,
 } from "src/types/prepaStats";
 
-// ───────────────────────────────────────────────
-// 🔧 Utilitaire pour retirer des clés d'un objet
-// ───────────────────────────────────────────────
 function omit<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K> {
   const clone = { ...obj };
   for (const k of keys) delete clone[k];
   return clone;
 }
 
-// ───────────────────────────────────────────────
-// 📊 Composant principal
-// ───────────────────────────────────────────────
+function StatTile({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+  accent: string;
+}) {
+  const theme = useTheme<AppTheme>();
+  const isDark = theme.palette.mode === "dark";
+
+  return (
+    <Box
+      sx={{
+        p: 2.25,
+        height: "100%",
+        borderRadius: 2.5,
+        bgcolor: isDark ? alpha(accent, 0.12) : alpha(accent, 0.08),
+        border: `1px solid ${alpha(accent, isDark ? 0.28 : 0.18)}`,
+        boxShadow: isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light,
+      }}
+    >
+      <Typography variant="overline" sx={{ color: theme.palette.text.secondary, letterSpacing: 0.4 }}>
+        {label}
+      </Typography>
+      <Typography variant="h4" sx={{ mt: 0.5, color: accent, fontWeight: 800, lineHeight: 1.1 }}>
+        {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
+      </Typography>
+      {hint ? (
+        <Typography variant="body2" sx={{ mt: 1, color: theme.palette.text.secondary }}>
+          {hint}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
 export default function PrepaStatsSummary({
   title = "Statistiques Prépa",
   initialFilters = {},
@@ -42,23 +83,16 @@ export default function PrepaStatsSummary({
   const { user } = useAuth();
   const isAdminLike = isAdminLikeRole(user?.role);
 
-  // 🔹 Filtres locaux
   const [filters, setFilters] = React.useState<PrepaFilters>({
     annee: new Date().getFullYear(),
     ...initialFilters,
   });
 
-  // 📊 Données principales du backend
   const { data, isLoading, error } = usePrepaResume(filters);
   const centreQuery = usePrepaGrouped("centre", omit(filters, ["centre"]));
   const deptQuery = usePrepaGrouped("departement", omit(filters, ["departement"]));
 
-  const resume = data;
-
-  // 🌀 États de chargement / erreur
-  if (isLoading) {
-    return <StatCardSkeleton count={3} />;
-  }
+  if (isLoading) return <StatCardSkeleton count={4} />;
 
   if (error) {
     return (
@@ -68,40 +102,7 @@ export default function PrepaStatsSummary({
     );
   }
 
-  if (!resume) return null;
-
-  const statBoxBg = isDark ? theme.custom.kpi.cardBackground.rest.dark : theme.custom.kpi.cardBackground.rest.light;
-  const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
-
-  // 🧮 Données principales (basées sur ton backend Prépa)
-  const objectif = resume.objectif_total ?? 0;
-  const realise = resume.realise_total ?? 0;
-  const reste = resume.reste_a_faire_total ?? 0;
-  const tauxAtteinte = resume.taux_atteinte_total ?? 0;
-
-  // 📊 Statistiques à afficher
-  const stats = [
-    {
-      label: "Objectif annuel",
-      value: objectif,
-      color: theme.palette.info.main,
-    },
-    {
-      label: "Total participants",
-      value: realise,
-      color: theme.palette.success.main,
-    },
-    {
-      label: "Taux d’atteinte (%)",
-      value: tauxAtteinte,
-      color: theme.palette.primary.main,
-    },
-    {
-      label: "Reste à faire",
-      value: reste,
-      color: theme.palette.warning.main,
-    },
-  ];
+  if (!data) return null;
 
   return (
     <Card
@@ -109,29 +110,18 @@ export default function PrepaStatsSummary({
         p: 3,
         borderRadius: 3,
         boxShadow: theme.custom.surface.elevated.boxShadowRest,
-        transition: "all 0.3s ease",
       }}
     >
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
         <Typography variant="h6" fontWeight={700}>
-          <EmojiEventsIcon
-            fontSize="small"
-            sx={{ mr: 1, verticalAlign: "middle", color: theme.palette.primary.main }}
-          />
+          <EmojiEventsIcon fontSize="small" sx={{ mr: 1, verticalAlign: "middle", color: theme.palette.primary.main }} />
           {title}
         </Typography>
 
-        {/* Filtre année */}
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <Select
             value={filters.annee ?? new Date().getFullYear()}
-            onChange={(e) =>
-              setFilters((f) => ({
-                ...f,
-                annee: Number(e.target.value),
-              }))
-            }
+            onChange={(e) => setFilters((f) => ({ ...f, annee: Number(e.target.value) }))}
           >
             {[2023, 2024, 2025, 2026].map((y) => (
               <MenuItem key={y} value={y}>
@@ -142,9 +132,7 @@ export default function PrepaStatsSummary({
         </FormControl>
       </Box>
 
-      {/* Filtres */}
       <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-        {/* Centre */}
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <Select
             value={filters.centre ?? ""}
@@ -155,94 +143,137 @@ export default function PrepaStatsSummary({
               }))
             }
             displayEmpty
-            sx={{
-              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
-              borderRadius: 1,
-            }}
+            sx={{ bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper", borderRadius: 1 }}
           >
-            <MenuItem value="">
-              {isAdminLike ? "Tous les centres (global)" : "Tous mes centres"}
-            </MenuItem>
+            <MenuItem value="">{isAdminLike ? "Tous les centres (global)" : "Tous mes centres"}</MenuItem>
             {centreQuery.data?.results?.map((r: PrepaGroupRow, i: number) => {
-              const label = resolveGroupLabel(r);
               const value = r.id ?? r.group_key;
               return value ? (
                 <MenuItem key={i} value={String(value)}>
-                  {label}
+                  {resolveGroupLabel(r)}
                 </MenuItem>
               ) : null;
             })}
           </Select>
         </FormControl>
 
-        {/* Département */}
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <Select
-            value={(filters as any).departement ?? ""}
-            onChange={(e) =>
-              setFilters((f) => ({
-                ...f,
-                departement: e.target.value || undefined,
-              }))
-            }
+            value={(filters as { departement?: string }).departement ?? ""}
+            onChange={(e) => setFilters((f) => ({ ...f, departement: e.target.value || undefined }))}
             displayEmpty
-            sx={{
-              bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper",
-              borderRadius: 1,
-            }}
+            sx={{ bgcolor: isDark ? alpha(theme.palette.common.white, 0.06) : "background.paper", borderRadius: 1 }}
           >
             <MenuItem value="">Tous départements</MenuItem>
-            {deptQuery.data?.results?.map((r: PrepaGroupRow, i: number) => {
-              const label = resolveGroupLabel(r);
-              const value = r.group_key;
-              return value ? (
-                <MenuItem key={i} value={String(value)}>
-                  {label}
-                </MenuItem>
-              ) : null;
-            })}
+            {deptQuery.data?.results?.map((r: PrepaGroupRow, i: number) => (
+              <MenuItem key={i} value={String(r.group_key)}>
+                {resolveGroupLabel(r)}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>
 
-      {/* Statistiques principales */}
       <Grid container spacing={2.5}>
-        {stats.map((s) => (
-          <Grid item xs={6} sm={4} md={3} key={s.label}>
-            <Box
-              sx={{
-                p: 2.5,
-                borderRadius: 2.5,
-                textAlign: "center",
-                bgcolor: statBoxBg,
-                boxShadow: statShadow,
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: isDark ? theme.custom.kpi.elevation.hover.dark : theme.custom.kpi.elevation.hover.light,
-                },
-              }}
-            >
-              <Typography
-                variant="h5"
-                sx={{
-                  color: s.color,
-                  fontWeight: 700,
-                  mb: 0.5,
-                  lineHeight: 1.2,
-                }}
-              >
-                {typeof s.value === "number" ? s.value.toLocaleString("fr-FR") : s.value}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}
-              >
-                {s.label}
-              </Typography>
-            </Box>
-          </Grid>
-        ))}
+        <Grid item xs={12} md={4}>
+          <StatTile
+            label="Objectif annuel"
+            value={data.objectif_total ?? 0}
+            hint={`Reste réel: ${(data.reste_a_faire_presents ?? 0).toLocaleString("fr-FR")}`}
+            accent={theme.palette.info.main}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <StatTile
+            label="Atelier 1 inscrits"
+            value={data.atelier1_inscrits ?? 0}
+            hint={`Atteinte engagée: ${(data.taux_atteinte_objectif_inscrits ?? 0).toFixed(1)} %`}
+            accent={theme.palette.warning.main}
+          />
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <StatTile
+            label="Atelier 1 présents"
+            value={data.atelier1_presents ?? 0}
+            hint={`Atteinte réelle: ${(data.taux_atteinte_objectif_presents ?? 0).toFixed(1)} %`}
+            accent={theme.palette.success.main}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
+        <Grid item xs={12} md={7}>
+          <Box
+            sx={{
+              p: 2.5,
+              borderRadius: 2.5,
+              bgcolor: isDark ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.main, 0.04),
+              border: `1px solid ${alpha(theme.palette.primary.main, isDark ? 0.28 : 0.12)}`,
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              Pilotage objectif atelier 1
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <StatTile
+                  label="Reste à faire engagés"
+                  value={data.reste_a_faire_inscrits ?? 0}
+                  hint="Basé sur les inscrits atelier 1"
+                  accent={theme.palette.warning.dark}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <StatTile
+                  label="Reste à faire réel"
+                  value={data.reste_a_faire_presents ?? 0}
+                  hint="Basé sur les présents atelier 1"
+                  accent={theme.palette.success.dark}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12} md={5}>
+          <Box
+            sx={{
+              p: 2.5,
+              height: "100%",
+              borderRadius: 2.5,
+              background: isDark
+                ? `linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.18)}, ${alpha(theme.palette.info.dark, 0.14)})`
+                : `linear-gradient(135deg, ${alpha(theme.palette.secondary.light, 0.32)}, ${alpha(theme.palette.info.light, 0.28)})`,
+              border: `1px solid ${alpha(theme.palette.secondary.main, 0.16)}`,
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2 }}>
+              Funnel Prépa
+            </Typography>
+            <Stack spacing={1.25}>
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography color="text.secondary">Adhésions IC</Typography>
+                <Typography fontWeight={700}>{(data.nb_adhesions ?? 0).toLocaleString("fr-FR")}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography color="text.secondary">Sorties atelier 6</Typography>
+                <Typography fontWeight={700}>{(data.sorties_atelier_6 ?? 0).toLocaleString("fr-FR")}</Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography color="text.secondary">Taux adhésion IC</Typography>
+                <Typography fontWeight={700}>
+                  {(data.taux_adhesion_ic ?? 0).toFixed(1)} %
+                </Typography>
+              </Box>
+              <Box display="flex" justifyContent="space-between" gap={2}>
+                <Typography color="text.secondary">Taux rétention A1 → A6</Typography>
+                <Typography fontWeight={700}>
+                  {(data.taux_retention_global ?? 0).toFixed(1)} %
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+        </Grid>
       </Grid>
     </Card>
   );

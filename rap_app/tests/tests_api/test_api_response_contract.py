@@ -2037,6 +2037,8 @@ class ApiResponseContractTests(APITestCase):
         self.assertEqual(response.data["data"]["entrees_atelier_1"], 1)
         self.assertEqual(response.data["data"]["orientes_afpa"], 1)
         self.assertEqual(response.data["data"]["taux_transformation_vers_afpa"], 100.0)
+        self.assertIn("taux_abandon_vers_entrees", response.data["data"])
+        self.assertIn("total_stagiaires", response.data["data"])
 
     def test_participant_declic_list_uses_standard_paginated_envelope(self):
         from rap_app.models.declic import ParticipantDeclic

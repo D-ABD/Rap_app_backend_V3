@@ -15,10 +15,12 @@ import {
 import { Prepa, CentreLight } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
-import PrepaInvitesSection from "./PrepaInvitesSection";
 import AppTextField from "src/components/forms/fields/AppTextField";
 import FormSectionCard from "src/components/forms/FormSectionCard";
 import type { AppTheme } from "../../theme";
+import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
+import { buildCentreLabel, extractScopedCentres } from "./prepaCentreScope";
 import {
   Event as EventIcon,
   Groups as GroupsIcon,
@@ -76,6 +78,8 @@ export default function PrepaFormIC({
   onCentreChange,
 }: Props) {
   const theme = useTheme<AppTheme>();
+  const { user } = useAuth();
+  const isAdminLike = isAdminLikeRole(user?.role);
 
   const [form, setForm] = useState<Partial<Prepa>>({
     type_prepa: initialValues?.type_prepa ?? "info_collective",
@@ -88,14 +92,12 @@ export default function PrepaFormIC({
     nb_presents_info: initialValues?.nb_presents_info ?? 0,
     nb_absents_info: initialValues?.nb_absents_info ?? 0,
     nb_adhesions: initialValues?.nb_adhesions ?? 0,
-    nb_inscrits_prepa: initialValues?.nb_inscrits_prepa ?? 0,
-    nb_presents_prepa: initialValues?.nb_presents_prepa ?? 0,
-    nb_absents_prepa: initialValues?.nb_absents_prepa ?? 0,
-    stagiaires_prepa: initialValues?.stagiaires_prepa ?? [],
   });
 
   const [centreLabel, setCentreLabel] = useState<string>("");
   const [showCentreModal, setShowCentreModal] = useState(false);
+  const scopedCentres = useMemo(() => extractScopedCentres((meta as Record<string, unknown> | null) ?? null), [meta]);
+  const hasSingleScopedCentre = !isAdminLike && scopedCentres.length === 1;
 
   const typeChoices = useMemo(() => {
     const source = meta?.type_prepa_choices?.length
@@ -109,26 +111,33 @@ export default function PrepaFormIC({
 
   useEffect(() => {
     if (form.nombre_prescriptions !== undefined && form.nb_presents_info !== undefined) {
+      const nextAbsents = Math.max(
+        0,
+        (form.nombre_prescriptions ?? 0) - (form.nb_presents_info ?? 0)
+      );
+      if (form.nb_absents_info === nextAbsents) return;
       setForm((prev) => ({
         ...prev,
-        nb_absents_info: Math.max(
-          0,
-          (prev.nombre_prescriptions ?? 0) - (prev.nb_presents_info ?? 0)
-        ),
+        nb_absents_info: nextAbsents,
       }));
     }
-  }, [form.nombre_prescriptions, form.nb_presents_info]);
+  }, [form.nombre_prescriptions, form.nb_presents_info, form.nb_absents_info]);
 
   useEffect(() => {
-    if (form.centre_id && meta?.centre_choices?.length) {
-      const opt = meta.centre_choices.find((c) => Number(c.value) === form.centre_id);
-      setCentreLabel(opt?.label ?? `#${form.centre_id}`);
-      if (opt?.label) onCentreChange?.(opt.label);
+    if (!form.centre_id && hasSingleScopedCentre) {
+      setForm((prev) => ({ ...prev, centre_id: scopedCentres[0].id }));
+      return;
+    }
+    if (form.centre_id && scopedCentres.length) {
+      const opt = scopedCentres.find((c) => c.id === form.centre_id);
+      const label = buildCentreLabel(opt) || `#${form.centre_id}`;
+      setCentreLabel((prev) => (prev === label ? prev : label));
+      onCentreChange?.(label);
     } else {
-      setCentreLabel("");
+      setCentreLabel((prev) => (prev === "" ? prev : ""));
       onCentreChange?.("");
     }
-  }, [form.centre_id, meta?.centre_choices, onCentreChange]);
+  }, [form.centre_id, hasSingleScopedCentre, onCentreChange, scopedCentres]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,9 +158,16 @@ export default function PrepaFormIC({
             <Grid container spacing={theme.custom.form.sectionCard.contentGap}>
               <Grid item xs={12}>
                 <Alert severity="info">
-                  Le centre sélectionné est utilisé pour rattacher la séance et ses invités.
+                  Une information collective reste purement chiffrée: aucun stagiaire nominatif n'est saisi ici.
                 </Alert>
               </Grid>
+              {hasSingleScopedCentre ? (
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    Le centre est prérempli automatiquement depuis votre périmètre.
+                  </Alert>
+                </Grid>
+              ) : null}
 
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
@@ -198,10 +214,12 @@ export default function PrepaFormIC({
 
               <Grid item xs={12} md={4}>
                 <Stack direction={{ xs: "column", sm: "row", md: "column" }} spacing={1}>
-                  <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
-                    Sélectionner un centre
-                  </Button>
-                  {form.centre_id ? (
+                  {!hasSingleScopedCentre ? (
+                    <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
+                      Sélectionner un centre
+                    </Button>
+                  ) : null}
+                  {form.centre_id && !hasSingleScopedCentre ? (
                     <Button
                       variant="outlined"
                       color="error"
@@ -233,7 +251,7 @@ export default function PrepaFormIC({
           <Section
             icon={<GroupsIcon color="primary" />}
             title="Information collective"
-            subtitle="Suivi des volumes et de la participation."
+            subtitle="Saisie simple des volumes, présences et adhésions."
           >
             <Grid container spacing={theme.custom.form.sectionCard.contentGap}>
               <Grid item xs={12} md={4}>
@@ -298,13 +316,6 @@ export default function PrepaFormIC({
               </Grid>
             </Grid>
           </Section>
-
-          <PrepaInvitesSection
-            stagiaires={form.stagiaires_prepa ?? []}
-            onChange={(stagiaires) =>
-              handleChange("stagiaires_prepa", stagiaires as Prepa["stagiaires_prepa"])
-            }
-          />
 
           <Section
             icon={<CommentIcon color="primary" />}

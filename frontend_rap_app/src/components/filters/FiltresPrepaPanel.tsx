@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from "react";
-import { Box, Stack, Button, TextField, MenuItem } from "@mui/material";
+import { Box, Button, Stack, TextField } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
+import FilterTemplate, { type FieldConfig } from "./FilterTemplate";
 import type { Choice, PrepaFiltresValues, TypePrepa } from "../../types/prepa";
 
 type Props = {
@@ -17,11 +18,10 @@ type Props = {
   onRefresh?: () => void;
   onReset?: () => void;
   hideSearch?: boolean;
+  hideType?: boolean;
+  dateLabelPrefix?: string;
 };
 
-/* ------------------------------------------------------------------ */
-/* 🔧 Helpers */
-/* ------------------------------------------------------------------ */
 const map = <T,>(arr?: T[]) => arr ?? [];
 const withPlaceholder = (opts: Array<{ value: string | number; label: string }>) =>
   opts.length ? opts : [{ value: "", label: "—" }];
@@ -41,9 +41,6 @@ function buildReset(values: PrepaFiltresValues): PrepaFiltresValues {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* 🧩 Composant principal */
-/* ------------------------------------------------------------------ */
 export default function FiltresPrepaPanel({
   options,
   values,
@@ -51,6 +48,8 @@ export default function FiltresPrepaPanel({
   onRefresh,
   onReset,
   hideSearch = false,
+  hideType = false,
+  dateLabelPrefix = "Date",
 }: Props) {
   const typeChoices = map(options?.type_prepa);
   const centreChoices = map(options?.centres);
@@ -81,6 +80,75 @@ export default function FiltresPrepaPanel({
     }),
     [onRefresh, onReset, onChange, values]
   );
+
+  const fields = useMemo<Array<FieldConfig<PrepaFiltresValues>>>(() => {
+    const next: Array<FieldConfig<PrepaFiltresValues>> = [
+      {
+        key: "annee",
+        label: "📅 Année",
+        type: "select",
+        options: withPlaceholder(anneesChoices),
+        parse: (raw) => (raw === "" ? undefined : Number(raw)),
+      },
+    ];
+
+    if (!hideType) {
+      next.push({
+        key: "type_prepa",
+        label: "🧩 Type d’activité Prépa",
+        type: "select",
+        options: withPlaceholder(
+          typeChoices.map((o) => ({
+            value: String(o.value),
+            label: o.label,
+          }))
+        ),
+        parse: (raw) => (raw === "" ? undefined : (raw as TypePrepa)),
+      });
+    }
+
+    if (departementChoices.length > 0) {
+      next.push({
+        key: "departement",
+        label: "🏙️ Département",
+        type: "select",
+        options: withPlaceholder(departementChoices),
+        parse: (raw) => (raw === "" ? undefined : raw),
+      });
+    }
+
+    if (centreChoices.length > 0) {
+      next.push({
+        key: "centre",
+        label: "🏫 Centre",
+        type: "select",
+        options: withPlaceholder(
+          centreChoices.map((o) => ({
+            value: String(o.value),
+            label: o.label,
+          }))
+        ),
+        parse: (raw) => (raw === "" ? undefined : Number(raw)),
+      });
+    }
+
+    next.push(
+      {
+        key: "date_min",
+        label: `📅 ${dateLabelPrefix} du`,
+        type: "date",
+        parse: (raw) => (raw === "" ? undefined : raw),
+      },
+      {
+        key: "date_max",
+        label: `📅 ${dateLabelPrefix} au`,
+        type: "date",
+        parse: (raw) => (raw === "" ? undefined : raw),
+      }
+    );
+
+    return next;
+  }, [anneesChoices, centreChoices, dateLabelPrefix, departementChoices, hideType, typeChoices]);
 
   const ready = Boolean(options);
 
@@ -133,156 +201,15 @@ export default function FiltresPrepaPanel({
             </Stack>
           )}
 
-          {/* 📆 Année / Type / Département / Centre */}
-          <Stack direction="row" spacing={2} mb={1.5} flexWrap="wrap">
-            {/* 📅 Année */}
-            <TextField
-              select
-              size="small"
-              label="📅 Année"
-              value={values.annee ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...values,
-                  annee: e.target.value === "" ? undefined : Number(e.target.value),
-                  page: 1,
-                })
-              }
-              sx={{ minWidth: 120 }}
-            >
-              {withPlaceholder(anneesChoices).map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {/* 🧩 Type d’activité */}
-            <TextField
-              select
-              size="small"
-              label="🧩 Type d’activité Prépa"
-              value={values.type_prepa ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...values,
-                  type_prepa: e.target.value === "" ? undefined : (e.target.value as TypePrepa),
-                  page: 1,
-                })
-              }
-              sx={{ minWidth: 180 }}
-            >
-              {withPlaceholder(
-                typeChoices.map((o) => ({
-                  value: String(o.value),
-                  label: o.label,
-                }))
-              ).map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {/* 🏙️ Département */}
-            {departementChoices.length > 0 && (
-              <TextField
-                select
-                size="small"
-                label="🏙️ Département"
-                value={values.departement ?? ""}
-                onChange={(e) =>
-                  onChange({
-                    ...values,
-                    departement: e.target.value === "" ? undefined : e.target.value,
-                    page: 1,
-                  })
-                }
-                sx={{ minWidth: 160 }}
-              >
-                {withPlaceholder(departementChoices).map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-
-            {/* 🏫 Centre */}
-            {centreChoices.length > 0 && (
-              <TextField
-                select
-                size="small"
-                label="🏫 Centre"
-                value={values.centre ?? ""}
-                onChange={(e) =>
-                  onChange({
-                    ...values,
-                    centre: e.target.value === "" ? undefined : Number(e.target.value),
-                    page: 1,
-                  })
-                }
-                sx={{ minWidth: 200 }}
-              >
-                {withPlaceholder(
-                  centreChoices.map((o) => ({
-                    value: String(o.value),
-                    label: o.label,
-                  }))
-                ).map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          </Stack>
-
-          {/* 📅 Dates */}
-          <Stack direction="row" spacing={2} mb={1.5} flexWrap="wrap">
-            <TextField
-              type="date"
-              size="small"
-              label="📅 Du"
-              InputLabelProps={{ shrink: true }}
-              value={values.date_min ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...values,
-                  date_min: e.target.value || undefined,
-                  page: 1,
-                })
-              }
-              sx={{ minWidth: 180 }}
-            />
-            <TextField
-              type="date"
-              size="small"
-              label="📅 Au"
-              InputLabelProps={{ shrink: true }}
-              value={values.date_max ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...values,
-                  date_max: e.target.value || undefined,
-                  page: 1,
-                })
-              }
-              sx={{ minWidth: 180 }}
-            />
-          </Stack>
-
-          {/* 🔁 Actions */}
-          <Stack direction="row" spacing={1} mt={2}>
-            <Button variant="outlined" onClick={() => actions.onReset()}>
-              {actions.resetLabel}
-            </Button>
-            {actions.onRefresh && (
-              <Button variant="outlined" onClick={actions.onRefresh}>
-                {actions.refreshLabel}
-              </Button>
-            )}
-          </Stack>
+          <FilterTemplate<PrepaFiltresValues>
+            values={values}
+            onChange={(next) => onChange({ ...next, page: 1 })}
+            fields={fields}
+            actions={actions}
+            cols={4}
+            loading={!ready}
+            title="Filtres Prépa"
+          />
         </>
       )}
     </>

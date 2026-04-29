@@ -63,6 +63,7 @@ interface Props {
   onRowClick: (id: number) => void;
   onDeleteClick: (id: number) => void;
   onRestoreClick?: (id: number) => void;
+  onReafficherClick?: (id: number) => void;
   onHardDeleteClick?: (id: number) => void;
 
   // URLs ou callbacks (rendent les compteurs cliquables)

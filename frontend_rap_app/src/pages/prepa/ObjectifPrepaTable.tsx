@@ -44,12 +44,13 @@ export default function ObjectifPrepaTable({ data }: Props) {
 
   // 🧮 Totaux
   const totalObjectif = data.reduce((sum, o) => sum + (o.valeur_objectif ?? 0), 0);
-  const totalRealisation = data.reduce(
-    (sum, o) => sum + (o.data_prepa?.presents ?? 0), // 🎯 total des présents Prépa
-    0
-  );
-  const totalReste = data.reduce((sum, o) => sum + (o.reste_a_faire ?? 0), 0);
-  const totalTaux = totalObjectif > 0 ? ((totalRealisation / totalObjectif) * 100).toFixed(1) : "-";
+  const totalAtelier1Inscrits = data.reduce((sum, o) => sum + (o.data_prepa?.atelier1_inscrits ?? 0), 0);
+  const totalAtelier1Presents = data.reduce((sum, o) => sum + (o.data_prepa?.atelier1_presents ?? o.data_prepa?.atelier1 ?? 0), 0);
+  const totalAdhesions = data.reduce((sum, o) => sum + (o.data_prepa?.adhesions ?? 0), 0);
+  const totalResteInscrits = data.reduce((sum, o) => sum + (o.reste_a_faire_inscrits ?? 0), 0);
+  const totalRestePresents = data.reduce((sum, o) => sum + (o.reste_a_faire_presents ?? o.reste_a_faire ?? 0), 0);
+  const totalTauxInscrits = totalObjectif > 0 ? ((totalAtelier1Inscrits / totalObjectif) * 100).toFixed(1) : "-";
+  const totalTauxPresents = totalObjectif > 0 ? ((totalAtelier1Presents / totalObjectif) * 100).toFixed(1) : "-";
 
   // 🔢 Formatage
   const fmtTaux = (val?: number | null) => (val != null ? `${val.toFixed(1)} %` : "—");
@@ -70,7 +71,7 @@ export default function ObjectifPrepaTable({ data }: Props) {
           size="small"
           stickyHeader
           sx={{
-            minWidth: 1300,
+            minWidth: 1680,
             "& th, & td": { whiteSpace: "nowrap" },
           }}
         >
@@ -82,9 +83,13 @@ export default function ObjectifPrepaTable({ data }: Props) {
                 "Centre",
                 "Département",
                 "🎯 Objectif",
-                "👥 Réalisé",
-                "% Atteinte",
-                "🔁 Reste à faire",
+                "🟠 A1 inscrits",
+                "🟢 A1 présents",
+                "% Obj engagés",
+                "% Obj réels",
+                "🔁 Reste engagés",
+                "🔁 Reste réels",
+                "🤝 Adhésions",
                 "📊 Taux Prescription",
                 "📈 Taux Présence",
                 "🤝 Taux Adhésion",
@@ -164,27 +169,42 @@ export default function ObjectifPrepaTable({ data }: Props) {
                 {/* Objectif */}
                 <TableCell align="right">{fmtNum(obj.valeur_objectif)}</TableCell>
 
-                {/* Réalisé */}
-                <TableCell align="right">{fmtNum(obj.data_prepa?.presents)}</TableCell>
+                <TableCell align="right">{fmtNum(obj.data_prepa?.atelier1_inscrits)}</TableCell>
+                <TableCell align="right">{fmtNum(obj.data_prepa?.atelier1_presents ?? obj.data_prepa?.atelier1)}</TableCell>
 
-                {/* Taux atteinte */}
                 <TableCell
                   align="right"
                   sx={{
                     color:
-                      obj.taux_atteinte != null && obj.taux_atteinte >= 100
+                      obj.taux_atteinte_inscrits != null && obj.taux_atteinte_inscrits >= 100
                         ? "success.main"
-                        : obj.taux_atteinte != null && obj.taux_atteinte < 70
+                        : obj.taux_atteinte_inscrits != null && obj.taux_atteinte_inscrits < 70
                           ? "error.main"
                           : "warning.main",
                     fontWeight: 600,
                   }}
                 >
-                  {fmtTaux(obj.taux_atteinte)}
+                  {fmtTaux(obj.taux_atteinte_inscrits)}
                 </TableCell>
 
-                {/* Reste à faire */}
-                <TableCell align="right">{fmtNum(obj.reste_a_faire)}</TableCell>
+                <TableCell
+                  align="right"
+                  sx={{
+                    color:
+                      obj.taux_atteinte_presents != null && obj.taux_atteinte_presents >= 100
+                        ? "success.main"
+                        : obj.taux_atteinte_presents != null && obj.taux_atteinte_presents < 70
+                          ? "error.main"
+                          : "warning.main",
+                    fontWeight: 600,
+                  }}
+                >
+                  {fmtTaux(obj.taux_atteinte_presents ?? obj.taux_atteinte)}
+                </TableCell>
+
+                <TableCell align="right">{fmtNum(obj.reste_a_faire_inscrits)}</TableCell>
+                <TableCell align="right">{fmtNum(obj.reste_a_faire_presents ?? obj.reste_a_faire)}</TableCell>
+                <TableCell align="right">{fmtNum(obj.data_prepa?.adhesions)}</TableCell>
 
                 {/* Taux prescription */}
                 <TableCell align="right">{fmtTaux(obj.taux_prescription)}</TableCell>
@@ -218,13 +238,25 @@ export default function ObjectifPrepaTable({ data }: Props) {
                 <Typography fontWeight={700}>{fmtNum(totalObjectif)}</Typography>
               </TableCell>
               <TableCell align="right">
-                <Typography fontWeight={700}>{fmtNum(totalRealisation)}</Typography>
-              </TableCell>
-              <TableCell align="right" sx={{ color: "primary.main", fontWeight: 700 }}>
-                {typeof totalTaux === "string" ? totalTaux : `${totalTaux} %`}
+                <Typography fontWeight={700}>{fmtNum(totalAtelier1Inscrits)}</Typography>
               </TableCell>
               <TableCell align="right">
-                <Typography fontWeight={700}>{fmtNum(totalReste)}</Typography>
+                <Typography fontWeight={700}>{fmtNum(totalAtelier1Presents)}</Typography>
+              </TableCell>
+              <TableCell align="right" sx={{ color: "warning.main", fontWeight: 700 }}>
+                {typeof totalTauxInscrits === "string" ? `${totalTauxInscrits} %` : totalTauxInscrits}
+              </TableCell>
+              <TableCell align="right" sx={{ color: "primary.main", fontWeight: 700 }}>
+                {typeof totalTauxPresents === "string" ? `${totalTauxPresents} %` : totalTauxPresents}
+              </TableCell>
+              <TableCell align="right">
+                <Typography fontWeight={700}>{fmtNum(totalResteInscrits)}</Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography fontWeight={700}>{fmtNum(totalRestePresents)}</Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography fontWeight={700}>{fmtNum(totalAdhesions)}</Typography>
               </TableCell>
               <TableCell align="center" colSpan={4}>
                 <Typography fontWeight={700} color="text.secondary">

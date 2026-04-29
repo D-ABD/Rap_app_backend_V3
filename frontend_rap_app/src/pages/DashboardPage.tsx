@@ -17,6 +17,7 @@ import {
   Divider,
   Stack,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -72,17 +73,19 @@ export default function DashboardPage() {
 
   const minCardHeight = isMobile ? 200 : 240;
 
-  /* --------------------------
-  🎚️ Wrapper d'accordéons stylés
-  ----------------------------*/
-  const styledAccordion = useMemo(
-    () =>
-      (
-        children: React.ReactNode,
-        title: string,
-        color: PaletteColorKey,
-        expanded = false
-      ) => (
+const styledAccordion = useMemo(
+  () =>
+    (
+      children: React.ReactNode,
+      title: string,
+      color: PaletteColorKey,
+      expanded = false
+    ) => {
+      const mainColor = theme.palette[color].main;
+      const darkColor = theme.palette[color].dark;
+      const textColor = theme.palette.getContrastText(mainColor);
+
+      return (
         <Accordion
           defaultExpanded={expanded}
           disableGutters
@@ -90,26 +93,43 @@ export default function DashboardPage() {
             mb: 2,
             borderRadius: 2,
             overflow: "hidden",
+            border: `1px solid ${alpha(mainColor, 0.22)}`,
             boxShadow: theme.shadows[2],
-            transition: "all 0.25s ease",
+            transition: "box-shadow 0.25s ease",
             "&:hover": {
               boxShadow: theme.shadows[4],
-              transform: "translateY(-2px)",
             },
             "&:before": { display: "none" },
           }}
         >
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon />}
+            expandIcon={
+              <ExpandMoreIcon
+                sx={{
+                  color: textColor,
+                }}
+              />
+            }
             sx={{
-              backgroundColor: theme.palette[color].light,
+              minHeight: 54,
+              color: textColor,
+              background: `linear-gradient(135deg, ${mainColor}, ${darkColor})`,
+              "& .MuiAccordionSummary-content": {
+                alignItems: "center",
+              },
               "&:hover": {
-                backgroundColor: theme.palette[color].main,
-                color: theme.palette.getContrastText(theme.palette[color].main),
+                background: `linear-gradient(135deg, ${darkColor}, ${mainColor})`,
               },
             }}
           >
-            <Typography variant="subtitle1" fontWeight="bold">
+            <Typography
+              variant="subtitle1"
+              fontWeight={800}
+              sx={{
+                color: "inherit",
+                letterSpacing: 0.2,
+              }}
+            >
               {title}
             </Typography>
           </AccordionSummary>
@@ -117,17 +137,16 @@ export default function DashboardPage() {
           <AccordionDetails
             sx={{
               backgroundColor: theme.palette.background.paper,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
+              p: { xs: 2, md: 3 },
             }}
           >
             {children}
           </AccordionDetails>
         </Accordion>
-      ),
-    [theme]
-  );
+      );
+    },
+  [theme]
+);
 
   return (
     <PageTemplate
@@ -179,34 +198,36 @@ export default function DashboardPage() {
     >
       <Divider sx={{ mb: 4 }} />
 
-      {/* ===================================================== */}
-      {/* 🎯 WIDGETS STRATÉGIQUES — VERSION CARRÉE (4 BLOCS) */}
-      {/* ===================================================== */}
-      <DashboardGrid sx={{ mb: 10 }}>
+      {styledAccordion(
+        <Stack spacing={2.5} sx={{ width: "100%" }}>
+          <Box sx={{ width: "100%" }}>
+            <PrepaStatsSummary title="Prepa - Synthese" />
+          </Box>
 
+          <Box sx={{ width: "100%" }}>
+            <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
+          </Box>
 
-        <Grid item xs={8} md={6} lg={4}>
-          <PrepaStatsSummary title="Prepa - Synthese" />
-        </Grid>
+          <Box sx={{ width: "100%" }}>
+            <PrepaStatsParcours title="Parcours Prepa" />
+          </Box>
+        </Stack>,
+        "Prepa-Compétences",
+        "secondary",
+        true
+      )}
 
-        <Grid item xs={8} md={6} lg={4}>
-          <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
-        </Grid>
+      {styledAccordion(
+        <DashboardGrid>
+          <Grid item xs={12}>
+            <DeclicStatsSummary title="Declic - Synthese" />
+          </Grid>
+        </DashboardGrid>,
+        "Declic",
+        "secondary",
+        true
+      )}
 
-        <Grid item xs={8} md={6} lg={4}>
-          <PrepaStatsParcours title="Parcours Prepa" />
-        </Grid>
-
-        <Grid item xs={8} md={6} lg={4}>
-          <DeclicStatsSummary title="Declic - Synthese" />
-        </Grid>
-      </DashboardGrid>
-
-      {/* ================================================ */}
-      {/* 📦 ACCORDÉONS */}
-      {/* ================================================ */}
-
-      {/* INDICATEURS CLÉS */}
       {styledAccordion(
         <DashboardGrid>
           <Grid item xs={12}>
@@ -216,27 +237,30 @@ export default function DashboardPage() {
           <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
             <FormationSaturationWidget title="Saturation Formations" />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
             <ProspectionConversionKpi title="Taux de transformation Prospections" />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4} sx={{ minHeight: minCardHeight }}>
             <AppairageConversionKpi title="Taux de transformation Appairages" />
           </Grid>
         </DashboardGrid>,
-        "Indicateurs clés",
+        "Formations - Indicateurs clés",
         "primary",
         true
       )}
 
-      {/* STATS FORMATIONS */}
       {styledAccordion(
         <DashboardGrid>
           <Grid item xs={12} sm={6} md={4}>
             <FormationOverviewWidget title="Répartition formations" />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4}>
             <FormationFinanceursOverviewWidget title="Types d’offres" />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4}>
             <FormationPlacesWidget title="Places disponibles" />
           </Grid>
@@ -245,12 +269,12 @@ export default function DashboardPage() {
         "success"
       )}
 
-      {/* STATS CANDIDATS */}
       {styledAccordion(
         <DashboardGrid>
           <Grid item xs={12} sm={6}>
             <CandidatOverviewWidget title="Statuts candidats" />
           </Grid>
+
           <Grid item xs={12} sm={6}>
             <CandidatContratOverviewWidget title="Répartition contrats" />
           </Grid>
@@ -259,21 +283,24 @@ export default function DashboardPage() {
         "warning"
       )}
 
-      {/* SUIVI PROSPECTION / APPAIRAGE / TRE / ÉVÉNEMENTS */}
       {styledAccordion(
         <DashboardGrid>
           <Grid item xs={12} sm={6} md={4}>
             <ProspectionOverviewWidget title="Vue d'ensemble Prospections" />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4}>
             <AppairageOverviewWidget />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4}>
             <AteliersTREOverviewWidget />
           </Grid>
+
           <Grid item xs={12} sm={6} md={4}>
             <EvenementOverviewWidget title="Vue d'ensemble Evenements" />
           </Grid>
+
           <Grid item xs={12}>
             <ProspectionCommentStatsDashboard title="Commentaires de prospection récents" />
           </Grid>
@@ -282,7 +309,6 @@ export default function DashboardPage() {
         "info"
       )}
 
-      {/* ANALYSE GROUPEE */}
       {styledAccordion(
         <Box display="flex" flexDirection="column" gap={2}>
           <FormationGroupedWidget />

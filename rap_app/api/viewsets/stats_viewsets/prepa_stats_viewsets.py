@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from django.db.models import F, Sum, Value
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce, Substr
 from django.http import HttpResponse
 from django.utils import timezone as dj_timezone
@@ -57,6 +57,14 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsPrepaStaffOrAbove]
     pagination_class = RapAppPagination
     queryset = Prepa.objects.select_related("centre").all()
+
+    @staticmethod
+    def _safe_ratio(num, den):
+        return round((num / den) * 100, 1) if den else None
+
+    @classmethod
+    def _sum_for_type(cls, qs, field_name, type_prepa):
+        return qs.aggregate(total=Sum(field_name, filter=Q(type_prepa=type_prepa)))["total"] or 0
 
     # ==========================================================
     # 🧩 0️⃣ Options de filtres — utilisé par le frontend
@@ -343,9 +351,12 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                 nb_presents_info=Sum("nb_presents_info"),
                 nb_absents_info=Sum("nb_absents_info"),
                 nb_adhesions=Sum("nb_adhesions"),
-                nb_inscrits_prepa=Sum("nb_inscrits_prepa"),
-                nb_presents_prepa=Sum("nb_presents_prepa"),
-                nb_absents_prepa=Sum("nb_absents_prepa"),
+                inscrits_prepa_total=Sum("nb_inscrits_prepa"),
+                presents_prepa_total=Sum("nb_presents_prepa"),
+                absents_prepa_total=Sum("nb_absents_prepa"),
+                atelier1_inscrits=Sum(F("nb_inscrits_prepa"), filter=Q(type_prepa=Prepa.TypePrepa.ATELIER1)),
+                atelier1_presents=Sum(F("nb_presents_prepa"), filter=Q(type_prepa=Prepa.TypePrepa.ATELIER1)),
+                atelier6_presents=Sum(F("nb_presents_prepa"), filter=Q(type_prepa=Prepa.TypePrepa.ATELIER6)),
             )
             .order_by("group_key")
         )
@@ -358,17 +369,20 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
             p_info = d["nb_presents_info"] or 0
             a_info = d["nb_absents_info"] or 0
             adh = d["nb_adhesions"] or 0
-            insc = d["nb_inscrits_prepa"] or 0
-            p_prepa = d["nb_presents_prepa"] or 0
-            a_prepa = d["nb_absents_prepa"] or 0
+            insc = d["inscrits_prepa_total"] or 0
+            p_prepa = d["presents_prepa_total"] or 0
+            a_prepa = d["absents_prepa_total"] or 0
+            atelier1_inscrits = d["atelier1_inscrits"] or 0
+            atelier1_presents = d["atelier1_presents"] or 0
+            atelier6_presents = d["atelier6_presents"] or 0
 
-            taux_presence_info = round(p_info / (p_info + a_info) * 100, 1) if (p_info + a_info) > 0 else None
-            taux_adhesion = round(adh / p_info * 100, 1) if p_info > 0 else None
-            taux_presence_prepa = round(p_prepa / (p_prepa + a_prepa) * 100, 1) if (p_prepa + a_prepa) > 0 else None
+            taux_presence_info = self._safe_ratio(p_info, p_info + a_info)
+            taux_adhesion = self._safe_ratio(adh, p_info)
+            taux_presence_prepa = self._safe_ratio(p_prepa, p_prepa + a_prepa)
 
             total = p_prepa
 
-            taux_retention = round((p_prepa - a_prepa) / p_prepa * 100, 1) if p_prepa > 0 else None
+            taux_retention = self._safe_ratio(atelier6_presents, atelier1_presents)
 
             results.append(
                 {
@@ -381,6 +395,9 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                     "nb_inscrits_prepa": insc,
                     "nb_presents_prepa": p_prepa,
                     "nb_absents_prepa": a_prepa,
+                    "atelier1_inscrits": atelier1_inscrits,
+                    "atelier1_presents": atelier1_presents,
+                    "atelier6_presents": atelier6_presents,
                     "taux_presence_info": taux_presence_info,
                     "taux_adhesion": taux_adhesion,
                     "taux_presence_prepa": taux_presence_prepa,
@@ -423,8 +440,28 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
         """
         annee = int(request.query_params.get("annee", localdate().year))
-        data = Prepa.synthese_objectifs(annee)
-        return Response(data)
+        resume_data = self.resume(request).data
+        return Response(
+            {
+                "annee": annee,
+                "objectif_total": resume_data["objectif_total"],
+                "engages_total": resume_data["atelier1_inscrits"],
+                "realise_total": resume_data["atelier1_presents"],
+                "atelier1_inscrits": resume_data["atelier1_inscrits"],
+                "atelier1_presents": resume_data["atelier1_presents"],
+                "adhesions_total": resume_data["nb_adhesions"],
+                "objectif_sur_inscrits": resume_data["atelier1_inscrits"],
+                "objectif_sur_presents": resume_data["atelier1_presents"],
+                "taux_atteinte_inscrits": resume_data["taux_atteinte_objectif_inscrits"],
+                "taux_atteinte_presents": resume_data["taux_atteinte_objectif_presents"],
+                "taux_atteinte_total": resume_data["taux_atteinte_total"],
+                "reste_a_faire_inscrits": resume_data["reste_a_faire_inscrits"],
+                "reste_a_faire_presents": resume_data["reste_a_faire_presents"],
+                "reste_a_faire_total": resume_data["reste_a_faire_total"],
+                "par_centre": resume_data["par_centre"],
+                "par_departement": resume_data["par_departement"],
+            }
+        )
 
     # ==========================================================
     # 🧾 3️⃣ Résumé rapide (dashboard)
@@ -540,10 +577,15 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # 📊 3) Totaux et Taux Globaux
         # ------------------------------------------------------
         objectif_total = objectifs_qs.aggregate(total=Sum("valeur_objectif"))["total"] or 0
-        realise_total = qs.aggregate(total=Sum("nb_presents_prepa"))["total"] or 0
+        atelier1_inscrits = self._sum_for_type(qs, "nb_inscrits_prepa", Prepa.TypePrepa.ATELIER1)
+        atelier1_presents = self._sum_for_type(qs, "nb_presents_prepa", Prepa.TypePrepa.ATELIER1)
+        atelier6_presents = self._sum_for_type(qs, "nb_presents_prepa", Prepa.TypePrepa.ATELIER6)
 
-        reste_a_faire_total = objectif_total - realise_total
-        taux_atteinte_total = round((realise_total / objectif_total) * 100, 1) if objectif_total > 0 else None
+        realise_total = atelier1_presents
+        reste_a_faire_total = max(objectif_total - atelier1_presents, 0)
+        reste_a_faire_inscrits = max(objectif_total - atelier1_inscrits, 0)
+        taux_atteinte_total = self._safe_ratio(atelier1_presents, objectif_total)
+        taux_atteinte_objectif_inscrits = self._safe_ratio(atelier1_inscrits, objectif_total)
 
         # ----------------------------------------------
         # 🟦  PRESCRIPTIONS (IC)
@@ -558,12 +600,10 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # ----------------------------------------------
         presents_info = qs.aggregate(total=Sum("nb_presents_info"))["total"] or 0
         absents_info = qs.aggregate(total=Sum("nb_absents_info"))["total"] or 0
+        nb_adhesions = qs.aggregate(total=Sum("nb_adhesions"))["total"] or 0
 
-        taux_presence_ic = (
-            round(presents_info / (presents_info + absents_info) * 100, 1)
-            if (presents_info + absents_info) > 0
-            else None
-        )
+        taux_presence_ic = self._safe_ratio(presents_info, presents_info + absents_info)
+        taux_adhesion_ic = self._safe_ratio(nb_adhesions, presents_info)
 
         # ----------------------------------------------
         # 🟪  PRÉSENCE ATELIERS PRÉPA
@@ -571,23 +611,40 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         presents_ateliers = qs.aggregate(total=Sum("nb_presents_prepa"))["total"] or 0
         absents_ateliers = qs.aggregate(total=Sum("nb_absents_prepa"))["total"] or 0
 
-        taux_presence_ateliers = (
-            round(presents_ateliers / (presents_ateliers + absents_ateliers) * 100, 1)
-            if (presents_ateliers + absents_ateliers) > 0
-            else None
-        )
+        taux_presence_ateliers = self._safe_ratio(presents_ateliers, presents_ateliers + absents_ateliers)
+        taux_retention_global = self._safe_ratio(atelier6_presents, atelier1_presents)
 
         # ------------------------------------------------------
         # 📌 4) Détail par centre
         # ------------------------------------------------------
         par_centre_qs = (
-            qs.values("centre__id", "centre__nom").annotate(total=Sum("nb_presents_prepa")).order_by("centre__nom")
+            qs.values("centre__id", "centre__nom")
+            .annotate(
+                total=Sum(
+                    Case(
+                        When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_presents_prepa"),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
+                engages=Sum(
+                    Case(
+                        When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_inscrits_prepa"),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
+                adhesions=Sum("nb_adhesions"),
+            )
+            .order_by("centre__nom")
         )
         par_centre = [
             {
                 "centre_id": r["centre__id"],
                 "centre__nom": r["centre__nom"] or "—",
                 "total": r["total"] or 0,
+                "engages": r["engages"] or 0,
+                "adhesions": r["adhesions"] or 0,
             }
             for r in par_centre_qs
         ]
@@ -598,11 +655,33 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         par_departement_qs = (
             qs.annotate(departement=Substr(Coalesce("centre__code_postal", Value("")), 1, 2))
             .values("departement")
-            .annotate(total=Sum("nb_presents_prepa"))
+            .annotate(
+                total=Sum(
+                    Case(
+                        When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_presents_prepa"),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
+                engages=Sum(
+                    Case(
+                        When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_inscrits_prepa"),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
+                adhesions=Sum("nb_adhesions"),
+            )
             .order_by("departement")
         )
         par_departement = [
-            {"departement": r["departement"] or "—", "total": r["total"] or 0} for r in par_departement_qs
+            {
+                "departement": r["departement"] or "—",
+                "total": r["total"] or 0,
+                "engages": r["engages"] or 0,
+                "adhesions": r["adhesions"] or 0,
+            }
+            for r in par_departement_qs
         ]
 
         # ------------------------------------------------------
@@ -613,19 +692,32 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                 "annee": annee,
                 "objectif_total": objectif_total,
                 "realise_total": realise_total,
+                "engages_total": atelier1_inscrits,
                 "taux_atteinte_total": taux_atteinte_total,
                 "reste_a_faire_total": reste_a_faire_total,
+                "atelier1_inscrits": atelier1_inscrits,
+                "atelier1_presents": atelier1_presents,
+                "sorties_atelier_6": atelier6_presents,
+                "objectif_sur_inscrits": atelier1_inscrits,
+                "objectif_sur_presents": atelier1_presents,
+                "taux_atteinte_objectif_inscrits": taux_atteinte_objectif_inscrits,
+                "taux_atteinte_objectif_presents": taux_atteinte_total,
+                "reste_a_faire_inscrits": reste_a_faire_inscrits,
+                "reste_a_faire_presents": reste_a_faire_total,
                 # ---- PRESCRIPTIONS ----
                 "nb_prescriptions": nb_prescriptions,
                 "taux_prescription": taux_prescription,
                 # ---- INFO COLLECTIVE ----
                 "presents_info": presents_info,
                 "absents_info": absents_info,
+                "nb_adhesions": nb_adhesions,
                 "taux_presence_ic": taux_presence_ic,
+                "taux_adhesion_ic": taux_adhesion_ic,
                 # ---- ATELIERS ----
                 "presents_ateliers": presents_ateliers,
                 "absents_ateliers": absents_ateliers,
                 "taux_presence_ateliers": taux_presence_ateliers,
+                "taux_retention_global": taux_retention_global,
                 # ---- GROUPES ----
                 "par_centre": par_centre,
                 "par_departement": par_departement,
@@ -735,11 +827,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
 
         for i, s in enumerate(qs, start=1):
 
-            taux_retention = (
-                round((s.nb_presents_prepa - s.nb_absents_prepa) / s.nb_presents_prepa * 100, 1)
-                if s.nb_presents_prepa > 0
-                else None
-            )
+            taux_retention = Prepa.taux_retention(s.centre, getattr(s.date_prepa, "year", annee))
 
             ws.append(
                 [

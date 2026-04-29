@@ -14,9 +14,11 @@ import {
   useTheme,
 } from "@mui/material";
 import type { AppTheme } from "src/theme";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { StagiairePrepa } from "src/types/prepa";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
+import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
 
 interface Props {
   initialValues?: Partial<StagiairePrepa>;
@@ -44,6 +46,8 @@ export default function StagiairesPrepaForm({
   onCancel,
 }: Props) {
   const theme = useTheme<AppTheme>();
+  const { user } = useAuth();
+  const isAdminLike = isAdminLikeRole(user?.role);
   const isLight = theme.palette.mode === "light";
   const sectionPaperBg = isLight
     ? theme.custom.form.section.paperBackground.light
@@ -85,6 +89,7 @@ export default function StagiairesPrepaForm({
   });
 
   const centres = useMemo(() => ((meta?.centres as Array<{ id: number; nom: string }>) ?? []), [meta]);
+  const hasSingleScopedCentre = !isAdminLike && centres.length === 1;
   const statuts = useMemo(
     () =>
       ((meta?.statut_parcours as Array<{ value: string; label: string }>) ?? [
@@ -93,10 +98,6 @@ export default function StagiairesPrepaForm({
         { value: "parcours_termine", label: "Parcours terminé" },
         { value: "abandon", label: "Abandon" },
       ]),
-    [meta]
-  );
-  const prepas = useMemo(
-    () => ((meta?.prepas_origine as Array<{ id: number; label: string }>) ?? []),
     [meta]
   );
   const statutsPositionnement = useMemo(
@@ -118,6 +119,12 @@ export default function StagiairesPrepaForm({
 
   const update = <K extends keyof StagiairePrepa>(key: K, value: StagiairePrepa[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  useEffect(() => {
+    if (!form.centre_id && hasSingleScopedCentre) {
+      setForm((prev) => (prev.centre_id === centres[0].id ? prev : { ...prev, centre_id: centres[0].id }));
+    }
+  }, [centres, form.centre_id, hasSingleScopedCentre]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +173,11 @@ export default function StagiairesPrepaForm({
             Le motif d'abandon est obligatoire quand le statut est <strong>Abandon</strong>.
           </Alert>
         ) : null}
+        {hasSingleScopedCentre ? (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Le centre est prérempli automatiquement depuis votre périmètre.
+          </Alert>
+        ) : null}
         <Grid container spacing={2}>
           <Grid item xs={12} md={3}>
             <TextField
@@ -173,6 +185,7 @@ export default function StagiairesPrepaForm({
               fullWidth
               label="Centre"
               value={form.centre_id ?? ""}
+              disabled={hasSingleScopedCentre}
               onChange={(e) => update("centre_id", e.target.value === "" ? undefined : Number(e.target.value))}
             >
               <MenuItem value="">—</MenuItem>
@@ -185,21 +198,13 @@ export default function StagiairesPrepaForm({
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
-              select
               fullWidth
-              label="Prépa d'origine"
-              value={form.prepa_origine_id ?? ""}
-              onChange={(e) =>
-                update("prepa_origine_id", e.target.value === "" ? undefined : Number(e.target.value))
-              }
-            >
-              <MenuItem value="">—</MenuItem>
-              {prepas.map((prepa) => (
-                <MenuItem key={prepa.id} value={prepa.id}>
-                  {prepa.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              label="Date IC"
+              value={initialValues?.date_ic ?? ""}
+              InputProps={{ readOnly: true }}
+              InputLabelProps={{ shrink: true }}
+              helperText="Renseignée automatiquement si une information collective d'origine existe."
+            />
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
@@ -384,6 +389,10 @@ export default function StagiairesPrepaForm({
         <Typography variant="h6" mb={2}>
           Ateliers réalisés
         </Typography>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Cette section est en lecture seule. Les ateliers réalisés se remplissent automatiquement depuis
+          les inscriptions et participations aux séances Prépa, afin d'éviter les erreurs de saisie.
+        </Alert>
         <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: sectionPaperBg }}>
           <Typography variant="body2" fontWeight={600} gutterBottom>
             Récapitulatif du parcours atelier
@@ -412,9 +421,7 @@ export default function StagiairesPrepaForm({
                       control={
                         <Switch
                           checked={checked}
-                          onChange={(e) =>
-                            update(field.flag, e.target.checked as StagiairePrepa[typeof field.flag])
-                          }
+                          disabled
                         />
                       }
                       label={field.label}
@@ -425,7 +432,7 @@ export default function StagiairesPrepaForm({
                       label={`Date ${field.label.toLowerCase()}`}
                       InputLabelProps={{ shrink: true }}
                       value={(form[field.date] as string) ?? ""}
-                      onChange={(e) => update(field.date, e.target.value as StagiairePrepa[typeof field.date])}
+                      InputProps={{ readOnly: true }}
                       disabled={!checked}
                     />
                   </Stack>

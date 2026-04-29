@@ -19,6 +19,8 @@ import { Link as RouterLink } from "react-router-dom";
 import { Link } from "@mui/material";
 import type { Prepa } from "src/types/prepa";
 import type { AppTheme } from "src/theme";
+import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
@@ -66,6 +68,8 @@ export default function PrepaTableIC({
   maxHeight,
 }: Props) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canSeePrepaObjectifs = isAdminLikeRole(user?.role);
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
   const tableHeaderBackground = isLight
@@ -116,6 +120,7 @@ export default function PrepaTableIC({
   );
 
   /* ---------- Totaux globaux (IC) ---------- */
+  const totalPlacesOuvertes = items.reduce((s, d) => s + (d.nombre_places_ouvertes ?? 0), 0);
   const totalInscrits = items.reduce((s, d) => s + (d.inscrits ?? 0), 0);
   const totalPresents = items.reduce((s, d) => s + (d.presents ?? 0), 0);
   const totalAbsents = items.reduce((s, d) => s + (d.absents ?? 0), 0);
@@ -215,6 +220,7 @@ export default function PrepaTableIC({
             </TableCell>
 
             {/* Colonnes IC uniquement */}
+            <TableCell>🪑 Places ouvertes</TableCell>
             <TableCell>👤 Inscrits</TableCell>
             <TableCell>👥 Présents</TableCell>
             <TableCell>🚫 Absents</TableCell>
@@ -296,7 +302,7 @@ export default function PrepaTableIC({
                     borderBottom: tableCellBorder,
                   }}
                 >
-                  {d.centre?.id ? (
+                  {d.centre?.id && canSeePrepaObjectifs ? (
                     <Link
                       component={RouterLink}
                       to={`/prepa/objectifs?centre=${d.centre.id}`}
@@ -306,8 +312,16 @@ export default function PrepaTableIC({
                       {d.centre.nom}
                     </Link>
                   ) : (
-                    "—"
+                    d.centre?.nom ?? "—"
                   )}
+                </TableCell>
+
+                <TableCell>
+                  <Chip
+                    size="small"
+                    color={(d.nombre_places_ouvertes ?? 0) > 0 ? "secondary" : "default"}
+                    label={d.nombre_places_ouvertes ?? 0}
+                  />
                 </TableCell>
 
                 {/* IC Inscrits */}
@@ -421,6 +435,12 @@ export default function PrepaTableIC({
             <TableCell />
             <TableCell colSpan={3} sx={{ fontWeight: 700 }}>
               TOTAL
+            </TableCell>
+
+            <TableCell>
+              <Typography fontWeight={700} color="secondary.main">
+                {totalPlacesOuvertes.toLocaleString("fr-FR")}
+              </Typography>
             </TableCell>
 
             <TableCell>

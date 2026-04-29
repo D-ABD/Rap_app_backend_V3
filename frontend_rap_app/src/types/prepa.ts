@@ -26,7 +26,7 @@ export interface StagiairePrepa {
   telephone?: string | null;
   email?: string | null;
   prepa_origine_id?: number | null;
-  prepa_origine_label?: string;
+  date_ic?: string | null;
   centre?: CentreLight | null;
   centre_id?: number | null;
   centre_nom?: string;
@@ -50,6 +50,9 @@ export interface StagiairePrepa {
   entree_formation_confirmee?: boolean;
   est_oriente_afpa?: boolean;
   est_oriente_vers_autre_centre_afpa?: boolean;
+  est_en_attente_entree?: boolean;
+  est_a_integrer_atelier_1?: boolean;
+  est_en_attente_prochain_atelier?: boolean;
   date_entree_parcours?: string | null;
   date_sortie_parcours?: string | null;
   commentaire_suivi?: string | null;
@@ -73,6 +76,30 @@ export interface StagiairePrepa {
   ateliers_realises_ordonnes?: Array<{ value: string; label: string; date?: string | null }>;
   dernier_atelier_label?: string | null;
   dernier_atelier_date?: string | null;
+  atelier_en_cours?: TypePrepa | null;
+  atelier_en_cours_display?: string | null;
+  atelier_en_cours_date?: string | null;
+  dernier_statut_participation?: PrepaPresenceStatut | null;
+  dernier_statut_participation_display?: string | null;
+  dernier_statut_participation_liberant?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type PrepaPresenceStatut = "inscrit" | "present" | "absent" | "termine" | "a_repositionner";
+
+export interface PrepaParticipation {
+  id?: number;
+  stagiaire_prepa?: StagiairePrepa | null;
+  stagiaire_prepa_id?: number | null;
+  nom?: string;
+  prenom?: string;
+  telephone?: string | null;
+  email?: string | null;
+  statut_parcours?: StagiairePrepaStatut;
+  statut: PrepaPresenceStatut;
+  statut_display?: string | null;
+  commentaire?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -96,15 +123,26 @@ export interface ObjectifPrepa {
   data_prepa?: {
     places: number;
     prescriptions: number;
+    presents_info?: number;
+    inscrits?: number;
     presents: number;
+    absents?: number;
     adhesions: number;
+    atelier1?: number;
+    atelier1_inscrits?: number;
+    atelier1_presents?: number;
+    atelier6?: number;
   };
 
   taux_prescription?: number;
   taux_presence?: number;
   taux_adhesion?: number;
   taux_atteinte?: number;
+  taux_atteinte_inscrits?: number;
+  taux_atteinte_presents?: number;
   reste_a_faire?: number;
+  reste_a_faire_inscrits?: number;
+  reste_a_faire_presents?: number;
   taux_retention?: number | null;
 
   // Métadonnées
@@ -121,6 +159,8 @@ export interface Prepa {
   type_prepa: string;
   type_prepa_display?: string;
   date_prepa: string;
+  date_debut_atelier?: string | null;
+  date_fin_atelier?: string | null;
   date_display?: string;
 
   centre: CentreLight | null;
@@ -128,6 +168,7 @@ export interface Prepa {
   centre_nom?: string;
   formateur_animateur?: string | null;
   stagiaires_prepa?: StagiairePrepa[];
+  participations_prepa?: PrepaParticipation[];
 
   // --- Information collective
   nombre_places_ouvertes: number;
@@ -140,6 +181,13 @@ export interface Prepa {
   nb_inscrits_prepa: number;
   nb_presents_prepa: number;
   nb_absents_prepa: number;
+  nb_inscrits_prepa_hors_liste?: number;
+  nb_presents_prepa_hors_liste?: number;
+  nb_absents_prepa_hors_liste?: number;
+  nb_inscrits_prepa_nominatifs?: number;
+  nb_presents_prepa_nominatifs?: number;
+  nb_absents_prepa_nominatifs?: number;
+  presence_counts_prepa?: Record<PrepaPresenceStatut, number>;
 
   // ---------- 🆕 Champs unifiés (backend) ----------
   inscrits: number; // IC → prescriptions / Atelier → inscrits
@@ -181,11 +229,15 @@ export interface PrepaStats {
 export interface SyntheseObjectifs {
   annee: number;
   objectif_total: number;
+  engages_total?: number;
   realise_total: number;
+  adhesions_total?: number;
+  taux_atteinte_inscrits?: number;
   taux_atteinte_total: number;
+  reste_a_faire_inscrits?: number;
   reste_a_faire_total: number;
-  par_centre: Record<string, number>;
-  par_departement: Record<string, number>;
+  par_centre: Array<{ centre_id?: number; centre__nom: string; total: number; engages?: number; adhesions?: number }>;
+  par_departement: Array<{ departement: string; total: number; engages?: number; adhesions?: number }>;
 }
 
 export interface ObjectifPrepaSynthese {
@@ -193,12 +245,18 @@ export interface ObjectifPrepaSynthese {
   departement?: string | null;
   annee: number;
   objectif: number;
+  engages_atelier_1?: number;
   realise: number;
+  realises_atelier_1?: number;
   adhesions: number;
   taux_prescription: number;
   taux_presence: number;
   taux_adhesion: number;
+  taux_atteinte_inscrits?: number;
+  taux_atteinte_presents?: number;
   taux_atteinte: number;
+  reste_a_faire_inscrits?: number;
+  reste_a_faire_presents?: number;
   reste_a_faire: number;
 }
 
@@ -250,17 +308,31 @@ export interface PrepaFiltersOptions {
 export interface StagiairePrepaFiltersValues {
   search?: string;
   centre?: number;
-  statut_parcours?: StagiairePrepaStatut;
-  type_atelier?: string;
-  annee?: number;
+  statut_parcours_calcule?: StagiairePrepaStatut;
+  atelier_en_cours?: TypePrepa;
+  prochain_atelier_attendu?: TypePrepa;
+  orientation_finale?: "afpa" | "autre_centre_afpa" | "hors_afpa";
+  pilotage?:
+    | "attente_entree"
+    | "a_integrer_atelier_1"
+    | "attente_prochain_atelier"
+    | "en_parcours_actif"
+    | "a_reprogrammer"
+    | "parcours_termine"
+    | "abandon";
+  date_ic_min?: string;
+  date_ic_max?: string;
   prepa_origine?: number;
+  prepa_participation?: number;
   ordering?: string;
+  page_size?: number;
   page?: number;
   avec_archivees?: boolean;
   archives_seules?: boolean;
 }
 
 export interface StagiairePrepaSynthese {
+  total_stagiaires?: number;
   en_attente_entree: number;
   a_integrer_atelier_1: number;
   en_attente_prochain_atelier: number;
@@ -272,6 +344,8 @@ export interface StagiairePrepaSynthese {
   entrees_atelier_1: number;
   sorties_atelier_6: number;
   taux_transformation_vers_afpa: number;
+  taux_abandon_vers_entrees?: number;
+  taux_orientation_autre_centre_afpa?: number;
   filtres?: {
     centre?: string | null;
     annee?: string | null;

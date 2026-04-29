@@ -11,15 +11,22 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from ...models.centres import Centre
-from ...models.prepa import Prepa, StagiairePrepa
+from ...models.prepa import Prepa, PrepaPresenceStatut, StagiairePrepa
 from ..mixins import HardDeleteArchivedMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..roles import is_admin_like, is_candidate, is_prepa_staff, is_staff_read, is_staff_standard
 from ..serializers.prepa_serializers import StagiairePrepaSerializer
+
+
+def _parse_stagiaires_prepa_ids(payload) -> list[int]:
+    ids = payload.get("ids") or payload.get("stagiaire_prepa_ids") or payload.get("stagiaires") or []
+    if not isinstance(ids, list) or any(not isinstance(i, int) for i in ids):
+        raise ValidationError({"ids": ["Une liste d'identifiants entiers est attendue."]})
+    return ids
 
 
 class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
@@ -118,12 +125,19 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         centre = params.get("centre")
         statut = params.get("statut_parcours")
         prepa_origine = params.get("prepa_origine")
+        prepa_participation = params.get("prepa_participation")
         annee = params.get("annee")
         type_atelier = params.get("type_atelier")
         statut_positionnement = params.get("statut_positionnement")
         orientation_finale = params.get("orientation_finale")
         centre_afpa_cible = params.get("centre_afpa_cible")
         entree_formation_confirmee = params.get("entree_formation_confirmee")
+        statut_parcours_calcule = params.get("statut_parcours_calcule")
+        atelier_en_cours = params.get("atelier_en_cours")
+        prochain_atelier_attendu = params.get("prochain_atelier_attendu")
+        pilotage = params.get("pilotage")
+        date_ic_min = params.get("date_ic_min")
+        date_ic_max = params.get("date_ic_max")
         ordering = params.get("ordering") or "nom"
 
         if search:
@@ -140,6 +154,8 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             qs = qs.filter(statut_parcours=statut)
         if prepa_origine:
             qs = qs.filter(prepa_origine_id=prepa_origine)
+        if prepa_participation:
+            qs = qs.filter(participations_prepa__prepa_id=prepa_participation).distinct()
         if annee:
             qs = qs.filter(Q(date_entree_parcours__year=annee) | Q(prepa_origine__date_prepa__year=annee))
         if type_atelier:
@@ -152,6 +168,98 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             qs = qs.filter(orientation_finale=orientation_finale)
         if centre_afpa_cible:
             qs = qs.filter(centre_afpa_cible_id=centre_afpa_cible)
+        if date_ic_min:
+            qs = qs.filter(
+                prepa_origine__type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE,
+                prepa_origine__date_prepa__gte=date_ic_min,
+            )
+        if date_ic_max:
+            qs = qs.filter(
+                prepa_origine__type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE,
+                prepa_origine__date_prepa__lte=date_ic_max,
+            )
+        if statut_parcours_calcule == StagiairePrepa.StatutParcours.ABANDON:
+            qs = qs.filter(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+        elif statut_parcours_calcule == StagiairePrepa.StatutParcours.PARCOURS_TERMINE:
+            qs = qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON).filter(
+                Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False)
+            )
+        elif statut_parcours_calcule == StagiairePrepa.StatutParcours.EN_PARCOURS:
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(Q(atelier_1_realise=True) | Q(date_entree_parcours__isnull=False))
+            )
+        elif statut_parcours_calcule == StagiairePrepa.StatutParcours.EN_ATTENTE:
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(atelier_1_realise=False, date_entree_parcours__isnull=True)
+            )
+        if atelier_en_cours:
+            qs = qs.filter(
+                participations_prepa__statut__in=PrepaPresenceStatut.active_statuses(),
+                participations_prepa__prepa__type_prepa=atelier_en_cours,
+            ).distinct()
+        if prochain_atelier_attendu:
+            qs = qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON).exclude(
+                Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False)
+            )
+            if prochain_atelier_attendu == Prepa.TypePrepa.ATELIER1:
+                qs = qs.filter(atelier_1_realise=False, date_entree_parcours__isnull=True)
+            elif prochain_atelier_attendu == Prepa.TypePrepa.ATELIER6:
+                qs = (
+                    qs.filter(Q(atelier_1_realise=True) | Q(date_entree_parcours__isnull=False))
+                    .filter(atelier_6_realise=False, date_atelier_6__isnull=True, date_sortie_parcours__isnull=True)
+                    .exclude(
+                        prochain_atelier_prevu__in=[
+                            Prepa.TypePrepa.ATELIER2,
+                            Prepa.TypePrepa.ATELIER3,
+                            Prepa.TypePrepa.ATELIER4,
+                            Prepa.TypePrepa.ATELIER5,
+                            Prepa.TypePrepa.AUTRE,
+                        ]
+                    )
+                )
+            else:
+                flag_field = StagiairePrepa.atelier_flag_map().get(prochain_atelier_attendu, (None, None))[0]
+                if flag_field:
+                    qs = qs.filter(prochain_atelier_prevu=prochain_atelier_attendu).exclude(**{flag_field: True})
+        if pilotage == "attente_entree":
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(atelier_1_realise=False, date_entree_parcours__isnull=True)
+            )
+        elif pilotage == "a_integrer_atelier_1":
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(atelier_1_realise=False, date_entree_parcours__isnull=True, prepa_origine__isnull=False)
+            )
+        elif pilotage == "attente_prochain_atelier":
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(Q(atelier_1_realise=True) | Q(date_entree_parcours__isnull=False))
+                .exclude(participations_prepa__statut__in=PrepaPresenceStatut.active_statuses())
+            )
+        elif pilotage == "en_parcours_actif":
+            qs = (
+                qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+                .exclude(Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False))
+                .filter(Q(atelier_1_realise=True) | Q(date_entree_parcours__isnull=False))
+                .filter(participations_prepa__statut__in=PrepaPresenceStatut.active_statuses())
+                .distinct()
+            )
+        elif pilotage == "a_reprogrammer":
+            qs = qs.filter(participations_prepa__statut=PrepaPresenceStatut.A_REPOSITIONNER).distinct()
+        elif pilotage == "parcours_termine":
+            qs = qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON).filter(
+                Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False)
+            )
+        elif pilotage == "abandon":
+            qs = qs.filter(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
         if str(entree_formation_confirmee).lower() in truthy:
             qs = qs.filter(entree_formation_confirmee=True)
         elif str(entree_formation_confirmee).lower() in {"0", "false", "no", "off"}:
@@ -186,6 +294,16 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             ).all()
         )
         return get_object_or_404(base_qs, **{self.lookup_field: lookup_value})
+
+    def _get_bulk_base_queryset(self):
+        return self._scope_qs(
+            StagiairePrepa.objects.select_related(
+                "centre",
+                "prepa_origine",
+                "prepa_origine__centre",
+                "centre_afpa_cible",
+            ).all()
+        )
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -237,6 +355,96 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                 "success": True,
                 "message": "Stagiaire Prépa désarchivé avec succès.",
                 "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/archive")
+    def bulk_archive(self, request):
+        ids = _parse_stagiaires_prepa_ids(request.data)
+        if not ids:
+            raise ValidationError({"ids": ["Aucun stagiaire Prépa sélectionné."]})
+
+        queryset = self._get_bulk_base_queryset().filter(id__in=ids, is_active=True)
+        selected_count = len(set(ids))
+        archived_count = 0
+
+        for instance in queryset:
+            instance.is_active = False
+            instance.save(user=request.user, update_fields=["is_active"])
+            archived_count += 1
+
+        return Response(
+            {
+                "success": True,
+                "message": f"{archived_count} fiche(s) archivée(s) sur {selected_count} sélectionnée(s).",
+                "data": {
+                    "selected_count": selected_count,
+                    "archived_count": archived_count,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/desarchiver")
+    def bulk_desarchiver(self, request):
+        ids = _parse_stagiaires_prepa_ids(request.data)
+        if not ids:
+            raise ValidationError({"ids": ["Aucun stagiaire Prépa sélectionné."]})
+
+        queryset = self._get_bulk_base_queryset().filter(id__in=ids, is_active=False)
+        selected_count = len(set(ids))
+        restored_count = 0
+
+        for instance in queryset:
+            instance.is_active = True
+            instance.save(user=request.user, update_fields=["is_active"])
+            restored_count += 1
+
+        return Response(
+            {
+                "success": True,
+                "message": f"{restored_count} fiche(s) restaurée(s) sur {selected_count} sélectionnée(s).",
+                "data": {
+                    "selected_count": selected_count,
+                    "restored_count": restored_count,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="bulk/hard-delete")
+    def bulk_hard_delete(self, request):
+        if not self._admin_like(request.user):
+            raise PermissionDenied("Suppression définitive réservée aux admins.")
+
+        ids = _parse_stagiaires_prepa_ids(request.data)
+        if not ids:
+            raise ValidationError({"ids": ["Aucun stagiaire Prépa sélectionné."]})
+
+        queryset = self._get_bulk_base_queryset().filter(id__in=ids)
+        selected_count = len(set(ids))
+        hard_deleted_count = 0
+        skipped_not_archived = []
+
+        for instance in queryset:
+            if not self.is_instance_archived_for_hard_delete(instance):
+                skipped_not_archived.append(instance.pk)
+                continue
+            self.perform_hard_delete(instance, user=request.user)
+            hard_deleted_count += 1
+
+        return Response(
+            {
+                "success": True,
+                "message": (
+                    f"{hard_deleted_count} fiche(s) supprimée(s) définitivement sur {selected_count} sélectionnée(s)."
+                ),
+                "data": {
+                    "selected_count": selected_count,
+                    "hard_deleted_count": hard_deleted_count,
+                    "skipped_not_archived_ids": skipped_not_archived,
+                },
             },
             status=status.HTTP_200_OK,
         )
@@ -312,9 +520,22 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         Retourne les métadonnées utiles au frontend dans l'enveloppe
         API standard (centres, statuts, ateliers, séances et années).
         """
-        centres = self._scope_qs(Centre.objects.all()).order_by("nom")
+        for_filters = str(request.query_params.get("for_filters", "")).lower() in {"1", "true", "yes", "on"}
+        qs = self.get_queryset() if for_filters else self._scope_qs(
+            StagiairePrepa.objects.select_related(
+                "centre",
+                "prepa_origine",
+                "prepa_origine__centre",
+                "centre_afpa_cible",
+            ).all()
+        )
+        centres = (
+            self._scope_qs(Centre.objects.filter(id__in=qs.exclude(centre_id__isnull=True).values_list("centre_id", flat=True).distinct()))
+            if for_filters
+            else self._scope_qs(Centre.objects.all())
+        ).order_by("nom")
         annees = (
-            self.get_queryset()
+            qs
             .order_by()
             .values_list("date_entree_parcours__year", flat=True)
             .distinct()
@@ -324,6 +545,22 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             self._scope_qs(Prepa.objects.select_related("centre").all())
             .order_by("-date_prepa", "-id")[:200]
         )
+
+        available_type_ateliers = [
+            {"value": value, "label": label}
+            for value, label in Prepa.TypePrepa.choices
+            if (
+                (value.startswith("atelier") or value == Prepa.TypePrepa.AUTRE)
+                and (
+                    qs.filter(
+                        participations_prepa__statut__in=PrepaPresenceStatut.active_statuses(),
+                        participations_prepa__prepa__type_prepa=value,
+                    ).exists()
+                    or qs.filter(prochain_atelier_prevu=value).exists()
+                    or (value == Prepa.TypePrepa.ATELIER1 and qs.filter(atelier_1_realise=False, date_entree_parcours__isnull=True).exists())
+                )
+            )
+        ]
 
         return Response(
             {
@@ -344,10 +581,15 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     "orientation_finale": [
                         {"value": value, "label": label} for value, label in StagiairePrepa.OrientationFinale.choices
                     ],
-                    "type_atelier": [
-                        {"value": value, "label": label}
-                        for value, label in Prepa.TypePrepa.choices
-                        if value.startswith("atelier") or value == Prepa.TypePrepa.AUTRE
+                    "type_atelier": available_type_ateliers,
+                    "pilotage": [
+                        {"value": "attente_entree", "label": "En attente d'entrée"},
+                        {"value": "a_integrer_atelier_1", "label": "À intégrer atelier 1"},
+                        {"value": "attente_prochain_atelier", "label": "En attente atelier suivant"},
+                        {"value": "en_parcours_actif", "label": "En parcours actif"},
+                        {"value": "a_reprogrammer", "label": "À reprogrammer"},
+                        {"value": "parcours_termine", "label": "Parcours terminé"},
+                        {"value": "abandon", "label": "Abandon"},
                     ],
                     "centres_afpa_cible": [
                         {"id": c.id, "nom": c.nom, "departement": c.departement, "code_postal": c.code_postal}
@@ -384,6 +626,7 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                         "centre": request.query_params.get("centre"),
                         "annee": request.query_params.get("annee"),
                         "prepa_origine": request.query_params.get("prepa_origine"),
+                        "prepa_participation": request.query_params.get("prepa_participation"),
                         "orientation_finale": request.query_params.get("orientation_finale"),
                     },
                 },

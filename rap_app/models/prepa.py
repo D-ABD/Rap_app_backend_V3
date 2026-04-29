@@ -52,6 +52,18 @@ class Prepa(BaseModel):
 
     type_prepa = models.CharField(max_length=40, choices=TypePrepa.choices, verbose_name=_("Type d’activité"))
     date_prepa = models.DateField(_("Date"), help_text=_("Date de la séance ou de la semaine concernée"))
+    date_debut_atelier = models.DateField(
+        _("Date de début atelier"),
+        null=True,
+        blank=True,
+        help_text=_("Date de début effective de l'atelier quand elle diffère de la date principale."),
+    )
+    date_fin_atelier = models.DateField(
+        _("Date de fin atelier"),
+        null=True,
+        blank=True,
+        help_text=_("Date de fin effective de l'atelier quand elle diffère de la date principale."),
+    )
 
     centre = models.ForeignKey(
         Centre,
@@ -78,6 +90,18 @@ class Prepa(BaseModel):
     nb_inscrits_prepa = models.PositiveIntegerField(default=0, verbose_name=_("Inscrits (Atelier)"))
     nb_presents_prepa = models.PositiveIntegerField(default=0, verbose_name=_("Présents (Atelier)"))
     nb_absents_prepa = models.PositiveIntegerField(default=0, verbose_name=_("Absents (Atelier)"))
+    nb_inscrits_prepa_hors_liste = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Inscrits hors liste nominative"),
+    )
+    nb_presents_prepa_hors_liste = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Présents hors liste nominative"),
+    )
+    nb_absents_prepa_hors_liste = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Absents hors liste nominative"),
+    )
 
     commentaire = models.TextField(blank=True, null=True, verbose_name=_("Commentaire / notes"))
 
@@ -101,7 +125,7 @@ class Prepa(BaseModel):
         """
         Sauvegarde le modèle en mettant à jour les absents et les utilisateurs si fournis.
         """
-        self.nb_absents_prepa = max(0, (self.nb_inscrits_prepa or 0) - (self.nb_presents_prepa or 0))
+        self.sync_compteurs_prepa()
         self.nb_absents_info = max(0, (self.nombre_prescriptions or 0) - (self.nb_presents_info or 0))
 
         if user is not None:
@@ -110,6 +134,67 @@ class Prepa(BaseModel):
             self.updated_by = user
 
         super().save(*args, **kwargs)
+
+    def sync_compteurs_prepa(self) -> None:
+        """
+        Aligne les compteurs atelier sur les participations nominatives quand elles existent,
+        tout en conservant un complément manuel hors liste.
+        """
+        hors_liste_inscrits = max(0, self.nb_inscrits_prepa_hors_liste or 0)
+        hors_liste_presents = max(0, self.nb_presents_prepa_hors_liste or 0)
+        hors_liste_absents = max(0, self.nb_absents_prepa_hors_liste or 0)
+
+        if self.pk:
+            counts = self.presence_counts_prepa
+            nominatif_total = (
+                counts["inscrit"] + counts["present"] + counts["absent"] + counts["termine"] + counts["a_repositionner"]
+            )
+            if nominatif_total > 0 or any([hors_liste_inscrits, hors_liste_presents, hors_liste_absents]):
+                inscrits = nominatif_total + hors_liste_inscrits
+                presents = counts["present"] + counts["termine"] + hors_liste_presents
+                absents = counts["absent"] + counts["inscrit"] + counts["a_repositionner"] + hors_liste_absents
+
+                self.nb_presents_prepa = max(0, presents)
+                self.nb_absents_prepa = max(0, absents)
+                self.nb_inscrits_prepa = max(inscrits, self.nb_presents_prepa + self.nb_absents_prepa)
+                return
+
+        self.nb_inscrits_prepa = max(0, self.nb_inscrits_prepa or 0)
+        self.nb_presents_prepa = max(0, self.nb_presents_prepa or 0)
+        self.nb_absents_prepa = max(0, (self.nb_inscrits_prepa or 0) - (self.nb_presents_prepa or 0))
+
+    @property
+    def presence_counts_prepa(self) -> Dict[str, int]:
+        """
+        Répartition des participations nominatives par statut pour cette séance Prépa.
+        """
+        empty = {code: 0 for code, _ in PrepaPresenceStatut.choices}
+        if not self.pk:
+            return empty
+
+        qs = getattr(self, "participations_stagiaires_prepa", None)
+        if qs is None:
+            qs = PrepaStagiaireParticipation.objects.filter(prepa=self)
+
+        rows = qs.values("statut").annotate(total=models.Count("id"))
+        for row in rows:
+            empty[row["statut"]] = row["total"]
+        return empty
+
+    @property
+    def nb_inscrits_prepa_nominatifs(self) -> int:
+        counts = self.presence_counts_prepa
+        return counts["inscrit"] + counts["present"] + counts["absent"] + counts["termine"] + counts["a_repositionner"]
+
+    @property
+    def nb_presents_prepa_nominatifs(self) -> int:
+        counts = self.presence_counts_prepa
+        return counts["present"] + counts["termine"]
+
+    @property
+    def nb_absents_prepa_nominatifs(self) -> int:
+        counts = self.presence_counts_prepa
+        return counts["absent"] + counts["inscrit"] + counts["a_repositionner"]
 
     @property
     def taux_prescription(self):
@@ -328,19 +413,36 @@ class Prepa(BaseModel):
         objectif_total = (
             ObjectifPrepa.objects.filter(annee=annee).aggregate(total=models.Sum("valeur_objectif"))["total"] or 0
         )
+        engages_total = (
+            cls.objects.filter(date_prepa__year=annee, type_prepa=cls.TypePrepa.ATELIER1).aggregate(
+                total=models.Sum("nb_inscrits_prepa")
+            )["total"]
+            or 0
+        )
         realise_total = (
             cls.objects.filter(date_prepa__year=annee, type_prepa=cls.TypePrepa.ATELIER1).aggregate(
                 total=models.Sum("nb_presents_prepa")
             )["total"]
             or 0
         )
+        adhesions_total = (
+            cls.objects.filter(date_prepa__year=annee, type_prepa=cls.TypePrepa.INFO_COLLECTIVE).aggregate(
+                total=models.Sum("nb_adhesions")
+            )["total"]
+            or 0
+        )
+        taux_atteinte_inscrits = round((engages_total / objectif_total) * 100, 1) if objectif_total else 0
         taux_atteinte = round((realise_total / objectif_total) * 100, 1) if objectif_total else 0
 
         return {
             "annee": annee,
             "objectif_total": objectif_total,
+            "engages_total": engages_total,
             "realise_total": realise_total,
+            "adhesions_total": adhesions_total,
+            "taux_atteinte_inscrits": taux_atteinte_inscrits,
             "taux_atteinte_total": taux_atteinte,
+            "reste_a_faire_inscrits": max(objectif_total - engages_total, 0),
             "reste_a_faire_total": max(objectif_total - realise_total, 0),
             "par_centre": cls.reste_a_faire_centre(annee),
             "par_departement": cls.reste_a_faire_departement(annee),
@@ -399,21 +501,98 @@ class StagiairePrepaQuerySet(models.QuerySet):
         return self.filter(atelier_6_realise=True)
 
     def synthese_parcours(self) -> Dict[str, Any]:
-        entrants = self.entrants_atelier_1().count()
-        orientes_afpa = self.orientes_afpa().count()
+        stagiaires = list(self)
+        entrants = sum(1 for stagiaire in stagiaires if stagiaire.atelier_1_realise)
+        en_attente_entree = sum(1 for stagiaire in stagiaires if stagiaire.est_en_attente_entree)
+        a_integrer_atelier_1 = sum(1 for stagiaire in stagiaires if stagiaire.est_a_integrer_atelier_1)
+        en_attente_prochain_atelier = sum(1 for stagiaire in stagiaires if stagiaire.est_en_attente_prochain_atelier)
+        en_parcours = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "en_parcours")
+        termines = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "parcours_termine")
+        abandons = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "abandon")
+        orientes_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_afpa)
+        orientes_autre_centre_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_vers_autre_centre_afpa)
+        sorties_atelier_6 = sum(1 for stagiaire in stagiaires if stagiaire.atelier_6_realise)
         return {
-            "en_attente_entree": self.en_attente_entree().count(),
-            "a_integrer_atelier_1": self.a_integrer_atelier_1().count(),
-            "en_attente_prochain_atelier": self.en_attente_prochain_atelier().count(),
-            "en_parcours": self.en_parcours().count(),
-            "termines": self.termines().count(),
-            "abandons": self.abandons().count(),
+            "total_stagiaires": len(stagiaires),
+            "en_attente_entree": en_attente_entree,
+            "a_integrer_atelier_1": a_integrer_atelier_1,
+            "en_attente_prochain_atelier": en_attente_prochain_atelier,
+            "en_parcours": en_parcours,
+            "termines": termines,
+            "abandons": abandons,
             "orientes_afpa": orientes_afpa,
-            "orientes_autre_centre_afpa": self.orientes_vers_autre_centre_afpa().count(),
+            "orientes_autre_centre_afpa": orientes_autre_centre_afpa,
             "entrees_atelier_1": entrants,
-            "sorties_atelier_6": self.sortants_atelier_6().count(),
+            "sorties_atelier_6": sorties_atelier_6,
             "taux_transformation_vers_afpa": round((orientes_afpa / entrants) * 100, 1) if entrants else 0,
+            "taux_abandon_vers_entrees": round((abandons / entrants) * 100, 1) if entrants else 0,
+            "taux_orientation_autre_centre_afpa": (
+                round((orientes_autre_centre_afpa / entrants) * 100, 1) if entrants else 0
+            ),
         }
+
+
+class PrepaPresenceStatut(models.TextChoices):
+    """
+    Statuts de participation nominative à une séance Prépa.
+    """
+
+    INSCRIT = "inscrit", _("Inscrit")
+    PRESENT = "present", _("Présent")
+    ABSENT = "absent", _("Absent")
+    TERMINE = "termine", _("Terminé")
+    A_REPOSITIONNER = "a_repositionner", _("À repositionner")
+
+    @classmethod
+    def active_statuses(cls) -> set[str]:
+        return {cls.INSCRIT, cls.PRESENT, cls.ABSENT}
+
+    @classmethod
+    def present_like_statuses(cls) -> set[str]:
+        return {cls.PRESENT, cls.TERMINE}
+
+
+class PrepaStagiaireParticipation(BaseModel):
+    """
+    Liaison nominative entre une séance Prépa et un stagiaire suivi.
+    """
+
+    prepa = models.ForeignKey(
+        Prepa,
+        on_delete=models.CASCADE,
+        related_name="participations_stagiaires_prepa",
+        verbose_name=_("Séance Prépa"),
+    )
+    stagiaire_prepa = models.ForeignKey(
+        "StagiairePrepa",
+        on_delete=models.CASCADE,
+        related_name="participations_prepa",
+        verbose_name=_("Stagiaire Prépa"),
+    )
+    statut = models.CharField(
+        max_length=16,
+        choices=PrepaPresenceStatut.choices,
+        default=PrepaPresenceStatut.INSCRIT,
+        verbose_name=_("Statut de participation"),
+    )
+    commentaire = models.TextField(blank=True, null=True, verbose_name=_("Commentaire de présence"))
+
+    class Meta:
+        verbose_name = _("Participation stagiaire Prépa")
+        verbose_name_plural = _("Participations stagiaires Prépa")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["prepa", "stagiaire_prepa"],
+                name="uniq_prepa_stagiaire_participation",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["prepa", "statut"]),
+            models.Index(fields=["stagiaire_prepa", "statut"]),
+        ]
+
+    def __str__(self):
+        return f"{self.prepa_id} / {self.stagiaire_prepa_id} → {self.get_statut_display()}"
 
 
 class StagiairePrepa(BaseModel):
@@ -565,6 +744,36 @@ class StagiairePrepa(BaseModel):
             self.date_sortie_parcours = self.date_atelier_6
         super().save(*args, user=user, **kwargs)
 
+    def marquer_participation_atelier(self, type_prepa: str, date_participation=None, user=None) -> None:
+        """
+        Répercute une participation effective sur le suivi du parcours individuel.
+        """
+        mapping = self.atelier_flag_map().get(type_prepa)
+        if not mapping:
+            return
+
+        flag_field, date_field = mapping
+        changed_fields: list[str] = []
+
+        if not getattr(self, flag_field):
+            setattr(self, flag_field, True)
+            changed_fields.append(flag_field)
+
+        if date_participation and not getattr(self, date_field):
+            setattr(self, date_field, date_participation)
+            changed_fields.append(date_field)
+
+        if type_prepa == Prepa.TypePrepa.ATELIER1 and date_participation and not self.date_entree_parcours:
+            self.date_entree_parcours = date_participation
+            changed_fields.append("date_entree_parcours")
+
+        if type_prepa == Prepa.TypePrepa.ATELIER6 and date_participation and not self.date_sortie_parcours:
+            self.date_sortie_parcours = date_participation
+            changed_fields.append("date_sortie_parcours")
+
+        if changed_fields:
+            self.save(user=user, update_fields=list(dict.fromkeys(changed_fields)))
+
     @classmethod
     def atelier_flag_map(cls) -> Dict[str, tuple[str, str]]:
         """
@@ -631,6 +840,29 @@ class StagiairePrepa(BaseModel):
         return bool(self.date_entree_parcours or self.ateliers_realises_count)
 
     @property
+    def est_en_attente_entree(self) -> bool:
+        return self.statut_parcours_calcule == self.StatutParcours.EN_ATTENTE and not self.a_deja_commence
+
+    @property
+    def est_a_integrer_atelier_1(self) -> bool:
+        return self.est_en_attente_entree and self.prepa_origine_id is not None
+
+    @property
+    def date_ic(self):
+        prepa = getattr(self, "prepa_origine", None)
+        if not prepa or prepa.type_prepa != Prepa.TypePrepa.INFO_COLLECTIVE:
+            return None
+        return prepa.date_prepa
+
+    @property
+    def est_en_attente_prochain_atelier(self) -> bool:
+        return (
+            self.statut_parcours_calcule == self.StatutParcours.EN_PARCOURS
+            and self.prochain_atelier_attendu is not None
+            and self.atelier_en_cours is None
+        )
+
+    @property
     def statut_parcours_calcule(self) -> str:
         """
         Statut métier recalculé à partir des ateliers réalisés et de l'orientation.
@@ -675,6 +907,127 @@ class StagiairePrepa(BaseModel):
         if not self.prochain_atelier_attendu:
             return None
         return Prepa.TypePrepa(self.prochain_atelier_attendu).label
+
+    @property
+    def atelier_en_cours(self) -> Optional[str]:
+        """
+        Atelier actuellement en cours pour un stagiaire en parcours, déduit de
+        sa dernière inscription/présence nominative sur une séance atelier.
+        """
+        if self.statut_parcours_calcule != self.StatutParcours.EN_PARCOURS:
+            return None
+
+        participations = getattr(self, "participations_prepa", None)
+        if participations is None:
+            participations = (
+                PrepaStagiaireParticipation.objects.filter(
+                    stagiaire_prepa=self,
+                    statut__in=PrepaPresenceStatut.active_statuses(),
+                    prepa__type_prepa__in=[
+                        Prepa.TypePrepa.ATELIER1,
+                        Prepa.TypePrepa.ATELIER2,
+                        Prepa.TypePrepa.ATELIER3,
+                        Prepa.TypePrepa.ATELIER4,
+                        Prepa.TypePrepa.ATELIER5,
+                        Prepa.TypePrepa.ATELIER6,
+                        Prepa.TypePrepa.AUTRE,
+                    ],
+                )
+                .select_related("prepa")
+                .order_by("-prepa__date_debut_atelier", "-prepa__date_prepa", "-id")
+            )
+        else:
+            participations = [
+                participation
+                for participation in participations.all()
+                if participation.statut in PrepaPresenceStatut.active_statuses()
+                and getattr(participation, "prepa", None) is not None
+                and participation.prepa.type_prepa in {
+                    Prepa.TypePrepa.ATELIER1,
+                    Prepa.TypePrepa.ATELIER2,
+                    Prepa.TypePrepa.ATELIER3,
+                    Prepa.TypePrepa.ATELIER4,
+                    Prepa.TypePrepa.ATELIER5,
+                    Prepa.TypePrepa.ATELIER6,
+                    Prepa.TypePrepa.AUTRE,
+                }
+            ]
+            participations = sorted(
+                participations,
+                key=lambda participation: (
+                    participation.prepa.date_debut_atelier or date.min,
+                    participation.prepa.date_prepa or date.min,
+                    participation.id or 0,
+                ),
+                reverse=True,
+            )
+
+        participation = participations[0] if isinstance(participations, list) and participations else (
+            participations.first() if not isinstance(participations, list) else None
+        )
+        if not participation or not participation.prepa:
+            return None
+        return participation.prepa.type_prepa
+
+    @property
+    def atelier_en_cours_label(self) -> Optional[str]:
+        if not self.atelier_en_cours:
+            return None
+        return Prepa.TypePrepa(self.atelier_en_cours).label
+
+    @property
+    def atelier_en_cours_date(self):
+        if self.statut_parcours_calcule != self.StatutParcours.EN_PARCOURS:
+            return None
+        participation = (
+            PrepaStagiaireParticipation.objects.filter(
+                stagiaire_prepa=self,
+                statut__in=PrepaPresenceStatut.active_statuses(),
+            )
+            .select_related("prepa")
+            .order_by("-prepa__date_debut_atelier", "-prepa__date_prepa", "-id")
+            .first()
+        )
+        if not participation or not participation.prepa:
+            return None
+        return participation.prepa.date_debut_atelier or participation.prepa.date_prepa
+
+    @property
+    def derniere_participation_atelier(self):
+        participations = (
+            PrepaStagiaireParticipation.objects.filter(
+                stagiaire_prepa=self,
+                prepa__type_prepa__in=[
+                    Prepa.TypePrepa.ATELIER1,
+                    Prepa.TypePrepa.ATELIER2,
+                    Prepa.TypePrepa.ATELIER3,
+                    Prepa.TypePrepa.ATELIER4,
+                    Prepa.TypePrepa.ATELIER5,
+                    Prepa.TypePrepa.ATELIER6,
+                    Prepa.TypePrepa.AUTRE,
+                ],
+            )
+            .select_related("prepa")
+            .order_by("-prepa__date_debut_atelier", "-prepa__date_prepa", "-id")
+        )
+        return participations.first()
+
+    @property
+    def dernier_statut_participation(self) -> Optional[str]:
+        participation = self.derniere_participation_atelier
+        return participation.statut if participation else None
+
+    @property
+    def dernier_statut_participation_label(self) -> Optional[str]:
+        participation = self.derniere_participation_atelier
+        return participation.get_statut_display() if participation else None
+
+    @property
+    def dernier_statut_participation_liberant(self) -> bool:
+        return self.dernier_statut_participation in {
+            PrepaPresenceStatut.TERMINE,
+            PrepaPresenceStatut.A_REPOSITIONNER,
+        }
 
     @property
     def est_oriente_afpa(self) -> bool:
@@ -785,6 +1138,13 @@ class ObjectifPrepa(BaseModel):
                 total_inscrits=models.Sum("nb_inscrits_prepa"),
                 total_presents=models.Sum("nb_presents_prepa"),
                 total_absents=models.Sum("nb_absents_prepa"),
+                total_atelier1_inscrits=models.Sum(
+                    models.Case(
+                        models.When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_inscrits_prepa"),
+                        default=0,
+                        output_field=models.IntegerField(),
+                    )
+                ),
                 total_atelier1=models.Sum(
                     models.Case(
                         models.When(type_prepa=Prepa.TypePrepa.ATELIER1, then="nb_presents_prepa"),
@@ -811,6 +1171,8 @@ class ObjectifPrepa(BaseModel):
             "inscrits": agg_ateliers.get("total_inscrits") or 0,
             "presents": agg_ateliers.get("total_presents") or 0,
             "absents": agg_ateliers.get("total_absents") or 0,
+            "atelier1_inscrits": agg_ateliers.get("total_atelier1_inscrits") or 0,
+            "atelier1_presents": agg_ateliers.get("total_atelier1") or 0,
             "atelier1": agg_ateliers.get("total_atelier1") or 0,
             "atelier6": agg_ateliers.get("total_atelier6") or 0,
         }
@@ -855,14 +1217,42 @@ class ObjectifPrepa(BaseModel):
         """
         Taux d’atteinte de l’objectif (Atelier 1 / objectif).
         """
-        return self._ratio(self.data_prepa["atelier1"], self.valeur_objectif)
+        return self.taux_atteinte_presents
+
+    @property
+    def taux_atteinte_inscrits(self):
+        """
+        Taux d’atteinte de l’objectif sur les inscrits en atelier 1.
+        """
+        return self._ratio(self.data_prepa["atelier1_inscrits"], self.valeur_objectif)
+
+    @property
+    def taux_atteinte_presents(self):
+        """
+        Taux d’atteinte de l’objectif sur les présents en atelier 1.
+        """
+        return self._ratio(self.data_prepa["atelier1_presents"], self.valeur_objectif)
 
     @property
     def reste_a_faire(self):
         """
         Reste à faire (objectif - Atelier 1 réalisés, non négatif).
         """
-        return max(self.valeur_objectif - self.data_prepa["atelier1"], 0)
+        return self.reste_a_faire_presents
+
+    @property
+    def reste_a_faire_inscrits(self):
+        """
+        Reste à faire selon les inscrits en atelier 1.
+        """
+        return max(self.valeur_objectif - self.data_prepa["atelier1_inscrits"], 0)
+
+    @property
+    def reste_a_faire_presents(self):
+        """
+        Reste à faire selon les présents en atelier 1.
+        """
+        return max(self.valeur_objectif - self.data_prepa["atelier1_presents"], 0)
 
     def synthese_globale(self) -> Dict[str, Any]:
         """
@@ -874,14 +1264,20 @@ class ObjectifPrepa(BaseModel):
             "centre": getattr(self.centre, "nom", str(self.centre)),
             "annee": self.annee,
             "objectif": self.valeur_objectif,
-            "realise": self.data_prepa["atelier1"],
+            "engages_atelier_1": self.data_prepa["atelier1_inscrits"],
+            "realise": self.data_prepa["atelier1_presents"],
+            "realises_atelier_1": self.data_prepa["atelier1_presents"],
             "adhesions": self.data_prepa["adhesions"],
             "absents": self.data_prepa["absents"],
             "taux_prescription": self.taux_prescription,
             "taux_presence": self.taux_presence_info,
             "taux_adhesion": self.taux_adhesion,
             "taux_presence_ateliers": self.taux_presence_ateliers,
+            "taux_atteinte_inscrits": self.taux_atteinte_inscrits,
+            "taux_atteinte_presents": self.taux_atteinte_presents,
             "taux_atteinte": self.taux_atteinte,
+            "reste_a_faire_inscrits": self.reste_a_faire_inscrits,
+            "reste_a_faire_presents": self.reste_a_faire_presents,
             "reste_a_faire": self.reste_a_faire,
         }
 

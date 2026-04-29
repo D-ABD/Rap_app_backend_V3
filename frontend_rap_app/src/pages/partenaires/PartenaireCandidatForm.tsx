@@ -104,7 +104,7 @@ export default function PartenaireCandidatForm({
   const count = (s?: string | null) => (s ? s.length : 0);
 
   // Évite MUI out-of-range : les ``choices`` arrivent après le détail (type = entreprise, options vides)
-  const typeOptionsList = choices?.types ?? [];
+  const typeOptionsList = useMemo(() => choices?.types ?? [], [choices?.types]);
   const rawType = form.type ?? "";
   const partenaireTypeSelectValue = useMemo(() => {
     if (!rawType) return "";

@@ -1,6 +1,29 @@
 - 📂 Documentation & Socle
 Finalisation du README.md : Rédiger la documentation technique et fonctionnelle complète du projet (installation, architecture des services, contrats d'API, et procédures de déploiement).
 --------------------------------------------------------------------
+Je veux que les utilisateurs puissent importer des fichiers Excel pour alimenter l’application.
+
+Le système doit :
+- contrôler les données
+- gérer les listes de choix
+- résoudre les relations (centre, formation…)
+- refuser les erreurs avec un rapport clair
+- enregistrer proprement en base
+
+L’Excel est un outil de saisie, pas une base de données.
+
+-------------------------------------------------------------------------
+Verifier tout le systeme rgpd 
+
+
+
+Ajouter possibilité de selection multiples des logs pour les supprimer en lots
+
+Faire un audit qui concerne les messages d'erreurs dans l'app. dis moi où je dois en ajouter. lorsqu'il y a une erreur, le user doit savoir ce qu'il se passe.
+
+
+je veux que les candidats/stagiaires aient les partenaires dans les stats
+
 
 
 Je souhaite aussi améliorer la qualité des données en intégrant un mécanisme de correction et de normalisation automatique des textes en français, afin de limiter les fautes de frappe, homogénéiser les saisies et améliorer la qualité globale des informations enregistrées.
@@ -9,7 +32,7 @@ Je souhaite aussi améliorer la qualité des données en intégrant un mécanism
 Comment organiser les futurs endpoints, statistiques, bulk actions et règles métier pour obtenir une application plus intelligente, plus robuste et plus simple à utiliser.
 --------------------------------------------------------------------
 Ajouter la double authentification pour sécuriser
---------------------------------------------------------------------
+-------------------------------------------------------------------- 
 
 Revoir les dates dans les form et certains form sont tres lents. et impossible de taper l'année
 --------------------------------------------------------------------
@@ -62,7 +85,7 @@ prepa competences. besoin d'identifier les personnes qui passent sur des formati
 --------------------------------------------------------------------
  
 git add .
-git commit -m "update UI theme refactor theme_saas_premium_"
+git commit -m "Refonte du module prepa complet"
 git push origin main
 
 

@@ -1,103 +1,405 @@
-import { Box, Button, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
-import type { StagiairePrepa } from "src/types/prepa";
+import { useMemo, useState } from "react";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  Collapse,
+  Divider,
+  Grid,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { ExpandLess, ExpandMore } from "@mui/icons-material";
+import { toast } from "react-toastify";
+import type { PrepaParticipation, PrepaPresenceStatut, StagiairePrepa } from "src/types/prepa";
+import StagiairesPrepaSelectModal from "src/components/modals/StagiairesPrepaSelectModal";
 
 interface Props {
-  stagiaires: StagiairePrepa[];
-  onChange: (stagiaires: StagiairePrepa[]) => void;
+  participations: PrepaParticipation[];
+  onChange: (participations: PrepaParticipation[]) => void;
+  centreId?: number;
 }
 
-const emptyStagiaire = (): StagiairePrepa => ({
+const PRESENCE_CHOICES: Array<{ value: PrepaPresenceStatut; label: string }> = [
+  { value: "inscrit", label: "Inscrit" },
+  { value: "present", label: "Présent" },
+  { value: "absent", label: "Absent" },
+  { value: "termine", label: "Terminé" },
+  { value: "a_repositionner", label: "À repositionner" },
+];
+
+const emptyParticipation = (): PrepaParticipation => ({
   nom: "",
   prenom: "",
   telephone: "",
   email: "",
   statut_parcours: "en_attente",
+  statut: "inscrit",
+  commentaire: "",
 });
 
-export default function PrepaInvitesSection({ stagiaires, onChange }: Props) {
-  const updateStagiaire = (index: number, key: keyof StagiairePrepa, value: string) => {
-    const next = stagiaires.map((stagiaire, idx) =>
-      idx === index ? { ...stagiaire, [key]: value } : stagiaire
+const participationKey = (participation: PrepaParticipation, index: number) =>
+  String(
+    participation.stagiaire_prepa_id ??
+      participation.stagiaire_prepa?.id ??
+      `${participation.nom ?? ""}-${participation.prenom ?? ""}-${participation.email ?? ""}-${index}`
+  );
+
+const formatAtelierEnCours = (stagiaire: StagiairePrepa) => {
+  const atelier = stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours;
+  const date = stagiaire.atelier_en_cours_date;
+  if (!atelier) return "";
+  return date ? `${atelier} du ${new Date(date).toLocaleDateString("fr-FR")}` : String(atelier);
+};
+
+function toParticipation(stagiaire: StagiairePrepa): PrepaParticipation {
+  return {
+    stagiaire_prepa_id: stagiaire.id ?? null,
+    nom: stagiaire.nom ?? "",
+    prenom: stagiaire.prenom ?? "",
+    telephone: stagiaire.telephone ?? "",
+    email: stagiaire.email ?? "",
+    statut_parcours: stagiaire.statut_parcours ?? "en_attente",
+    statut: "inscrit",
+    commentaire: "",
+  };
+}
+
+function getLiberationBadge(statut?: PrepaPresenceStatut): { label: string; color: "primary" | "warning" } | null {
+  if (statut === "termine") {
+    return { label: "Libéré pour atelier suivant", color: "primary" };
+  }
+  if (statut === "a_repositionner") {
+    return { label: "Libéré pour repositionnement", color: "warning" };
+  }
+  return null;
+}
+
+function formatStagiaireLabel(stagiaire: StagiairePrepa | null | undefined): string {
+  if (!stagiaire) return "Ce stagiaire";
+  const fullName = `${stagiaire.prenom ?? ""} ${stagiaire.nom ?? ""}`.trim();
+  return fullName || "Ce stagiaire";
+}
+
+export default function PrepaInvitesSection({ participations, onChange, centreId }: Props) {
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const participationsSafe = useMemo(() => participations ?? [], [participations]);
+
+  const selectedStagiaires = useMemo(
+    () =>
+      participationsSafe.map((participation) => ({
+        id: participation.stagiaire_prepa_id ?? participation.stagiaire_prepa?.id,
+        nom: participation.nom ?? participation.stagiaire_prepa?.nom ?? "",
+        prenom: participation.prenom ?? participation.stagiaire_prepa?.prenom ?? "",
+        telephone: participation.telephone ?? participation.stagiaire_prepa?.telephone ?? "",
+        email: participation.email ?? participation.stagiaire_prepa?.email ?? "",
+        statut_parcours:
+          participation.statut_parcours ?? participation.stagiaire_prepa?.statut_parcours ?? "en_attente",
+      })),
+    [participationsSafe]
+  );
+
+  const updateParticipation = (
+    index: number,
+    patch: Partial<PrepaParticipation>
+  ) => {
+    const next = participationsSafe.map((participation, idx) =>
+      idx === index ? { ...participation, ...patch } : participation
     );
     onChange(next);
   };
 
-  const addStagiaire = () => onChange([...(stagiaires ?? []), emptyStagiaire()]);
-  const removeStagiaire = (index: number) =>
-    onChange(stagiaires.filter((_, idx) => idx !== index));
+  const addManualParticipation = () => onChange([...participationsSafe, emptyParticipation()]);
+
+  const importStagiaires = (importedStagiaires: StagiairePrepa[]) => {
+    const existingIds = new Set(
+      participationsSafe
+        .map((participation) => participation.stagiaire_prepa_id ?? participation.stagiaire_prepa?.id)
+        .filter((value): value is number => typeof value === "number")
+    );
+
+    const existingKeys = new Set(
+      participationsSafe.map((participation, index) => participationKey(participation, index).toLowerCase())
+    );
+
+    let duplicateCount = 0;
+    let alreadyElsewhereCount = 0;
+    let firstConflictElsewhere: StagiairePrepa | null = null;
+    const nextImported = importedStagiaires
+      .map(toParticipation)
+      .filter((participation, index) => {
+        const id = participation.stagiaire_prepa_id ?? participation.stagiaire_prepa?.id;
+        const source: StagiairePrepa | undefined = importedStagiaires[index];
+        if (source?.atelier_en_cours) {
+          alreadyElsewhereCount += 1;
+          if (!firstConflictElsewhere) firstConflictElsewhere = source;
+          return false;
+        }
+        if (typeof id === "number" && existingIds.has(id)) {
+          duplicateCount += 1;
+          return false;
+        }
+        const isDuplicate = existingKeys.has(participationKey(participation, index).toLowerCase());
+        if (isDuplicate) duplicateCount += 1;
+        return !isDuplicate;
+      });
+
+    if (duplicateCount > 0) {
+      toast.warning(
+        duplicateCount === 1
+          ? "Ce stagiaire est déjà inscrit à l'atelier."
+          : `${duplicateCount} stagiaires sont déjà inscrits à l'atelier.`
+      );
+    }
+    if (alreadyElsewhereCount > 0) {
+      const conflict = firstConflictElsewhere;
+      if (alreadyElsewhereCount === 1 && conflict) {
+        toast.error(
+          `Inscription impossible : ${formatStagiaireLabel(conflict)} est déjà en ${formatAtelierEnCours(conflict)}.`
+        );
+      } else {
+        toast.error(`${alreadyElsewhereCount} stagiaires sont déjà inscrits sur un autre atelier en cours.`);
+      }
+    }
+
+    onChange([...participationsSafe, ...nextImported]);
+  };
+
+  const removeParticipation = (index: number) => {
+    const targetKey = participationKey(participationsSafe[index], index);
+    onChange(participationsSafe.filter((_, idx) => idx !== index));
+    setSelectedKeys((prev) => prev.filter((key) => key !== targetKey));
+    setExpandedKey((prev) => (prev === targetKey ? null : prev));
+  };
+
+  const toggleSelected = (key: string) => {
+    setSelectedKeys((prev) => (prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]));
+  };
+
+  const setStatusForSelection = (statut: PrepaPresenceStatut) => {
+    if (!selectedKeys.length) return;
+    onChange(
+      participationsSafe.map((participation, index) =>
+        selectedKeys.includes(participationKey(participation, index))
+          ? { ...participation, statut }
+          : participation
+      )
+    );
+  };
+
+  const clearSelection = () => setSelectedKeys([]);
+  const statusCounts = useMemo(
+    () => ({
+      inscrit: participationsSafe.filter((participation) => participation.statut === "inscrit").length,
+      present: participationsSafe.filter((participation) => participation.statut === "present").length,
+      absent: participationsSafe.filter((participation) => participation.statut === "absent").length,
+      termine: participationsSafe.filter((participation) => participation.statut === "termine").length,
+      repositionner: participationsSafe.filter((participation) => participation.statut === "a_repositionner").length,
+    }),
+    [participationsSafe]
+  );
 
   return (
     <Paper sx={{ p: 2, mb: 2 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
         <Box>
-          <Typography variant="h6">Stagiaires Prépa à suivre</Typography>
+          <Typography variant="h6">Participation nominative atelier</Typography>
           <Typography variant="body2" color="text.secondary">
-            Saisis ici les personnes à suivre en Prépa, sans créer de candidat ni de compte.
+            Renseigne ici les stagiaires inscrits à la séance, puis marque leur présence individuellement ou en lot.
           </Typography>
         </Box>
-        <Button variant="outlined" onClick={addStagiaire}>
-          Ajouter un stagiaire
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Button variant="contained" onClick={() => setShowSelectModal(true)}>
+            Ajouter via modal
+          </Button>
+          <Button variant="outlined" onClick={addManualParticipation}>
+            Ajouter manuellement
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
+        <Chip label={`${participationsSafe.length} inscrits saisis`} />
+        <Chip
+          color="success"
+          variant="outlined"
+          label={`${statusCounts.present + statusCounts.termine} présents / terminés`}
+        />
+        <Chip
+          color="error"
+          variant="outlined"
+          label={`${statusCounts.absent + statusCounts.inscrit + statusCounts.repositionner} absents / non pointés`}
+        />
+        <Chip variant="outlined" label={`${statusCounts.inscrit} non pointés`} />
+        <Chip color="primary" variant="outlined" label={`${statusCounts.termine} terminés`} />
+        <Chip color="warning" variant="outlined" label={`${statusCounts.repositionner} à repositionner`} />
+      </Stack>
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ mb: 2 }}>
+        <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("present")}>
+          Marquer présents ({selectedKeys.length})
+        </Button>
+        <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("absent")}>
+          Marquer absents ({selectedKeys.length})
+        </Button>
+        <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("termine")}>
+          Marquer terminés ({selectedKeys.length})
+        </Button>
+        <Button
+          variant="outlined"
+          disabled={selectedKeys.length === 0}
+          onClick={() => setStatusForSelection("a_repositionner")}
+        >
+          Marquer à repositionner ({selectedKeys.length})
+        </Button>
+        <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("inscrit")}>
+          Repasser en inscrits
+        </Button>
+        <Button variant="text" disabled={selectedKeys.length === 0} onClick={clearSelection}>
+          Vider la sélection
         </Button>
       </Stack>
 
-      {stagiaires.length === 0 ? (
+      {participationsSafe.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          Aucun stagiaire Prépa renseigné pour le moment.
+          Aucun stagiaire renseigné pour le moment.
         </Typography>
       ) : null}
 
-      <Stack spacing={2}>
-        {stagiaires.map((stagiaire, index) => (
-          <Paper key={stagiaire.id ?? `stagiaire-${index}`} variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-              <Typography variant="subtitle2" fontWeight={700}>
-                Stagiaire {index + 1}
-              </Typography>
-              <Button color="error" variant="text" onClick={() => removeStagiaire(index)}>
-                Retirer
-              </Button>
-            </Stack>
+      <Stack spacing={1.25}>
+        {participationsSafe.map((participation, index) => {
+          const key = participationKey(participation, index);
+          const label = PRESENCE_CHOICES.find((choice) => choice.value === participation.statut)?.label ?? participation.statut;
+          const liberationBadge = getLiberationBadge(participation.statut);
+          const isExpanded = expandedKey === key;
+          const displayNom = `${participation.prenom ?? participation.stagiaire_prepa?.prenom ?? ""} ${participation.nom ?? participation.stagiaire_prepa?.nom ?? ""}`.trim() || `Participant ${index + 1}`;
+          const contact = participation.email || participation.telephone || "";
+          return (
+            <Paper key={key} variant="outlined" sx={{ p: 1.25 }}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "stretch", md: "center" }}
+                spacing={1}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+                  <Checkbox checked={selectedKeys.includes(key)} onChange={() => toggleSelected(key)} />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={700} noWrap>
+                      {displayNom}
+                    </Typography>
+                    {contact ? (
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {contact}
+                      </Typography>
+                    ) : null}
+                    {liberationBadge ? (
+                      <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.25 }}>
+                        {liberationBadge.label}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                  <Chip size="small" variant="outlined" label={label} />
+                  {liberationBadge ? (
+                    <Chip size="small" color={liberationBadge.color} variant="filled" label="Libéré" />
+                  ) : null}
+                </Stack>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Nom"
-                  value={stagiaire.nom ?? ""}
-                  onChange={(e) => updateStagiaire(index, "nom", e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Prénom"
-                  value={stagiaire.prenom ?? ""}
-                  onChange={(e) => updateStagiaire(index, "prenom", e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Téléphone"
-                  value={stagiaire.telephone ?? ""}
-                  onChange={(e) => updateStagiaire(index, "telephone", e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={stagiaire.email ?? ""}
-                  onChange={(e) => updateStagiaire(index, "email", e.target.value)}
-                />
-              </Grid>
-            </Grid>
-          </Paper>
-        ))}
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                  <Select
+                    size="small"
+                    value={participation.statut ?? "inscrit"}
+                    onChange={(e) =>
+                      updateParticipation(index, { statut: e.target.value as PrepaPresenceStatut })
+                    }
+                    sx={{ minWidth: 132 }}
+                  >
+                    {PRESENCE_CHOICES.map((choice) => (
+                      <MenuItem key={choice.value} value={choice.value}>
+                        {choice.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <Button
+                    variant="text"
+                    onClick={() => setExpandedKey((prev) => (prev === key ? null : key))}
+                    endIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
+                  >
+                    {isExpanded ? "Réduire" : "Détails"}
+                  </Button>
+                  <Button color="error" variant="text" onClick={() => removeParticipation(index)}>
+                    Retirer
+                  </Button>
+                </Stack>
+              </Stack>
+
+              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                <Divider sx={{ my: 1.5 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="Nom"
+                      value={participation.nom ?? participation.stagiaire_prepa?.nom ?? ""}
+                      onChange={(e) => updateParticipation(index, { nom: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="Prénom"
+                      value={participation.prenom ?? participation.stagiaire_prepa?.prenom ?? ""}
+                      onChange={(e) => updateParticipation(index, { prenom: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Téléphone"
+                      value={participation.telephone ?? participation.stagiaire_prepa?.telephone ?? ""}
+                      onChange={(e) => updateParticipation(index, { telephone: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      type="email"
+                      label="Email"
+                      value={participation.email ?? participation.stagiaire_prepa?.email ?? ""}
+                      onChange={(e) => updateParticipation(index, { email: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Commentaire présence"
+                      value={participation.commentaire ?? ""}
+                      onChange={(e) => updateParticipation(index, { commentaire: e.target.value })}
+                    />
+                  </Grid>
+                </Grid>
+              </Collapse>
+            </Paper>
+          );
+        })}
       </Stack>
+
+      <StagiairesPrepaSelectModal
+        show={showSelectModal}
+        onClose={() => setShowSelectModal(false)}
+        onSelect={importStagiaires}
+        centreId={centreId}
+        selectedStagiaires={selectedStagiaires}
+      />
     </Paper>
   );
 }

@@ -248,6 +248,7 @@ export function useSidebarItems(): SidebarItem[] {
   const canAccessPrepa = canAccessPrepaRole(role);
   const canAccessDeclic = canAccessDeclicRole(role);
   const canAccessParametres = isAdminLikeRole(role);
+  const canAccessPrepaObjectifs = isAdminLikeRole(role);
 
   return useMemo(() => {
     return sidebarItems
@@ -255,6 +256,16 @@ export function useSidebarItems(): SidebarItem[] {
       if (item.label === "Déclic" && !canAccessDeclic) return null;
       if (item.label === "Prépa Comp" && !canAccessPrepa) return null;
       if (item.label === "Paramètres" && !canAccessParametres) return null;
+
+      if (item.label === "Prépa Comp" && item.children) {
+        return {
+          ...item,
+          children: item.children.filter((child: SidebarItem) => {
+            if (child.path === "/prepa/objectifs") return canAccessPrepaObjectifs;
+            return true;
+          }),
+        };
+      }
 
       if (item.label === "CRM" && item.children) {
         const filteredChildren = item.children.filter((child: SidebarItem) => {
@@ -309,5 +320,6 @@ export function useSidebarItems(): SidebarItem[] {
     canAccessPrepa,
     canAccessDeclic,
     canAccessParametres,
+    canAccessPrepaObjectifs,
   ]);
 }

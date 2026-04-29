@@ -6,7 +6,13 @@ import api from "../api/axios";
 // ───────────────────────────────────────────────
 export const PREPA_TYPE_LABELS: Record<string, string> = {
   info_collective: "Information collective",
-  session_1: "Session Prépa 1",
+  atelier_1: "Atelier 1",
+  atelier_2: "Atelier 2",
+  atelier_3: "Atelier 3",
+  atelier_4: "Atelier 4",
+  atelier_5: "Atelier 5",
+  atelier_6: "Atelier 6",
+  autre: "Autre activité Prépa",
 };
 
 export type PrepaTypeKey = keyof typeof PREPA_TYPE_LABELS;
@@ -39,6 +45,9 @@ export type PrepaGroupRow = {
   nb_inscrits_prepa: number;
   nb_presents_prepa: number;
   nb_absents_prepa: number;
+  atelier1_inscrits?: number;
+  atelier1_presents?: number;
+  atelier6_presents?: number;
 
   taux_presence_info: number | null;
   taux_adhesion: number | null;
@@ -57,20 +66,34 @@ export type PrepaGroupedResponse = {
 export type PrepaResumeCentre = {
   centre__nom: string;
   total: number;
+  engages?: number;
+  adhesions?: number;
 };
 
 export type PrepaResumeDepartement = {
   departement: string;
   total: number;
+  engages?: number;
+  adhesions?: number;
 };
 
 export type PrepaResumeResponse = {
   annee: number;
 
   objectif_total: number;
+  engages_total?: number;
   realise_total: number;
   taux_atteinte_total: number;
   reste_a_faire_total: number;
+  atelier1_inscrits: number;
+  atelier1_presents: number;
+  sorties_atelier_6: number;
+  objectif_sur_inscrits?: number;
+  objectif_sur_presents?: number;
+  taux_atteinte_objectif_inscrits: number | null;
+  taux_atteinte_objectif_presents: number | null;
+  reste_a_faire_inscrits: number;
+  reste_a_faire_presents: number;
 
   // ---- PRESCRIPTIONS ----
   nb_prescriptions: number;
@@ -79,12 +102,15 @@ export type PrepaResumeResponse = {
   // ---- IC (Informations Collectives) ----
   presents_info: number;
   absents_info: number;
+  nb_adhesions: number;
   taux_presence_ic: number | null;
+  taux_adhesion_ic: number | null;
 
   // ---- ATELIERS ----
   presents_ateliers: number;
   absents_ateliers: number;
   taux_presence_ateliers: number | null;
+  taux_retention_global: number | null;
 
   // ---- GROUPES ----
   par_centre: PrepaResumeCentre[];
@@ -94,9 +120,21 @@ export type PrepaResumeResponse = {
 export type PrepaSyntheseResponse = {
   annee: number;
   objectif_total: number;
+  engages_total: number;
   realise_total: number;
+  atelier1_inscrits?: number;
+  atelier1_presents?: number;
+  adhesions_total: number;
+  objectif_sur_inscrits?: number;
+  objectif_sur_presents?: number;
+  taux_atteinte_inscrits: number;
+  taux_atteinte_presents?: number;
   taux_atteinte_total: number;
+  reste_a_faire_inscrits: number;
+  reste_a_faire_presents?: number;
   reste_a_faire_total: number;
+  par_centre: PrepaResumeCentre[];
+  par_departement: PrepaResumeDepartement[];
 };
 
 // ───────────────────────────────────────────────

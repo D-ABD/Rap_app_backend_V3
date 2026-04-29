@@ -1,10 +1,11 @@
 """Sérialiseurs des séances Prépa et de leurs stagiaires."""
 
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiExample, extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from ...models.centres import Centre
-from ...models.prepa import Prepa, StagiairePrepa
+from ...models.prepa import Prepa, PrepaPresenceStatut, PrepaStagiaireParticipation, StagiairePrepa
 from .rich_text_utils import sanitize_rich_text
 
 
@@ -40,6 +41,51 @@ class StagiairePrepaNestedSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
+class PrepaStagiaireParticipationSerializer(serializers.ModelSerializer):
+    """
+    Participation nominative d'un stagiaire à une séance Prépa.
+    """
+
+    stagiaire_prepa = StagiairePrepaNestedSerializer(read_only=True)
+    stagiaire_prepa_id = serializers.PrimaryKeyRelatedField(
+        source="stagiaire_prepa",
+        queryset=StagiairePrepa.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    statut_display = serializers.CharField(source="get_statut_display", read_only=True)
+    nom = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    prenom = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    telephone = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    email = serializers.EmailField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    statut_parcours = serializers.ChoiceField(
+        choices=StagiairePrepa.StatutParcours.choices,
+        write_only=True,
+        required=False,
+        default=StagiairePrepa.StatutParcours.EN_ATTENTE,
+    )
+
+    class Meta:
+        model = PrepaStagiaireParticipation
+        fields = [
+            "id",
+            "stagiaire_prepa",
+            "stagiaire_prepa_id",
+            "nom",
+            "prenom",
+            "telephone",
+            "email",
+            "statut_parcours",
+            "statut",
+            "statut_display",
+            "commentaire",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "stagiaire_prepa", "statut_display", "created_at", "updated_at"]
+
+
 class StagiairePrepaSerializer(serializers.ModelSerializer):
     """
     Sérialiseur complet du suivi nominatif des stagiaires Prépa.
@@ -70,7 +116,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    prepa_origine_label = serializers.SerializerMethodField()
+    date_ic = serializers.SerializerMethodField()
     statut_parcours_display = serializers.CharField(source="get_statut_parcours_display", read_only=True)
     statut_parcours_calcule = serializers.SerializerMethodField()
     statut_parcours_calcule_display = serializers.SerializerMethodField()
@@ -81,11 +127,20 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     ateliers_realises_ordonnes = serializers.SerializerMethodField()
     dernier_atelier_label = serializers.SerializerMethodField()
     dernier_atelier_date = serializers.SerializerMethodField()
+    atelier_en_cours = serializers.SerializerMethodField()
+    atelier_en_cours_display = serializers.SerializerMethodField()
+    atelier_en_cours_date = serializers.SerializerMethodField()
+    dernier_statut_participation = serializers.SerializerMethodField()
+    dernier_statut_participation_display = serializers.SerializerMethodField()
+    dernier_statut_participation_liberant = serializers.SerializerMethodField()
     prochain_atelier_attendu = serializers.SerializerMethodField()
     prochain_atelier_attendu_display = serializers.SerializerMethodField()
     prochain_atelier_prevu_display = serializers.CharField(source="get_prochain_atelier_prevu_display", read_only=True)
     est_oriente_afpa = serializers.SerializerMethodField()
     est_oriente_vers_autre_centre_afpa = serializers.SerializerMethodField()
+    est_en_attente_entree = serializers.SerializerMethodField()
+    est_a_integrer_atelier_1 = serializers.SerializerMethodField()
+    est_en_attente_prochain_atelier = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -94,7 +149,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "id",
             "is_active",
             "prepa_origine_id",
-            "prepa_origine_label",
+            "date_ic",
             "centre",
             "centre_id",
             "centre_nom",
@@ -122,6 +177,9 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "entree_formation_confirmee",
             "est_oriente_afpa",
             "est_oriente_vers_autre_centre_afpa",
+            "est_en_attente_entree",
+            "est_a_integrer_atelier_1",
+            "est_en_attente_prochain_atelier",
             "date_entree_parcours",
             "date_sortie_parcours",
             "commentaire_suivi",
@@ -145,6 +203,12 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "ateliers_realises_ordonnes",
             "dernier_atelier_label",
             "dernier_atelier_date",
+            "atelier_en_cours",
+            "atelier_en_cours_display",
+            "atelier_en_cours_date",
+            "dernier_statut_participation",
+            "dernier_statut_participation_display",
+            "dernier_statut_participation_liberant",
             "created_at",
             "updated_at",
             "created_by",
@@ -155,7 +219,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "updated_at",
             "created_by",
             "updated_by",
-            "prepa_origine_label",
+            "date_ic",
             "centre_nom",
             "centre_afpa_cible_nom",
             "statut_parcours_display",
@@ -168,21 +232,25 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "orientation_finale_display",
             "est_oriente_afpa",
             "est_oriente_vers_autre_centre_afpa",
+            "est_en_attente_entree",
+            "est_a_integrer_atelier_1",
+            "est_en_attente_prochain_atelier",
             "ateliers_realises_count",
             "ateliers_realises_labels",
             "ateliers_realises_ordonnes",
             "dernier_atelier_label",
             "dernier_atelier_date",
+            "atelier_en_cours",
+            "atelier_en_cours_display",
+            "atelier_en_cours_date",
+            "dernier_statut_participation",
+            "dernier_statut_participation_display",
+            "dernier_statut_participation_liberant",
         ]
 
-    @extend_schema_field(serializers.CharField())
-    def get_prepa_origine_label(self, obj) -> str:
-        prepa = getattr(obj, "prepa_origine", None)
-        if not prepa:
-            return ""
-        centre_nom = getattr(getattr(prepa, "centre", None), "nom", None)
-        suffix = f" - {centre_nom}" if centre_nom else ""
-        return f"{prepa.get_type_prepa_display()} du {prepa.date_prepa:%d/%m/%Y}{suffix}"
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_date_ic(self, obj):
+        return obj.date_ic
 
     @extend_schema_field(serializers.IntegerField())
     def get_ateliers_realises_count(self, obj) -> int:
@@ -213,6 +281,30 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_dernier_atelier_date(self, obj) -> str | None:
         return obj.dernier_atelier_date
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_atelier_en_cours(self, obj) -> str | None:
+        return obj.atelier_en_cours
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_atelier_en_cours_display(self, obj) -> str | None:
+        return obj.atelier_en_cours_label
+
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_atelier_en_cours_date(self, obj):
+        return obj.atelier_en_cours_date
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_dernier_statut_participation(self, obj) -> str | None:
+        return obj.dernier_statut_participation
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_dernier_statut_participation_display(self, obj) -> str | None:
+        return obj.dernier_statut_participation_label
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_dernier_statut_participation_liberant(self, obj) -> bool:
+        return obj.dernier_statut_participation_liberant
+
     @extend_schema_field(serializers.CharField())
     def get_statut_parcours_calcule(self, obj) -> str:
         return obj.statut_parcours_calcule
@@ -237,8 +329,22 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_est_oriente_vers_autre_centre_afpa(self, obj) -> bool:
         return obj.est_oriente_vers_autre_centre_afpa
 
+    @extend_schema_field(serializers.BooleanField())
+    def get_est_en_attente_entree(self, obj) -> bool:
+        return obj.est_en_attente_entree
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_est_a_integrer_atelier_1(self, obj) -> bool:
+        return obj.est_a_integrer_atelier_1
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_est_en_attente_prochain_atelier(self, obj) -> bool:
+        return obj.est_en_attente_prochain_atelier
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        centre = attrs.get("centre", getattr(self.instance, "centre", None))
+        duplicate = self._find_duplicate_stagiaire(attrs, centre=centre)
         statut = attrs.get("statut_parcours", getattr(self.instance, "statut_parcours", None))
         motif = attrs.get("motif_abandon", getattr(self.instance, "motif_abandon", None))
         orientation = attrs.get("orientation_finale", getattr(self.instance, "orientation_finale", None))
@@ -261,6 +367,10 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             errors["date_orientation"] = (
                 "La date d'orientation est requise lorsqu'une orientation finale est renseignée."
             )
+        if duplicate:
+            errors["non_field_errors"] = [
+                "Une fiche Stagiaire Prépa existe déjà pour cette personne. Réutilisez la fiche existante."
+            ]
         if errors:
             raise serializers.ValidationError(errors)
 
@@ -268,6 +378,36 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
 
     def validate_commentaire_suivi(self, value):
         return sanitize_rich_text(value)
+
+    def _find_duplicate_stagiaire(self, attrs, centre=None) -> StagiairePrepa | None:
+        nom = (attrs.get("nom", getattr(self.instance, "nom", "")) or "").strip()
+        prenom = (attrs.get("prenom", getattr(self.instance, "prenom", "")) or "").strip()
+        telephone = (attrs.get("telephone", getattr(self.instance, "telephone", "")) or "").strip()
+        email = (attrs.get("email", getattr(self.instance, "email", "")) or "").strip()
+
+        if not nom or not prenom or not centre:
+            return None
+
+        queryset = StagiairePrepa.objects.filter(
+            centre=centre,
+            nom__iexact=nom,
+            prenom__iexact=prenom,
+        )
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if email:
+            match = queryset.filter(email__iexact=email).first()
+            if match:
+                return match
+        if telephone:
+            match = queryset.filter(telephone=telephone).first()
+            if match:
+                return match
+        if not email and not telephone and queryset.count() == 1:
+            return queryset.first()
+
+        return None
 
 
 @extend_schema_serializer(
@@ -316,6 +456,11 @@ class PrepaSerializer(serializers.ModelSerializer):
     )
     centre_nom = serializers.CharField(source="centre.nom", read_only=True)
     stagiaires_prepa = StagiairePrepaNestedSerializer(many=True, required=False)
+    participations_prepa = PrepaStagiaireParticipationSerializer(
+        many=True,
+        required=False,
+        source="participations_stagiaires_prepa",
+    )
 
     taux_prescription = serializers.SerializerMethodField()
     taux_presence_info = serializers.SerializerMethodField()
@@ -326,6 +471,10 @@ class PrepaSerializer(serializers.ModelSerializer):
     objectif_annuel = serializers.SerializerMethodField()
     taux_atteinte_annuel = serializers.SerializerMethodField()
     reste_a_faire = serializers.SerializerMethodField()
+    presence_counts_prepa = serializers.SerializerMethodField()
+    nb_inscrits_prepa_nominatifs = serializers.SerializerMethodField()
+    nb_presents_prepa_nominatifs = serializers.SerializerMethodField()
+    nb_absents_prepa_nominatifs = serializers.SerializerMethodField()
 
     type_prepa_display = serializers.CharField(source="get_type_prepa_display", read_only=True)
     date_display = serializers.SerializerMethodField()
@@ -343,6 +492,8 @@ class PrepaSerializer(serializers.ModelSerializer):
             "type_prepa",
             "type_prepa_display",
             "date_prepa",
+            "date_debut_atelier",
+            "date_fin_atelier",
             "date_display",
             "is_active",
             "centre",
@@ -350,6 +501,7 @@ class PrepaSerializer(serializers.ModelSerializer):
             "centre_nom",
             "formateur_animateur",
             "stagiaires_prepa",
+            "participations_prepa",
             "nombre_places_ouvertes",
             "nombre_prescriptions",
             "nb_presents_info",
@@ -358,6 +510,13 @@ class PrepaSerializer(serializers.ModelSerializer):
             "nb_inscrits_prepa",
             "nb_presents_prepa",
             "nb_absents_prepa",
+            "nb_inscrits_prepa_hors_liste",
+            "nb_presents_prepa_hors_liste",
+            "nb_absents_prepa_hors_liste",
+            "nb_inscrits_prepa_nominatifs",
+            "nb_presents_prepa_nominatifs",
+            "nb_absents_prepa_nominatifs",
+            "presence_counts_prepa",
             "inscrits",
             "presents",
             "absents",
@@ -429,6 +588,22 @@ class PrepaSerializer(serializers.ModelSerializer):
     def get_reste_a_faire(self, obj):
         return obj.reste_a_faire
 
+    @extend_schema_field(serializers.DictField(child=serializers.IntegerField()))
+    def get_presence_counts_prepa(self, obj):
+        return obj.presence_counts_prepa
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_nb_inscrits_prepa_nominatifs(self, obj):
+        return obj.nb_inscrits_prepa_nominatifs
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_nb_presents_prepa_nominatifs(self, obj):
+        return obj.nb_presents_prepa_nominatifs
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_nb_absents_prepa_nominatifs(self, obj):
+        return obj.nb_absents_prepa_nominatifs
+
     @extend_schema_field(serializers.IntegerField)
     def get_inscrits(self, obj):
         return obj.nombre_prescriptions if obj.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE else obj.nb_inscrits_prepa
@@ -449,33 +624,73 @@ class PrepaSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         stagiaires_data = validated_data.pop("stagiaires_prepa", [])
+        participations_data = validated_data.pop("participations_stagiaires_prepa", [])
         instance = Prepa(**validated_data)
         instance.save(user=user)
-        self._sync_stagiaires_prepa(instance, stagiaires_data, user=user)
+        if instance.type_prepa != Prepa.TypePrepa.INFO_COLLECTIVE:
+            self._sync_stagiaires_prepa(instance, stagiaires_data, user=user)
+            self._sync_participations_prepa(instance, participations_data, user=user)
+            instance.save(user=user)
         return instance
 
     def update(self, instance, validated_data):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         stagiaires_data = validated_data.pop("stagiaires_prepa", None)
+        participations_data = validated_data.pop("participations_stagiaires_prepa", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save(user=user)
-        if stagiaires_data is not None:
+        if instance.type_prepa != Prepa.TypePrepa.INFO_COLLECTIVE and stagiaires_data is not None:
             self._sync_stagiaires_prepa(instance, stagiaires_data, user=user)
+        if instance.type_prepa != Prepa.TypePrepa.INFO_COLLECTIVE and participations_data is not None:
+            self._sync_participations_prepa(instance, participations_data, user=user)
+            if not participations_data and not any(
+                [
+                    instance.nb_inscrits_prepa_hors_liste,
+                    instance.nb_presents_prepa_hors_liste,
+                    instance.nb_absents_prepa_hors_liste,
+                ]
+            ):
+                instance.nb_inscrits_prepa = 0
+                instance.nb_presents_prepa = 0
+                instance.nb_absents_prepa = 0
+        instance.save(user=user)
         return instance
 
     def validate(self, attrs):
         type_prepa = attrs.get("type_prepa", getattr(self.instance, "type_prepa", None))
         stagiaires = attrs.get("stagiaires_prepa", None)
+        participations = attrs.get("participations_stagiaires_prepa", None)
+        errors = {}
 
         if type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE and attrs.get("nombre_places_ouvertes", 0) == 0:
-            raise serializers.ValidationError(
+            errors["nombre_places_ouvertes"] = (
                 "Les informations collectives doivent avoir un nombre de places ouvert > 0."
             )
 
         if stagiaires is not None:
             attrs["stagiaires_prepa"] = self._normalize_stagiaires(stagiaires)
+        if participations is not None:
+            attrs["participations_stagiaires_prepa"] = self._normalize_participations(participations)
+            self._validate_participations_uniques(attrs["participations_stagiaires_prepa"])
+
+        if type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE:
+            if attrs.get("stagiaires_prepa"):
+                errors["stagiaires_prepa"] = [
+                    "Une information collective ne gère pas de stagiaires nominatifs."
+                ]
+            if attrs.get("participations_stagiaires_prepa"):
+                errors["participations_prepa"] = [
+                    "Une information collective ne gère pas de participations nominatives."
+                ]
+
+        date_debut = attrs.get("date_debut_atelier", getattr(self.instance, "date_debut_atelier", None))
+        date_fin = attrs.get("date_fin_atelier", getattr(self.instance, "date_fin_atelier", None))
+        if date_debut and date_fin and date_fin < date_debut:
+            errors["date_fin_atelier"] = "La date de fin atelier doit être postérieure ou égale à la date de début."
+
+        if errors:
+            raise serializers.ValidationError(errors)
 
         return attrs
 
@@ -487,6 +702,7 @@ class PrepaSerializer(serializers.ModelSerializer):
         keep_ids = set()
 
         for stagiaire_data in stagiaires_data or []:
+            stagiaire_data = dict(stagiaire_data)
             stagiaire_id = stagiaire_data.pop("id", None)
             if stagiaire_id and stagiaire_id in existing:
                 stagiaire = existing[stagiaire_id]
@@ -497,13 +713,24 @@ class PrepaSerializer(serializers.ModelSerializer):
                 keep_ids.add(stagiaire.id)
                 continue
 
-            stagiaire = StagiairePrepa(
-                prepa_origine=instance,
-                centre=instance.centre,
-                date_entree_parcours=instance.date_prepa,
-                **stagiaire_data,
-            )
-            stagiaire.save(user=user)
+            stagiaire = self._find_existing_stagiaire_prepa(instance, stagiaire_data)
+            if stagiaire:
+                self._hydrate_existing_stagiaire(
+                    stagiaire,
+                    instance=instance,
+                    data=stagiaire_data,
+                    user=user,
+                    default_prepa_origine=instance,
+                    default_date_entree=instance.date_prepa,
+                )
+            else:
+                stagiaire = StagiairePrepa(
+                    prepa_origine=instance,
+                    centre=instance.centre,
+                    date_entree_parcours=instance.date_prepa,
+                    **stagiaire_data,
+                )
+                stagiaire.save(user=user)
             keep_ids.add(stagiaire.id)
 
         for stagiaire in instance.stagiaires_prepa.exclude(id__in=keep_ids):
@@ -512,6 +739,150 @@ class PrepaSerializer(serializers.ModelSerializer):
                 and stagiaire.statut_parcours == StagiairePrepa.StatutParcours.EN_ATTENTE
             ):
                 stagiaire.delete(user=user)
+
+    def _sync_participations_prepa(self, instance: Prepa, participations_data, user=None) -> None:
+        existing = {
+            participation.stagiaire_prepa_id: participation
+            for participation in instance.participations_stagiaires_prepa.select_related("stagiaire_prepa").all()
+        }
+        keep_ids = set()
+
+        for participation_data in participations_data or []:
+            participation_data = dict(participation_data)
+            stagiaire = participation_data.pop("stagiaire_prepa", None)
+            if not stagiaire:
+                candidat_data = {
+                    "nom": participation_data.pop("nom"),
+                    "prenom": participation_data.pop("prenom"),
+                    "telephone": participation_data.pop("telephone", None),
+                    "email": participation_data.pop("email", None),
+                    "statut_parcours": participation_data.pop(
+                        "statut_parcours",
+                        StagiairePrepa.StatutParcours.EN_ATTENTE,
+                    ),
+                }
+                stagiaire = self._find_existing_stagiaire_prepa(instance, candidat_data)
+                if stagiaire:
+                    self._hydrate_existing_stagiaire(
+                        stagiaire,
+                        instance=instance,
+                        data=candidat_data,
+                        user=user,
+                        default_prepa_origine=instance if instance.type_prepa == Prepa.TypePrepa.ATELIER1 else None,
+                        default_date_entree=instance.date_debut_atelier or instance.date_prepa,
+                    )
+                else:
+                    stagiaire = StagiairePrepa(
+                        prepa_origine=instance if instance.type_prepa == Prepa.TypePrepa.ATELIER1 else None,
+                        centre=instance.centre,
+                        **candidat_data,
+                    )
+                    if instance.type_prepa == Prepa.TypePrepa.ATELIER1:
+                        stagiaire.date_entree_parcours = instance.date_debut_atelier or instance.date_prepa
+                    stagiaire.save(user=user)
+            else:
+                for extra_key in ["nom", "prenom", "telephone", "email", "statut_parcours"]:
+                    participation_data.pop(extra_key, None)
+
+            participation = existing.get(stagiaire.id)
+            if participation:
+                changed_fields = []
+                for field in ["statut", "commentaire"]:
+                    if field in participation_data and getattr(participation, field) != participation_data[field]:
+                        setattr(participation, field, participation_data[field])
+                        changed_fields.append(field)
+                if changed_fields:
+                    participation.save(user=user, update_fields=changed_fields)
+            else:
+                participation = PrepaStagiaireParticipation(
+                    prepa=instance,
+                    stagiaire_prepa=stagiaire,
+                    statut=participation_data.get("statut", PrepaPresenceStatut.INSCRIT),
+                    commentaire=participation_data.get("commentaire"),
+                )
+                participation.save(user=user)
+
+            if participation.statut in PrepaPresenceStatut.present_like_statuses():
+                stagiaire.marquer_participation_atelier(
+                    instance.type_prepa,
+                    date_participation=instance.date_debut_atelier or instance.date_prepa,
+                    user=user,
+                )
+
+            keep_ids.add(stagiaire.id)
+
+        instance.participations_stagiaires_prepa.exclude(stagiaire_prepa_id__in=keep_ids).delete()
+
+    def _find_existing_stagiaire_prepa(self, instance: Prepa, data: dict) -> StagiairePrepa | None:
+        nom = (data.get("nom") or "").strip()
+        prenom = (data.get("prenom") or "").strip()
+        telephone = (data.get("telephone") or "").strip()
+        email = (data.get("email") or "").strip()
+
+        if not nom or not prenom or not instance.centre_id:
+            return None
+
+        queryset = StagiairePrepa.objects.filter(
+            centre=instance.centre,
+            nom__iexact=nom,
+            prenom__iexact=prenom,
+        )
+        if email:
+            match = queryset.filter(email__iexact=email).first()
+            if match:
+                return match
+        if telephone:
+            match = queryset.filter(telephone=telephone).first()
+            if match:
+                return match
+        if not email and not telephone and queryset.count() == 1:
+            return queryset.first()
+        if email and telephone:
+            match = queryset.filter(Q(email__isnull=True) | Q(email="")).filter(
+                Q(telephone=telephone) | Q(telephone__isnull=True) | Q(telephone="")
+            ).first()
+            if match:
+                return match
+
+        return None
+
+    def _hydrate_existing_stagiaire(
+        self,
+        stagiaire: StagiairePrepa,
+        *,
+        instance: Prepa,
+        data: dict,
+        user=None,
+        default_prepa_origine=None,
+        default_date_entree=None,
+    ) -> None:
+        changed_fields = []
+
+        if not stagiaire.centre_id and instance.centre_id:
+            stagiaire.centre = instance.centre
+            changed_fields.append("centre")
+        if not stagiaire.prepa_origine_id and default_prepa_origine is not None:
+            stagiaire.prepa_origine = default_prepa_origine
+            changed_fields.append("prepa_origine")
+        if not stagiaire.date_entree_parcours and default_date_entree:
+            stagiaire.date_entree_parcours = default_date_entree
+            changed_fields.append("date_entree_parcours")
+
+        for field in ["telephone", "email"]:
+            incoming = data.get(field)
+            current = getattr(stagiaire, field)
+            if incoming and not current:
+                setattr(stagiaire, field, incoming)
+                changed_fields.append(field)
+
+        incoming_statut = data.get("statut_parcours")
+        if incoming_statut and stagiaire.statut_parcours == StagiairePrepa.StatutParcours.EN_ATTENTE:
+            if incoming_statut != stagiaire.statut_parcours:
+                stagiaire.statut_parcours = incoming_statut
+                changed_fields.append("statut_parcours")
+
+        if changed_fields:
+            stagiaire.save(user=user, update_fields=list(dict.fromkeys(changed_fields)))
 
     def _normalize_stagiaires(self, stagiaires_data):
         normalized = []
@@ -543,3 +914,109 @@ class PrepaSerializer(serializers.ModelSerializer):
             )
 
         return normalized
+
+    def _normalize_participations(self, participations_data):
+        normalized = []
+        for index, participation in enumerate(participations_data or []):
+            existing = participation.get("stagiaire_prepa")
+            nom = (participation.get("nom") or "").strip()
+            prenom = (participation.get("prenom") or "").strip()
+            telephone = (participation.get("telephone") or "").strip() or None
+            email = (participation.get("email") or "").strip() or None
+            statut_parcours = participation.get("statut_parcours") or StagiairePrepa.StatutParcours.EN_ATTENTE
+            statut = participation.get("statut") or PrepaPresenceStatut.INSCRIT
+            commentaire = (participation.get("commentaire") or "").strip() or None
+
+            if not existing and not any([nom, prenom, telephone, email]):
+                continue
+
+            if not existing and (not nom or not prenom):
+                raise serializers.ValidationError(
+                    {
+                        "participations_prepa": [
+                            f"Ligne participation {index + 1} : le nom et le prénom sont obligatoires."
+                        ]
+                    }
+                )
+
+            normalized.append(
+                {
+                    "stagiaire_prepa": existing,
+                    "nom": nom,
+                    "prenom": prenom,
+                    "telephone": telephone,
+                    "email": email,
+                    "statut_parcours": statut_parcours,
+                    "statut": statut,
+                    "commentaire": commentaire,
+                }
+            )
+
+        return normalized
+
+    def _validate_participations_uniques(self, participations_data) -> None:
+        current_prepa_id = getattr(self.instance, "id", None)
+        active_statuses = PrepaPresenceStatut.active_statuses()
+        errors: list[str] = []
+        seen_stagiaire_ids: set[int] = set()
+        seen_identity_keys: set[tuple[str, str, str | None, str | None]] = set()
+
+        for participation in participations_data or []:
+            stagiaire = participation.get("stagiaire_prepa")
+            statut = participation.get("statut")
+            if stagiaire:
+                if stagiaire.id in seen_stagiaire_ids:
+                    errors.append(
+                        f"Doublon séance : {stagiaire.prenom} {stagiaire.nom} est renseigné plusieurs fois dans cet atelier."
+                    )
+                    continue
+                seen_stagiaire_ids.add(stagiaire.id)
+            else:
+                identity_key = (
+                    (participation.get("nom") or "").strip().lower(),
+                    (participation.get("prenom") or "").strip().lower(),
+                    (participation.get("email") or "").strip().lower() or None,
+                    (participation.get("telephone") or "").strip() or None,
+                )
+                if identity_key[0] and identity_key[1]:
+                    if identity_key in seen_identity_keys:
+                        errors.append(
+                            f"Doublon séance : {participation.get('prenom', '').strip()} "
+                            f"{participation.get('nom', '').strip()} est renseigné plusieurs fois dans cet atelier."
+                        )
+                        continue
+                    seen_identity_keys.add(identity_key)
+
+            if not stagiaire or statut not in active_statuses:
+                continue
+
+            conflict = (
+                PrepaStagiaireParticipation.objects.filter(
+                    stagiaire_prepa=stagiaire,
+                    statut__in=active_statuses,
+                    prepa__type_prepa__in=[
+                        Prepa.TypePrepa.ATELIER1,
+                        Prepa.TypePrepa.ATELIER2,
+                        Prepa.TypePrepa.ATELIER3,
+                        Prepa.TypePrepa.ATELIER4,
+                        Prepa.TypePrepa.ATELIER5,
+                        Prepa.TypePrepa.ATELIER6,
+                        Prepa.TypePrepa.AUTRE,
+                    ],
+                )
+                .exclude(prepa_id=current_prepa_id)
+                .select_related("prepa")
+                .order_by("-prepa__date_debut_atelier", "-prepa__date_prepa", "-id")
+                .first()
+            )
+            if not conflict or not conflict.prepa:
+                continue
+
+            date_ref = conflict.prepa.date_debut_atelier or conflict.prepa.date_prepa
+            date_label = f" du {date_ref:%d/%m/%Y}" if date_ref else ""
+            errors.append(
+                f"Inscription impossible : {stagiaire.prenom} {stagiaire.nom} est déjà inscrit à {conflict.prepa.get_type_prepa_display()}{date_label}."
+            )
+
+        if errors:
+            raise serializers.ValidationError({"participations_prepa": errors})

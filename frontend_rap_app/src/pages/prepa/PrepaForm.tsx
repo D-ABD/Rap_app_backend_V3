@@ -17,6 +17,9 @@ import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
 import AppTextField from "src/components/forms/fields/AppTextField";
 import type { AppTheme } from "../../theme";
+import { useAuth } from "src/hooks/useAuth";
+import { isAdminLikeRole } from "src/utils/roleGroups";
+import { buildCentreLabel, extractScopedCentres } from "./prepaCentreScope";
 import {
   Event as EventIcon,
   Groups as GroupsIcon,
@@ -144,6 +147,8 @@ export default function PrepaForm({
   onCentreChange,
 }: Props) {
   const theme = useTheme<AppTheme>();
+  const { user } = useAuth();
+  const isAdminLike = isAdminLikeRole(user?.role);
 
   const [form, setForm] = useState<Partial<Prepa>>({
     type_prepa: initialValues?.type_prepa ?? "info_collective",
@@ -159,11 +164,13 @@ export default function PrepaForm({
     nb_inscrits_prepa: initialValues?.nb_inscrits_prepa ?? 0,
     nb_presents_prepa: initialValues?.nb_presents_prepa ?? 0,
     nb_absents_prepa: initialValues?.nb_absents_prepa ?? 0,
-    stagiaires_prepa: initialValues?.stagiaires_prepa ?? [],
+    participations_prepa: initialValues?.participations_prepa ?? [],
   });
 
   const [centreLabel, setCentreLabel] = useState<string>("");
   const [showCentreModal, setShowCentreModal] = useState(false);
+  const scopedCentres = useMemo(() => extractScopedCentres((meta as Record<string, unknown> | null) ?? null), [meta]);
+  const hasSingleScopedCentre = !isAdminLike && scopedCentres.length === 1;
 
   const typeChoices = useMemo(
     () =>
@@ -176,38 +183,47 @@ export default function PrepaForm({
 
   useEffect(() => {
     if (form.nombre_prescriptions !== undefined && form.nb_presents_info !== undefined) {
+      const nextAbsents = Math.max(
+        0,
+        (form.nombre_prescriptions ?? 0) - (form.nb_presents_info ?? 0)
+      );
+      if (form.nb_absents_info === nextAbsents) return;
       setForm((prev) => ({
         ...prev,
-        nb_absents_info: Math.max(
-          0,
-          (prev.nombre_prescriptions ?? 0) - (prev.nb_presents_info ?? 0)
-        ),
+        nb_absents_info: nextAbsents,
       }));
     }
-  }, [form.nombre_prescriptions, form.nb_presents_info]);
+  }, [form.nombre_prescriptions, form.nb_presents_info, form.nb_absents_info]);
 
   useEffect(() => {
     if (form.nb_inscrits_prepa !== undefined && form.nb_presents_prepa !== undefined) {
+      const nextAbsents = Math.max(
+        0,
+        (form.nb_inscrits_prepa ?? 0) - (form.nb_presents_prepa ?? 0)
+      );
+      if (form.nb_absents_prepa === nextAbsents) return;
       setForm((prev) => ({
         ...prev,
-        nb_absents_prepa: Math.max(
-          0,
-          (prev.nb_inscrits_prepa ?? 0) - (prev.nb_presents_prepa ?? 0)
-        ),
+        nb_absents_prepa: nextAbsents,
       }));
     }
-  }, [form.nb_inscrits_prepa, form.nb_presents_prepa]);
+  }, [form.nb_inscrits_prepa, form.nb_presents_prepa, form.nb_absents_prepa]);
 
   useEffect(() => {
-    if (form.centre_id && meta?.centre_choices?.length) {
-      const opt = meta.centre_choices.find((c) => Number(c.value) === form.centre_id);
-      setCentreLabel(opt?.label ?? `#${form.centre_id}`);
-      if (opt?.label) onCentreChange?.(opt.label);
+    if (!form.centre_id && hasSingleScopedCentre) {
+      setForm((prev) => ({ ...prev, centre_id: scopedCentres[0].id }));
+      return;
+    }
+    if (form.centre_id && scopedCentres.length) {
+      const opt = scopedCentres.find((c) => c.id === form.centre_id);
+      const label = buildCentreLabel(opt) || `#${form.centre_id}`;
+      setCentreLabel((prev) => (prev === label ? prev : label));
+      onCentreChange?.(label);
     } else {
-      setCentreLabel("");
+      setCentreLabel((prev) => (prev === "" ? prev : ""));
       onCentreChange?.("");
     }
-  }, [form.centre_id, meta?.centre_choices, onCentreChange]);
+  }, [form.centre_id, hasSingleScopedCentre, onCentreChange, scopedCentres]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,6 +249,13 @@ export default function PrepaForm({
                   Le centre sélectionné est utilisé pour rattacher la séance et ses invités.
                 </Alert>
               </Grid>
+              {hasSingleScopedCentre ? (
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    Le centre est prérempli automatiquement depuis votre périmètre.
+                  </Alert>
+                </Grid>
+              ) : null}
 
               <Grid item xs={12} md={4}>
                 <Select
@@ -277,11 +300,13 @@ export default function PrepaForm({
                 />
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} mt={1}>
-                  <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
-                    Sélectionner un centre
-                  </Button>
+                  {!hasSingleScopedCentre ? (
+                    <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
+                      Sélectionner un centre
+                    </Button>
+                  ) : null}
 
-                  {form.centre_id ? (
+                  {form.centre_id && !hasSingleScopedCentre ? (
                     <Button
                       variant="outlined"
                       color="error"
@@ -401,9 +426,10 @@ export default function PrepaForm({
           </Collapse>
 
           <PrepaInvitesSection
-            stagiaires={form.stagiaires_prepa ?? []}
-            onChange={(stagiaires) =>
-              handleChange("stagiaires_prepa", stagiaires as Prepa["stagiaires_prepa"])
+            participations={form.participations_prepa ?? []}
+            centreId={form.centre_id}
+            onChange={(participations) =>
+              handleChange("participations_prepa", participations as Prepa["participations_prepa"])
             }
           />
 

@@ -2,7 +2,6 @@ import { Link as RouterLink } from "react-router-dom";
 import { Typography, Button, Grid, Stack, Divider } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageTemplate from "../components/PageTemplate";
-import ChartCard from "../components/dashboard/ChartCard";
 
 import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
 import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
@@ -33,39 +32,24 @@ export default function DashboardPrepaStaffPage() {
             Voir les séances Prépa
           </Button>
 
-          <Button
-            variant="outlined"
-            color="secondary"
-            component={RouterLink}
-            to="/prepa/objectif"
-          >
-            Gérer les objectifs
-          </Button>
         </Stack>
       }
     >
       <Divider sx={{ mb: 4 }} />
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} lg={6}>
+      <Grid >
+        <Grid >
           <PrepaStatsSummary title="Synthèse annuelle — Objectifs & réalisations" />
         </Grid>
 
-        <Grid item xs={12} lg={6}>
+        <Grid >
           <PrepaStatsOperations title="Indicateurs opérationnels — IC & Ateliers" />
         </Grid>
 
-        <Grid item xs={12} lg={6}>
+        <Grid >
           <PrepaStatsParcours title="Parcours individuels — Stagiaires Prépa" />
         </Grid>
 
-        <Grid item xs={12} lg={6}>
-          <ChartCard title="Extensions futures">
-            <Typography color="text.secondary" textAlign="center">
-              (Espace disponible : tableau détaillé, export rapide, heatmap…)
-            </Typography>
-          </ChartCard>
-        </Grid>
       </Grid>
     </PageTemplate>
   );
