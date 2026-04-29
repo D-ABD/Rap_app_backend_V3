@@ -10,6 +10,7 @@ import {
   MenuItem,
   FormHelperText,
   Alert,
+  Typography,
   useTheme,
 } from "@mui/material";
 import { Prepa, CentreLight } from "src/types/prepa";
@@ -23,7 +24,6 @@ import { isAdminLikeRole } from "src/utils/roleGroups";
 import { buildCentreLabel, extractScopedCentres } from "./prepaCentreScope";
 import {
   Event as EventIcon,
-  Groups as GroupsIcon,
   Comment as CommentIcon,
 } from "@mui/icons-material";
 
@@ -149,20 +149,20 @@ export default function PrepaFormIC({
   return (
     <>
       <Box component="form" onSubmit={handleSubmit}>
-        <Stack spacing={2}>
+        <Stack spacing={1}>
           <Section
             icon={<EventIcon color="primary" />}
             title="Informations principales"
             subtitle="Type, date, centre et animateur de la séance Prépa."
           >
             <Grid container spacing={theme.custom.form.sectionCard.contentGap}>
-              <Grid item xs={12}>
+              <Grid item xs={5}>
                 <Alert severity="info">
                   Une information collective reste purement chiffrée: aucun stagiaire nominatif n'est saisi ici.
                 </Alert>
               </Grid>
               {hasSingleScopedCentre ? (
-                <Grid item xs={12}>
+                <Grid item xs={5}>
                   <Alert severity="success">
                     Le centre est prérempli automatiquement depuis votre périmètre.
                   </Alert>
@@ -188,7 +188,7 @@ export default function PrepaFormIC({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <AppTextField
                   type="date"
                   fullWidth
@@ -201,7 +201,7 @@ export default function PrepaFormIC({
                 />
               </Grid>
 
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} md={5}>
                 <AppTextField
                   fullWidth
                   label="Centre"
@@ -212,7 +212,7 @@ export default function PrepaFormIC({
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Stack direction={{ xs: "column", sm: "row", md: "column" }} spacing={1}>
                   {!hasSingleScopedCentre ? (
                     <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
@@ -235,7 +235,7 @@ export default function PrepaFormIC({
                 </Stack>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sx={{ mt: { xs: -0.5, md: -0.75 } }}>
                 <AppTextField
                   fullWidth
                   label="Formateur / animateur"
@@ -245,16 +245,14 @@ export default function PrepaFormIC({
                   helperText="Personne en charge de l’animation."
                 />
               </Grid>
-            </Grid>
-          </Section>
 
-          <Section
-            icon={<GroupsIcon color="primary" />}
-            title="Information collective"
-            subtitle="Saisie simple des volumes, présences et adhésions."
-          >
-            <Grid container spacing={theme.custom.form.sectionCard.contentGap}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sx={{ mt: { xs: -0.75, md: -1 } }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ lineHeight: 1.1 }}>
+                  Information collective
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={4} sx={{ mt: { xs: -0.25, md: -0.5 } }}>
                 <AppTextField
                   type="number"
                   fullWidth
@@ -267,7 +265,7 @@ export default function PrepaFormIC({
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={4} sx={{ mt: { xs: -0.25, md: -0.5 } }}>
                 <AppTextField
                   type="number"
                   fullWidth
@@ -280,7 +278,7 @@ export default function PrepaFormIC({
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={4} sx={{ mt: { xs: -0.25, md: -0.5 } }}>
                 <AppTextField
                   type="number"
                   fullWidth
