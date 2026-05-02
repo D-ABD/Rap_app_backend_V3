@@ -79,53 +79,72 @@ export default function FormationOverviewWidget({
   }, [filters]);
 
   // Applique le flag “archivées”
-  const effectiveFilters = {
-    ...localFilters,
-    ...(includeArchived ? { avec_archivees: true } : {}),
-  };
+  const effectiveFilters = React.useMemo(
+    () => ({
+      ...localFilters,
+      ...(includeArchived ? { avec_archivees: true } : {}),
+    }),
+    [includeArchived, localFilters]
+  );
 
-  const centreQuery = useFormationGrouped("centre", omit(localFilters, ["centre"]));
-  const deptQuery = useFormationGrouped("departement", omit(localFilters, ["departement"]));
+  const centreFilters = React.useMemo(
+    () => omit(localFilters, ["centre"]),
+    [localFilters]
+  );
+  const departementFilters = React.useMemo(
+    () => omit(localFilters, ["departement"]),
+    [localFilters]
+  );
+
+  const centreQuery = useFormationGrouped("centre", centreFilters);
+  const deptQuery = useFormationGrouped("departement", departementFilters);
 
   const { data, isLoading, error, refetch, isFetching } = useFormationOverview(effectiveFilters);
   const k = data?.kpis;
 
   // Options filtres
-  const centreOptions =
-    centreQuery.data?.results
-      ?.map((r: GroupRow) => {
-        const label =
-          (typeof r["centre__nom"] === "string" && r["centre__nom"]) ||
-          (typeof r.group_label === "string" && r.group_label) ||
-          undefined;
-        const value = r.group_key ?? r.centre_id ?? label;
-        return value && label ? { label, value } : null;
-      })
-      .filter(Boolean) ?? [];
+  const centreOptions = React.useMemo(
+    () =>
+      centreQuery.data?.results
+        ?.map((r: GroupRow) => {
+          const label =
+            (typeof r["centre__nom"] === "string" && r["centre__nom"]) ||
+            (typeof r.group_label === "string" && r.group_label) ||
+            undefined;
+          const value = r.group_key ?? r.centre_id ?? label;
+          return value && label ? { label, value } : null;
+        })
+        .filter(Boolean) ?? [],
+    [centreQuery.data]
+  );
 
-  const deptOptions =
-    deptQuery.data?.results
-      ?.map((r: GroupRow) => {
-        const label =
-          (typeof r.group_label === "string" && r.group_label) ||
-          (typeof r.departement === "string" && r.departement) ||
-          undefined;
-        const value = r.group_key ?? r.departement ?? label;
-        return value && label ? { label, value } : null;
-      })
-      .filter(Boolean) ?? [];
+  const deptOptions = React.useMemo(
+    () =>
+      deptQuery.data?.results
+        ?.map((r: GroupRow) => {
+          const label =
+            (typeof r.group_label === "string" && r.group_label) ||
+            (typeof r.departement === "string" && r.departement) ||
+            undefined;
+          const value = r.group_key ?? r.departement ?? label;
+          return value && label ? { label, value } : null;
+        })
+        .filter(Boolean) ?? [],
+    [deptQuery.data]
+  );
 
   // Données du camembert
-  const pieData = k && [
-    { name: "En cours", value: k.nb_actives ?? 0 },
-    { name: "À venir", value: k.nb_a_venir ?? 0 },
-    { name: "Terminées", value: k.nb_terminees ?? 0 },
-  ];
-
-  // 🔁 Refetch si on bascule “archivées”
-  React.useEffect(() => {
-    refetch();
-  }, [includeArchived, refetch]); // ✅ ajouté refetch dans les dépendances
+  const pieData = React.useMemo(
+    () =>
+      k
+        ? [
+            { name: "En cours", value: k.nb_actives ?? 0 },
+            { name: "À venir", value: k.nb_a_venir ?? 0 },
+            { name: "Terminées", value: k.nb_terminees ?? 0 },
+          ]
+        : [],
+    [k]
+  );
 
   return (
     <Card
@@ -243,7 +262,7 @@ export default function FormationOverviewWidget({
         ) : error ? (
           <Alert severity="error">{(error as Error).message}</Alert>
         ) : (
-          pieData && (
+          pieData.length > 0 && (
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie

@@ -8,8 +8,12 @@ import { useStagiairesPrepaMeta, useStagiairesPrepaSynthese } from "src/hooks/us
 
 export default function PrepaStatsParcours({
   title = "Parcours individuels Prépa",
+  filters: externalFilters,
+  hideFilters = false,
 }: {
   title?: string;
+  filters?: { annee?: number; centre?: number };
+  hideFilters?: boolean;
 }) {
   const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
@@ -26,15 +30,16 @@ export default function PrepaStatsParcours({
     [meta]
   );
 
-  const [filters, setFilters] = React.useState<{ annee?: number; centre?: number }>({
+  const [localFilters, setLocalFilters] = React.useState<{ annee?: number; centre?: number }>({
     annee: annees[0] ?? new Date().getFullYear(),
   });
+  const filters = externalFilters ?? localFilters;
 
   React.useEffect(() => {
-    if (!filters.annee && annees[0]) {
-      setFilters((prev) => ({ ...prev, annee: annees[0] }));
+    if (!externalFilters && !filters.annee && annees[0]) {
+      setLocalFilters((prev) => ({ ...prev, annee: annees[0] }));
     }
-  }, [annees, filters.annee]);
+  }, [annees, externalFilters, filters.annee]);
 
   const { data, isLoading, error } = useStagiairesPrepaSynthese(filters);
 
@@ -52,32 +57,38 @@ export default function PrepaStatsParcours({
   const statShadow = isDark ? theme.custom.kpi.elevation.rest.dark : theme.custom.kpi.elevation.rest.light;
 
   const stats = [
-    { label: "Total suivis", value: data.total_stagiaires ?? 0, color: theme.palette.text.primary },
-    { label: "Entrées atelier 1", value: data.entrees_atelier_1, color: theme.palette.primary.main },
-    { label: "Sorties atelier 6", value: data.sorties_atelier_6, color: theme.palette.success.main },
-    { label: "Orientés AFPA", value: data.orientes_afpa, color: theme.palette.info.main },
     {
-      label: "Transformation AFPA (%)",
-      value: data.taux_transformation_vers_afpa,
-      color: theme.palette.secondary.main,
+      label: "Total suivis",
+      value: data.total_stagiaires ?? 0,
+      color: theme.palette.text.primary,
     },
     {
-      label: "Taux abandon (%)",
-      value: data.taux_abandon_vers_entrees ?? 0,
-      color: theme.palette.error.dark,
+      label: "En attente de parcours",
+      value: data.pipeline_en_attente_demarrage ?? data.en_attente_entree ?? 0,
+      color: theme.palette.text.secondary,
     },
-    { label: "En attente d'entrée", value: data.en_attente_entree, color: theme.palette.warning.dark },
-    { label: "À intégrer atelier 1", value: data.a_integrer_atelier_1, color: theme.palette.warning.main },
     {
-      label: "En attente atelier suivant",
-      value: data.en_attente_prochain_atelier,
+      label: "Orientés AFPA",
+      value: data.orientes_afpa ?? 0,
       color: theme.palette.info.dark,
+      hint: `Transformation : ${(data.taux_transformation_vers_afpa ?? 0).toFixed(1)} %`,
     },
-    { label: "Abandons", value: data.abandons, color: theme.palette.error.main },
     {
-      label: "Orientés autre centre AFPA (%)",
-      value: data.taux_orientation_autre_centre_afpa ?? 0,
-      color: theme.palette.info.dark,
+      label: "Abandons",
+      value: data.abandons ?? 0,
+      color: theme.palette.error.main,
+      hint: `Taux abandon : ${(data.taux_abandon_vers_entrees ?? 0).toFixed(1)} %`,
+    },
+    {
+      label: "En attente bilan",
+      value: data.pipeline_en_attente_bilan ?? 0,
+      color: theme.palette.secondary.dark,
+    },
+    {
+      label: "Bilans enregistrés",
+      value: data.nb_bilans ?? 0,
+      color: theme.palette.success.dark,
+      hint: `Écart bilans : ${(data.ecart_bilans ?? 0).toLocaleString("fr-FR")}`,
     },
   ];
 
@@ -99,12 +110,13 @@ export default function PrepaStatsParcours({
           {title}
         </Typography>
 
+        {!hideFilters ? (
         <Box display="flex" gap={1.5} flexWrap="wrap">
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <Select
               value={filters.annee ?? ""}
               onChange={(e) =>
-                setFilters((prev) => ({
+                setLocalFilters((prev) => ({
                   ...prev,
                   annee: e.target.value ? Number(e.target.value) : undefined,
                 }))
@@ -122,7 +134,7 @@ export default function PrepaStatsParcours({
             <Select
               value={filters.centre ?? ""}
               onChange={(e) =>
-                setFilters((prev) => ({
+                setLocalFilters((prev) => ({
                   ...prev,
                   centre: e.target.value ? Number(e.target.value) : undefined,
                 }))
@@ -142,6 +154,7 @@ export default function PrepaStatsParcours({
             </Select>
           </FormControl>
         </Box>
+        ) : null}
       </Box>
 
       <Grid container spacing={2.5}>
@@ -167,6 +180,11 @@ export default function PrepaStatsParcours({
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
                 {s.label}
               </Typography>
+              {"hint" in s && s.hint ? (
+                <Typography variant="caption" sx={{ display: "block", mt: 0.75, color: theme.palette.text.secondary }}>
+                  {s.hint}
+                </Typography>
+              ) : null}
             </Box>
           </Grid>
         ))}

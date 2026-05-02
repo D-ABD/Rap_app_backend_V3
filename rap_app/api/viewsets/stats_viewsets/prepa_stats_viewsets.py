@@ -174,6 +174,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         annee = int(request.query_params.get("annee", localdate().year))
         centre_param = request.query_params.get("centre")
         type_prepa = request.query_params.get("type_prepa")
+        include_archived = str(request.query_params.get("avec_archivees", "")).lower() in {"1", "true", "yes", "on"}
         department_scope = use_department_stats_scope(request)
 
         # ------------------------------------------------------
@@ -220,6 +221,9 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # ------------------------------------------------------
         if type_prepa:
             qs = qs.filter(type_prepa=type_prepa)
+
+        if not include_archived:
+            qs = qs.filter(is_active=True)
 
         return qs
 
@@ -592,6 +596,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
         # ----------------------------------------------
         nb_prescriptions = qs.aggregate(total=Sum("nombre_prescriptions"))["total"] or 0
         places_ouvertes = qs.aggregate(total=Sum("nombre_places_ouvertes"))["total"] or 0
+        nombre_ic = qs.filter(type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE).count()
 
         taux_prescription = round(nb_prescriptions / places_ouvertes * 100, 1) if places_ouvertes > 0 else None
 
@@ -706,6 +711,7 @@ class PrepaStatsViewSet(viewsets.ReadOnlyModelViewSet):
                 "reste_a_faire_presents": reste_a_faire_total,
                 # ---- PRESCRIPTIONS ----
                 "nb_prescriptions": nb_prescriptions,
+                "nombre_ic": nombre_ic,
                 "taux_prescription": taux_prescription,
                 # ---- INFO COLLECTIVE ----
                 "presents_info": presents_info,

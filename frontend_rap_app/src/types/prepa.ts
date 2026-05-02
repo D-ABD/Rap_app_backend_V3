@@ -18,6 +18,23 @@ export type StagiairePrepaStatut =
   | "parcours_termine"
   | "abandon";
 
+export type StatutParcoursCourant =
+  | "en_attente_demarrage"
+  | "en_attente_repositionnement"
+  | "en_attente_suite"
+  | "en_attente_bilan"
+  | "termine";
+
+export type IssueBilanPrepa = "oriente_afpa" | "abandon" | "autre_sortie";
+export type ProchainEtapePrepa = TypePrepa | "bilan";
+export type StagiairePrepaStatutForm =
+  | "en_attente"
+  | "en_parcours"
+  | "parcours_termine"
+  | "abandon"
+  | "en_attente_prochain_atelier"
+  | "a_repositionner";
+
 export interface StagiairePrepa {
   id?: number;
   is_active?: boolean;
@@ -26,6 +43,7 @@ export interface StagiairePrepa {
   telephone?: string | null;
   email?: string | null;
   prepa_origine_id?: number | null;
+  prepa_origine_label?: string | null;
   date_ic?: string | null;
   centre?: CentreLight | null;
   centre_id?: number | null;
@@ -33,30 +51,26 @@ export interface StagiairePrepa {
   centre_afpa_cible?: CentreLight | null;
   centre_afpa_cible_id?: number | null;
   centre_afpa_cible_nom?: string;
+  centre_afpa_cible_texte?: string | null;
   statut_parcours?: StagiairePrepaStatut;
   statut_parcours_display?: string;
-  statut_parcours_calcule?: StagiairePrepaStatut;
-  statut_parcours_calcule_display?: string;
-  prochain_atelier_prevu?: TypePrepa | null;
+  prochain_atelier_prevu?: ProchainEtapePrepa | null;
   prochain_atelier_prevu_display?: string | null;
+  prochain_etape?: ProchainEtapePrepa | null;
+  prochain_etape_display?: string | null;
   prochain_atelier_attendu?: TypePrepa | null;
   prochain_atelier_attendu_display?: string | null;
-  statut_positionnement?: "a_positionner" | "positionne" | "en_attente" | null;
-  statut_positionnement_display?: string | null;
   orientation_finale?: "afpa" | "autre_centre_afpa" | "hors_afpa" | null;
   orientation_finale_display?: string | null;
   formation_afpa_cible?: string | null;
-  date_orientation?: string | null;
-  entree_formation_confirmee?: boolean;
   est_oriente_afpa?: boolean;
   est_oriente_vers_autre_centre_afpa?: boolean;
   est_en_attente_entree?: boolean;
   est_a_integrer_atelier_1?: boolean;
   est_en_attente_prochain_atelier?: boolean;
-  date_entree_parcours?: string | null;
-  date_sortie_parcours?: string | null;
+  date_entree_calculee?: string | null;
+  date_fin_calculee?: string | null;
   commentaire_suivi?: string | null;
-  motif_abandon?: string | null;
   atelier_1_realise?: boolean;
   atelier_2_realise?: boolean;
   atelier_3_realise?: boolean;
@@ -82,6 +96,21 @@ export interface StagiairePrepa {
   dernier_statut_participation?: PrepaPresenceStatut | null;
   dernier_statut_participation_display?: string | null;
   dernier_statut_participation_liberant?: boolean;
+  statut_parcours_courant?: StatutParcoursCourant | null;
+  statut_parcours_courant_display?: string | null;
+  date_bilan?: string | null;
+  derniere_presence_reelle?: {
+    type_prepa?: string | null;
+    type_prepa_display?: string | null;
+    date?: string | null;
+  } | null;
+  derniere_etape?: {
+    value?: string | null;
+    label?: string | null;
+    date?: string | null;
+  } | null;
+  action_suivante_recommandee?: { code: string; label: string } | null;
+  historique_ateliers?: Array<Record<string, unknown>>;
   created_at?: string;
   updated_at?: string;
 }
@@ -308,18 +337,10 @@ export interface PrepaFiltersOptions {
 export interface StagiairePrepaFiltersValues {
   search?: string;
   centre?: number;
-  statut_parcours_calcule?: StagiairePrepaStatut;
+  statut_parcours_courant?: StatutParcoursCourant;
   atelier_en_cours?: TypePrepa;
-  prochain_atelier_attendu?: TypePrepa;
+  prochain_etape?: ProchainEtapePrepa;
   orientation_finale?: "afpa" | "autre_centre_afpa" | "hors_afpa";
-  pilotage?:
-    | "attente_entree"
-    | "a_integrer_atelier_1"
-    | "attente_prochain_atelier"
-    | "en_parcours_actif"
-    | "a_reprogrammer"
-    | "parcours_termine"
-    | "abandon";
   date_ic_min?: string;
   date_ic_max?: string;
   prepa_origine?: number;
@@ -346,6 +367,16 @@ export interface StagiairePrepaSynthese {
   taux_transformation_vers_afpa: number;
   taux_abandon_vers_entrees?: number;
   taux_orientation_autre_centre_afpa?: number;
+  pipeline_en_attente_demarrage?: number;
+  pipeline_en_attente_repositionnement?: number;
+  pipeline_en_attente_suite?: number;
+  pipeline_en_attente_bilan?: number;
+  pipeline_termine?: number;
+  nb_bilans?: number;
+  nb_at1_realises?: number;
+  ecart_bilans?: number;
+  bilans_abandon?: number;
+  bilans_orientes_afpa?: number;
   filtres?: {
     centre?: string | null;
     annee?: string | null;

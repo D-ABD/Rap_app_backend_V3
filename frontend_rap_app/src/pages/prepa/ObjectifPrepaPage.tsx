@@ -54,17 +54,7 @@ export default function ObjectifPrepaPage() {
   });
 
   // 🔄 Affichage des filtres (persisté)
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const saved = localStorage.getItem("objectifsPrepa.showFilters");
-    return saved ? saved === "1" : false;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("objectifsPrepa.showFilters", showFilters ? "1" : "0");
-    }
-  }, [showFilters]);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setFilters((prev) => ({ ...prev, centre: scopedCentre }));

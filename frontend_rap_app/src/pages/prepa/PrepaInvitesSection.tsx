@@ -23,15 +23,20 @@ interface Props {
   participations: PrepaParticipation[];
   onChange: (participations: PrepaParticipation[]) => void;
   centreId?: number;
+  typePrepa?: string;
 }
 
 const PRESENCE_CHOICES: Array<{ value: PrepaPresenceStatut; label: string }> = [
   { value: "inscrit", label: "Inscrit" },
   { value: "present", label: "Présent" },
   { value: "absent", label: "Absent" },
-  { value: "termine", label: "Terminé" },
-  { value: "a_repositionner", label: "À repositionner" },
 ];
+
+function canonPresenceStatut(statut?: PrepaPresenceStatut): PrepaPresenceStatut {
+  if (statut === "termine") return "present";
+  if (statut === "a_repositionner") return "absent";
+  return statut ?? "inscrit";
+}
 
 const emptyParticipation = (): PrepaParticipation => ({
   nom: "",
@@ -70,23 +75,13 @@ function toParticipation(stagiaire: StagiairePrepa): PrepaParticipation {
   };
 }
 
-function getLiberationBadge(statut?: PrepaPresenceStatut): { label: string; color: "primary" | "warning" } | null {
-  if (statut === "termine") {
-    return { label: "Libéré pour atelier suivant", color: "primary" };
-  }
-  if (statut === "a_repositionner") {
-    return { label: "Libéré pour repositionnement", color: "warning" };
-  }
-  return null;
-}
-
 function formatStagiaireLabel(stagiaire: StagiairePrepa | null | undefined): string {
   if (!stagiaire) return "Ce stagiaire";
   const fullName = `${stagiaire.prenom ?? ""} ${stagiaire.nom ?? ""}`.trim();
   return fullName || "Ce stagiaire";
 }
 
-export default function PrepaInvitesSection({ participations, onChange, centreId }: Props) {
+export default function PrepaInvitesSection({ participations, onChange, centreId, typePrepa }: Props) {
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -130,16 +125,21 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
     );
 
     let duplicateCount = 0;
-    let alreadyElsewhereCount = 0;
-    let firstConflictElsewhere: StagiairePrepa | null = null;
+    let missingAt1Count = 0;
+    let firstMissingAt1: StagiairePrepa | null = null;
+    const requiresAt1 =
+      typePrepa !== "atelier_1" &&
+      typePrepa !== "info_collective" &&
+      Boolean(typePrepa);
+
     const nextImported = importedStagiaires
       .map(toParticipation)
       .filter((participation, index) => {
-        const id = participation.stagiaire_prepa_id ?? participation.stagiaire_prepa?.id;
         const source: StagiairePrepa | undefined = importedStagiaires[index];
-        if (source?.atelier_en_cours) {
-          alreadyElsewhereCount += 1;
-          if (!firstConflictElsewhere) firstConflictElsewhere = source;
+        const id = participation.stagiaire_prepa_id ?? participation.stagiaire_prepa?.id;
+        if (requiresAt1 && !source?.atelier_1_realise && !source?.date_entree_calculee) {
+          missingAt1Count += 1;
+          if (!firstMissingAt1) firstMissingAt1 = source;
           return false;
         }
         if (typeof id === "number" && existingIds.has(id)) {
@@ -158,17 +158,18 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
           : `${duplicateCount} stagiaires sont déjà inscrits à l'atelier.`
       );
     }
-    if (alreadyElsewhereCount > 0) {
-      const conflict = firstConflictElsewhere;
-      if (alreadyElsewhereCount === 1 && conflict) {
+    if (missingAt1Count > 0) {
+      const target = firstMissingAt1;
+      if (missingAt1Count === 1 && target) {
         toast.error(
-          `Inscription impossible : ${formatStagiaireLabel(conflict)} est déjà en ${formatAtelierEnCours(conflict)}.`
+          `Inscription impossible : ${formatStagiaireLabel(target)} doit commencer le parcours par un Atelier 1.`
         );
       } else {
-        toast.error(`${alreadyElsewhereCount} stagiaires sont déjà inscrits sur un autre atelier en cours.`);
+        toast.error(
+          `${missingAt1Count} stagiaires ne peuvent pas être ajoutés ici : le parcours doit commencer par un Atelier 1.`
+        );
       }
     }
-
     onChange([...participationsSafe, ...nextImported]);
   };
 
@@ -197,11 +198,9 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
   const clearSelection = () => setSelectedKeys([]);
   const statusCounts = useMemo(
     () => ({
-      inscrit: participationsSafe.filter((participation) => participation.statut === "inscrit").length,
-      present: participationsSafe.filter((participation) => participation.statut === "present").length,
-      absent: participationsSafe.filter((participation) => participation.statut === "absent").length,
-      termine: participationsSafe.filter((participation) => participation.statut === "termine").length,
-      repositionner: participationsSafe.filter((participation) => participation.statut === "a_repositionner").length,
+      inscrit: participationsSafe.filter((participation) => canonPresenceStatut(participation.statut) === "inscrit").length,
+      present: participationsSafe.filter((participation) => canonPresenceStatut(participation.statut) === "present").length,
+      absent: participationsSafe.filter((participation) => canonPresenceStatut(participation.statut) === "absent").length,
     }),
     [participationsSafe]
   );
@@ -226,20 +225,10 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
       </Stack>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
-        <Chip label={`${participationsSafe.length} inscrits saisis`} />
-        <Chip
-          color="success"
-          variant="outlined"
-          label={`${statusCounts.present + statusCounts.termine} présents / terminés`}
-        />
-        <Chip
-          color="error"
-          variant="outlined"
-          label={`${statusCounts.absent + statusCounts.inscrit + statusCounts.repositionner} absents / non pointés`}
-        />
-        <Chip variant="outlined" label={`${statusCounts.inscrit} non pointés`} />
-        <Chip color="primary" variant="outlined" label={`${statusCounts.termine} terminés`} />
-        <Chip color="warning" variant="outlined" label={`${statusCounts.repositionner} à repositionner`} />
+        <Chip label={`${participationsSafe.length} lignes nominatives`} />
+        <Chip color="success" variant="outlined" label={`${statusCounts.present} présents`} />
+        <Chip color="error" variant="outlined" label={`${statusCounts.absent} absents`} />
+        <Chip variant="outlined" label={`${statusCounts.inscrit} inscrits`} />
       </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ mb: 2 }}>
@@ -248,16 +237,6 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
         </Button>
         <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("absent")}>
           Marquer absents ({selectedKeys.length})
-        </Button>
-        <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("termine")}>
-          Marquer terminés ({selectedKeys.length})
-        </Button>
-        <Button
-          variant="outlined"
-          disabled={selectedKeys.length === 0}
-          onClick={() => setStatusForSelection("a_repositionner")}
-        >
-          Marquer à repositionner ({selectedKeys.length})
         </Button>
         <Button variant="outlined" disabled={selectedKeys.length === 0} onClick={() => setStatusForSelection("inscrit")}>
           Repasser en inscrits
@@ -276,11 +255,16 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
       <Stack spacing={1.25}>
         {participationsSafe.map((participation, index) => {
           const key = participationKey(participation, index);
-          const label = PRESENCE_CHOICES.find((choice) => choice.value === participation.statut)?.label ?? participation.statut;
-          const liberationBadge = getLiberationBadge(participation.statut);
+          const label =
+            PRESENCE_CHOICES.find((choice) => choice.value === canonPresenceStatut(participation.statut))?.label ??
+            participation.statut;
           const isExpanded = expandedKey === key;
           const displayNom = `${participation.prenom ?? participation.stagiaire_prepa?.prenom ?? ""} ${participation.nom ?? participation.stagiaire_prepa?.nom ?? ""}`.trim() || `Participant ${index + 1}`;
           const contact = participation.email || participation.telephone || "";
+          const parcoursLabel =
+            participation.stagiaire_prepa?.statut_parcours_courant_display ??
+            participation.stagiaire_prepa?.statut_parcours_display ??
+            participation.statut_parcours;
           return (
             <Paper key={key} variant="outlined" sx={{ p: 1.25 }}>
               <Stack
@@ -300,22 +284,19 @@ export default function PrepaInvitesSection({ participations, onChange, centreId
                         {contact}
                       </Typography>
                     ) : null}
-                    {liberationBadge ? (
+                    {parcoursLabel ? (
                       <Typography variant="caption" sx={{ display: "block", color: "text.secondary", mt: 0.25 }}>
-                        {liberationBadge.label}
+                        Parcours: {parcoursLabel}
                       </Typography>
                     ) : null}
                   </Box>
                   <Chip size="small" variant="outlined" label={label} />
-                  {liberationBadge ? (
-                    <Chip size="small" color={liberationBadge.color} variant="filled" label="Libéré" />
-                  ) : null}
                 </Stack>
 
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
                   <Select
                     size="small"
-                    value={participation.statut ?? "inscrit"}
+                    value={canonPresenceStatut(participation.statut)}
                     onChange={(e) =>
                       updateParticipation(index, { statut: e.target.value as PrepaPresenceStatut })
                     }

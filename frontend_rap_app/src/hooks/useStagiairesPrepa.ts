@@ -44,12 +44,13 @@ function normalizeListResponse<T>(payload: unknown) {
 export interface StagiairePrepaFilters {
   _refresh?: number;
   search?: string;
+  annee?: number;
   centre?: number;
-  statut_parcours_calcule?: string;
+  departement?: string;
+  statut_parcours_courant?: string;
   atelier_en_cours?: string;
-  prochain_atelier_attendu?: string;
+  prochain_etape?: string;
   orientation_finale?: string;
-  pilotage?: string;
   date_ic_min?: string;
   date_ic_max?: string;
   prepa_origine?: number;

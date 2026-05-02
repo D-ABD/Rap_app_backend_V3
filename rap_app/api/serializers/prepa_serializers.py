@@ -6,6 +6,20 @@ from rest_framework import serializers
 
 from ...models.centres import Centre
 from ...models.prepa import Prepa, PrepaPresenceStatut, PrepaStagiaireParticipation, StagiairePrepa
+from ...services.prepa_parcours import (
+    ETAPE_BILAN,
+    StatutParcoursCourant,
+    build_historique_ateliers,
+    coerce_presence_statut_for_write,
+    compute_action_suivante_recommandee,
+    compute_date_entree_calculee,
+    compute_date_fin_calculee,
+    compute_derniere_etape,
+    compute_derniere_presence_reelle,
+    compute_statut_parcours_courant,
+    derive_issue_bilan_from_orientation,
+    has_at1_present_ever,
+)
 from .rich_text_utils import sanitize_rich_text
 
 
@@ -91,6 +105,8 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     Sérialiseur complet du suivi nominatif des stagiaires Prépa.
     """
 
+    PROCHAIN_ATELIER_PREVU_CHOICES = [*Prepa.TypePrepa.choices, (ETAPE_BILAN, "Bilan")]
+
     centre = PrepaCentreLightSerializer(read_only=True)
     centre_id = serializers.PrimaryKeyRelatedField(
         queryset=Centre.objects.all(),
@@ -109,6 +125,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     centre_afpa_cible_nom = serializers.CharField(source="centre_afpa_cible.nom", read_only=True)
+    centre_afpa_cible_texte = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     prepa_origine_id = serializers.PrimaryKeyRelatedField(
         queryset=Prepa.objects.select_related("centre").all(),
         source="prepa_origine",
@@ -116,11 +133,9 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    prepa_origine_label = serializers.SerializerMethodField()
     date_ic = serializers.SerializerMethodField()
     statut_parcours_display = serializers.CharField(source="get_statut_parcours_display", read_only=True)
-    statut_parcours_calcule = serializers.SerializerMethodField()
-    statut_parcours_calcule_display = serializers.SerializerMethodField()
-    statut_positionnement_display = serializers.CharField(source="get_statut_positionnement_display", read_only=True)
     orientation_finale_display = serializers.CharField(source="get_orientation_finale_display", read_only=True)
     ateliers_realises_count = serializers.SerializerMethodField()
     ateliers_realises_labels = serializers.SerializerMethodField()
@@ -133,14 +148,30 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     dernier_statut_participation = serializers.SerializerMethodField()
     dernier_statut_participation_display = serializers.SerializerMethodField()
     dernier_statut_participation_liberant = serializers.SerializerMethodField()
+    prochain_atelier_prevu = serializers.ChoiceField(
+        choices=PROCHAIN_ATELIER_PREVU_CHOICES,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
+    prochain_etape = serializers.SerializerMethodField()
+    prochain_etape_display = serializers.SerializerMethodField()
     prochain_atelier_attendu = serializers.SerializerMethodField()
     prochain_atelier_attendu_display = serializers.SerializerMethodField()
-    prochain_atelier_prevu_display = serializers.CharField(source="get_prochain_atelier_prevu_display", read_only=True)
+    prochain_atelier_prevu_display = serializers.SerializerMethodField()
     est_oriente_afpa = serializers.SerializerMethodField()
     est_oriente_vers_autre_centre_afpa = serializers.SerializerMethodField()
     est_en_attente_entree = serializers.SerializerMethodField()
     est_a_integrer_atelier_1 = serializers.SerializerMethodField()
     est_en_attente_prochain_atelier = serializers.SerializerMethodField()
+    statut_parcours_courant = serializers.SerializerMethodField()
+    statut_parcours_courant_display = serializers.SerializerMethodField()
+    derniere_presence_reelle = serializers.SerializerMethodField()
+    derniere_etape = serializers.SerializerMethodField()
+    date_entree_calculee = serializers.SerializerMethodField()
+    date_fin_calculee = serializers.SerializerMethodField()
+    action_suivante_recommandee = serializers.SerializerMethodField()
+    historique_ateliers = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -149,6 +180,7 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "id",
             "is_active",
             "prepa_origine_id",
+            "prepa_origine_label",
             "date_ic",
             "centre",
             "centre_id",
@@ -156,34 +188,37 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "centre_afpa_cible",
             "centre_afpa_cible_id",
             "centre_afpa_cible_nom",
+            "centre_afpa_cible_texte",
             "nom",
             "prenom",
             "telephone",
             "email",
             "statut_parcours",
             "statut_parcours_display",
-            "statut_parcours_calcule",
-            "statut_parcours_calcule_display",
             "prochain_atelier_prevu",
             "prochain_atelier_prevu_display",
+            "prochain_etape",
+            "prochain_etape_display",
             "prochain_atelier_attendu",
             "prochain_atelier_attendu_display",
-            "statut_positionnement",
-            "statut_positionnement_display",
             "orientation_finale",
             "orientation_finale_display",
             "formation_afpa_cible",
-            "date_orientation",
-            "entree_formation_confirmee",
             "est_oriente_afpa",
             "est_oriente_vers_autre_centre_afpa",
             "est_en_attente_entree",
             "est_a_integrer_atelier_1",
             "est_en_attente_prochain_atelier",
-            "date_entree_parcours",
-            "date_sortie_parcours",
+            "date_entree_calculee",
+            "date_fin_calculee",
             "commentaire_suivi",
-            "motif_abandon",
+            "date_bilan",
+            "statut_parcours_courant",
+            "statut_parcours_courant_display",
+            "derniere_presence_reelle",
+            "derniere_etape",
+            "action_suivante_recommandee",
+            "historique_ateliers",
             "atelier_1_realise",
             "atelier_2_realise",
             "atelier_3_realise",
@@ -220,15 +255,15 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "created_by",
             "updated_by",
             "date_ic",
+            "prepa_origine_label",
             "centre_nom",
             "centre_afpa_cible_nom",
             "statut_parcours_display",
-            "statut_parcours_calcule",
-            "statut_parcours_calcule_display",
             "prochain_atelier_prevu_display",
+            "prochain_etape",
+            "prochain_etape_display",
             "prochain_atelier_attendu",
             "prochain_atelier_attendu_display",
-            "statut_positionnement_display",
             "orientation_finale_display",
             "est_oriente_afpa",
             "est_oriente_vers_autre_centre_afpa",
@@ -246,7 +281,28 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             "dernier_statut_participation",
             "dernier_statut_participation_display",
             "dernier_statut_participation_liberant",
+            "statut_parcours_courant",
+            "statut_parcours_courant_display",
+            "derniere_presence_reelle",
+            "derniere_etape",
+            "date_entree_calculee",
+            "date_fin_calculee",
+            "action_suivante_recommandee",
+            "historique_ateliers",
         ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prepa_origine_label(self, obj) -> str | None:
+        prepa = getattr(obj, "prepa_origine", None)
+        if not prepa:
+            return None
+        if prepa.type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE:
+            centre_nom = getattr(getattr(prepa, "centre", None), "nom", None)
+            return f"IC du {prepa.date_prepa:%d/%m/%Y}" + (f" - {centre_nom}" if centre_nom else "")
+        centre_nom = getattr(getattr(prepa, "centre", None), "nom", None)
+        return f"{prepa.get_type_prepa_display()} du {prepa.date_prepa:%d/%m/%Y}" + (
+            f" - {centre_nom}" if centre_nom else ""
+        )
 
     @extend_schema_field(serializers.DateField(allow_null=True))
     def get_date_ic(self, obj):
@@ -305,13 +361,22 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_dernier_statut_participation_liberant(self, obj) -> bool:
         return obj.dernier_statut_participation_liberant
 
-    @extend_schema_field(serializers.CharField())
-    def get_statut_parcours_calcule(self, obj) -> str:
-        return obj.statut_parcours_calcule
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prochain_atelier_prevu_display(self, obj) -> str | None:
+        value = getattr(obj, "prochain_atelier_prevu", None)
+        if not value:
+            return None
+        if value == ETAPE_BILAN:
+            return "Bilan"
+        return dict(Prepa.TypePrepa.choices).get(value, value)
 
-    @extend_schema_field(serializers.CharField())
-    def get_statut_parcours_calcule_display(self, obj) -> str:
-        return obj.get_statut_parcours_calcule_display()
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prochain_etape(self, obj) -> str | None:
+        return obj.prochain_atelier_attendu
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_prochain_etape_display(self, obj) -> str | None:
+        return obj.prochain_atelier_attendu_label
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_prochain_atelier_attendu(self, obj) -> str | None:
@@ -341,31 +406,78 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
     def get_est_en_attente_prochain_atelier(self, obj) -> bool:
         return obj.est_en_attente_prochain_atelier
 
+    @extend_schema_field(serializers.CharField())
+    def get_statut_parcours_courant(self, obj) -> str:
+        return compute_statut_parcours_courant(obj)
+
+    @extend_schema_field(serializers.CharField())
+    def get_statut_parcours_courant_display(self, obj) -> str:
+        return StatutParcoursCourant(compute_statut_parcours_courant(obj)).label
+
+    @extend_schema_field(serializers.DictField(child=serializers.CharField(allow_null=True), allow_null=True))
+    def get_derniere_presence_reelle(self, obj) -> dict | None:
+        return compute_derniere_presence_reelle(obj)
+
+    @extend_schema_field(serializers.DictField(child=serializers.CharField(allow_null=True), allow_null=True))
+    def get_derniere_etape(self, obj) -> dict | None:
+        return compute_derniere_etape(obj)
+
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_date_entree_calculee(self, obj) -> str | None:
+        return compute_date_entree_calculee(obj)
+
+    @extend_schema_field(serializers.DateField(allow_null=True))
+    def get_date_fin_calculee(self, obj) -> str | None:
+        return compute_date_fin_calculee(obj)
+
+    @extend_schema_field(serializers.DictField(child=serializers.CharField()))
+    def get_action_suivante_recommandee(self, obj) -> dict[str, str]:
+        return compute_action_suivante_recommandee(obj)
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_historique_ateliers(self, obj) -> list[dict]:
+        return build_historique_ateliers(obj)
+
     def validate(self, attrs):
         attrs = super().validate(attrs)
         centre = attrs.get("centre", getattr(self.instance, "centre", None))
         duplicate = self._find_duplicate_stagiaire(attrs, centre=centre)
         statut = attrs.get("statut_parcours", getattr(self.instance, "statut_parcours", None))
-        motif = attrs.get("motif_abandon", getattr(self.instance, "motif_abandon", None))
         orientation = attrs.get("orientation_finale", getattr(self.instance, "orientation_finale", None))
         centre_afpa_cible = attrs.get("centre_afpa_cible", getattr(self.instance, "centre_afpa_cible", None))
+        centre_afpa_cible_texte = attrs.get(
+            "centre_afpa_cible_texte", getattr(self.instance, "centre_afpa_cible_texte", None)
+        )
         formation_afpa_cible = attrs.get("formation_afpa_cible", getattr(self.instance, "formation_afpa_cible", None))
-        date_orientation = attrs.get("date_orientation", getattr(self.instance, "date_orientation", None))
+        date_bilan = attrs.get("date_bilan", getattr(self.instance, "date_bilan", None))
         errors = {}
 
-        if statut == StagiairePrepa.StatutParcours.ABANDON and not motif:
-            errors["motif_abandon"] = "Le motif d'abandon est requis quand le statut est Abandon."
+        instance = self.instance
+        new_orientation = attrs.get("orientation_finale", serializers.empty)
+        if new_orientation is not serializers.empty and new_orientation and instance:
+            if instance.orientation_finale != new_orientation:
+                courant = compute_statut_parcours_courant(instance)
+                orientation_msgs = []
+                if courant != StatutParcoursCourant.EN_ATTENTE_BILAN:
+                    orientation_msgs.append(
+                        "L’orientation se renseigne uniquement lorsque le parcours est en attente de bilan."
+                    )
+                if not has_at1_present_ever(instance):
+                    orientation_msgs.append("Un atelier 1 réalisé est requis avant de clôturer le bilan.")
+                if orientation_msgs:
+                    errors["orientation_finale"] = " ".join(orientation_msgs)
+
         if orientation in {
             StagiairePrepa.OrientationFinale.AFPA,
             StagiairePrepa.OrientationFinale.AUTRE_CENTRE_AFPA,
         }:
-            if not centre_afpa_cible:
-                errors["centre_afpa_cible_id"] = "Le centre AFPA cible est requis pour une orientation AFPA."
+            if not centre_afpa_cible and not centre_afpa_cible_texte:
+                errors["centre_afpa_cible_texte"] = "Le centre AFPA cible est requis pour une orientation AFPA."
             if not formation_afpa_cible:
                 errors["formation_afpa_cible"] = "La formation AFPA cible est requise pour une orientation AFPA."
-        if orientation and not date_orientation:
-            errors["date_orientation"] = (
-                "La date d'orientation est requise lorsqu'une orientation finale est renseignée."
+        if orientation and not date_bilan:
+            errors["date_bilan"] = (
+                "La date du bilan est requise lorsqu'une orientation finale est renseignée."
             )
         if duplicate:
             errors["non_field_errors"] = [
@@ -373,6 +485,17 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             ]
         if errors:
             raise serializers.ValidationError(errors)
+
+        if attrs.get("orientation_finale"):
+            derived = derive_issue_bilan_from_orientation(attrs["orientation_finale"])
+            if derived:
+                attrs.setdefault("issue_bilan", derived)
+        if attrs.get("centre_afpa_cible_texte"):
+            attrs["centre_afpa_cible_texte"] = attrs["centre_afpa_cible_texte"].strip()
+        if statut == StagiairePrepa.StatutParcours.ABANDON and attrs.get("date_bilan"):
+            attrs.setdefault("issue_bilan", StagiairePrepa.IssueBilanPrepa.ABANDON)
+        if attrs.get("date_bilan"):
+            attrs["date_sortie_parcours"] = attrs["date_bilan"]
 
         return attrs
 
@@ -672,7 +795,10 @@ class PrepaSerializer(serializers.ModelSerializer):
             attrs["stagiaires_prepa"] = self._normalize_stagiaires(stagiaires)
         if participations is not None:
             attrs["participations_stagiaires_prepa"] = self._normalize_participations(participations)
-            self._validate_participations_uniques(attrs["participations_stagiaires_prepa"])
+            self._validate_participations_uniques(
+                attrs["participations_stagiaires_prepa"],
+                type_prepa=type_prepa,
+            )
 
         if type_prepa == Prepa.TypePrepa.INFO_COLLECTIVE:
             if attrs.get("stagiaires_prepa"):
@@ -721,13 +847,12 @@ class PrepaSerializer(serializers.ModelSerializer):
                     data=stagiaire_data,
                     user=user,
                     default_prepa_origine=instance,
-                    default_date_entree=instance.date_prepa,
+                    default_date_entree=None,
                 )
             else:
                 stagiaire = StagiairePrepa(
                     prepa_origine=instance,
                     centre=instance.centre,
-                    date_entree_parcours=instance.date_prepa,
                     **stagiaire_data,
                 )
                 stagiaire.save(user=user)
@@ -769,7 +894,7 @@ class PrepaSerializer(serializers.ModelSerializer):
                         data=candidat_data,
                         user=user,
                         default_prepa_origine=instance if instance.type_prepa == Prepa.TypePrepa.ATELIER1 else None,
-                        default_date_entree=instance.date_debut_atelier or instance.date_prepa,
+                        default_date_entree=None,
                     )
                 else:
                     stagiaire = StagiairePrepa(
@@ -777,8 +902,6 @@ class PrepaSerializer(serializers.ModelSerializer):
                         centre=instance.centre,
                         **candidat_data,
                     )
-                    if instance.type_prepa == Prepa.TypePrepa.ATELIER1:
-                        stagiaire.date_entree_parcours = instance.date_debut_atelier or instance.date_prepa
                     stagiaire.save(user=user)
             else:
                 for extra_key in ["nom", "prenom", "telephone", "email", "statut_parcours"]:
@@ -924,7 +1047,7 @@ class PrepaSerializer(serializers.ModelSerializer):
             telephone = (participation.get("telephone") or "").strip() or None
             email = (participation.get("email") or "").strip() or None
             statut_parcours = participation.get("statut_parcours") or StagiairePrepa.StatutParcours.EN_ATTENTE
-            statut = participation.get("statut") or PrepaPresenceStatut.INSCRIT
+            statut = coerce_presence_statut_for_write(participation.get("statut") or PrepaPresenceStatut.INSCRIT)
             commentaire = (participation.get("commentaire") or "").strip() or None
 
             if not existing and not any([nom, prenom, telephone, email]):
@@ -954,12 +1077,24 @@ class PrepaSerializer(serializers.ModelSerializer):
 
         return normalized
 
-    def _validate_participations_uniques(self, participations_data) -> None:
-        current_prepa_id = getattr(self.instance, "id", None)
-        active_statuses = PrepaPresenceStatut.active_statuses()
+    def _validate_participations_uniques(self, participations_data, *, type_prepa=None) -> None:
         errors: list[str] = []
         seen_stagiaire_ids: set[int] = set()
         seen_identity_keys: set[tuple[str, str, str | None, str | None]] = set()
+        current_participant_ids: set[int] = set()
+        requires_at1 = type_prepa in {
+            Prepa.TypePrepa.ATELIER2,
+            Prepa.TypePrepa.ATELIER3,
+            Prepa.TypePrepa.ATELIER4,
+            Prepa.TypePrepa.ATELIER5,
+            Prepa.TypePrepa.ATELIER6,
+            Prepa.TypePrepa.AUTRE,
+        }
+
+        if self.instance and self.instance.pk:
+            current_participant_ids = set(
+                self.instance.participations_stagiaires_prepa.values_list("stagiaire_prepa_id", flat=True)
+            )
 
         for participation in participations_data or []:
             stagiaire = participation.get("stagiaire_prepa")
@@ -987,36 +1122,21 @@ class PrepaSerializer(serializers.ModelSerializer):
                         continue
                     seen_identity_keys.add(identity_key)
 
-            if not stagiaire or statut not in active_statuses:
+            if not requires_at1 or not statut:
                 continue
 
-            conflict = (
-                PrepaStagiaireParticipation.objects.filter(
-                    stagiaire_prepa=stagiaire,
-                    statut__in=active_statuses,
-                    prepa__type_prepa__in=[
-                        Prepa.TypePrepa.ATELIER1,
-                        Prepa.TypePrepa.ATELIER2,
-                        Prepa.TypePrepa.ATELIER3,
-                        Prepa.TypePrepa.ATELIER4,
-                        Prepa.TypePrepa.ATELIER5,
-                        Prepa.TypePrepa.ATELIER6,
-                        Prepa.TypePrepa.AUTRE,
-                    ],
+            if stagiaire:
+                if stagiaire.id in current_participant_ids:
+                    continue
+                if not has_at1_present_ever(stagiaire):
+                    errors.append(
+                        f"Inscription impossible : {stagiaire.prenom} {stagiaire.nom} doit commencer le parcours par un Atelier 1."
+                    )
+            else:
+                errors.append(
+                    f"Inscription impossible : {(participation.get('prenom') or '').strip()} "
+                    f"{(participation.get('nom') or '').strip()} doit commencer le parcours par un Atelier 1."
                 )
-                .exclude(prepa_id=current_prepa_id)
-                .select_related("prepa")
-                .order_by("-prepa__date_debut_atelier", "-prepa__date_prepa", "-id")
-                .first()
-            )
-            if not conflict or not conflict.prepa:
-                continue
-
-            date_ref = conflict.prepa.date_debut_atelier or conflict.prepa.date_prepa
-            date_label = f" du {date_ref:%d/%m/%Y}" if date_ref else ""
-            errors.append(
-                f"Inscription impossible : {stagiaire.prenom} {stagiaire.nom} est déjà inscrit à {conflict.prepa.get_type_prepa_display()}{date_label}."
-            )
 
         if errors:
             raise serializers.ValidationError({"participations_prepa": errors})

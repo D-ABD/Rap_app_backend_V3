@@ -81,7 +81,7 @@ Type de contrat du stagiaire, Contrat signé, numero osia, permis, rqth, et form
 --------------------------------------------------------------------
  
 
-prepa competences. besoin d'identifier les personnes qui passent sur des formations AFPA. KPI..... 
+
 --------------------------------------------------------------------
  
 git add .

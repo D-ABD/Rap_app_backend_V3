@@ -280,6 +280,34 @@ class PrepaStatsViewSetTests(AuthenticatedTestCase):
         self.assertEqual(payload["results"][0]["nom"], attendu.nom)
         self.assertNotEqual(payload["results"][0]["nom"], autre.nom)
 
+    def test_stagiaires_prepa_can_be_filtered_by_prochain_etape_alias(self):
+        attendu = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Alias",
+            prenom="Lea",
+            atelier_1_realise=True,
+            date_entree_parcours=date(2026, 4, 1),
+            prochain_atelier_prevu=Prepa.TypePrepa.ATELIER4,
+            created_by=self.admin,
+        )
+        autre = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Autre",
+            prenom="Noe",
+            atelier_1_realise=True,
+            date_entree_parcours=date(2026, 4, 1),
+            prochain_atelier_prevu=Prepa.TypePrepa.ATELIER2,
+            created_by=self.admin,
+        )
+
+        response = self.client.get("/api/stagiaires-prepa/?prochain_etape=atelier_4")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.data.get("data", response.data)
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["nom"], attendu.nom)
+        self.assertNotEqual(payload["results"][0]["nom"], autre.nom)
+
     def test_stagiaires_prepa_prochain_atelier_6_excludes_parcours_termines(self):
         attendu = StagiairePrepa.objects.create(
             centre=self.centre,
@@ -307,3 +335,52 @@ class PrepaStatsViewSetTests(AuthenticatedTestCase):
         noms = {item["nom"] for item in payload["results"]}
         self.assertIn(attendu.nom, noms)
         self.assertNotIn(termine.nom, noms)
+
+    def test_stagiaires_prepa_prochain_etape_bilan_returns_attente_bilan(self):
+        attendu_bilan = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Bilan",
+            prenom="Nina",
+            created_by=self.admin,
+        )
+        at1 = Prepa.objects.create(
+            type_prepa=Prepa.TypePrepa.ATELIER1,
+            date_prepa=date(2026, 4, 1),
+            centre=self.centre,
+            created_by=self.admin,
+        )
+        at6 = Prepa.objects.create(
+            type_prepa=Prepa.TypePrepa.ATELIER6,
+            date_prepa=date(2026, 4, 20),
+            centre=self.centre,
+            created_by=self.admin,
+        )
+        PrepaStagiaireParticipation.objects.create(
+            prepa=at1,
+            stagiaire_prepa=attendu_bilan,
+            statut=PrepaPresenceStatut.PRESENT,
+            created_by=self.admin,
+        )
+        PrepaStagiaireParticipation.objects.create(
+            prepa=at6,
+            stagiaire_prepa=attendu_bilan,
+            statut=PrepaPresenceStatut.PRESENT,
+            created_by=self.admin,
+        )
+        autre = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Suite",
+            prenom="Luca",
+            atelier_1_realise=True,
+            date_entree_parcours=date(2026, 4, 1),
+            prochain_atelier_prevu=Prepa.TypePrepa.ATELIER3,
+            created_by=self.admin,
+        )
+
+        response = self.client.get("/api/stagiaires-prepa/?prochain_etape=bilan")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.data.get("data", response.data)
+        noms = {item["nom"] for item in payload["results"]}
+        self.assertIn(attendu_bilan.nom, noms)
+        self.assertNotIn(autre.nom, noms)

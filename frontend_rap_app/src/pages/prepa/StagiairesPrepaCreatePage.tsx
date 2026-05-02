@@ -35,10 +35,10 @@ export default function StagiairesPrepaCreatePage() {
       const err = e as AxiosError<unknown>;
       const parsed = err.response?.data
         ? extractPrepaApiMessage(err.response.data, {
-            fieldLabels: {
-              motif_abandon: "Motif d'abandon",
+          fieldLabels: {
               prepa_origine_id: "Prépa d'origine",
               centre_id: "Centre",
+              centre_afpa_cible_texte: "Centre AFPA cible",
               non_field_errors: "Validation",
             },
           })

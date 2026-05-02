@@ -39,6 +39,37 @@ export default defineConfig(({ mode }) => {
         transformMixedEsModules: true,
         include: [/node_modules/],
       },
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return;
+
+            if (id.includes("/recharts/") || id.includes("/d3-")) {
+              return "vendor-charts";
+            }
+
+            if (
+              id.includes("/tiptap/") ||
+              id.includes("/@tiptap/") ||
+              id.includes("/prosemirror/") ||
+              id.includes("/quill/")
+            ) {
+              return "vendor-editor";
+            }
+
+            if (
+              id.includes("/axios/") ||
+              id.includes("/dayjs/") ||
+              id.includes("/date-fns/") ||
+              id.includes("/xlsx/") ||
+              id.includes("/jspdf/") ||
+              id.includes("/html2canvas/")
+            ) {
+              return "vendor-utils";
+            }
+          },
+        },
+      },
     },
     optimizeDeps: {
       esbuildOptions: {

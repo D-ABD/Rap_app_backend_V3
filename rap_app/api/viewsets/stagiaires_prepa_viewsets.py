@@ -3,6 +3,7 @@
 from io import BytesIO
 
 from django.db.models import Q
+from django.utils.html import strip_tags
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.utils.timezone import localdate
@@ -15,7 +16,18 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from ...models.centres import Centre
-from ...models.prepa import Prepa, PrepaPresenceStatut, StagiairePrepa
+from ...models.prepa import IssueBilanPrepa, Prepa, PrepaPresenceStatut, StagiairePrepa
+from ...services.prepa_parcours import (
+    ETAPE_BILAN,
+    StatutParcoursCourant,
+    compute_action_suivante_recommandee,
+    compute_date_entree_calculee,
+    compute_date_fin_calculee,
+    compute_derniere_etape,
+    compute_derniere_presence_reelle,
+    compute_statut_parcours_courant,
+    prefetch_parcours_dependencies,
+)
 from ..mixins import HardDeleteArchivedMixin
 from ..permissions import IsPrepaStaffOrAbove
 from ..roles import is_admin_like, is_candidate, is_prepa_staff, is_staff_read, is_staff_standard
@@ -123,6 +135,7 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
 
         search = params.get("search")
         centre = params.get("centre")
+        departement = params.get("departement")
         statut = params.get("statut_parcours")
         prepa_origine = params.get("prepa_origine")
         prepa_participation = params.get("prepa_participation")
@@ -134,8 +147,9 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         entree_formation_confirmee = params.get("entree_formation_confirmee")
         statut_parcours_calcule = params.get("statut_parcours_calcule")
         atelier_en_cours = params.get("atelier_en_cours")
-        prochain_atelier_attendu = params.get("prochain_atelier_attendu")
+        prochain_atelier_attendu = params.get("prochain_etape") or params.get("prochain_atelier_attendu")
         pilotage = params.get("pilotage")
+        statut_parcours_courant = params.get("statut_parcours_courant")
         date_ic_min = params.get("date_ic_min")
         date_ic_max = params.get("date_ic_max")
         ordering = params.get("ordering") or "nom"
@@ -150,6 +164,8 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             )
         if centre:
             qs = qs.filter(centre_id=centre)
+        if departement:
+            qs = qs.filter(centre__code_postal__startswith=str(departement).strip())
         if statut:
             qs = qs.filter(statut_parcours=statut)
         if prepa_origine:
@@ -205,7 +221,18 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             qs = qs.exclude(statut_parcours=StagiairePrepa.StatutParcours.ABANDON).exclude(
                 Q(atelier_6_realise=True) | Q(date_sortie_parcours__isnull=False)
             )
-            if prochain_atelier_attendu == Prepa.TypePrepa.ATELIER1:
+            if prochain_atelier_attendu == ETAPE_BILAN:
+                ids_all = list(qs.values_list("pk", flat=True))
+                matched: list[int] = []
+                chunk_size = 400
+                for i in range(0, len(ids_all), chunk_size):
+                    chunk = ids_all[i : i + chunk_size]
+                    rows = prefetch_parcours_dependencies(StagiairePrepa.objects.filter(pk__in=chunk))
+                    for row in rows:
+                        if compute_statut_parcours_courant(row) == StatutParcoursCourant.EN_ATTENTE_BILAN:
+                            matched.append(row.pk)
+                qs = qs.filter(pk__in=matched)
+            elif prochain_atelier_attendu == Prepa.TypePrepa.ATELIER1:
                 qs = qs.filter(atelier_1_realise=False, date_entree_parcours__isnull=True)
             elif prochain_atelier_attendu == Prepa.TypePrepa.ATELIER6:
                 qs = (
@@ -260,6 +287,22 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             )
         elif pilotage == "abandon":
             qs = qs.filter(statut_parcours=StagiairePrepa.StatutParcours.ABANDON)
+        if statut_parcours_courant:
+            allowed = {choice.value for choice in StatutParcoursCourant}
+            if statut_parcours_courant not in allowed:
+                raise ValidationError(
+                    {"statut_parcours_courant": [f"Valeur inconnue : doit être parmi {sorted(allowed)}."]}
+                )
+            ids_all = list(qs.values_list("pk", flat=True))
+            matched: list[int] = []
+            chunk_size = 400
+            for i in range(0, len(ids_all), chunk_size):
+                chunk = ids_all[i : i + chunk_size]
+                rows = prefetch_parcours_dependencies(StagiairePrepa.objects.filter(pk__in=chunk))
+                for row in rows:
+                    if compute_statut_parcours_courant(row) == statut_parcours_courant:
+                        matched.append(row.pk)
+            qs = qs.filter(pk__in=matched)
         if str(entree_formation_confirmee).lower() in truthy:
             qs = qs.filter(entree_formation_confirmee=True)
         elif str(entree_formation_confirmee).lower() in {"0", "false", "no", "off"}:
@@ -543,6 +586,7 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         annees = sorted([a for a in annees if a], reverse=True)
         prepas_origine = (
             self._scope_qs(Prepa.objects.select_related("centre").all())
+            .filter(type_prepa=Prepa.TypePrepa.INFO_COLLECTIVE)
             .order_by("-date_prepa", "-id")[:200]
         )
 
@@ -561,6 +605,15 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                 )
             )
         ]
+        prochaines_etapes = [
+            {"value": Prepa.TypePrepa.ATELIER1, "label": "Atelier 1"},
+            {"value": Prepa.TypePrepa.ATELIER2, "label": "Atelier 2"},
+            {"value": Prepa.TypePrepa.ATELIER3, "label": "Atelier 3"},
+            {"value": Prepa.TypePrepa.ATELIER4, "label": "Atelier 4"},
+            {"value": Prepa.TypePrepa.ATELIER5, "label": "Atelier 5"},
+            {"value": Prepa.TypePrepa.ATELIER6, "label": "Atelier 6"},
+            {"value": ETAPE_BILAN, "label": "Bilan"},
+        ]
 
         return Response(
             {
@@ -574,6 +627,14 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     "statut_parcours": [
                         {"value": value, "label": label} for value, label in StagiairePrepa.StatutParcours.choices
                     ],
+                    "statut_formulaire": [
+                        {"value": "en_attente", "label": "En attente de parcours"},
+                        {"value": "en_parcours", "label": "En parcours"},
+                        {"value": "parcours_termine", "label": "Parcours terminé"},
+                        {"value": "abandon", "label": "Abandon"},
+                        {"value": "en_attente_prochain_atelier", "label": "En attente prochain atelier"},
+                        {"value": "a_repositionner", "label": "À repositionner"},
+                    ],
                     "statut_positionnement": [
                         {"value": value, "label": label}
                         for value, label in StagiairePrepa.StatutPositionnement.choices
@@ -581,7 +642,14 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     "orientation_finale": [
                         {"value": value, "label": label} for value, label in StagiairePrepa.OrientationFinale.choices
                     ],
+                    "statut_parcours_courant": [
+                        {"value": value, "label": label} for value, label in StatutParcoursCourant.choices
+                    ],
+                    "issue_bilan": [
+                        {"value": value, "label": label} for value, label in IssueBilanPrepa.choices
+                    ],
                     "type_atelier": available_type_ateliers,
+                    "prochain_etape": prochaines_etapes,
                     "pilotage": [
                         {"value": "attente_entree", "label": "En attente d'entrée"},
                         {"value": "a_integrer_atelier_1", "label": "À intégrer atelier 1"},
@@ -598,7 +666,7 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     "prepas_origine": [
                         {
                             "id": p.id,
-                            "label": f"{p.get_type_prepa_display()} du {p.date_prepa:%d/%m/%Y}"
+                            "label": f"IC du {p.date_prepa:%d/%m/%Y}"
                             + (f" - {p.centre.nom}" if p.centre else ""),
                         }
                         for p in prepas_origine
@@ -624,6 +692,7 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     **synthese,
                     "filtres": {
                         "centre": request.query_params.get("centre"),
+                        "departement": request.query_params.get("departement"),
                         "annee": request.query_params.get("annee"),
                         "prepa_origine": request.query_params.get("prepa_origine"),
                         "prepa_participation": request.query_params.get("prepa_participation"),
@@ -649,6 +718,19 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         wb = Workbook()
         ws = wb.active
         ws.title = "Stagiaires Prepa"
+
+        title = "Export stagiaires Prépa"
+        ws.merge_cells("A1:S1")
+        ws["A1"] = title
+        ws["A1"].font = Font(bold=True, size=14)
+        ws["A1"].alignment = Alignment(horizontal="center")
+
+        filter_summary = self._build_export_filter_summary(request)
+        ws.merge_cells("A2:S2")
+        ws["A2"] = filter_summary
+        ws["A2"].alignment = Alignment(horizontal="left")
+
+        ws.append([])
         ws.append(
             [
                 "Nom",
@@ -656,25 +738,27 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                 "Téléphone",
                 "Email",
                 "Centre",
-                "Prépa d'origine",
-                "Statut",
-                "Statut calculé",
-                "Positionnement",
-                "Prochain atelier attendu",
+                "IC d'origine",
+                "Statut courant",
+                "Action suggérée",
+                "Prochaine étape",
+                "Dernière étape",
+                "Dernière présence",
                 "Orientation finale",
                 "Centre AFPA cible",
                 "Formation AFPA cible",
-                "Date orientation",
-                "Entrée AFPA confirmée",
+                "Date bilan",
+                "Entrée parcours",
+                "Fin parcours",
                 "Ateliers réalisés",
-                "Dernier atelier",
-                "Date d'entrée",
-                "Date de sortie",
-                "Motif abandon",
+                "Commentaire",
             ]
         )
 
         for obj in qs:
+            derniere_etape = compute_derniere_etape(obj)
+            derniere_presence = compute_derniere_presence_reelle(obj)
+            action = compute_action_suivante_recommandee(obj)
             ws.append(
                 [
                     obj.nom,
@@ -682,25 +766,29 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     obj.telephone or "",
                     obj.email or "",
                     getattr(obj.centre, "nom", ""),
-                    str(obj.prepa_origine) if obj.prepa_origine else "",
-                    obj.get_statut_parcours_display(),
-                    obj.get_statut_parcours_calcule_display(),
-                    obj.get_statut_positionnement_display() if obj.statut_positionnement else "",
-                    obj.prochain_atelier_attendu_label or "",
+                    obj.date_ic.strftime("%d/%m/%Y") if obj.date_ic else "",
+                    StatutParcoursCourant(compute_statut_parcours_courant(obj)).label,
+                    action.get("label", ""),
+                    obj.prochain_atelier_attendu_label
+                    or (
+                        "Bilan"
+                        if obj.prochain_atelier_prevu == ETAPE_BILAN
+                        else dict(Prepa.TypePrepa.choices).get(obj.prochain_atelier_prevu, obj.prochain_atelier_prevu or "")
+                    ),
+                    self._format_etape_export(derniere_etape),
+                    self._format_presence_export(derniere_presence),
                     obj.get_orientation_finale_display() if obj.orientation_finale else "",
-                    getattr(obj.centre_afpa_cible, "nom", ""),
+                    obj.centre_afpa_cible_texte or getattr(obj.centre_afpa_cible, "nom", ""),
                     obj.formation_afpa_cible or "",
-                    obj.date_orientation.strftime("%d/%m/%Y") if obj.date_orientation else "",
-                    "Oui" if obj.entree_formation_confirmee else "Non",
+                    obj.date_bilan.strftime("%d/%m/%Y") if obj.date_bilan else "",
+                    compute_date_entree_calculee(obj) or "",
+                    compute_date_fin_calculee(obj) or "",
                     ", ".join(obj.ateliers_realises_labels),
-                    obj.dernier_atelier_label or "",
-                    obj.date_entree_parcours.strftime("%d/%m/%Y") if obj.date_entree_parcours else "",
-                    obj.date_sortie_parcours.strftime("%d/%m/%Y") if obj.date_sortie_parcours else "",
-                    obj.motif_abandon or "",
+                    self._plain_comment(obj.commentaire_suivi),
                 ]
             )
 
-        self._style_sheet(ws)
+        self._style_sheet(ws, header_row=4, freeze_cell="A5")
         return self._xlsx_response(wb, "stagiaires_prepa.xlsx")
 
     @action(detail=False, methods=["get", "post"], url_path="export-emargement-xlsx")
@@ -780,8 +868,77 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         self._style_sheet(ws, header_row=3)
         return self._xlsx_response(wb, "stagiaires_prepa_presence.xlsx")
 
-    def _style_sheet(self, ws, header_row=1):
+    def _build_export_filter_summary(self, request) -> str:
+        params = request.query_params
+        chunks: list[str] = []
+
+        annee = params.get("annee")
+        if annee:
+            chunks.append(f"Année : {annee}")
+
+        centre = params.get("centre")
+        if centre:
+            centre_label = centre
+            try:
+                centre_obj = Centre.objects.filter(pk=int(str(centre).strip())).only("nom").first()
+                if centre_obj:
+                    centre_label = centre_obj.nom
+            except (TypeError, ValueError):
+                pass
+            chunks.append(f"Centre : {centre_label}")
+
+        departement = params.get("departement")
+        if departement:
+            chunks.append(f"Département : {departement}")
+
+        statut = params.get("statut_parcours_courant")
+        if statut:
+            try:
+                statut_label = StatutParcoursCourant(statut).label
+            except ValueError:
+                statut_label = statut
+            chunks.append(f"Statut : {statut_label}")
+
+        search = params.get("search")
+        if search:
+            chunks.append(f"Recherche : {search}")
+
+        return "Filtres : " + (" | ".join(chunks) if chunks else "aucun")
+
+    def _format_etape_export(self, payload: dict | None) -> str:
+        if not payload:
+            return ""
+        label = payload.get("label") or payload.get("value") or ""
+        step_date = payload.get("date")
+        if label and step_date:
+            return f"{label} ({self._format_date_value(step_date)})"
+        return str(label)
+
+    def _format_presence_export(self, payload: dict | None) -> str:
+        if not payload:
+            return ""
+        label = payload.get("type_prepa_display") or payload.get("type_prepa") or ""
+        step_date = payload.get("date")
+        if label and step_date:
+            return f"{label} ({self._format_date_value(step_date)})"
+        return str(label)
+
+    def _format_date_value(self, value: str | None) -> str:
+        if not value:
+            return ""
+        parts = str(value).split("-")
+        if len(parts) == 3:
+            return f"{parts[2]}/{parts[1]}/{parts[0]}"
+        return str(value)
+
+    def _plain_comment(self, value: str | None) -> str:
+        if not value:
+            return ""
+        return " ".join(strip_tags(str(value).replace("<br>", " ").replace("<br/>", " ").replace("<br />", " ")).split())
+
+    def _style_sheet(self, ws, header_row=1, freeze_cell: str | None = None):
         fill = PatternFill("solid", fgColor="DCE6F1")
+        title_fill = PatternFill("solid", fgColor="EEF4FB")
         border = Border(
             left=Side(style="thin", color="CCCCCC"),
             right=Side(style="thin", color="CCCCCC"),
@@ -795,17 +952,27 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
             cell.alignment = Alignment(horizontal="center")
             cell.border = border
 
+        if header_row > 1:
+            for row_index in range(1, header_row):
+                for cell in ws[row_index]:
+                    cell.fill = title_fill
+                    cell.alignment = Alignment(vertical="center", wrap_text=True)
+
         for row in ws.iter_rows(min_row=header_row + 1):
             for cell in row:
                 cell.border = border
-                cell.alignment = Alignment(vertical="top")
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
 
         for col in ws.columns:
             if not col:
                 continue
             letter = get_column_letter(col[0].column)
             max_len = max((len(str(c.value)) for c in col if c.value), default=10)
-            ws.column_dimensions[letter].width = min(max_len + 2, 40)
+            ws.column_dimensions[letter].width = min(max_len + 3, 42)
+
+        ws.auto_filter.ref = ws.dimensions
+        if freeze_cell:
+            ws.freeze_panes = freeze_cell
 
     def _xlsx_response(self, wb, filename):
         buf = BytesIO()

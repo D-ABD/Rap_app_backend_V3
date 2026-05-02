@@ -24,6 +24,7 @@ import { Commentaire } from "src/types/commentaire";
 import { nsfSpecialiteLabel } from "../../constants/nsfOptions";
 import type { AppTheme } from "src/theme";
 import type { Formation } from "../../types/formation";
+import CommentaireContent from "../commentaires/CommentaireContent";
 
 /* ---------- Types ---------- */
 type Props = {
@@ -41,33 +42,6 @@ const dtfFR =
         timeStyle: "short",
       })
     : undefined;
-
-// 🔒 Désinfection minimale sans dépendance
-function sanitizeHTML(input: string): string {
-  const allowedTags = ["b", "i", "em", "strong", "u", "p", "span", "br"];
-  const allowedAttrs = ["style"];
-
-  const div = document.createElement("div");
-  div.innerHTML = input;
-
-  const elements = div.getElementsByTagName("*");
-  for (let i = elements.length - 1; i >= 0; i--) {
-    const el = elements[i];
-    if (!allowedTags.includes(el.tagName.toLowerCase())) {
-      el.remove();
-      continue;
-    }
-
-    // Supprime les attributs non autorisés
-    for (const attr of Array.from(el.attributes)) {
-      if (!allowedAttrs.includes(attr.name.toLowerCase())) {
-        el.removeAttribute(attr.name);
-      }
-    }
-  }
-
-  return div.innerHTML;
-}
 
 const fmt = (iso?: string | null): string => {
   if (!iso) return "—";
@@ -487,16 +461,8 @@ export default function FormationDetailModal({
                             🗒️ Dernier commentaire :
                           </Typography>
 
-                          <Box
-                            sx={{
-                              "& p": { m: 0 },
-                              "& span": { borderRadius: "2px", padding: "1px 3px" },
-                            }}
-                            dangerouslySetInnerHTML={{
-                              __html: sanitizeHTML(
-                                dernier.contenu ?? displayFormation.dernier_commentaire ?? ""
-                              ),
-                            }}
+                          <CommentaireContent
+                            html={dernier.contenu ?? displayFormation.dernier_commentaire ?? "<em>—</em>"}
                           />
 
                           <Typography

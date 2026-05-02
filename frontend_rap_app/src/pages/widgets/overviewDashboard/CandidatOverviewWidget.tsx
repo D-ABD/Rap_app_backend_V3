@@ -63,85 +63,120 @@ export default function CandidatOverviewWidget({
   const theme = useTheme<AppTheme>();
   const [filters, setFilters] = React.useState<CandidatFilters>(initialFilters ?? {});
 
+  const centreFilters = React.useMemo(
+    () => ({
+      ...filters,
+      centre: undefined,
+    }),
+    [filters]
+  );
+  const departementFilters = React.useMemo(
+    () => ({
+      ...filters,
+      departement: undefined,
+    }),
+    [filters]
+  );
+
   const { data, isLoading, error } = useCandidatOverview(filters);
-  const { data: centresGrouped, isLoading: loadingCentres } = useCandidatGrouped("centre", {
-    ...filters,
-    centre: undefined,
-  });
-  const { data: depsGrouped } = useCandidatGrouped("departement", {
-    ...filters,
-    departement: undefined,
-  });
+  const { data: centresGrouped, isLoading: loadingCentres } = useCandidatGrouped(
+    "centre",
+    centreFilters
+  );
+  const { data: depsGrouped } = useCandidatGrouped(
+    "departement",
+    departementFilters
+  );
 
   // ✅ Options filtres
-  const centreOptions =
-    centresGrouped?.results
-      ?.map((r: CandidatGroupRow) => {
-        const id =
-          r.formation__centre_id ??
-          (typeof r.group_key === "string" || typeof r.group_key === "number"
-            ? r.group_key
-            : undefined);
-        return id != null
-          ? { id: String(id), label: resolveCandidatGroupLabel(r, "centre") }
-          : null;
-      })
-      .filter((o): o is { id: string; label: string } => o !== null) ?? [];
+  const centreOptions = React.useMemo(
+    () =>
+      centresGrouped?.results
+        ?.map((r: CandidatGroupRow) => {
+          const id =
+            r.formation__centre_id ??
+            (typeof r.group_key === "string" || typeof r.group_key === "number"
+              ? r.group_key
+              : undefined);
+          return id != null
+            ? { id: String(id), label: resolveCandidatGroupLabel(r, "centre") }
+            : null;
+        })
+        .filter((o): o is { id: string; label: string } => o !== null) ?? [],
+    [centresGrouped]
+  );
 
-  const departementOptions =
-    depsGrouped?.results
-      ?.map((r: CandidatGroupRow) => {
-        const code =
-          (typeof r.departement === "string" && r.departement) ||
-          (typeof r.group_key === "string" ? r.group_key : "");
-        return code
-          ? {
-              code: String(code),
-              label: resolveCandidatGroupLabel(r, "departement"),
-            }
-          : null;
-      })
-      .filter((o): o is { code: string; label: string } => o !== null) ?? [];
+  const departementOptions = React.useMemo(
+    () =>
+      depsGrouped?.results
+        ?.map((r: CandidatGroupRow) => {
+          const code =
+            (typeof r.departement === "string" && r.departement) ||
+            (typeof r.group_key === "string" ? r.group_key : "");
+          return code
+            ? {
+                code: String(code),
+                label: resolveCandidatGroupLabel(r, "departement"),
+              }
+            : null;
+        })
+        .filter((o): o is { code: string; label: string } => o !== null) ?? [],
+    [depsGrouped]
+  );
 
   const k = data?.kpis;
 
-  const statusData =
-    data?.repartition.par_statut_metier
-      ?.map((item) => {
-        const value = Number(item.count) || 0;
-        if (value <= 0) return null;
+  const statusData = React.useMemo(
+    () =>
+      data?.repartition.par_statut_metier
+        ?.map((item) => {
+          const value = Number(item.count) || 0;
+          if (value <= 0) return null;
 
-        const key = item.statut_metier ?? "candidat";
-        return {
-          name: getCandidatBusinessStatusLabelFromValue(key),
-          value,
-          color: semanticStatusFill(theme, getCandidatBusinessStatusColorByValue(key)),
-        };
-      })
-      .filter(
-        (
-          item
-        ): item is {
-          name: string;
-          value: number;
-          color: string;
-        } => item !== null
-      ) ?? [];
+          const key = item.statut_metier ?? "candidat";
+          return {
+            name: getCandidatBusinessStatusLabelFromValue(key),
+            value,
+            color: semanticStatusFill(theme, getCandidatBusinessStatusColorByValue(key)),
+          };
+        })
+        .filter(
+          (
+            item
+          ): item is {
+            name: string;
+            value: number;
+            color: string;
+          } => item !== null
+        ) ?? [],
+    [data, theme]
+  );
 
-  const totalStatus = statusData.reduce((acc, d) => acc + d.value, 0);
-  const pct = (val: number) =>
-    totalStatus > 0 ? ((val / totalStatus) * 100).toFixed(1).replace(/\.0$/, "") : "0";
+  const totalStatus = React.useMemo(
+    () => statusData.reduce((acc, d) => acc + d.value, 0),
+    [statusData]
+  );
+  const pct = React.useCallback(
+    (val: number) =>
+      totalStatus > 0
+        ? ((val / totalStatus) * 100).toFixed(1).replace(/\.0$/, "")
+        : "0",
+    [totalStatus]
+  );
 
-  const statusHighlights = [
-    { label: "Sans statut métier", value: k ? getCandidatSansStatutCount(k) : 0 },
-    { label: "Admissibles", value: k?.admissibles ?? 0 },
-    { label: "En accompagnement TRE", value: k?.en_accompagnement ?? 0 },
-    { label: "En appairage", value: k?.en_appairage ?? 0 },
-    { label: "Inscrits GESPERS", value: k?.inscrits_gespers ?? 0 },
-    { label: "En formation", value: k?.en_formation ?? 0 },
-    { label: "Sortie / fin de formation", value: k?.sortis ?? 0 },
-    { label: "Abandons", value: k?.abandons_phase ?? 0 },
-  ];
+  const statusHighlights = React.useMemo(
+    () => [
+      { label: "Sans statut métier", value: k ? getCandidatSansStatutCount(k) : 0 },
+      { label: "Admissibles", value: k?.admissibles ?? 0 },
+      { label: "En accompagnement TRE", value: k?.en_accompagnement ?? 0 },
+      { label: "En appairage", value: k?.en_appairage ?? 0 },
+      { label: "Inscrits GESPERS", value: k?.inscrits_gespers ?? 0 },
+      { label: "En formation", value: k?.en_formation ?? 0 },
+      { label: "Sortie / fin de formation", value: k?.sortis ?? 0 },
+      { label: "Abandons", value: k?.abandons_phase ?? 0 },
+    ],
+    [k]
+  );
 
   return (
     <Card

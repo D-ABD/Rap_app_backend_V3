@@ -35,6 +35,8 @@ import FormSectionCard from "../../components/forms/FormSectionCard";
 import AppDateField from "../../components/forms/fields/AppDateField";
 import AppSelectField from "../../components/forms/fields/AppSelectField";
 import AppTextField from "../../components/forms/fields/AppTextField";
+import RichHtmlEditorField from "../../components/forms/RichHtmlEditorField";
+import CommentaireContent from "../commentaires/CommentaireContent";
 import api from "../../api/axios";
 import { readRapAppApiError } from "../../api/readRapAppApiError";
 import { useFormations } from "../../hooks/useFormations";
@@ -801,9 +803,9 @@ export default function PlanActionFormationForm({
                                     {c.formation_nom ?? "—"} {c.centre_nom ? `· ${c.centre_nom}` : ""} · {c.auteur ?? "Auteur inconnu"}{" "}
                                     · {new Date(c.created_at).toLocaleString("fr-FR")}
                                   </Typography>
-                                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                                    {c.contenu}
-                                  </Typography>
+                                  <Box sx={{ mt: 0.5 }}>
+                                    <CommentaireContent html={c.contenu || "<em>—</em>"} />
+                                  </Box>
                                 </Box>
                               }
                             />
@@ -909,26 +911,23 @@ export default function PlanActionFormationForm({
 
       <FormSectionCard title="Contenus" subtitle="Synthèse, points clés et plan d’action.">
         <Stack spacing={2}>
-          <AppTextField
+          <RichHtmlEditorField
             label="Synthèse"
             value={form.synthese}
-            onChange={(e) => update("synthese", e.target.value)}
-            multiline
-            minRows={4}
+            onChange={(value) => update("synthese", value)}
+            minHeight={120}
           />
-          <AppTextField
+          <RichHtmlEditorField
             label="Points clés (résumé)"
             value={form.resume_points_cles}
-            onChange={(e) => update("resume_points_cles", e.target.value)}
-            multiline
-            minRows={3}
+            onChange={(value) => update("resume_points_cles", value)}
+            minHeight={110}
           />
-          <AppTextField
+          <RichHtmlEditorField
             label="Plan d’action"
             value={form.plan_action}
-            onChange={(e) => update("plan_action", e.target.value)}
-            multiline
-            minRows={4}
+            onChange={(value) => update("plan_action", value)}
+            minHeight={140}
           />
         </Stack>
       </FormSectionCard>

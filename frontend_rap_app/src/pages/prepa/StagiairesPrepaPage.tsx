@@ -62,10 +62,7 @@ export default function StagiairesPrepaPage() {
   const [selectedStag, setSelectedStag] = useState<StagiairePrepa | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
-    const saved = localStorage.getItem("prepa.stagiaires.showFilters");
-    return saved === "1";
-  });
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<StagiairePrepaFiltersValues>({
     ordering: "nom",
     page: 1,
@@ -83,17 +80,14 @@ export default function StagiairesPrepaPage() {
         | {
             centres?: Array<{ id: number; nom: string }>;
             statut_parcours?: Array<{ value: string | number; label: string }>;
+            statut_parcours_courant?: Array<{ value: string | number; label: string }>;
             orientation_finale?: Array<{ value: string | number; label: string }>;
             type_atelier?: Array<{ value: string | number; label: string }>;
-            pilotage?: Array<{ value: string | number; label: string }>;
+            prochain_etape?: Array<{ value: string | number; label: string }>;
           }
         | undefined) ?? undefined,
     [meta]
   );
-
-  useEffect(() => {
-    localStorage.setItem("prepa.stagiaires.showFilters", showFilters ? "1" : "0");
-  }, [showFilters]);
 
   const prepaOrigine = useMemo(() => {
     const v = searchParams.get("prepa_origine");
@@ -120,11 +114,10 @@ export default function StagiairesPrepaPage() {
     () => ({
       search: debouncedSearch || undefined,
       centre: filters.centre,
-      statut_parcours_calcule: filters.statut_parcours_calcule,
+      statut_parcours_courant: filters.statut_parcours_courant,
       atelier_en_cours: filters.atelier_en_cours,
-      prochain_atelier_attendu: filters.prochain_atelier_attendu,
+      prochain_etape: filters.prochain_etape,
       orientation_finale: filters.orientation_finale,
-      pilotage: filters.pilotage,
       date_ic_min: filters.date_ic_min,
       date_ic_max: filters.date_ic_max,
       page,
@@ -496,7 +489,7 @@ export default function StagiairesPrepaPage() {
             spacing={1}
           >
             <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
+              Page {page} / {totalPages} • Total : {count} • Affichés : {items.length}
             </Typography>
             <Pagination
               page={page}

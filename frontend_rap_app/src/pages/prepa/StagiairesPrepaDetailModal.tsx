@@ -38,58 +38,51 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
               <Field label="Téléphone" value={stagiaire.telephone} />
               <Field label="Email" value={stagiaire.email} />
               <Field label="Centre" value={stagiaire.centre_nom ?? stagiaire.centre?.nom} />
-              <Field label="Statut" value={stagiaire.statut_parcours_display ?? stagiaire.statut_parcours} />
-              <Field
-                label="Statut calculé"
-                value={stagiaire.statut_parcours_calcule_display ?? stagiaire.statut_parcours_calcule}
-              />
+              <Field label="Statut" value={stagiaire.statut_parcours_courant_display ?? stagiaire.statut_parcours_display ?? stagiaire.statut_parcours} />
+              <Field label="Information collective d'origine" value={stagiaire.prepa_origine_label} />
               <Field label="Date IC" value={stagiaire.date_ic} />
-              <Field label="Date d'entrée" value={stagiaire.date_entree_parcours} />
-              <Field label="Date de sortie" value={stagiaire.date_sortie_parcours} />
+              <Field label="Date d'entrée" value={stagiaire.date_entree_calculee} />
+              <Field label="Date de fin" value={stagiaire.date_fin_calculee} />
+              <Field label="Dernière étape" value={stagiaire.derniere_etape?.label} />
               <Field
-                label="Positionnement (historique)"
-                value={stagiaire.statut_positionnement_display ?? stagiaire.statut_positionnement}
+                label="Prochaine étape prévue"
+                value={
+                  stagiaire.action_suivante_recommandee?.label ??
+                  stagiaire.prochain_atelier_prevu_display ??
+                  stagiaire.prochain_etape_display ??
+                  stagiaire.prochain_atelier_attendu_display ??
+                  stagiaire.prochain_atelier_prevu ??
+                  stagiaire.prochain_etape ??
+                  stagiaire.prochain_atelier_attendu
+                }
               />
               <Field
-                label="Prochain atelier attendu"
-                value={stagiaire.prochain_atelier_attendu_display ?? stagiaire.prochain_atelier_attendu}
+                label="Dernière présence"
+                value={
+                  stagiaire.derniere_presence_reelle?.type_prepa_display
+                    ? `${stagiaire.derniere_presence_reelle.type_prepa_display}${
+                        stagiaire.derniere_presence_reelle.date
+                          ? ` - ${stagiaire.derniere_presence_reelle.date}`
+                          : ""
+                      }`
+                    : "—"
+                }
               />
               <Field
                 label="Orientation finale"
                 value={stagiaire.orientation_finale_display ?? stagiaire.orientation_finale}
               />
-              <Field label="Centre AFPA cible" value={stagiaire.centre_afpa_cible_nom ?? stagiaire.centre_afpa_cible?.nom} />
-              <Field label="Formation AFPA cible" value={stagiaire.formation_afpa_cible} />
-              <Field label="Date d'orientation" value={stagiaire.date_orientation} />
               <Field
-                label="Entrée AFPA confirmée"
-                value={stagiaire.entree_formation_confirmee ? "Oui" : "Non"}
-              />
-              <Field label="Ateliers réalisés" value={stagiaire.ateliers_realises_labels?.join(", ") || "—"} />
-              <Field label="Dernier atelier" value={stagiaire.dernier_atelier_label} />
-              <Field label="Atelier en cours" value={stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours} />
-              <Field label="Date atelier en cours" value={stagiaire.atelier_en_cours_date} />
-              <Field
-                label="Dernier statut participation"
-                value={stagiaire.dernier_statut_participation_display ?? stagiaire.dernier_statut_participation}
-              />
-              <Field
-                label="Libération atelier"
+                label="Centre AFPA cible"
                 value={
-                  stagiaire.dernier_statut_participation_liberant
-                    ? stagiaire.dernier_statut_participation === "a_repositionner"
-                      ? "Libéré pour repositionnement"
-                      : "Libéré pour atelier suivant"
-                    : "Non"
+                  stagiaire.centre_afpa_cible_texte ??
+                  stagiaire.centre_afpa_cible_nom ??
+                  stagiaire.centre_afpa_cible?.nom
                 }
               />
-              <Field label="En attente d'entrée" value={stagiaire.est_en_attente_entree ? "Oui" : "Non"} />
-              <Field label="À intégrer atelier 1" value={stagiaire.est_a_integrer_atelier_1 ? "Oui" : "Non"} />
-              <Field
-                label="En attente atelier suivant"
-                value={stagiaire.est_en_attente_prochain_atelier ? "Oui" : "Non"}
-              />
-              <Field label="Motif abandon" value={stagiaire.motif_abandon} />
+              <Field label="Formation AFPA cible" value={stagiaire.formation_afpa_cible} />
+              <Field label="Ateliers réalisés" value={stagiaire.ateliers_realises_labels?.join(", ") || "—"} />
+              <Field label="Atelier en cours" value={stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours} />
               <Grid item xs={12}>
                 <Typography variant="body2" component="div">
                   <strong>Commentaire :</strong>

@@ -24,6 +24,8 @@ import {
   usePrepaResume,
 } from "src/types/prepaStats";
 
+const PREPA_DASHBOARD_YEARS = [2023, 2024, 2025, 2026] as const;
+
 function omit<T extends object, K extends keyof T>(
   obj: T,
   keys: readonly K[]
@@ -36,26 +38,37 @@ function omit<T extends object, K extends keyof T>(
 export default function PrepaStatsOperations({
   title = "Indicateurs opérationnels Prépa",
   initialFilters = {},
+  filters: externalFilters,
+  hideFilters = false,
 }: {
   title?: string;
   initialFilters?: PrepaFilters;
+  filters?: PrepaFilters;
+  hideFilters?: boolean;
 }) {
   const theme = useTheme<AppTheme>();
   const isDark = theme.palette.mode === "dark";
   const { user } = useAuth();
   const isAdminLike = isAdminLikeRole(user?.role);
 
-  const [filters, setFilters] = React.useState<PrepaFilters>({
+  const [localFilters, setLocalFilters] = React.useState<PrepaFilters>({
     annee: new Date().getFullYear(),
     ...initialFilters,
   });
+  const filters = externalFilters ?? localFilters;
+
+  const groupedCentreFilters = React.useMemo(
+    () => omit(filters, ["centre"]),
+    [filters]
+  );
+  const groupedDepartementFilters = React.useMemo(
+    () => omit(filters, ["departement"]),
+    [filters]
+  );
 
   const { data, isLoading, error } = usePrepaResume(filters);
-  const centreQuery = usePrepaGrouped("centre", omit(filters, ["centre"]));
-  const deptQuery = usePrepaGrouped(
-    "departement",
-    omit(filters, ["departement"])
-  );
+  const centreQuery = usePrepaGrouped("centre", groupedCentreFilters);
+  const deptQuery = usePrepaGrouped("departement", groupedDepartementFilters);
 
   if (isLoading) return <StatCardSkeleton count={6} />;
 
@@ -71,28 +84,28 @@ export default function PrepaStatsOperations({
 
   const stats = [
     {
-      label: "Prescriptions IC",
-      value: data.nb_prescriptions ?? 0,
+      label: "Taux prescription IC",
+      value: `${(data.taux_prescription ?? 0).toFixed(1)} %`,
       color: theme.palette.info.main,
-    },
-    {
-      label: "Présents IC",
-      value: data.presents_info ?? 0,
-      color: theme.palette.info.dark,
-    },
-    {
-      label: "Adhésions IC",
-      value: data.nb_adhesions ?? 0,
-      color: theme.palette.secondary.main,
     },
     {
       label: "Taux présence IC",
       value: `${(data.taux_presence_ic ?? 0).toFixed(1)} %`,
-      color: theme.palette.success.dark,
+      color: theme.palette.info.dark,
     },
     {
       label: "Taux adhésion IC",
       value: `${(data.taux_adhesion_ic ?? 0).toFixed(1)} %`,
+      color: theme.palette.secondary.main,
+    },
+    {
+      label: "Présents ateliers",
+      value: data.presents_ateliers ?? 0,
+      color: theme.palette.success.dark,
+    },
+    {
+      label: "Absents ateliers",
+      value: data.absents_ateliers ?? 0,
       color: theme.palette.secondary.dark,
     },
     {
@@ -193,23 +206,26 @@ export default function PrepaStatsOperations({
             </Typography>
           </Box>
 
+          {!hideFilters ? (
           <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 130 } }}>
             <Select
               value={filters.annee ?? new Date().getFullYear()}
               onChange={(e) =>
-                setFilters((f) => ({ ...f, annee: Number(e.target.value) }))
+                setLocalFilters((f) => ({ ...f, annee: Number(e.target.value) }))
               }
               sx={selectSx}
             >
-              {[2023, 2024, 2025, 2026].map((y) => (
+              {PREPA_DASHBOARD_YEARS.map((y) => (
                 <MenuItem key={y} value={y}>
                   {y}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
+          ) : null}
         </Box>
 
+        {!hideFilters ? (
         <Box
           display="flex"
           gap={1.5}
@@ -231,7 +247,7 @@ export default function PrepaStatsOperations({
             <Select
               value={filters.centre ?? ""}
               onChange={(e) =>
-                setFilters((f) => ({
+                setLocalFilters((f) => ({
                   ...f,
                   centre: e.target.value ? Number(e.target.value) : undefined,
                 }))
@@ -257,7 +273,7 @@ export default function PrepaStatsOperations({
             <Select
               value={(filters as { departement?: string }).departement ?? ""}
               onChange={(e) =>
-                setFilters((f) => ({
+                setLocalFilters((f) => ({
                   ...f,
                   departement: e.target.value || undefined,
                 }))
@@ -274,6 +290,7 @@ export default function PrepaStatsOperations({
             </Select>
           </FormControl>
         </Box>
+        ) : null}
 
         <Grid container spacing={2}>
           {stats.map((s) => (

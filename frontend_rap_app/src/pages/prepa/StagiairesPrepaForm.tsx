@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Chip,
+  Collapse,
   FormControlLabel,
   Grid,
   MenuItem,
@@ -15,10 +16,16 @@ import {
 } from "@mui/material";
 import type { AppTheme } from "src/theme";
 import { useEffect, useMemo, useState } from "react";
-import type { StagiairePrepa } from "src/types/prepa";
+import type { StagiairePrepa, StagiairePrepaStatutForm } from "src/types/prepa";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import { useAuth } from "src/hooks/useAuth";
 import { isAdminLikeRole } from "src/utils/roleGroups";
+import {
+  PREPA_ORIENTATION_FINALE_OPTIONS,
+  PREPA_PROCHAIN_ETAPE_OPTIONS,
+  PREPA_STATUT_FORM_OPTIONS,
+  mergeChoiceOption,
+} from "src/constants/prepaChoices";
 
 interface Props {
   initialValues?: Partial<StagiairePrepa>;
@@ -37,6 +44,16 @@ const atelierFields = [
   { flag: "atelier_6_realise", date: "date_atelier_6", label: "Atelier 6" },
   { flag: "atelier_autre_realise", date: "date_atelier_autre", label: "Autre atelier" },
 ] as const;
+
+function deriveStatutForm(initialValues?: Partial<StagiairePrepa>): StagiairePrepaStatutForm {
+  const courant = initialValues?.statut_parcours_courant;
+  if (courant === "en_attente_repositionnement") return "a_repositionner";
+  if (courant === "en_attente_suite") return "en_attente_prochain_atelier";
+  if (initialValues?.statut_parcours === "abandon") return "abandon";
+  if (courant === "termine" || initialValues?.statut_parcours === "parcours_termine") return "parcours_termine";
+  if (initialValues?.statut_parcours === "en_parcours") return "en_parcours";
+  return "en_attente";
+}
 
 export default function StagiairesPrepaForm({
   initialValues,
@@ -60,18 +77,16 @@ export default function StagiairesPrepaForm({
     centre_id: initialValues?.centre_id ?? initialValues?.centre?.id ?? undefined,
     prepa_origine_id: initialValues?.prepa_origine_id ?? undefined,
     statut_parcours: initialValues?.statut_parcours ?? "en_attente",
-    statut_positionnement: initialValues?.statut_positionnement ?? null,
     prochain_atelier_prevu: initialValues?.prochain_atelier_prevu ?? null,
     orientation_finale: initialValues?.orientation_finale ?? null,
-    centre_afpa_cible_id:
-      initialValues?.centre_afpa_cible_id ?? initialValues?.centre_afpa_cible?.id ?? undefined,
+    centre_afpa_cible_texte:
+      initialValues?.centre_afpa_cible_texte ??
+      initialValues?.centre_afpa_cible_nom ??
+      initialValues?.centre_afpa_cible?.nom ??
+      "",
     formation_afpa_cible: initialValues?.formation_afpa_cible ?? "",
-    date_orientation: initialValues?.date_orientation ?? "",
-    entree_formation_confirmee: initialValues?.entree_formation_confirmee ?? false,
-    date_entree_parcours: initialValues?.date_entree_parcours ?? "",
-    date_sortie_parcours: initialValues?.date_sortie_parcours ?? "",
     commentaire_suivi: initialValues?.commentaire_suivi ?? "",
-    motif_abandon: initialValues?.motif_abandon ?? "",
+    date_bilan: initialValues?.date_bilan ?? "",
     atelier_1_realise: initialValues?.atelier_1_realise ?? false,
     atelier_2_realise: initialValues?.atelier_2_realise ?? false,
     atelier_3_realise: initialValues?.atelier_3_realise ?? false,
@@ -87,38 +102,91 @@ export default function StagiairesPrepaForm({
     date_atelier_6: initialValues?.date_atelier_6 ?? "",
     date_atelier_autre: initialValues?.date_atelier_autre ?? "",
   });
+  const [statutForm, setStatutForm] = useState<StagiairePrepaStatutForm>(() => deriveStatutForm(initialValues));
 
-  const centres = useMemo(() => ((meta?.centres as Array<{ id: number; nom: string }>) ?? []), [meta]);
+  const centres = useMemo(() => {
+    const fromMeta = (meta?.centres as Array<{ id: number; nom: string }>) ?? [];
+    const cid = form.centre_id ?? initialValues?.centre_id ?? initialValues?.centre?.id;
+    if (typeof cid !== "number") return fromMeta;
+    if (fromMeta.some((c) => c.id === cid)) return fromMeta;
+    const nom = initialValues?.centre_nom ?? initialValues?.centre?.nom ?? `Centre #${cid}`;
+    return [...fromMeta, { id: cid, nom }];
+  }, [
+    meta,
+    form.centre_id,
+    initialValues?.centre_id,
+    initialValues?.centre?.id,
+    initialValues?.centre_nom,
+    initialValues?.centre?.nom,
+  ]);
   const hasSingleScopedCentre = !isAdminLike && centres.length === 1;
   const statuts = useMemo(
     () =>
-      ((meta?.statut_parcours as Array<{ value: string; label: string }>) ?? [
-        { value: "en_attente", label: "En attente de parcours" },
-        { value: "en_parcours", label: "En parcours" },
-        { value: "parcours_termine", label: "Parcours terminé" },
-        { value: "abandon", label: "Abandon" },
-      ]),
+      mergeChoiceOption(
+        ((meta?.statut_formulaire as Array<{ value: string; label: string }>) ?? []).length
+          ? (meta?.statut_formulaire as Array<{ value: string; label: string }>)
+          : PREPA_STATUT_FORM_OPTIONS,
+        statutForm
+      ),
     [meta]
   );
-  const statutsPositionnement = useMemo(
-    () => ((meta?.statut_positionnement as Array<{ value: string; label: string }>) ?? []),
-    [meta]
-  );
+  const prepasOrigine = useMemo(() => {
+    const raw = (meta?.prepas_origine as Array<{ id: number; label: string }>) ?? [];
+    const pid = form.prepa_origine_id ?? initialValues?.prepa_origine_id;
+    if (typeof pid !== "number") return raw;
+    if (raw.some((p) => p.id === pid)) return raw;
+    const fallback = initialValues?.prepa_origine_label ?? `IC #${pid}`;
+    return [...raw, { id: pid, label: fallback }];
+  }, [meta, form.prepa_origine_id, initialValues?.prepa_origine_id, initialValues?.prepa_origine_label]);
   const orientationsFinales = useMemo(
-    () => ((meta?.orientation_finale as Array<{ value: string; label: string }>) ?? []),
-    [meta]
+    () =>
+      mergeChoiceOption(
+        ((meta?.orientation_finale as Array<{ value: string; label: string }>) ?? []).length
+          ? (meta?.orientation_finale as Array<{ value: string; label: string }>)
+          : PREPA_ORIENTATION_FINALE_OPTIONS,
+        form.orientation_finale ?? initialValues?.orientation_finale
+      ),
+    [meta, form.orientation_finale, initialValues?.orientation_finale]
   );
-  const typeAteliers = useMemo(
-    () => ((meta?.type_atelier as Array<{ value: string; label: string }>) ?? []),
-    [meta]
+  const prochainesEtapes = useMemo(
+    () =>
+      mergeChoiceOption(
+        ((meta?.prochain_etape as Array<{ value: string; label: string }>) ?? []).length
+          ? (meta?.prochain_etape as Array<{ value: string; label: string }>)
+          : PREPA_PROCHAIN_ETAPE_OPTIONS,
+        form.prochain_atelier_prevu ?? initialValues?.prochain_atelier_prevu
+      ),
+    [meta, form.prochain_atelier_prevu, initialValues?.prochain_atelier_prevu]
   );
-  const centresAfpa = useMemo(
-    () => ((meta?.centres_afpa_cible as Array<{ id: number; nom: string }>) ?? centres),
-    [meta, centres]
-  );
+  const showBilanSection =
+    initialValues?.statut_parcours_courant === "en_attente_bilan" ||
+    initialValues?.statut_parcours_courant === "termine" ||
+    Boolean(initialValues?.orientation_finale) ||
+    Boolean(form.date_bilan) ||
+    statutForm === "abandon" ||
+    form.prochain_atelier_prevu === "bilan";
+
+  const [showAteliersDetail, setShowAteliersDetail] = useState(false);
 
   const update = <K extends keyof StagiairePrepa>(key: K, value: StagiairePrepa[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const updateStatutForm = (value: StagiairePrepaStatutForm) => {
+    setStatutForm(value);
+    const nextStatut =
+      value === "parcours_termine"
+        ? "parcours_termine"
+        : value === "abandon"
+          ? "abandon"
+          : value === "en_parcours" || value === "en_attente_prochain_atelier" || value === "a_repositionner"
+            ? "en_parcours"
+            : "en_attente";
+
+    setForm((prev) => ({
+      ...prev,
+      statut_parcours: nextStatut,
+    }));
+  };
 
   useEffect(() => {
     if (!form.centre_id && hasSingleScopedCentre) {
@@ -131,7 +199,6 @@ export default function StagiairesPrepaForm({
     await onSubmit(form);
   };
 
-  const isAbandon = form.statut_parcours === "abandon";
   const isOrientationAfpa =
     form.orientation_finale === "afpa" || form.orientation_finale === "autre_centre_afpa";
   const ateliersRealisesLive = useMemo(
@@ -143,44 +210,86 @@ export default function StagiairesPrepaForm({
   );
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={2}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        "& .MuiFormHelperText-root": { mt: 0.25, lineHeight: 1.2 },
+        "& .MuiFormControlLabel-root": { my: 0 },
+      }}
+    >
+      {initialValues?.id ? (
+        <Paper
+          sx={{
+            p: 1.5,
+            mb: 1.5,
+            borderLeft: 4,
+            borderColor: "primary.main",
+          }}
+        >
+          <Typography variant="overline" color="text.secondary">
+            Synthèse parcours
+          </Typography>
+          <Stack spacing={0.75} mt={0.5}>
+            <Typography variant="h6">{initialValues.statut_parcours_courant_display ?? "—"}</Typography>
+            {initialValues.derniere_etape?.label ? (
+              <Typography variant="body2" color="text.secondary">
+                Dernière étape : {initialValues.derniere_etape.label}
+                {initialValues.derniere_etape.date
+                  ? ` (${new Date(initialValues.derniere_etape.date).toLocaleDateString("fr-FR")})`
+                  : ""}
+              </Typography>
+            ) : null}
+            {initialValues.derniere_presence_reelle?.type_prepa_display ? (
+              <Typography variant="body2" color="text.secondary">
+                Dernière présence : {initialValues.derniere_presence_reelle.type_prepa_display}
+                {initialValues.derniere_presence_reelle.date
+                  ? ` (${new Date(initialValues.derniere_presence_reelle.date).toLocaleDateString("fr-FR")})`
+                  : ""}
+              </Typography>
+            ) : null}
+            {initialValues.action_suivante_recommandee?.label ? (
+              <Typography variant="body2" fontWeight={600}>
+                Action suggérée : {initialValues.action_suivante_recommandee.label}
+              </Typography>
+            ) : null}
+          </Stack>
+        </Paper>
+      ) : null}
+
+      <Paper sx={{ p: 1.5, mb: 1.5 }}>
+        <Typography variant="h6" mb={1.25}>
           Identité
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           <Grid item xs={12} md={3}>
-            <TextField fullWidth required label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} />
+            <TextField size="small" fullWidth required label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <TextField fullWidth required label="Prénom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} />
+            <TextField size="small" fullWidth required label="Prénom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <TextField fullWidth label="Téléphone" value={form.telephone ?? ""} onChange={(e) => update("telephone", e.target.value)} />
+            <TextField size="small" fullWidth label="Téléphone" value={form.telephone ?? ""} onChange={(e) => update("telephone", e.target.value)} />
           </Grid>
           <Grid item xs={12} md={3}>
-            <TextField fullWidth label="Email" type="email" value={form.email ?? ""} onChange={(e) => update("email", e.target.value)} />
+            <TextField size="small" fullWidth label="Email" type="email" value={form.email ?? ""} onChange={(e) => update("email", e.target.value)} />
           </Grid>
         </Grid>
       </Paper>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={2}>
+      <Paper sx={{ p: 1.5, mb: 1.5 }}>
+        <Typography variant="h6" mb={1.25}>
           Parcours
         </Typography>
-        {isAbandon ? (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Le motif d'abandon est obligatoire quand le statut est <strong>Abandon</strong>.
-          </Alert>
-        ) : null}
         {hasSingleScopedCentre ? (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: 1.5 }}>
             Le centre est prérempli automatiquement depuis votre périmètre.
           </Alert>
         ) : null}
-        <Grid container spacing={2}>
+        <Grid container spacing={1.5}>
           <Grid item xs={12} md={3}>
             <TextField
+              size="small"
               select
               fullWidth
               label="Centre"
@@ -198,21 +307,32 @@ export default function StagiairesPrepaForm({
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
+              size="small"
+              select
               fullWidth
-              label="Date IC"
-              value={initialValues?.date_ic ?? ""}
-              InputProps={{ readOnly: true }}
-              InputLabelProps={{ shrink: true }}
-              helperText="Renseignée automatiquement si une information collective d'origine existe."
-            />
+              label="Information collective d'origine"
+              value={form.prepa_origine_id ?? ""}
+              onChange={(e) =>
+                update("prepa_origine_id", e.target.value === "" ? undefined : Number(e.target.value))
+              }
+              helperText="Sélectionner l'information collective d'origine si elle existe."
+            >
+              <MenuItem value="">—</MenuItem>
+              {prepasOrigine.map((prepa) => (
+                <MenuItem key={prepa.id} value={prepa.id}>
+                  {prepa.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
+              size="small"
               select
               fullWidth
               label="Statut"
-              value={form.statut_parcours ?? "en_attente"}
-              onChange={(e) => update("statut_parcours", e.target.value as StagiairePrepa["statut_parcours"])}
+              value={statutForm}
+              onChange={(e) => updateStatutForm(e.target.value as StagiairePrepaStatutForm)}
             >
               {statuts.map((statut) => (
                 <MenuItem key={statut.value} value={statut.value}>
@@ -223,81 +343,43 @@ export default function StagiairesPrepaForm({
           </Grid>
           <Grid item xs={12} md={3}>
             <TextField
-              select
+              size="small"
               fullWidth
-              label="Positionnement"
-              value={form.statut_positionnement ?? ""}
-              onChange={(e) =>
-                update("statut_positionnement", (e.target.value || null) as StagiairePrepa["statut_positionnement"])
-              }
-            >
-              <MenuItem value="">—</MenuItem>
-              {statutsPositionnement.map((statut) => (
-                <MenuItem key={statut.value} value={statut.value}>
-                  {statut.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Entrée"
-              InputLabelProps={{ shrink: true }}
-              value={form.date_entree_parcours ?? ""}
-              onChange={(e) => update("date_entree_parcours", e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Sortie"
-              InputLabelProps={{ shrink: true }}
-              value={form.date_sortie_parcours ?? ""}
-              onChange={(e) => update("date_sortie_parcours", e.target.value)}
+              label="Dernière étape"
+              value={initialValues?.derniere_etape?.label ?? "En attente de AT1"}
+              InputProps={{ readOnly: true }}
+              helperText="Calculée automatiquement depuis l'historique du parcours."
             />
           </Grid>
           <Grid item xs={12} md={4}>
             <TextField
+              size="small"
               select
               fullWidth
-              label="Prochain atelier prévu"
+              label="Prochaine étape prévue"
               value={form.prochain_atelier_prevu ?? ""}
               onChange={(e) =>
                 update("prochain_atelier_prevu", (e.target.value || null) as StagiairePrepa["prochain_atelier_prevu"])
               }
               helperText={
+                initialValues?.prochain_atelier_prevu_display ||
+                initialValues?.prochain_etape_display ||
                 initialValues?.prochain_atelier_attendu_display
-                  ? `Attendu actuellement : ${initialValues.prochain_atelier_attendu_display}`
+                  ? `Étape actuellement attendue : ${
+                      initialValues?.prochain_atelier_prevu_display ??
+                      initialValues?.prochain_etape_display ??
+                      initialValues?.prochain_atelier_attendu_display
+                    }`
                   : undefined
               }
             >
               <MenuItem value="">—</MenuItem>
-              {typeAteliers.map((atelier) => (
+              {prochainesEtapes.map((atelier) => (
                 <MenuItem key={atelier.value} value={atelier.value}>
                   {atelier.label}
                 </MenuItem>
               ))}
             </TextField>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              required={isAbandon}
-              label="Motif d'abandon"
-              value={form.motif_abandon ?? ""}
-              onChange={(e) => update("motif_abandon", e.target.value)}
-              error={isAbandon && !(form.motif_abandon ?? "").trim()}
-              helperText={
-                isAbandon
-                  ? (form.motif_abandon ?? "").trim()
-                    ? "Motif saisi."
-                    : "Explique pourquoi le stagiaire a abandonné."
-                  : "À renseigner uniquement en cas d'abandon."
-              }
-            />
           </Grid>
           <Grid item xs={12}>
             <RichHtmlEditorField
@@ -310,90 +392,84 @@ export default function StagiairesPrepaForm({
         </Grid>
       </Paper>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={2}>
-          Orientation
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <TextField
-              select
-              fullWidth
-              label="Orientation finale"
-              value={form.orientation_finale ?? ""}
-              onChange={(e) =>
-                update("orientation_finale", (e.target.value || null) as StagiairePrepa["orientation_finale"])
-              }
-            >
-              <MenuItem value="">—</MenuItem>
-              {orientationsFinales.map((orientation) => (
-                <MenuItem key={orientation.value} value={orientation.value}>
-                  {orientation.label}
-                </MenuItem>
-              ))}
-            </TextField>
+      {showBilanSection ? (
+        <Paper sx={{ p: 1.5, mb: 1.5 }}>
+          <Typography variant="h6" mb={1.25}>
+            Bilan & orientation
+          </Typography>
+          <Grid container spacing={1.5}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                size="small"
+                fullWidth
+                type="date"
+                label="Date du bilan"
+                InputLabelProps={{ shrink: true }}
+                value={form.date_bilan ?? ""}
+                onChange={(e) => update("date_bilan", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                size="small"
+                select
+                fullWidth
+                label="Orientation finale"
+                value={form.orientation_finale ?? ""}
+                onChange={(e) =>
+                  update("orientation_finale", (e.target.value || null) as StagiairePrepa["orientation_finale"])
+                }
+              >
+                <MenuItem value="">—</MenuItem>
+                {orientationsFinales.map((orientation) => (
+                  <MenuItem key={orientation.value} value={orientation.value}>
+                    {orientation.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Centre AFPA cible"
+                value={form.centre_afpa_cible_texte ?? ""}
+                onChange={(e) => update("centre_afpa_cible_texte", e.target.value)}
+                required={isOrientationAfpa}
+                helperText="Saisie libre du centre cible."
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Formation AFPA cible"
+                value={form.formation_afpa_cible ?? ""}
+                required={isOrientationAfpa}
+                onChange={(e) => update("formation_afpa_cible", e.target.value)}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              select
-              fullWidth
-              label="Centre AFPA cible"
-              value={form.centre_afpa_cible_id ?? ""}
-              onChange={(e) =>
-                update("centre_afpa_cible_id", e.target.value === "" ? undefined : Number(e.target.value))
-              }
-              required={isOrientationAfpa}
-            >
-              <MenuItem value="">—</MenuItem>
-              {centresAfpa.map((centre) => (
-                <MenuItem key={centre.id} value={centre.id}>
-                  {centre.nom}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              label="Formation AFPA cible"
-              value={form.formation_afpa_cible ?? ""}
-              required={isOrientationAfpa}
-              onChange={(e) => update("formation_afpa_cible", e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Date d'orientation"
-              InputLabelProps={{ shrink: true }}
-              value={form.date_orientation ?? ""}
-              onChange={(e) => update("date_orientation", e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={5}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={Boolean(form.entree_formation_confirmee)}
-                  onChange={(e) => update("entree_formation_confirmee", e.target.checked)}
-                />
-              }
-              label="Entrée en formation AFPA confirmée"
-            />
-          </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      ) : (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          La clôture du parcours sera disponible lorsque le parcours sera en phase bilan,
+          ou lorsque des données de clôture existent déjà sur la fiche.
+        </Alert>
+      )}
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" mb={2}>
-          Ateliers réalisés
-        </Typography>
-        <Alert severity="info" sx={{ mb: 2 }}>
+      <Paper sx={{ p: 1.5, mb: 1.5 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.25}>
+          <Typography variant="h6">Ateliers réalisés</Typography>
+          <Button size="small" variant="text" onClick={() => setShowAteliersDetail((v) => !v)}>
+            {showAteliersDetail ? "Masquer le détail technique" : "Voir le détail technique"}
+          </Button>
+        </Stack>
+        <Alert severity="info" sx={{ mb: 1.5 }}>
           Cette section est en lecture seule. Les ateliers réalisés se remplissent automatiquement depuis
           les inscriptions et participations aux séances Prépa, afin d'éviter les erreurs de saisie.
         </Alert>
-        <Paper variant="outlined" sx={{ p: 1.5, mb: 2, bgcolor: sectionPaperBg }}>
+        <Paper variant="outlined" sx={{ p: 1.25, mb: 1.5, bgcolor: sectionPaperBg }}>
           <Typography variant="body2" fontWeight={600} gutterBottom>
             Récapitulatif du parcours atelier
           </Typography>
@@ -410,37 +486,39 @@ export default function StagiairesPrepaForm({
             )}
           </Stack>
         </Paper>
-        <Grid container spacing={2}>
-          {atelierFields.map((field) => {
-            const checked = Boolean(form[field.flag]);
-            return (
-              <Grid item xs={12} md={6} key={field.flag}>
-                <Paper variant="outlined" sx={{ p: 1.5 }}>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={checked}
-                          disabled
-                        />
-                      }
-                      label={field.label}
-                    />
-                    <TextField
-                      type="date"
-                      size="small"
-                      label={`Date ${field.label.toLowerCase()}`}
-                      InputLabelProps={{ shrink: true }}
-                      value={(form[field.date] as string) ?? ""}
-                      InputProps={{ readOnly: true }}
-                      disabled={!checked}
-                    />
-                  </Stack>
-                </Paper>
-              </Grid>
-            );
-          })}
-        </Grid>
+        <Collapse in={showAteliersDetail} timeout="auto">
+          <Grid container spacing={1.5}>
+            {atelierFields.map((field) => {
+              const checked = Boolean(form[field.flag]);
+              return (
+                <Grid item xs={12} md={6} key={field.flag}>
+                  <Paper variant="outlined" sx={{ p: 1.5 }}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ sm: "center" }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={checked}
+                            disabled
+                          />
+                        }
+                        label={field.label}
+                      />
+                      <TextField
+                        size="small"
+                        type="date"
+                        label={`Date ${field.label.toLowerCase()}`}
+                        InputLabelProps={{ shrink: true }}
+                        value={(form[field.date] as string) ?? ""}
+                        InputProps={{ readOnly: true }}
+                        disabled={!checked}
+                      />
+                    </Stack>
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Collapse>
       </Paper>
 
       <Stack direction="row" spacing={2} justifyContent="flex-end">

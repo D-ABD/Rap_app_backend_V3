@@ -36,6 +36,8 @@ type RawStagiaire = {
   atelier_en_cours?: string | null;
   atelier_en_cours_display?: string | null;
   atelier_en_cours_date?: string | null;
+  atelier_1_realise?: boolean | null;
+  date_entree_calculee?: string | null;
 };
 
 type Props = {
@@ -80,6 +82,8 @@ function toDraftStagiaire(stagiaire: RawStagiaire): StagiairePrepa {
     atelier_en_cours: (stagiaire.atelier_en_cours as StagiairePrepa["atelier_en_cours"]) ?? null,
     atelier_en_cours_display: stagiaire.atelier_en_cours_display ?? null,
     atelier_en_cours_date: stagiaire.atelier_en_cours_date ?? null,
+    atelier_1_realise: Boolean(stagiaire.atelier_1_realise),
+    date_entree_calculee: stagiaire.date_entree_calculee ?? null,
   };
 }
 

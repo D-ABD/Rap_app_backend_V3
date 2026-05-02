@@ -501,7 +501,9 @@ class StagiairePrepaQuerySet(models.QuerySet):
         return self.filter(atelier_6_realise=True)
 
     def synthese_parcours(self) -> Dict[str, Any]:
-        stagiaires = list(self)
+        from rap_app.services.prepa_parcours import aggregate_pipeline_counts, prefetch_parcours_dependencies
+
+        stagiaires = list(prefetch_parcours_dependencies(self))
         entrants = sum(1 for stagiaire in stagiaires if stagiaire.atelier_1_realise)
         en_attente_entree = sum(1 for stagiaire in stagiaires if stagiaire.est_en_attente_entree)
         a_integrer_atelier_1 = sum(1 for stagiaire in stagiaires if stagiaire.est_a_integrer_atelier_1)
@@ -512,6 +514,8 @@ class StagiairePrepaQuerySet(models.QuerySet):
         orientes_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_afpa)
         orientes_autre_centre_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_vers_autre_centre_afpa)
         sorties_atelier_6 = sum(1 for stagiaire in stagiaires if stagiaire.atelier_6_realise)
+        pipeline = aggregate_pipeline_counts(stagiaires)
+
         return {
             "total_stagiaires": len(stagiaires),
             "en_attente_entree": en_attente_entree,
@@ -529,6 +533,7 @@ class StagiairePrepaQuerySet(models.QuerySet):
             "taux_orientation_autre_centre_afpa": (
                 round((orientes_autre_centre_afpa / entrants) * 100, 1) if entrants else 0
             ),
+            **pipeline,
         }
 
 
@@ -593,6 +598,16 @@ class PrepaStagiaireParticipation(BaseModel):
 
     def __str__(self):
         return f"{self.prepa_id} / {self.stagiaire_prepa_id} → {self.get_statut_display()}"
+
+
+class IssueBilanPrepa(models.TextChoices):
+    """
+    Issue formalisée au bilan : distincte du statut de parcours (cf. machine d'états Prépa).
+    """
+
+    ORIENTE_AFPA = "oriente_afpa", _("Orienté AFPA")
+    ABANDON = "abandon", _("Abandon")
+    AUTRE_SORTIE = "autre_sortie", _("Autre sortie")
 
 
 class StagiairePrepa(BaseModel):
@@ -679,6 +694,12 @@ class StagiairePrepa(BaseModel):
         related_name="stagiaires_prepa_orientes",
         verbose_name=_("Centre AFPA cible"),
     )
+    centre_afpa_cible_texte = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Centre AFPA cible (texte libre)"),
+    )
     formation_afpa_cible = models.CharField(
         max_length=255,
         blank=True,
@@ -692,6 +713,17 @@ class StagiairePrepa(BaseModel):
     )
     commentaire_suivi = models.TextField(blank=True, null=True, verbose_name=_("Commentaire de suivi"))
     motif_abandon = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Motif d'abandon"))
+
+    issue_bilan = models.CharField(
+        max_length=24,
+        choices=IssueBilanPrepa.choices,
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name=_("Issue du bilan"),
+        help_text=_("Sortie formalisée au bilan ; distincte du statut de parcours courant."),
+    )
+    date_bilan = models.DateField(blank=True, null=True, verbose_name=_("Date du bilan"))
 
     atelier_1_realise = models.BooleanField(default=False, verbose_name=_("Atelier 1 réalisé"))
     atelier_2_realise = models.BooleanField(default=False, verbose_name=_("Atelier 2 réalisé"))
@@ -719,6 +751,7 @@ class StagiairePrepa(BaseModel):
             models.Index(fields=["statut_parcours"]),
             models.Index(fields=["statut_positionnement"]),
             models.Index(fields=["orientation_finale"]),
+            models.Index(fields=["issue_bilan"]),
             models.Index(fields=["nom", "prenom"]),
         ]
 

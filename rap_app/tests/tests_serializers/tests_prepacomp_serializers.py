@@ -133,12 +133,12 @@ class StagiairePrepaSerializerTests(TestCase):
                 "nom": "Bernard",
                 "prenom": "Noah",
                 "orientation_finale": StagiairePrepa.OrientationFinale.AFPA,
-                "date_orientation": "2026-04-20",
+                "date_bilan": "2026-04-20",
             }
         )
 
         self.assertFalse(serializer.is_valid())
-        self.assertIn("centre_afpa_cible_id", serializer.errors)
+        self.assertIn("centre_afpa_cible_texte", serializer.errors)
         self.assertIn("formation_afpa_cible", serializer.errors)
 
     def test_serializer_accepts_complete_afpa_orientation_payload(self):
@@ -148,10 +148,9 @@ class StagiairePrepaSerializerTests(TestCase):
                 "nom": "Bernard",
                 "prenom": "Noah",
                 "orientation_finale": StagiairePrepa.OrientationFinale.AUTRE_CENTRE_AFPA,
-                "centre_afpa_cible_id": self.autre_centre.id,
+                "centre_afpa_cible_texte": "AFPA Meudon",
                 "formation_afpa_cible": "Titre professionnel RH",
-                "date_orientation": "2026-04-20",
-                "entree_formation_confirmee": True,
+                "date_bilan": "2026-04-20",
             }
         )
 
@@ -191,6 +190,11 @@ class PrepaSerializerParticipationTests(TestCase):
             prenom="Nina",
             created_by=self.user,
         )
+
+    def _mark_at1_done(self):
+        self.stagiaire.atelier_1_realise = True
+        self.stagiaire.date_atelier_1 = date(2026, 4, 20)
+        self.stagiaire.save(update_fields=["atelier_1_realise", "date_atelier_1"])
 
     def test_serializer_creates_participation_and_syncs_totals(self):
         serializer = PrepaSerializer(
@@ -241,7 +245,8 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("date_fin_atelier", serializer.errors)
 
-    def test_serializer_rejects_stagiaire_already_registered_on_other_active_atelier(self):
+    def test_serializer_allows_stagiaire_already_registered_on_other_active_atelier(self):
+        self._mark_at1_done()
         autre_atelier = Prepa.objects.create(
             type_prepa=Prepa.TypePrepa.ATELIER2,
             date_prepa=timezone.localdate(),
@@ -272,10 +277,10 @@ class PrepaSerializerParticipationTests(TestCase):
             }
         )
 
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("participations_prepa", serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_serializer_rejects_stagiaire_absent_on_other_active_atelier(self):
+    def test_serializer_allows_stagiaire_absent_on_other_active_atelier(self):
+        self._mark_at1_done()
         autre_atelier = Prepa.objects.create(
             type_prepa=Prepa.TypePrepa.ATELIER2,
             date_prepa=timezone.localdate(),
@@ -306,10 +311,10 @@ class PrepaSerializerParticipationTests(TestCase):
             }
         )
 
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("participations_prepa", serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_allows_stagiaire_on_new_atelier_when_previous_is_termine(self):
+        self._mark_at1_done()
         autre_atelier = Prepa.objects.create(
             type_prepa=Prepa.TypePrepa.ATELIER2,
             date_prepa=timezone.localdate(),
@@ -343,6 +348,7 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_allows_stagiaire_on_new_atelier_when_previous_is_a_repositionner(self):
+        self._mark_at1_done()
         autre_atelier = Prepa.objects.create(
             type_prepa=Prepa.TypePrepa.ATELIER2,
             date_prepa=timezone.localdate(),
@@ -376,6 +382,7 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_termine_counts_as_present_and_marks_workshop_done(self):
+        self._mark_at1_done()
         serializer = PrepaSerializer(
             data={
                 "type_prepa": Prepa.TypePrepa.ATELIER2,
@@ -400,11 +407,15 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertEqual(instance.nb_absents_prepa, 0)
         self.assertEqual(instance.nb_presents_prepa_nominatifs, 1)
 
+        participation = PrepaStagiaireParticipation.objects.get(prepa=instance, stagiaire_prepa=self.stagiaire)
+        self.assertEqual(participation.statut, PrepaPresenceStatut.PRESENT)
+
         self.stagiaire.refresh_from_db()
         self.assertTrue(self.stagiaire.atelier_2_realise)
         self.assertEqual(str(self.stagiaire.date_atelier_2), "2026-04-27")
 
     def test_inscrit_counts_as_absent_for_operational_totals(self):
+        self._mark_at1_done()
         serializer = PrepaSerializer(
             data={
                 "type_prepa": Prepa.TypePrepa.ATELIER2,
@@ -430,6 +441,7 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertEqual(instance.nb_absents_prepa_nominatifs, 1)
 
     def test_a_repositionner_counts_as_absent_and_does_not_mark_workshop_done(self):
+        self._mark_at1_done()
         serializer = PrepaSerializer(
             data={
                 "type_prepa": Prepa.TypePrepa.ATELIER2,
@@ -459,6 +471,7 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertIsNone(self.stagiaire.date_atelier_2)
 
     def test_serializer_reuses_existing_stagiaire_instead_of_creating_duplicate(self):
+        self._mark_at1_done()
         serializer = PrepaSerializer(
             data={
                 "type_prepa": Prepa.TypePrepa.ATELIER2,
@@ -479,6 +492,7 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_serializer_rejects_same_stagiaire_twice_in_same_atelier_payload(self):
+        self._mark_at1_done()
         serializer = PrepaSerializer(
             data={
                 "type_prepa": Prepa.TypePrepa.ATELIER2,
@@ -501,6 +515,27 @@ class PrepaSerializerParticipationTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn("participations_prepa", serializer.errors)
+
+    def test_serializer_rejects_non_at1_participation_without_at1(self):
+        serializer = PrepaSerializer(
+            data={
+                "type_prepa": Prepa.TypePrepa.ATELIER2,
+                "date_prepa": "2026-04-27",
+                "date_debut_atelier": "2026-04-27",
+                "date_fin_atelier": "2026-04-27",
+                "centre_id": self.centre.id,
+                "participations_prepa": [
+                    {
+                        "stagiaire_prepa_id": self.stagiaire.id,
+                        "statut": PrepaPresenceStatut.INSCRIT,
+                    }
+                ],
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("participations_prepa", serializer.errors)
+        self.assertIn("Atelier 1", serializer.errors["participations_prepa"][0])
 
     def test_serializer_update_resets_totals_when_all_participations_are_removed(self):
         atelier = Prepa.objects.create(

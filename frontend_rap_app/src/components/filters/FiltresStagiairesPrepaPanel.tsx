@@ -1,7 +1,14 @@
 import React, { useMemo } from "react";
 import { Box } from "@mui/material";
 import FilterTemplate, { type FieldConfig } from "./FilterTemplate";
-import type { StagiairePrepaFiltersValues, TypePrepa } from "../../types/prepa";
+import type { ProchainEtapePrepa, StagiairePrepaFiltersValues, TypePrepa } from "../../types/prepa";
+import {
+  PREPA_ORIENTATION_FINALE_OPTIONS,
+  PREPA_PROCHAIN_ETAPE_OPTIONS,
+  PREPA_STATUT_PARCOURS_OPTIONS,
+  PREPA_TYPE_ATELIER_PARCOURS_OPTIONS,
+  mergeChoiceOption,
+} from "../../constants/prepaChoices";
 
 type Option = { value: string | number; label: string };
 
@@ -10,9 +17,10 @@ type Props = {
     | {
         centres?: Array<{ id: number; nom: string }>;
         statut_parcours?: Option[];
+        statut_parcours_courant?: Option[];
         orientation_finale?: Option[];
         type_atelier?: Option[];
-        pilotage?: Option[];
+        prochain_etape?: Option[];
       }
     | undefined;
   values: StagiairePrepaFiltersValues;
@@ -25,11 +33,10 @@ function buildReset(values: StagiairePrepaFiltersValues): StagiairePrepaFiltersV
   return {
     ...values,
     centre: undefined,
-    statut_parcours_calcule: undefined,
+    statut_parcours_courant: undefined,
     atelier_en_cours: undefined,
-    prochain_atelier_attendu: undefined,
+    prochain_etape: undefined,
     orientation_finale: undefined,
-    pilotage: undefined,
     date_ic_min: undefined,
     date_ic_max: undefined,
     page: 1,
@@ -44,11 +51,30 @@ export default function FiltresStagiairesPrepaPanel({
   onReset,
 }: Props) {
   const fields = useMemo(() => {
-    const centres = options?.centres ?? [];
-    const statuts = options?.statut_parcours ?? [];
-    const orientations = options?.orientation_finale ?? [];
-    const ateliers = options?.type_atelier ?? [];
-    const pilotages = options?.pilotage ?? [];
+    const centresRaw = options?.centres ?? [];
+    const centreId = values.centre;
+    const centres =
+      typeof centreId === "number" && !centresRaw.some((c) => c.id === centreId)
+        ? [...centresRaw, { id: centreId, nom: `Centre #${centreId}` }]
+        : centresRaw;
+
+    const statuts = mergeChoiceOption(
+      options?.statut_parcours_courant?.length ? options.statut_parcours_courant : PREPA_STATUT_PARCOURS_OPTIONS,
+      values.statut_parcours_courant
+    );
+
+    let ateliers = options?.type_atelier?.length ? options.type_atelier : PREPA_TYPE_ATELIER_PARCOURS_OPTIONS;
+    ateliers = mergeChoiceOption(ateliers, values.atelier_en_cours);
+
+    let prochainesEtapes: Array<{ value: string | number; label: string }> =
+      options?.prochain_etape?.length ? [...options.prochain_etape] : [...PREPA_PROCHAIN_ETAPE_OPTIONS];
+    prochainesEtapes = mergeChoiceOption(prochainesEtapes, values.prochain_etape);
+
+    const orientations = mergeChoiceOption(
+      options?.orientation_finale?.length ? options.orientation_finale : PREPA_ORIENTATION_FINALE_OPTIONS,
+      values.orientation_finale
+    );
+
     const next: Array<FieldConfig<StagiairePrepaFiltersValues>> = [];
 
     if (centres.length) {
@@ -62,31 +88,29 @@ export default function FiltresStagiairesPrepaPanel({
     }
 
     next.push({
-      key: "statut_parcours_calcule",
+      key: "statut_parcours_courant",
       label: "📍 Statut",
       type: "select",
       options: statuts,
       parse: (raw) => (raw === "" ? undefined : raw),
     });
 
-    if (ateliers.length) {
-      next.push(
-        {
-          key: "atelier_en_cours",
-          label: "🧩 Atelier en cours",
-          type: "select",
-          options: ateliers,
-          parse: (raw) => (raw === "" ? undefined : (raw as TypePrepa)),
-        },
-        {
-          key: "prochain_atelier_attendu",
-          label: "⏭️ Atelier à venir",
-          type: "select",
-          options: ateliers,
-          parse: (raw) => (raw === "" ? undefined : (raw as TypePrepa)),
-        }
-      );
-    }
+    next.push(
+      {
+        key: "atelier_en_cours",
+        label: "🧩 Atelier en cours",
+        type: "select",
+        options: ateliers,
+        parse: (raw) => (raw === "" ? undefined : (raw as TypePrepa)),
+      },
+      {
+        key: "prochain_etape",
+        label: "⏭️ Étape à venir",
+        type: "select",
+        options: prochainesEtapes,
+        parse: (raw) => (raw === "" ? undefined : (raw as ProchainEtapePrepa)),
+      }
+    );
 
     next.push(
       {
@@ -94,13 +118,6 @@ export default function FiltresStagiairesPrepaPanel({
         label: "🎯 Orientation",
         type: "select",
         options: orientations,
-        parse: (raw) => (raw === "" ? undefined : raw),
-      },
-      {
-        key: "pilotage",
-        label: "🧭 Pilotage",
-        type: "select",
-        options: pilotages,
         parse: (raw) => (raw === "" ? undefined : raw),
       },
       {
@@ -117,7 +134,7 @@ export default function FiltresStagiairesPrepaPanel({
       }
     );
     return next;
-  }, [options]);
+  }, [options, values]);
 
   return (
     <Box>

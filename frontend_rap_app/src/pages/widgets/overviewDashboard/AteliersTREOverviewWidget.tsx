@@ -51,61 +51,91 @@ export default function AteliersTREOverviewWidget() {
 
   const { data: overview, isLoading, error } = useAtelierTREOverview(filters);
 
+  const centreFilters = React.useMemo(
+    () => ({
+      ...filters,
+      centre: undefined,
+    }),
+    [filters]
+  );
+  const departementFilters = React.useMemo(
+    () => ({
+      ...filters,
+      departement: undefined,
+    }),
+    [filters]
+  );
+
   // Centres
-  const { data: centresGrouped, error: centresError } = useAtelierTREGrouped("centre", {
-    ...filters,
-    centre: undefined,
-  });
-  const centreOptions =
-    centresGrouped?.results?.flatMap((r: AtelierTREGroupRow) => {
-      const id =
-        (typeof r.centre_id === "number" ? r.centre_id : undefined) ??
-        (typeof r.group_key === "number" || typeof r.group_key === "string"
-          ? r.group_key
-          : undefined);
-      return id != null ? [{ id, label: resolveGroupLabel(r) }] : [];
-    }) ?? [];
+  const { data: centresGrouped, error: centresError } = useAtelierTREGrouped(
+    "centre",
+    centreFilters
+  );
+  const centreOptions = React.useMemo(
+    () =>
+      centresGrouped?.results?.flatMap((r: AtelierTREGroupRow) => {
+        const id =
+          (typeof r.centre_id === "number" ? r.centre_id : undefined) ??
+          (typeof r.group_key === "number" || typeof r.group_key === "string"
+            ? r.group_key
+            : undefined);
+        return id != null ? [{ id, label: resolveGroupLabel(r) }] : [];
+      }) ?? [],
+    [centresGrouped]
+  );
 
   // Départements
-  const { data: depsGrouped, error: depsError } = useAtelierTREGrouped("departement", {
-    ...filters,
-    departement: undefined,
-  });
-  const departementOptions =
-    depsGrouped?.results?.flatMap((r: AtelierTREGroupRow) => {
-      const code =
-        (typeof r.departement === "string" && r.departement) ||
-        (typeof r.group_key === "string" ? r.group_key : "");
-      return code ? [{ code, label: resolveGroupLabel(r) }] : [];
-    }) ?? [];
+  const { data: depsGrouped, error: depsError } = useAtelierTREGrouped(
+    "departement",
+    departementFilters
+  );
+  const departementOptions = React.useMemo(
+    () =>
+      depsGrouped?.results?.flatMap((r: AtelierTREGroupRow) => {
+        const code =
+          (typeof r.departement === "string" && r.departement) ||
+          (typeof r.group_key === "string" ? r.group_key : "");
+        return code ? [{ code, label: resolveGroupLabel(r) }] : [];
+      }) ?? [],
+    [depsGrouped]
+  );
 
-  const atelierTypeEntries = Object.entries(ATELIER_TYPE_LABELS) as Array<[AtelierTypeKey, string]>;
+  const atelierTypeEntries = React.useMemo(
+    () => Object.entries(ATELIER_TYPE_LABELS) as Array<[AtelierTypeKey, string]>,
+    []
+  );
 
   const reset = () => setFilters(initialRef.current);
 
   // 📊 Données du diagramme
-  const chartData = overview && [
-    {
-      name: "Candidats uniques",
-      value: overview.kpis.nb_candidats_uniques,
-      color: theme.palette.info.main,
-    },
-    {
-      name: "Inscriptions",
-      value: overview.kpis.inscrits_total,
-      color: theme.palette.success.main,
-    },
-    {
-      name: "Présents",
-      value: overview.kpis.presences.present,
-      color: theme.palette.success.dark,
-    },
-    {
-      name: "Absents",
-      value: overview.kpis.presences.absent,
-      color: theme.palette.error.main,
-    },
-  ];
+  const chartData = React.useMemo(
+    () =>
+      overview
+        ? [
+            {
+              name: "Candidats uniques",
+              value: overview.kpis.nb_candidats_uniques,
+              color: theme.palette.info.main,
+            },
+            {
+              name: "Inscriptions",
+              value: overview.kpis.inscrits_total,
+              color: theme.palette.success.main,
+            },
+            {
+              name: "Présents",
+              value: overview.kpis.presences.present,
+              color: theme.palette.success.dark,
+            },
+            {
+              name: "Absents",
+              value: overview.kpis.presences.absent,
+              color: theme.palette.error.main,
+            },
+          ]
+        : [],
+    [overview, theme.palette]
+  );
 
   return (
     <Card
@@ -240,7 +270,7 @@ export default function AteliersTREOverviewWidget() {
         ) : error ? (
           <Alert severity="error">{getErrorMessage(error)}</Alert>
         ) : (
-          chartData && (
+          chartData.length > 0 && (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart
                 data={chartData}

@@ -11,14 +11,11 @@ import ResponsiveTableTemplate, {
 } from "../../components/ResponsiveTableTemplate";
 
 const W_CHECK = 56;
-const W_NOM = 160;
-const W_PRENOM = 150;
+const W_STAGIAIRE = 220;
 const W_CENTRE = 190;
-const W_STATUT = 150;
-const OFF_NOM = W_CHECK;
-const OFF_PRENOM = W_CHECK + W_NOM;
-const OFF_CENTRE = W_CHECK + W_NOM + W_PRENOM;
-const OFF_STATUT = W_CHECK + W_NOM + W_PRENOM + W_CENTRE;
+
+const OFF_STAGIAIRE = W_CHECK;
+const OFF_CENTRE = W_CHECK + W_STAGIAIRE;
 
 type Props = {
   items: StagiairePrepa[];
@@ -33,10 +30,6 @@ type Props = {
   onRowClick?: (id: number) => void;
 };
 
-const boolChip = (value?: boolean) => (
-  <Chip size="small" color={value ? "success" : "default"} label={value ? "Oui" : "Non"} />
-);
-
 export default function StagiairesPrepaTable({
   items,
   selectedIds = [],
@@ -49,12 +42,23 @@ export default function StagiairesPrepaTable({
   onHardDelete,
   onRowClick,
 }: Props) {
-  const selectableItems = useMemo(() => items.filter((item) => typeof item.id === "number"), [items]);
+  const selectableItems = useMemo(
+    () => items.filter((item) => typeof item.id === "number"),
+    [items]
+  );
+
   const selectedCount = useMemo(
-    () => selectableItems.filter((item) => item.id && selectedIds.includes(item.id)).length,
+    () =>
+      selectableItems.filter(
+        (item) => item.id && selectedIds.includes(item.id)
+      ).length,
     [selectableItems, selectedIds]
   );
-  const allSelected = selectableItems.length > 0 && selectedCount === selectableItems.length;
+
+  const allSelected =
+    selectableItems.length > 0 &&
+    selectedCount === selectableItems.length;
+
   const partiallySelected = selectedCount > 0 && !allSelected;
 
   const columns = useMemo<TableColumn<StagiairePrepa>[]>(
@@ -86,110 +90,168 @@ export default function StagiairesPrepaTable({
             )
           : undefined,
       },
-      { key: "nom", label: "Nom", width: W_NOM, sticky: "left", stickyLeftOffsetPx: OFF_NOM, render: (item) => item.nom },
+
       {
-        key: "prenom",
-        label: "Prénom",
-        width: W_PRENOM,
+        key: "stagiaire",
+        label: "Stagiaire",
+        width: W_STAGIAIRE,
         sticky: "left",
-        stickyLeftOffsetPx: OFF_PRENOM,
-        render: (item) => item.prenom,
+        stickyLeftOffsetPx: OFF_STAGIAIRE,
+        render: (item) => (
+          <Stack spacing={0.75}>
+            <Typography variant="body2" fontWeight={700}>
+              {`${item.nom ?? ""} ${item.prenom ?? ""}`.trim() || "—"}
+            </Typography>
+            <Chip
+              size="small"
+              sx={{ alignSelf: "flex-start" }}
+              color={
+                item.statut_parcours_courant === "termine"
+                  ? "success"
+                  : item.statut_parcours === "abandon"
+                  ? "error"
+                  : item.statut_parcours_courant === "en_attente_bilan"
+                  ? "warning"
+                  : item.statut_parcours_courant === "en_attente_suite"
+                  ? "info"
+                  : item.statut_parcours_courant ===
+                    "en_attente_repositionnement"
+                  ? "secondary"
+                  : "default"
+              }
+              label={
+                item.statut_parcours_courant_display ??
+                item.statut_parcours_courant ??
+                item.statut_parcours_display ??
+                item.statut_parcours ??
+                "—"
+              }
+            />
+          </Stack>
+        ),
       },
+
       {
         key: "centre",
         label: "Centre",
         width: W_CENTRE,
         sticky: "left",
         stickyLeftOffsetPx: OFF_CENTRE,
-        render: (item) => item.centre_nom ?? item.centre?.nom ?? "—",
+        render: (item) =>
+          item.centre_nom ?? item.centre?.nom ?? "—",
       },
-      {
-        key: "statut",
-        label: "Statut",
-        width: W_STATUT,
-        sticky: "left",
-        stickyLeftOffsetPx: OFF_STATUT,
-        render: (item) => (
-          <Chip
-            size="small"
-            color={
-              item.statut_parcours_calcule === "abandon"
-                ? "error"
-                : item.statut_parcours_calcule === "parcours_termine"
-                  ? "success"
-                  : item.statut_parcours_calcule === "en_parcours"
-                    ? "info"
-                    : "default"
-            }
-            label={item.statut_parcours_calcule_display ?? item.statut_parcours_calcule ?? "—"}
-          />
-        ),
-      },
+
       {
         key: "date_ic",
-        label: "Date IC",
+        label: "IC d'origine",
         render: (item) =>
-          item.date_ic ? new Date(item.date_ic).toLocaleDateString("fr-FR") : "—",
+          item.date_ic
+            ? new Date(item.date_ic).toLocaleDateString("fr-FR")
+            : item.prepa_origine_label?.match(/IC du (\d{2}\/\d{2}\/\d{4})/)?.[1] ?? "—",
       },
+
       {
         key: "prochain",
-        label: "Prochain attendu",
-        render: (item) => item.prochain_atelier_attendu_display ?? item.prochain_atelier_attendu ?? "—",
+        label: "Prochaine étape",
+        render: (item) =>
+          item.action_suivante_recommandee?.label ??
+          item.prochain_atelier_prevu_display ??
+          item.prochain_etape_display ??
+          item.prochain_atelier_attendu_display ??
+          item.prochain_atelier_prevu ??
+          item.prochain_etape ??
+          item.prochain_atelier_attendu ??
+          "—",
       },
+
       {
-        key: "encours",
-        label: "Atelier en cours",
+        key: "derniere_etape",
+        label: "Dernière étape",
         render: (item) => (
           <Stack spacing={0.5}>
             <Typography variant="body2">
-              {item.atelier_en_cours_display ?? item.atelier_en_cours ?? "—"}
+              {item.derniere_etape?.label ??
+                item.dernier_atelier_label ??
+                "—"}
             </Typography>
-            {item.dernier_statut_participation_liberant ? (
-              <Chip
-                size="small"
-                color={item.dernier_statut_participation === "a_repositionner" ? "warning" : "primary"}
-                label={item.dernier_statut_participation === "a_repositionner" ? "Libéré pour repositionnement" : "Libéré pour atelier suivant"}
-              />
+            {item.derniere_etape?.date ||
+            item.dernier_atelier_date ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                {new Date(
+                  item.derniere_etape?.date ??
+                    item.dernier_atelier_date ??
+                    ""
+                ).toLocaleDateString("fr-FR")}
+              </Typography>
             ) : null}
           </Stack>
         ),
       },
 
-      { key: "a1", label: "AT1 réalisé", render: (item) => boolChip(item.atelier_1_realise) },
-      { key: "a3", label: "AT3 réalisé", render: (item) => boolChip(item.atelier_3_realise) },
-      { key: "a4", label: "AT4 réalisé", render: (item) => boolChip(item.atelier_4_realise) },
-      { key: "a5", label: "AT5 réalisé", render: (item) => boolChip(item.atelier_5_realise) },
-      { key: "a6", label: "AT6 réalisé", render: (item) => boolChip(item.atelier_6_realise) },
-      { key: "aautre", label: "Autre AT réalisé", render: (item) => boolChip(item.atelier_autre_realise) },
+      {
+        key: "derniere_presence",
+        label: "Dernière présence",
+        render: (item) => (
+          <Stack spacing={0.5}>
+            <Typography variant="body2">
+              {item.derniere_presence_reelle
+                ?.type_prepa_display ?? "—"}
+            </Typography>
+            {item.derniere_presence_reelle?.date ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                {new Date(
+                  item.derniere_presence_reelle.date
+                ).toLocaleDateString("fr-FR")}
+              </Typography>
+            ) : null}
+          </Stack>
+        ),
+      },
+
       {
         key: "count",
-        label: "Nombre Ateliers faits",
+        label: "Ateliers réalisés",
         render: (item) => item.ateliers_realises_count ?? 0,
       },
 
       {
         key: "orientation",
         label: "Orientation",
-        render: (item) => item.orientation_finale_display ?? item.orientation_finale ?? "—",
+        render: (item) =>
+          item.orientation_finale_display ??
+          item.orientation_finale ??
+          "—",
       },
+
       {
         key: "pilotage",
-        label: "Pilotage",
-        noWrap: false,
+        label: "Action / pilotage",
         render: (item) => {
-          const labels = [];
-
-          if (item.est_a_integrer_atelier_1) labels.push("À intégrer AT1");
-          if (item.est_en_attente_prochain_atelier) labels.push("En attente atelier suivant");
-          if (item.dernier_statut_participation === "a_repositionner") labels.push("À reprogrammer");
-          if (labels.length) return labels.join(" • ");
-          if (item.statut_parcours_calcule === "en_parcours") return "En parcours actif";
-          if (item.statut_parcours_calcule === "parcours_termine") return "Parcours terminé";
-          if (item.statut_parcours_calcule === "abandon") return "Abandon";
-          return "Suivi standard";
+          if (item.action_suivante_recommandee?.label) {
+            return item.action_suivante_recommandee.label;
+          }
+          if (item.statut_parcours_courant === "en_attente_bilan")
+            return "Ouvrir le bilan";
+          if (
+            item.statut_parcours_courant ===
+            "en_attente_repositionnement"
+          )
+            return "Repositionner";
+          if (item.statut_parcours_courant === "en_attente_suite")
+            return "Décider de la suite du parcours";
+          if (item.statut_parcours_courant === "termine")
+            return "Parcours terminé";
+          if (item.statut_parcours === "abandon")
+            return "Abandon";
+          return "En attente de démarrage";
         },
       },
-
     ],
     [allSelected, onToggleSelect, onToggleSelectAll, partiallySelected, selectedIds]
   );
@@ -206,7 +268,9 @@ export default function StagiairesPrepaTable({
     <ResponsiveTableTemplate<StagiairePrepa>
       columns={columns}
       data={items}
-      getRowId={(item) => item.id ?? `tmp-${item.nom}-${item.prenom}`}
+      getRowId={(item) =>
+        item.id ?? `tmp-${item.nom}-${item.prenom}`
+      }
       onRowClick={
         onRowClick
           ? (item) => {
@@ -214,7 +278,9 @@ export default function StagiairesPrepaTable({
             }
           : undefined
       }
-      cardTitle={(item) => `${item.nom} ${item.prenom}`.trim() || "Stagiaire"}
+      cardTitle={(item) =>
+        `${item.nom} ${item.prenom}`.trim() || "Stagiaire"
+      }
       actions={(item) => (
         <Stack direction="row" spacing={1}>
           {item.id ? (

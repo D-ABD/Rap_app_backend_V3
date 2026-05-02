@@ -52,9 +52,7 @@ import EvenementGroupedWidget from "./widgets/groupeddashboard/EvenementGroupedW
 import FormationStatsSummary from "./widgets/overviewDashboard/FormationStatsSummary";
 import ProspectionCommentStatsDashboard from "./widgets/commentsDahboard/ProspectionCommentStatsDashboard";
 import DeclicStatsSummary from "./declic/DeclicStatsSummary";
-import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
-import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
-import PrepaStatsParcours from "./prepa/PrepaStatsParcours";
+import PrepaDashboardSection from "./prepa/PrepaDashboardSection";
 import DeclicGroupedWidget from "./widgets/groupeddashboard/DeclicGroupedWidget";
 import PrepaGroupedWidget from "./widgets/groupeddashboard/PrepaGroupedWidget";
 
@@ -199,19 +197,7 @@ const styledAccordion = useMemo(
       <Divider sx={{ mb: 4 }} />
 
       {styledAccordion(
-        <Stack spacing={2.5} sx={{ width: "100%" }}>
-          <Box sx={{ width: "100%" }}>
-            <PrepaStatsSummary title="Prepa - Synthese" />
-          </Box>
-
-          <Box sx={{ width: "100%" }}>
-            <PrepaStatsOperations title="Indicateurs operationnels Prepa" />
-          </Box>
-
-          <Box sx={{ width: "100%" }}>
-            <PrepaStatsParcours title="Parcours Prepa" />
-          </Box>
-        </Stack>,
+        <PrepaDashboardSection />,
         "Prepa-Compétences",
         "secondary",
         true

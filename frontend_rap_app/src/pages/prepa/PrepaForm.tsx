@@ -428,6 +428,7 @@ export default function PrepaForm({
           <PrepaInvitesSection
             participations={form.participations_prepa ?? []}
             centreId={form.centre_id}
+            typePrepa={form.type_prepa}
             onChange={(participations) =>
               handleChange("participations_prepa", participations as Prepa["participations_prepa"])
             }

@@ -11,7 +11,7 @@ import {
   Collapse,
   Alert,
 } from "@mui/material";
-import { Prepa, CentreLight, PrepaParticipation } from "src/types/prepa";
+import { Prepa, CentreLight, PrepaParticipation, type PrepaPresenceStatut } from "src/types/prepa";
 import CentresSelectModal from "src/components/modals/CentresSelectModal";
 import RichHtmlEditorField from "src/components/forms/RichHtmlEditorField";
 import PrepaInvitesSection from "./PrepaInvitesSection";
@@ -43,6 +43,12 @@ const TYPE_PREPA_CHOICES_FALLBACK = [
   { value: "autre", label: "Autre activité Prépa" },
 ];
 
+function normalizeLegacyPresenceStatut(statut?: PrepaPresenceStatut): PrepaPresenceStatut {
+  if (statut === "termine") return "present";
+  if (statut === "a_repositionner") return "absent";
+  return statut ?? "inscrit";
+}
+
 function normalizeParticipationForForm(participation: PrepaParticipation): PrepaParticipation {
   return {
     ...participation,
@@ -58,7 +64,7 @@ function normalizeParticipationForForm(participation: PrepaParticipation): Prepa
       participation.statut_parcours ??
       participation.stagiaire_prepa?.statut_parcours ??
       "en_attente",
-    statut: participation.statut ?? "inscrit",
+    statut: normalizeLegacyPresenceStatut(participation.statut),
     commentaire: participation.commentaire ?? "",
   };
 }
@@ -252,24 +258,29 @@ export default function PrepaFormAteliers({
 
   return (
     <>
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{ "& .MuiFormHelperText-root": { mt: 0.25, lineHeight: 1.2 } }}
+      >
         {/* --- Informations principales --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper sx={{ p: 1.5, mb: 1.5 }}>
           <Typography variant="h6">Informations principales</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.875, lineHeight: 1.3 }}>
             Type, date et centre de la séance Prépa.
           </Typography>
           {hasSingleScopedCentre ? (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert severity="success" sx={{ mb: 1.5, py: 0.5 }}>
               Le centre est prérempli automatiquement depuis votre périmètre.
             </Alert>
           ) : null}
 
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             {/* Type d’activité */}
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Type d’activité *</Typography>
               <Select
+                size="small"
                 fullWidth
                 required
                 value={form.type_prepa ?? ""}
@@ -287,6 +298,7 @@ export default function PrepaFormAteliers({
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Date *</Typography>
               <AppTextField
+                size="small"
                 type="date"
                 fullWidth
                 required
@@ -299,6 +311,7 @@ export default function PrepaFormAteliers({
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Début atelier</Typography>
               <AppTextField
+                size="small"
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
@@ -310,6 +323,7 @@ export default function PrepaFormAteliers({
             <Grid item xs={12} md={4}>
               <Typography fontWeight={600}>Fin atelier</Typography>
               <AppTextField
+                size="small"
                 type="date"
                 fullWidth
                 InputLabelProps={{ shrink: true }}
@@ -322,12 +336,13 @@ export default function PrepaFormAteliers({
             <Grid item xs={12} md={6}>
               <Typography fontWeight={600}>Centre *</Typography>
               <AppTextField
+                size="small"
                 fullWidth
                 placeholder="— Aucun centre sélectionné —"
                 value={centreLabel || (form.centre_id ? `#${form.centre_id}` : "")}
                 InputProps={{ readOnly: true }}
               />
-              <Stack direction="row" spacing={1} mt={1}>
+              <Stack direction="row" spacing={0.75} mt={0.75}>
                 {!hasSingleScopedCentre ? (
                   <Button variant="outlined" onClick={() => setShowCentreModal(true)}>
                     🏫 Sélectionner un centre
@@ -352,6 +367,7 @@ export default function PrepaFormAteliers({
             <Grid item xs={12} md={6}>
               <Typography fontWeight={600}>Formateur / animateur</Typography>
               <AppTextField
+                size="small"
                 fullWidth
                 placeholder="Nom du formateur qui anime la séance"
                 value={form.formateur_animateur ?? ""}
@@ -363,9 +379,9 @@ export default function PrepaFormAteliers({
 
         {/* --- Informations collectives --- */}
         <Collapse in={isInfoCollective} unmountOnExit>
-          <Paper sx={{ p: 2, mb: 2 }}>
+          <Paper sx={{ p: 1.5, mb: 1.5 }}>
             <Typography variant="h6">Information collective</Typography>
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               {[
                 ["nombre_places_ouvertes", "Places ouvertes"],
                 ["nombre_prescriptions", "Prescriptions"],
@@ -373,6 +389,7 @@ export default function PrepaFormAteliers({
               ].map(([key, label]) => (
                 <Grid item xs={12} md={4} key={key}>
                   <AppTextField
+                    size="small"
                     type="number"
                     fullWidth
                     label={label}
@@ -387,6 +404,7 @@ export default function PrepaFormAteliers({
               {/* Adhésions */}
               <Grid item xs={12} md={4}>
                 <AppTextField
+                  size="small"
                   type="number"
                   fullWidth
                   label="Adhésions"
@@ -400,15 +418,15 @@ export default function PrepaFormAteliers({
 
         {/* --- Ateliers Prépa --- */}
         <Collapse in={isAtelier} unmountOnExit>
-          <Paper sx={{ p: 2, mb: 2 }}>
+          <Paper sx={{ p: 1.5, mb: 1.5 }}>
             <Typography variant="h6">Ateliers Prépa</Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
+            <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
               Les totaux atelier se remplissent automatiquement depuis la participation nominative ci-dessous.
               Utilise les champs “hors liste” si tu veux compléter les chiffres sans renseigner tous les stagiaires.
             </Alert>
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               <Grid item xs={12}>
-                <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Paper variant="outlined" sx={{ p: 1.25 }}>
                   <Grid container spacing={1.5}>
                     <Grid item xs={12} md={3}>
                       <Typography variant="subtitle2" fontWeight={700}>
@@ -480,6 +498,7 @@ export default function PrepaFormAteliers({
               ].map(([key, label]) => (
                 <Grid item xs={12} md={4} key={key}>
                   <AppTextField
+                    size="small"
                     type="number"
                     fullWidth
                     label={label}
@@ -503,13 +522,14 @@ export default function PrepaFormAteliers({
         <PrepaInvitesSection
           participations={form.participations_prepa ?? []}
           centreId={form.centre_id}
+          typePrepa={form.type_prepa}
           onChange={(participations) =>
             handleChange("participations_prepa", participations as Prepa["participations_prepa"])
           }
         />
 
         {/* --- Commentaire --- */}
-        <Paper sx={{ p: 2, mb: 2 }}>
+        <Paper sx={{ p: 1.5, mb: 1.5 }}>
           <Typography variant="h6">Commentaire</Typography>
           <RichHtmlEditorField
             label="Commentaire"
@@ -520,7 +540,7 @@ export default function PrepaFormAteliers({
         </Paper>
 
         {/* --- Actions --- */}
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
+      <Stack direction="row" spacing={1.5} justifyContent="flex-end">
           {onCancel && (
             <Button variant="outlined" onClick={onCancel}>
               Annuler

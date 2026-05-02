@@ -25,6 +25,7 @@ export type PrepaFilters = {
   centre?: string | number;
   type_prepa?: PrepaTypeKey | string;
   departement?: string;
+  avec_archivees?: boolean;
 };
 
 // ───────────────────────────────────────────────
@@ -97,6 +98,7 @@ export type PrepaResumeResponse = {
 
   // ---- PRESCRIPTIONS ----
   nb_prescriptions: number;
+  nombre_ic?: number;
   taux_prescription: number | null;
 
   // ---- IC (Informations Collectives) ----

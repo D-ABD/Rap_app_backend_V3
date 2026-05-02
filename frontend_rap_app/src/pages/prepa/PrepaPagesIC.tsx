@@ -55,14 +55,7 @@ export default function PrepaPageIC() {
   const { data: filterOptions, isLoading: loadingFilters } = usePrepaFiltersOptions("ic");
 
   // Toggle panneau filtres
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
-    const saved = localStorage.getItem("prepa.showFilters");
-    return saved === "1";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("prepa.showFilters", showFilters ? "1" : "0");
-  }, [showFilters]);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Pagination
   const { page, setPage, pageSize, setPageSize, count, setCount, totalPages } =
@@ -341,7 +334,7 @@ export default function PrepaPageIC() {
             spacing={1}
           >
             <Typography variant="body2">
-              Page {page} / {totalPages} ({count} résultats)
+              Page {page} / {totalPages} • Total : {count} • Affichés : {items.length}
             </Typography>
 
             <Pagination

@@ -1,11 +1,8 @@
 import { Link as RouterLink } from "react-router-dom";
-import { Typography, Button, Grid, Stack, Divider } from "@mui/material";
+import { Typography, Button, Stack, Divider } from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import PageTemplate from "../components/PageTemplate";
-
-import PrepaStatsSummary from "./prepa/PrepaStatsSummary";
-import PrepaStatsOperations from "./prepa/PrepaStatsOperations";
-import PrepaStatsParcours from "./prepa/PrepaStatsParcours";
+import PrepaDashboardSection from "./prepa/PrepaDashboardSection";
 
 export default function DashboardPrepaStaffPage() {
   const { user } = useAuth();
@@ -36,21 +33,7 @@ export default function DashboardPrepaStaffPage() {
       }
     >
       <Divider sx={{ mb: 4 }} />
-
-      <Grid >
-        <Grid >
-          <PrepaStatsSummary title="Synthèse annuelle — Objectifs & réalisations" />
-        </Grid>
-
-        <Grid >
-          <PrepaStatsOperations title="Indicateurs opérationnels — IC & Ateliers" />
-        </Grid>
-
-        <Grid >
-          <PrepaStatsParcours title="Parcours individuels — Stagiaires Prépa" />
-        </Grid>
-
-      </Grid>
+      <PrepaDashboardSection />
     </PageTemplate>
   );
 }
