@@ -128,7 +128,7 @@ export default function StagiairesPrepaForm({
           : PREPA_STATUT_FORM_OPTIONS,
         statutForm
       ),
-    [meta]
+    [meta, statutForm]
   );
   const prepasOrigine = useMemo(() => {
     const raw = (meta?.prepas_origine as Array<{ id: number; label: string }>) ?? [];

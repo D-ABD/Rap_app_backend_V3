@@ -55,13 +55,6 @@ const participationKey = (participation: PrepaParticipation, index: number) =>
       `${participation.nom ?? ""}-${participation.prenom ?? ""}-${participation.email ?? ""}-${index}`
   );
 
-const formatAtelierEnCours = (stagiaire: StagiairePrepa) => {
-  const atelier = stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours;
-  const date = stagiaire.atelier_en_cours_date;
-  if (!atelier) return "";
-  return date ? `${atelier} du ${new Date(date).toLocaleDateString("fr-FR")}` : String(atelier);
-};
-
 function toParticipation(stagiaire: StagiairePrepa): PrepaParticipation {
   return {
     stagiaire_prepa_id: stagiaire.id ?? null,
