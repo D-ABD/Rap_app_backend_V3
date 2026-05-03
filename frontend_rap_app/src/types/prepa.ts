@@ -29,7 +29,6 @@ export type IssueBilanPrepa = "oriente_afpa" | "abandon" | "autre_sortie";
 export type ProchainEtapePrepa = TypePrepa | "bilan";
 export type StagiairePrepaStatutForm =
   | "en_attente"
-  | "en_parcours"
   | "parcours_termine"
   | "abandon"
   | "en_attente_prochain_atelier"

@@ -146,7 +146,7 @@ export function useStagiairesPrepaMeta(params?: { for_filters?: boolean }) {
 
 export function useStagiairesPrepaSynthese(filters: Partial<StagiairePrepaFilters> = {}) {
   return useQuery<StagiairePrepaSynthese, Error>({
-    queryKey: ["stagiaires-prepa-synthese", JSON.stringify(filters)],
+    queryKey: ["stagiaires-prepa-synthese", filters],
     queryFn: async () => {
       const res = await api.get("/stagiaires-prepa/synthese-parcours/", { params: filters });
       return (res.data?.data ?? res.data) as StagiairePrepaSynthese;
@@ -223,6 +223,15 @@ export function useBulkHardDeleteStagiairesPrepa() {
     hardDeleteMany: async (ids: number[]) => {
       const res = await api.post("/stagiaires-prepa/bulk/hard-delete/", { ids });
       return res.data;
+    },
+  };
+}
+
+export function useReopenStagiairePrepaParcours() {
+  return {
+    reopen: async (id: number) => {
+      const res = await api.post(`/stagiaires-prepa/${id}/reouvrir-parcours/`);
+      return (res.data?.data ?? res.data) as StagiairePrepa;
     },
   };
 }

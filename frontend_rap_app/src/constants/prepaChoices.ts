@@ -6,17 +6,16 @@ export type PrepaChoiceOption = { value: string; label: string };
 
 export const PREPA_STATUT_PARCOURS_OPTIONS: PrepaChoiceOption[] = [
   { value: "en_attente", label: "En attente de parcours" },
-  { value: "en_parcours", label: "En parcours" },
+  { value: "en_parcours", label: "En attente d'atelier" },
   { value: "parcours_termine", label: "Parcours terminé" },
   { value: "abandon", label: "Abandon" },
 ];
 
 export const PREPA_STATUT_FORM_OPTIONS: PrepaChoiceOption[] = [
   { value: "en_attente", label: "En attente de parcours" },
-  { value: "en_parcours", label: "En parcours" },
   { value: "parcours_termine", label: "Parcours terminé" },
   { value: "abandon", label: "Abandon" },
-  { value: "en_attente_prochain_atelier", label: "En attente prochain atelier" },
+  { value: "en_attente_prochain_atelier", label: "En attente d'atelier" },
   { value: "a_repositionner", label: "À repositionner" },
 ];
 

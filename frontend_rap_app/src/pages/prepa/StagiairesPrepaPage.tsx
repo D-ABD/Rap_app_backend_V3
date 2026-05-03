@@ -30,6 +30,7 @@ import {
   useDeleteStagiairePrepa,
   useDesarchiverStagiairePrepa,
   useHardDeleteStagiairePrepa,
+  useReopenStagiairePrepaParcours,
   useExportStagiairesPrepa,
   useBulkArchiveStagiairesPrepa,
   useBulkRestoreStagiairesPrepa,
@@ -146,6 +147,7 @@ export default function StagiairesPrepaPage() {
   const { remove } = useDeleteStagiairePrepa();
   const { restore } = useDesarchiverStagiairePrepa();
   const { hardDelete } = useHardDeleteStagiairePrepa();
+  const { reopen } = useReopenStagiairePrepaParcours();
   const { archiveMany } = useBulkArchiveStagiairesPrepa();
   const { restoreMany } = useBulkRestoreStagiairesPrepa();
   const { hardDeleteMany } = useBulkHardDeleteStagiairesPrepa();
@@ -222,6 +224,17 @@ export default function StagiairesPrepaPage() {
       setListBump((b) => b + 1);
     } catch {
       toast.error("Erreur de suppression");
+    }
+  };
+
+  const handleReopenParcours = async (id: number) => {
+    try {
+      const updated = await reopen(id);
+      setSelectedStag(updated);
+      setListBump((b) => b + 1);
+      toast.success("Parcours rouvert");
+    } catch {
+      toast.error("Impossible de rouvrir le parcours");
     }
   };
 
@@ -609,6 +622,7 @@ export default function StagiairesPrepaPage() {
               }
             : undefined
         }
+        onReopen={canWritePrepa ? handleReopenParcours : undefined}
       />
 
       <Dialog open={showConfirmDelete} onClose={() => setShowConfirmDelete(false)}>

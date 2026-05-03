@@ -501,20 +501,35 @@ class StagiairePrepaQuerySet(models.QuerySet):
         return self.filter(atelier_6_realise=True)
 
     def synthese_parcours(self) -> Dict[str, Any]:
-        from rap_app.services.prepa_parcours import aggregate_pipeline_counts, prefetch_parcours_dependencies
+        from rap_app.services.prepa_parcours import (
+            StatutParcoursCourant,
+            aggregate_pipeline_counts,
+            compute_statut_parcours_courant,
+            has_at1_present_ever,
+            prefetch_parcours_dependencies,
+        )
 
         stagiaires = list(prefetch_parcours_dependencies(self))
-        entrants = sum(1 for stagiaire in stagiaires if stagiaire.atelier_1_realise)
+        entrants = sum(1 for stagiaire in stagiaires if has_at1_present_ever(stagiaire))
         en_attente_entree = sum(1 for stagiaire in stagiaires if stagiaire.est_en_attente_entree)
         a_integrer_atelier_1 = sum(1 for stagiaire in stagiaires if stagiaire.est_a_integrer_atelier_1)
         en_attente_prochain_atelier = sum(1 for stagiaire in stagiaires if stagiaire.est_en_attente_prochain_atelier)
-        en_parcours = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "en_parcours")
-        termines = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "parcours_termine")
-        abandons = sum(1 for stagiaire in stagiaires if stagiaire.statut_parcours_calcule == "abandon")
-        orientes_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_afpa)
+        en_parcours = sum(
+            1
+            for stagiaire in stagiaires
+            if compute_statut_parcours_courant(stagiaire)
+            in {
+                StatutParcoursCourant.EN_ATTENTE_SUITE,
+                StatutParcoursCourant.EN_ATTENTE_REPOSITIONNEMENT,
+                StatutParcoursCourant.EN_ATTENTE_BILAN,
+            }
+        )
         orientes_autre_centre_afpa = sum(1 for stagiaire in stagiaires if stagiaire.est_oriente_vers_autre_centre_afpa)
         sorties_atelier_6 = sum(1 for stagiaire in stagiaires if stagiaire.atelier_6_realise)
         pipeline = aggregate_pipeline_counts(stagiaires)
+        termines = pipeline["pipeline_termine"]
+        abandons = pipeline["bilans_abandon"]
+        orientes_afpa = pipeline["bilans_orientes_afpa"]
 
         return {
             "total_stagiaires": len(stagiaires),
@@ -799,6 +814,9 @@ class StagiairePrepa(BaseModel):
         if type_prepa == Prepa.TypePrepa.ATELIER1 and date_participation and not self.date_entree_parcours:
             self.date_entree_parcours = date_participation
             changed_fields.append("date_entree_parcours")
+        if type_prepa == Prepa.TypePrepa.ATELIER1 and self.statut_parcours == self.StatutParcours.EN_ATTENTE:
+            self.statut_parcours = self.StatutParcours.EN_PARCOURS
+            changed_fields.append("statut_parcours")
 
         if type_prepa == Prepa.TypePrepa.ATELIER6 and date_participation and not self.date_sortie_parcours:
             self.date_sortie_parcours = date_participation

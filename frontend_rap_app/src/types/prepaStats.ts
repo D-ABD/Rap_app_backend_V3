@@ -189,7 +189,7 @@ export async function exportPrepaXlsx(filters: PrepaFilters): Promise<Blob> {
 // ───────────────────────────────────────────────
 export function usePrepaGrouped(by: PrepaGroupBy, filters: PrepaFilters) {
   return useQuery<PrepaGroupedResponse, Error>({
-    queryKey: ["prepa:grouped", by, JSON.stringify(filters)],
+    queryKey: ["prepa:grouped", by, filters],
     queryFn: () => getPrepaGrouped(by, filters),
     staleTime: 0,
     placeholderData: (prev) => prev,
@@ -198,7 +198,7 @@ export function usePrepaGrouped(by: PrepaGroupBy, filters: PrepaFilters) {
 
 export function usePrepaSynthese(filters: PrepaFilters) {
   return useQuery<PrepaSyntheseResponse, Error>({
-    queryKey: ["prepa:synthese", JSON.stringify(filters)],
+    queryKey: ["prepa:synthese", filters],
     queryFn: () => getPrepaSynthese(filters),
     staleTime: 0,
     placeholderData: (prev) => prev,
@@ -207,7 +207,7 @@ export function usePrepaSynthese(filters: PrepaFilters) {
 
 export function usePrepaResume(filters: PrepaFilters) {
   return useQuery<PrepaResumeResponse, Error>({
-    queryKey: ["prepa:resume", JSON.stringify(filters)],
+    queryKey: ["prepa:resume", filters],
     queryFn: () => getPrepaResume(filters),
     staleTime: 0,
     placeholderData: (prev) => prev,

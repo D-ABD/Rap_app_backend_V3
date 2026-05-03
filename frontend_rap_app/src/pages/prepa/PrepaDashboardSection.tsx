@@ -93,20 +93,95 @@ export default function PrepaDashboardSection() {
     avec_archivees: false,
   });
 
-  const centreQuery = usePrepaGrouped("centre", {
-    ...filters,
-  });
-  const departementQuery = usePrepaGrouped("departement", {
-    ...filters,
-  });
+  const groupedFilters = React.useMemo(
+    () => ({
+      ...filters,
+    }),
+    [filters]
+  );
 
-  const resumeQuery = usePrepaResume(filters);
-  const parcoursQuery = useStagiairesPrepaSynthese({
-    annee: filters.annee,
-    centre: typeof filters.centre === "number" ? filters.centre : undefined,
-    departement: filters.departement,
-    avec_archivees: filters.avec_archivees,
-  });
+  const parcoursFilters = React.useMemo(
+    () => ({
+      annee: filters.annee,
+      centre: typeof filters.centre === "number" ? filters.centre : undefined,
+      departement: filters.departement,
+      avec_archivees: filters.avec_archivees,
+    }),
+    [filters]
+  );
+
+  const centreQuery = usePrepaGrouped("centre", groupedFilters);
+  const departementQuery = usePrepaGrouped("departement", groupedFilters);
+
+  const resumeQuery = usePrepaResume(groupedFilters);
+  const parcoursQuery = useStagiairesPrepaSynthese(parcoursFilters);
+  const resume = resumeQuery.data;
+  const parcours = parcoursQuery.data;
+  const tunnelSteps = React.useMemo(
+    () => [
+      {
+        label: "Prescriptions IC",
+        value: resume?.nb_prescriptions ?? 0,
+        accent: theme.palette.info.main,
+        metrics: [
+          {
+            label: "Taux prescription",
+            value: `${(resume?.taux_prescription ?? 0).toFixed(1)} %`,
+          },
+        ],
+      },
+      {
+        label: "Présents IC",
+        value: resume?.presents_info ?? 0,
+        accent: theme.palette.primary.main,
+        metrics: [
+          {
+            label: "Taux présence IC",
+            value: `${(resume?.taux_presence_ic ?? 0).toFixed(1)} %`,
+          },
+        ],
+      },
+      {
+        label: "Adhésions IC",
+        value: resume?.nb_adhesions ?? 0,
+        accent: theme.palette.secondary.main,
+        metrics: [
+          {
+            label: "Taux adhésion IC",
+            value: `${(resume?.taux_adhesion_ic ?? 0).toFixed(1)} %`,
+          },
+        ],
+      },
+      {
+        label: "AT1 présents",
+        value: resume?.atelier1_presents ?? 0,
+        accent: theme.palette.success.main,
+        metrics: [
+          {
+            label: "Transformation IC → AT1",
+            value: `${(
+              resume?.nb_adhesions
+                ? ((resume?.atelier1_presents ?? 0) / Math.max(resume.nb_adhesions, 1)) * 100
+                : 0
+            ).toFixed(1)} %`,
+          },
+        ],
+      },
+    ],
+    [
+      resume?.atelier1_presents,
+      resume?.nb_adhesions,
+      resume?.nb_prescriptions,
+      resume?.presents_info,
+      resume?.taux_adhesion_ic,
+      resume?.taux_presence_ic,
+      resume?.taux_prescription,
+      theme.palette.info.main,
+      theme.palette.primary.main,
+      theme.palette.secondary.main,
+      theme.palette.success.main,
+    ]
+  );
 
   if (resumeQuery.isLoading || parcoursQuery.isLoading) {
     return <StatCardSkeleton count={8} />;
@@ -122,60 +197,7 @@ export default function PrepaDashboardSection() {
     );
   }
 
-  const resume = resumeQuery.data;
-  const parcours = parcoursQuery.data;
   if (!resume || !parcours) return null;
-
-  const tunnelSteps = [
-    {
-      label: "Prescriptions IC",
-      value: resume.nb_prescriptions ?? 0,
-      accent: theme.palette.info.main,
-      metrics: [
-        {
-          label: "Taux prescription",
-          value: `${(resume.taux_prescription ?? 0).toFixed(1)} %`,
-        },
-      ],
-    },
-    {
-      label: "Présents IC",
-      value: resume.presents_info ?? 0,
-      accent: theme.palette.primary.main,
-      metrics: [
-        {
-          label: "Taux présence IC",
-          value: `${(resume.taux_presence_ic ?? 0).toFixed(1)} %`,
-        },
-      ],
-    },
-    {
-      label: "Adhésions IC",
-      value: resume.nb_adhesions ?? 0,
-      accent: theme.palette.secondary.main,
-      metrics: [
-        {
-          label: "Taux adhésion IC",
-          value: `${(resume.taux_adhesion_ic ?? 0).toFixed(1)} %`,
-        },
-      ],
-    },
-    {
-      label: "AT1 présents",
-      value: resume.atelier1_presents ?? 0,
-      accent: theme.palette.success.main,
-      metrics: [
-        {
-          label: "Transformation IC → AT1",
-          value: `${(
-            resume.nb_adhesions
-              ? ((resume.atelier1_presents ?? 0) / Math.max(resume.nb_adhesions, 1)) * 100
-              : 0
-          ).toFixed(1)} %`,
-        },
-      ],
-    },
-  ];
 
   const atteinteReelle = resume.objectif_total
     ? ((resume.atelier1_presents ?? 0) / Math.max(resume.objectif_total, 1)) * 100
@@ -420,6 +442,13 @@ export default function PrepaDashboardSection() {
                 value={parcours.orientes_afpa ?? 0}
                 hint={`Transformation : ${(parcours.taux_transformation_vers_afpa ?? 0).toFixed(1)} %`}
                 accent={theme.palette.info.dark}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <DashboardTile
+                label="En attente de suite"
+                value={parcours.pipeline_en_attente_suite ?? parcours.en_attente_prochain_atelier ?? 0}
+                accent={theme.palette.info.main}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>

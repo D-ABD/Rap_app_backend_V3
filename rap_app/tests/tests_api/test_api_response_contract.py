@@ -2040,6 +2040,31 @@ class ApiResponseContractTests(APITestCase):
         self.assertIn("taux_abandon_vers_entrees", response.data["data"])
         self.assertIn("total_stagiaires", response.data["data"])
 
+    def test_stagiaire_prepa_reouvrir_parcours_uses_standard_envelope(self):
+        from rap_app.models.prepa import IssueBilanPrepa, StagiairePrepa
+
+        stagiaire = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Termine",
+            prenom="Prepa",
+            atelier_1_realise=True,
+            date_atelier_1=timezone.now().date(),
+            orientation_finale=StagiairePrepa.OrientationFinale.AFPA,
+            formation_afpa_cible="TP RH",
+            date_bilan=timezone.now().date(),
+            issue_bilan=IssueBilanPrepa.ORIENTE_AFPA,
+            created_by=self.user,
+        )
+
+        response = self.client.post(reverse("stagiaire-prepa-reouvrir-parcours", args=[stagiaire.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data.keys()), {"success", "message", "data"})
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["message"], "Parcours rouvert avec succès.")
+        self.assertIsNone(response.data["data"]["orientation_finale"])
+        self.assertIsNone(response.data["data"]["date_bilan"])
+
     def test_participant_declic_list_uses_standard_paginated_envelope(self):
         from rap_app.models.declic import ParticipantDeclic
 

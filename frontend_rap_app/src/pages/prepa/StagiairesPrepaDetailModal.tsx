@@ -8,6 +8,7 @@ interface Props {
   onClose: () => void;
   stagiaire?: StagiairePrepa | null;
   onEdit?: (id: number) => void;
+  onReopen?: (id: number) => void;
 }
 
 function Field({ label, value }: { label: string; value?: string | number | null }) {
@@ -20,7 +21,7 @@ function Field({ label, value }: { label: string; value?: string | number | null
   );
 }
 
-export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, onEdit }: Props) {
+export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, onEdit, onReopen }: Props) {
   const theme = useTheme<AppTheme>();
   const isLight = theme.palette.mode === "light";
   const modalScrim = isLight ? theme.custom.overlay.scrim.background.light : theme.custom.overlay.scrim.background.dark;
@@ -94,6 +95,11 @@ export default function StagiairesPrepaDetailModal({ open, onClose, stagiaire, o
         )}
       </DialogContent>
       <DialogActions sx={{ borderTop: modalTitleBorder }}>
+        {stagiaire?.id && onReopen && stagiaire.statut_parcours_courant === "termine" ? (
+          <Button color="warning" variant="outlined" onClick={() => onReopen(stagiaire.id!)}>
+            Rouvrir le parcours
+          </Button>
+        ) : null}
         {stagiaire?.id && onEdit ? (
           <Button variant="contained" onClick={() => onEdit(stagiaire.id!)}>
             Modifier

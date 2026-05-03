@@ -19,6 +19,7 @@ from ...services.prepa_parcours import (
     compute_statut_parcours_courant,
     derive_issue_bilan_from_orientation,
     has_at1_present_ever,
+    normalize_participation_statut,
 )
 from .rich_text_utils import sanitize_rich_text
 
@@ -496,6 +497,16 @@ class StagiairePrepaSerializer(serializers.ModelSerializer):
             attrs.setdefault("issue_bilan", StagiairePrepa.IssueBilanPrepa.ABANDON)
         if attrs.get("date_bilan"):
             attrs["date_sortie_parcours"] = attrs["date_bilan"]
+
+        has_at1_context = (
+            bool(attrs.get("atelier_1_realise"))
+            or bool(attrs.get("date_atelier_1"))
+            or bool(getattr(self.instance, "atelier_1_realise", False))
+            or bool(getattr(self.instance, "date_atelier_1", None))
+            or (bool(self.instance) and has_at1_present_ever(self.instance))
+        )
+        if attrs.get("statut_parcours") == StagiairePrepa.StatutParcours.EN_PARCOURS and not has_at1_context:
+            attrs["statut_parcours"] = StagiairePrepa.StatutParcours.EN_ATTENTE
 
         return attrs
 
@@ -1123,12 +1134,11 @@ class PrepaSerializer(serializers.ModelSerializer):
                     seen_identity_keys.add(identity_key)
 
             if not requires_at1 or not statut:
-                continue
-
-            if stagiaire:
+                pass
+            elif stagiaire:
                 if stagiaire.id in current_participant_ids:
-                    continue
-                if not has_at1_present_ever(stagiaire):
+                    pass
+                elif not has_at1_present_ever(stagiaire):
                     errors.append(
                         f"Inscription impossible : {stagiaire.prenom} {stagiaire.nom} doit commencer le parcours par un Atelier 1."
                     )
@@ -1136,6 +1146,35 @@ class PrepaSerializer(serializers.ModelSerializer):
                 errors.append(
                     f"Inscription impossible : {(participation.get('prenom') or '').strip()} "
                     f"{(participation.get('nom') or '').strip()} doit commencer le parcours par un Atelier 1."
+                )
+
+            if not stagiaire or not type_prepa or normalize_participation_statut(statut) != PrepaPresenceStatut.PRESENT:
+                continue
+
+            existing_present_same_type = stagiaire.participations_prepa.select_related("prepa").filter(
+                prepa__type_prepa=type_prepa
+            )
+            if self.instance and self.instance.pk:
+                existing_present_same_type = existing_present_same_type.exclude(prepa_id=self.instance.pk)
+
+            existing_present_same_type = [
+                row
+                for row in existing_present_same_type
+                if normalize_participation_statut(row.statut) == PrepaPresenceStatut.PRESENT
+            ]
+            if existing_present_same_type:
+                first = sorted(
+                    existing_present_same_type,
+                    key=lambda row: (
+                        row.prepa.date_debut_atelier or row.prepa.date_prepa,
+                        row.prepa.id,
+                    ),
+                )[0]
+                atelier_date = first.prepa.date_debut_atelier or first.prepa.date_prepa
+                date_label = atelier_date.strftime("%d/%m/%Y") if atelier_date else "date inconnue"
+                type_label = first.prepa.get_type_prepa_display()
+                errors.append(
+                    f"Présence impossible : {stagiaire.prenom} {stagiaire.nom} a déjà été présent sur {type_label} du {date_label}."
                 )
 
         if errors:

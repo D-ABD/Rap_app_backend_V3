@@ -87,6 +87,13 @@ function toDraftStagiaire(stagiaire: RawStagiaire): StagiairePrepa {
   };
 }
 
+function formatAtelierEnCoursLabel(stagiaire: RawStagiaire): string | null {
+  const atelier = stagiaire.atelier_en_cours_display ?? stagiaire.atelier_en_cours;
+  if (!atelier) return null;
+  if (!stagiaire.atelier_en_cours_date) return String(atelier);
+  return `${atelier} du ${new Date(stagiaire.atelier_en_cours_date).toLocaleDateString("fr-FR")}`;
+}
+
 const emptyDraft = (centreId?: number): Partial<StagiairePrepa> => ({
   nom: "",
   prenom: "",
@@ -296,9 +303,9 @@ export default function StagiairesPrepaSelectModal({
                               Origine: {stagiaire.prepa_origine_label}
                             </Typography>
                           ) : null}
-                          {stagiaire.atelier_en_cours_display ? (
+                          {formatAtelierEnCoursLabel(stagiaire) ? (
                             <Typography variant="caption" color="warning.main">
-                              Déjà sur: {stagiaire.atelier_en_cours_display}
+                              Déjà sur: {formatAtelierEnCoursLabel(stagiaire)}
                             </Typography>
                           ) : null}
                           {stagiaire.email ? (
@@ -374,7 +381,7 @@ export default function StagiairesPrepaSelectModal({
                     }
                   >
                     <MenuItem value="en_attente">En attente de parcours</MenuItem>
-                    <MenuItem value="en_parcours">En parcours</MenuItem>
+                    <MenuItem value="en_parcours">En attente d'atelier</MenuItem>
                     <MenuItem value="parcours_termine">Parcours terminé</MenuItem>
                     <MenuItem value="abandon">Abandon</MenuItem>
                   </TextField>

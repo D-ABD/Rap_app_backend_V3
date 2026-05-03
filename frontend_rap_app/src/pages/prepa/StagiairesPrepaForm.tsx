@@ -51,7 +51,7 @@ function deriveStatutForm(initialValues?: Partial<StagiairePrepa>): StagiairePre
   if (courant === "en_attente_suite") return "en_attente_prochain_atelier";
   if (initialValues?.statut_parcours === "abandon") return "abandon";
   if (courant === "termine" || initialValues?.statut_parcours === "parcours_termine") return "parcours_termine";
-  if (initialValues?.statut_parcours === "en_parcours") return "en_parcours";
+  if (initialValues?.statut_parcours === "en_parcours") return "en_attente_prochain_atelier";
   return "en_attente";
 }
 
@@ -173,13 +173,19 @@ export default function StagiairesPrepaForm({
 
   const updateStatutForm = (value: StagiairePrepaStatutForm) => {
     setStatutForm(value);
+    const hasAt1 =
+      Boolean(initialValues?.date_entree_calculee) ||
+      Boolean(form.atelier_1_realise) ||
+      Boolean(form.date_atelier_1);
     const nextStatut =
       value === "parcours_termine"
         ? "parcours_termine"
         : value === "abandon"
           ? "abandon"
-          : value === "en_parcours" || value === "en_attente_prochain_atelier" || value === "a_repositionner"
-            ? "en_parcours"
+          : value === "en_attente_prochain_atelier" || value === "a_repositionner"
+            ? hasAt1
+              ? "en_parcours"
+              : "en_attente"
             : "en_attente";
 
     setForm((prev) => ({

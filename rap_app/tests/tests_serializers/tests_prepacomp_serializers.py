@@ -228,6 +228,9 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertEqual(participation.statut, PrepaPresenceStatut.PRESENT)
 
         self.stagiaire.refresh_from_db()
+        self.assertEqual(self.stagiaire.statut_parcours, StagiairePrepa.StatutParcours.EN_PARCOURS)
+
+        self.stagiaire.refresh_from_db()
         self.assertTrue(self.stagiaire.atelier_1_realise)
         self.assertEqual(str(self.stagiaire.date_atelier_1), "2026-04-27")
 
@@ -536,6 +539,44 @@ class PrepaSerializerParticipationTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("participations_prepa", serializer.errors)
         self.assertIn("Atelier 1", serializer.errors["participations_prepa"][0])
+
+    def test_serializer_rejects_second_present_on_same_workshop_type(self):
+        self._mark_at1_done()
+        premier_atelier_1 = Prepa.objects.create(
+            type_prepa=Prepa.TypePrepa.ATELIER1,
+            date_prepa=date(2026, 4, 20),
+            date_debut_atelier=date(2026, 4, 20),
+            date_fin_atelier=date(2026, 4, 20),
+            centre=self.centre,
+            created_by=self.user,
+        )
+        PrepaStagiaireParticipation.objects.create(
+            prepa=premier_atelier_1,
+            stagiaire_prepa=self.stagiaire,
+            statut=PrepaPresenceStatut.PRESENT,
+            created_by=self.user,
+        )
+
+        serializer = PrepaSerializer(
+            data={
+                "type_prepa": Prepa.TypePrepa.ATELIER1,
+                "date_prepa": "2026-04-27",
+                "date_debut_atelier": "2026-04-27",
+                "date_fin_atelier": "2026-04-27",
+                "centre_id": self.centre.id,
+                "participations_prepa": [
+                    {
+                        "stagiaire_prepa_id": self.stagiaire.id,
+                        "statut": PrepaPresenceStatut.PRESENT,
+                    }
+                ],
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("participations_prepa", serializer.errors)
+        self.assertIn("Présence impossible", serializer.errors["participations_prepa"][0])
+        self.assertIn("20/04/2026", serializer.errors["participations_prepa"][0])
 
     def test_serializer_update_resets_totals_when_all_participations_are_removed(self):
         atelier = Prepa.objects.create(

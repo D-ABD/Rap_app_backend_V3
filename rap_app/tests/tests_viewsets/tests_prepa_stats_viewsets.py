@@ -384,3 +384,26 @@ class PrepaStatsViewSetTests(AuthenticatedTestCase):
         noms = {item["nom"] for item in payload["results"]}
         self.assertIn(attendu_bilan.nom, noms)
         self.assertNotIn(autre.nom, noms)
+
+    def test_stagiaire_prepa_reopen_parcours_clears_bilan_fields(self):
+        stagiaire = StagiairePrepa.objects.create(
+            centre=self.centre,
+            nom="Reopen",
+            prenom="Nina",
+            atelier_1_realise=True,
+            date_atelier_1=date(2026, 4, 1),
+            orientation_finale=StagiairePrepa.OrientationFinale.AFPA,
+            formation_afpa_cible="TP RH",
+            date_bilan=date(2026, 4, 20),
+            issue_bilan="oriente_afpa",
+            created_by=self.admin,
+        )
+
+        response = self.client.post(f"/api/stagiaires-prepa/{stagiaire.id}/reouvrir-parcours/")
+
+        self.assertEqual(response.status_code, 200)
+        stagiaire.refresh_from_db()
+        self.assertIsNone(stagiaire.orientation_finale)
+        self.assertIsNone(stagiaire.date_bilan)
+        self.assertIsNone(stagiaire.issue_bilan)
+        self.assertEqual(stagiaire.statut_parcours, StagiairePrepa.StatutParcours.EN_PARCOURS)

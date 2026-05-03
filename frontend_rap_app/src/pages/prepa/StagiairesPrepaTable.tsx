@@ -17,6 +17,28 @@ const W_CENTRE = 190;
 const OFF_STAGIAIRE = W_CHECK;
 const OFF_CENTRE = W_CHECK + W_STAGIAIRE;
 
+function resolveParcoursStatus(item: StagiairePrepa): {
+  label: string;
+  color: "default" | "success" | "error" | "warning" | "info" | "secondary";
+} {
+  if (item.statut_parcours_courant === "termine") {
+    return { label: "Parcours terminé", color: "success" };
+  }
+  if (item.statut_parcours === "abandon") {
+    return { label: "Abandon", color: "error" };
+  }
+  if (item.statut_parcours_courant === "en_attente_repositionnement") {
+    return { label: "À repositionner", color: "secondary" };
+  }
+  if (item.statut_parcours_courant === "en_attente_bilan") {
+    return { label: "En attente bilan", color: "warning" };
+  }
+  if (item.statut_parcours_courant === "en_attente_suite") {
+    return { label: "En attente d'atelier", color: "info" };
+  }
+  return { label: "En attente de parcours", color: "default" };
+}
+
 type Props = {
   items: StagiairePrepa[];
   selectedIds?: number[];
@@ -97,7 +119,9 @@ export default function StagiairesPrepaTable({
         width: W_STAGIAIRE,
         sticky: "left",
         stickyLeftOffsetPx: OFF_STAGIAIRE,
-        render: (item) => (
+        render: (item) => {
+          const status = resolveParcoursStatus(item);
+          return (
           <Stack spacing={0.75}>
             <Typography variant="body2" fontWeight={700}>
               {`${item.nom ?? ""} ${item.prenom ?? ""}`.trim() || "—"}
@@ -105,30 +129,12 @@ export default function StagiairesPrepaTable({
             <Chip
               size="small"
               sx={{ alignSelf: "flex-start" }}
-              color={
-                item.statut_parcours_courant === "termine"
-                  ? "success"
-                  : item.statut_parcours === "abandon"
-                  ? "error"
-                  : item.statut_parcours_courant === "en_attente_bilan"
-                  ? "warning"
-                  : item.statut_parcours_courant === "en_attente_suite"
-                  ? "info"
-                  : item.statut_parcours_courant ===
-                    "en_attente_repositionnement"
-                  ? "secondary"
-                  : "default"
-              }
-              label={
-                item.statut_parcours_courant_display ??
-                item.statut_parcours_courant ??
-                item.statut_parcours_display ??
-                item.statut_parcours ??
-                "—"
-              }
+              color={status.color}
+              label={status.label}
             />
           </Stack>
-        ),
+        );
+        },
       },
 
       {
@@ -154,11 +160,11 @@ export default function StagiairesPrepaTable({
         key: "prochain",
         label: "Prochaine étape",
         render: (item) =>
-          item.action_suivante_recommandee?.label ??
           item.prochain_atelier_prevu_display ??
+          item.prochain_atelier_prevu ??
+          item.action_suivante_recommandee?.label ??
           item.prochain_etape_display ??
           item.prochain_atelier_attendu_display ??
-          item.prochain_atelier_prevu ??
           item.prochain_etape ??
           item.prochain_atelier_attendu ??
           "—",

@@ -557,6 +557,59 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
         self._assert_user_can_use_prepa_origine(prepa_origine)
         serializer.save()
 
+    @action(detail=True, methods=["post"], url_path="reouvrir-parcours")
+    def reouvrir_parcours(self, request, pk=None):
+        instance = self.get_object()
+        if compute_statut_parcours_courant(instance) != StatutParcoursCourant.TERMINE:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Seuls les parcours terminés peuvent être rouverts.",
+                    "data": {"id": instance.id},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        instance.orientation_finale = None
+        instance.centre_afpa_cible = None
+        instance.centre_afpa_cible_texte = None
+        instance.formation_afpa_cible = None
+        instance.date_orientation = None
+        instance.entree_formation_confirmee = False
+        instance.motif_abandon = None
+        instance.issue_bilan = None
+        instance.date_bilan = None
+        instance.date_sortie_parcours = None
+        instance.statut_parcours = (
+            StagiairePrepa.StatutParcours.EN_PARCOURS
+            if instance.atelier_1_realise or instance.date_atelier_1
+            else StagiairePrepa.StatutParcours.EN_ATTENTE
+        )
+        instance.save(
+            user=request.user,
+            update_fields=[
+                "orientation_finale",
+                "centre_afpa_cible",
+                "centre_afpa_cible_texte",
+                "formation_afpa_cible",
+                "date_orientation",
+                "entree_formation_confirmee",
+                "motif_abandon",
+                "issue_bilan",
+                "date_bilan",
+                "date_sortie_parcours",
+                "statut_parcours",
+            ],
+        )
+        return Response(
+            {
+                "success": True,
+                "message": "Parcours rouvert avec succès.",
+                "data": self.get_serializer(instance).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
         """
@@ -629,10 +682,9 @@ class StagiairePrepaViewSet(HardDeleteArchivedMixin, viewsets.ModelViewSet):
                     ],
                     "statut_formulaire": [
                         {"value": "en_attente", "label": "En attente de parcours"},
-                        {"value": "en_parcours", "label": "En parcours"},
                         {"value": "parcours_termine", "label": "Parcours terminé"},
                         {"value": "abandon", "label": "Abandon"},
-                        {"value": "en_attente_prochain_atelier", "label": "En attente prochain atelier"},
+                        {"value": "en_attente_prochain_atelier", "label": "En attente d'atelier"},
                         {"value": "a_repositionner", "label": "À repositionner"},
                     ],
                     "statut_positionnement": [
